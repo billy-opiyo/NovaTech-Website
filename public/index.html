@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta
+			name="description"
+			content="NovaTech is a navy blue glassmorphism electronics store homepage featuring phones, laptops, consoles, accessories, smart devices, PC components, brands, deals, and best sellers."
+		/>
+		<title>NovaTech | Premium Electronics Store</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="CSS/style.css" />
+	</head>
+	<body>
+		<div class="site-bg" aria-hidden="true">
+			<span class="grid-glow"></span>
+		</div>
+
+		<header class="main-header">
+			<nav class="navbar glass-panel" aria-label="Primary navigation">
+				<a class="brand" href="#home" aria-label="NovaTech home">
+					<span class="brand-mark">N</span>
+					<span>NOVATECH</span>
+				</a>
+
+				<button
+					class="menu-toggle"
+					type="button"
+					aria-label="Open navigation menu"
+					aria-expanded="false"
+				>
+					<span></span><span></span><span></span>
+				</button>
+
+				<div class="nav-links" id="navLinks">
+					<a href="#categories">Categories</a>
+					<a href="#deals">Deals</a>
+					<a href="#trending">Trending</a>
+					<a href="#brands">Brands</a>
+					<a href="#reviews">Reviews</a>
+					<a href="#contact">Contact</a>
+				</div>
+
+				<form class="nav-search" role="search">
+					<label class="sr-only" for="siteSearch"
+						>Search products and categories</label
+					>
+					<input
+						id="siteSearch"
+						type="search"
+						placeholder="Search phones, laptops, consoles..."
+						autocomplete="off"
+					/>
+					<button type="submit" aria-label="Submit search">⌕</button>
+				</form>
+
+				<div class="nav-actions" aria-label="Store actions">
+					<button class="icon-button" type="button" aria-label="Wishlist">
+						♡
+					</button>
+					<button class="cart-button" type="button" aria-label="Cart">
+						🛒 <span>Cart</span><strong>3</strong>
+					</button>
+				</div>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero section-shell" id="home">
+				<div class="hero-content">
+					<p class="eyebrow">New season tech drop • Up to 35% off</p>
+					<h1>Upgrade your tech with <span>NovaTech</span></h1>
+					<p class="hero-copy">
+						Discover flagship phones, ultra-fast laptops, immersive gaming gear,
+						smart accessories, and trusted components wrapped in unbeatable
+						deals.
+					</p>
+					<div class="hero-actions">
+						<a class="btn primary" href="#deals">Shop flash sales</a>
+						<a class="btn secondary" href="#categories">Explore categories</a>
+					</div>
+					<div class="hero-stats" aria-label="NovaTech store highlights">
+						<div><strong>4.9/5</strong><span>Customer rating</span></div>
+						<div><strong>24h</strong><span>Fast dispatch</span></div>
+						<div><strong>500+</strong><span>Top gadgets</span></div>
+					</div>
+				</div>
+
+				<div
+					class="hero-showcase glass-panel"
+					aria-label="Featured laptop and phone bundle"
+				>
+					<div class="deal-badge">Launch Deal</div>
+					<div class="device-stack">
+						<div class="laptop-visual">
+							<div class="laptop-screen">
+								<span class="screen-chip">NovaBook X1</span>
+								<span class="screen-line wide"></span>
+								<span class="screen-line"></span>
+								<span class="screen-line short"></span>
+							</div>
+							<div class="laptop-base"></div>
+						</div>
+						<div class="phone-visual">
+							<span class="phone-camera"></span>
+							<span class="phone-widget"></span>
+							<span class="phone-widget small"></span>
+						</div>
+					</div>
+					<div class="showcase-info">
+						<div>
+							<h2>Nova Pro Bundle</h2>
+							<p>Flagship phone + AI-ready laptop</p>
+						</div>
+						<strong>$1,499</strong>
+					</div>
+				</div>
+			</section>
+
+			<section class="trust-strip section-shell" aria-label="Trust signals">
+				<article class="trust-card glass-panel">
+					<span>🚚</span>
+					<div>
+						<h3>Fast Delivery</h3>
+						<p>Same-day dispatch on selected items.</p>
+					</div>
+				</article>
+				<article class="trust-card glass-panel">
+					<span>🛡️</span>
+					<div>
+						<h3>Warranty Protected</h3>
+						<p>Official warranty on every device.</p>
+					</div>
+				</article>
+				<article class="trust-card glass-panel">
+					<span>🔒</span>
+					<div>
+						<h3>Secure Checkout</h3>
+						<p>Encrypted payments and safe shopping.</p>
+					</div>
+				</article>
+				<article class="trust-card glass-panel">
+					<span>🎧</span>
+					<div>
+						<h3>Expert Support</h3>
+						<p>Tech guidance before and after purchase.</p>
+					</div>
+				</article>
+			</section>
+
+			<section class="section-shell" id="categories">
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Featured categories</p>
+						<h2>Shop by your favorite tech zone</h2>
+					</div>
+					<a href="#trending">View products →</a>
+				</div>
+				<div class="category-grid searchable-area">
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="phones smartphones android iphone mobile"
+					>
+						<span>📱</span>
+						<h3>Phones</h3>
+						<p>Flagship and budget smartphones.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="laptops notebooks ultrabooks macbook gaming laptop"
+					>
+						<span>💻</span>
+						<h3>Laptops</h3>
+						<p>Work, school, gaming, and creator laptops.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="desktop computers pc workstation tower"
+					>
+						<span>🖥️</span>
+						<h3>Desktop Computers</h3>
+						<p>Powerful PCs and office systems.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="tablets ipad android tablet stylus"
+					>
+						<span>📲</span>
+						<h3>Tablets</h3>
+						<p>Portable screens for creativity and entertainment.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="gaming consoles playstation xbox nintendo controllers"
+					>
+						<span>🎮</span>
+						<h3>Gaming Consoles</h3>
+						<p>Next-gen consoles and controllers.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="accessories chargers cases keyboards mouse headphones"
+					>
+						<span>🎧</span>
+						<h3>Accessories</h3>
+						<p>Chargers, cases, keyboards, mice, and more.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="smartwatches wearables fitness watch"
+					>
+						<span>⌚</span>
+						<h3>Smartwatches</h3>
+						<p>Track fitness, calls, alerts, and health.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="networking devices router mesh wifi modem switch"
+					>
+						<span>📡</span>
+						<h3>Networking Devices</h3>
+						<p>Routers, mesh Wi‑Fi, switches, and modems.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="tvs audio systems television speakers soundbar home theater"
+					>
+						<span>📺</span>
+						<h3>TVs & Audio Systems</h3>
+						<p>Immersive screens, soundbars, and speakers.</p>
+					</article>
+					<article
+						class="category-card glass-panel searchable-card"
+						data-keywords="pc components graphics card gpu cpu ram ssd motherboard"
+					>
+						<span>🧩</span>
+						<h3>PC Components</h3>
+						<p>GPUs, CPUs, RAM, SSDs, and motherboards.</p>
+					</article>
+				</div>
+			</section>
+
+			<section class="section-shell deals-section" id="deals">
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Flash sales</p>
+						<h2>Limited-time deals and discounts</h2>
+					</div>
+					<div class="countdown glass-panel" aria-label="Flash sale countdown">
+						Ends in <strong id="dealCountdown">05:59:59</strong>
+					</div>
+				</div>
+
+				<div class="deals-grid searchable-area">
+					<article
+						class="deal-card product-card glass-panel searchable-card"
+						data-keywords="phone smartphone NovaPhone 15 5g deal featured product"
+					>
+						<span class="discount">-28%</span>
+						<div class="product-visual">📱</div>
+						<h3>NovaPhone 15 5G</h3>
+						<p>AMOLED display, triple camera, 256GB storage.</p>
+						<div class="price-row"><strong>$719</strong><span>$999</span></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="deal-card product-card glass-panel searchable-card"
+						data-keywords="laptop ultrabook NovaBook Air deal featured product"
+					>
+						<span class="discount">-22%</span>
+						<div class="product-visual">💻</div>
+						<h3>NovaBook Air 14</h3>
+						<p>Ultra-light laptop with 18-hour battery life.</p>
+						<div class="price-row">
+							<strong>$899</strong><span>$1,149</span>
+						</div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="deal-card product-card glass-panel searchable-card"
+						data-keywords="gaming console controller bundle deal featured product"
+					>
+						<span class="discount">-18%</span>
+						<div class="product-visual">🎮</div>
+						<h3>GameSphere X Bundle</h3>
+						<p>4K gaming console with dual wireless controllers.</p>
+						<div class="price-row"><strong>$489</strong><span>$599</span></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+				</div>
+			</section>
+
+			<section class="section-shell" id="trending">
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Trending products</p>
+						<h2>Best sellers and new arrivals</h2>
+					</div>
+					<div class="filter-pills" aria-label="Product labels">
+						<span>Best sellers</span><span>New arrivals</span
+						><span>Top rated</span>
+					</div>
+				</div>
+
+				<div class="product-grid searchable-area">
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="best seller smartwatch wearable fitness"
+					>
+						<span class="tag">Best Seller</span>
+						<div class="product-visual">⌚</div>
+						<h3>PulseWatch Ultra</h3>
+						<p>Health tracking, GPS, calls, and 7-day battery.</p>
+						<div class="rating">★★★★★ <span>4.9</span></div>
+						<div class="price-row"><strong>$249</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="new arrival tablet stylus creative"
+					>
+						<span class="tag new">New Arrival</span>
+						<div class="product-visual">📲</div>
+						<h3>CanvasTab Pro</h3>
+						<p>12.9-inch creative tablet with precision stylus.</p>
+						<div class="rating">★★★★☆ <span>4.7</span></div>
+						<div class="price-row"><strong>$649</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="best seller headphones audio wireless noise cancelling"
+					>
+						<span class="tag">Best Seller</span>
+						<div class="product-visual">🎧</div>
+						<h3>AeroSound Max</h3>
+						<p>Wireless noise-cancelling headphones with deep bass.</p>
+						<div class="rating">★★★★★ <span>4.8</span></div>
+						<div class="price-row"><strong>$179</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="new arrival networking router wifi 7 mesh"
+					>
+						<span class="tag new">New Arrival</span>
+						<div class="product-visual">📡</div>
+						<h3>MeshWave Wi‑Fi 7</h3>
+						<p>Whole-home mesh networking with ultra-low latency.</p>
+						<div class="rating">★★★★☆ <span>4.6</span></div>
+						<div class="price-row"><strong>$329</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="pc components graphics card gpu gaming"
+					>
+						<span class="tag">Top Rated</span>
+						<div class="product-visual">🧩</div>
+						<h3>RTX Nova 780 GPU</h3>
+						<p>High-frame-rate graphics card for creators and gamers.</p>
+						<div class="rating">★★★★★ <span>4.9</span></div>
+						<div class="price-row"><strong>$799</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+					<article
+						class="product-card glass-panel searchable-card"
+						data-keywords="tv audio soundbar oled television"
+					>
+						<span class="tag new">New Arrival</span>
+						<div class="product-visual">📺</div>
+						<h3>CinemaView OLED 55</h3>
+						<p>Brilliant OLED TV bundled with spatial soundbar.</p>
+						<div class="rating">★★★★☆ <span>4.7</span></div>
+						<div class="price-row"><strong>$1,099</strong></div>
+						<button class="add-cart" type="button">Add to cart</button>
+					</article>
+				</div>
+				<p class="empty-state" id="emptyState" hidden>
+					No matching products found. Try searching for another device.
+				</p>
+			</section>
+
+			<section class="section-shell brands-section" id="brands">
+				<div class="section-heading centered">
+					<p class="eyebrow">Popular brands</p>
+					<h2>Trusted names, curated by NovaTech</h2>
+				</div>
+				<div class="brand-cloud" aria-label="Popular electronics brands">
+					<span class="glass-panel">Apple</span
+					><span class="glass-panel">Samsung</span
+					><span class="glass-panel">Dell</span
+					><span class="glass-panel">HP</span
+					><span class="glass-panel">Lenovo</span
+					><span class="glass-panel">Sony</span
+					><span class="glass-panel">Asus</span
+					><span class="glass-panel">Microsoft</span
+					><span class="glass-panel">Logitech</span
+					><span class="glass-panel">TP-Link</span>
+				</div>
+			</section>
+
+			<section class="section-shell testimonials" id="reviews">
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Testimonials</p>
+						<h2>What shoppers say about NovaTech</h2>
+					</div>
+				</div>
+				<div class="testimonial-grid">
+					<article class="testimonial-card glass-panel">
+						<p>
+							“The site made it simple to compare laptops, and my NovaBook
+							arrived the next morning. Excellent support.”
+						</p>
+						<div><strong>Amina K.</strong><span>Creator & designer</span></div>
+					</article>
+					<article class="testimonial-card glass-panel">
+						<p>
+							“I grabbed a console during flash sales and saved a lot. Checkout
+							felt secure and smooth.”
+						</p>
+						<div><strong>Brian M.</strong><span>Gaming enthusiast</span></div>
+					</article>
+					<article class="testimonial-card glass-panel">
+						<p>
+							“NovaTech has everything from routers to PC parts. The warranty
+							promise gives me confidence.”
+						</p>
+						<div>
+							<strong>Sarah W.</strong><span>Small business owner</span>
+						</div>
+					</article>
+				</div>
+			</section>
+
+			<section class="contact section-shell" id="contact">
+				<div class="contact-card glass-panel">
+					<div class="contact-copy">
+						<p class="eyebrow">Contact NovaTech</p>
+						<h2>Need help choosing your next device?</h2>
+						<p>
+							Tell us what you are looking for and our tech specialists will
+							recommend the right phones, laptops, accessories, or components.
+						</p>
+						<div class="contact-info" aria-label="NovaTech contact details">
+							<span>📍 Nairobi, Kenya</span>
+							<span>☎ +254 700 000 000</span>
+							<span>✉ support@novatech.store</span>
+						</div>
+					</div>
+
+					<form class="contact-form" id="contactForm">
+						<div class="form-row">
+							<div class="form-field">
+								<label for="contactName">Full name</label>
+								<input
+									id="contactName"
+									type="text"
+									placeholder="Your name"
+									autocomplete="name"
+									required
+								/>
+							</div>
+							<div class="form-field">
+								<label for="contactEmail">Email address</label>
+								<input
+									id="contactEmail"
+									type="email"
+									placeholder="you@example.com"
+									autocomplete="email"
+									required
+								/>
+							</div>
+						</div>
+						<div class="form-field">
+							<label for="contactSubject">Subject</label>
+							<input
+								id="contactSubject"
+								type="text"
+								placeholder="Product inquiry, order help, support..."
+								required
+							/>
+						</div>
+						<div class="form-field">
+							<label for="contactMessage">Message</label>
+							<textarea
+								id="contactMessage"
+								rows="5"
+								placeholder="How can we help?"
+								required
+							></textarea>
+						</div>
+						<button class="btn primary" type="submit">Send message</button>
+						<small id="contactMessageStatus" aria-live="polite"></small>
+					</form>
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer section-shell">
+			<div class="footer-grid glass-panel">
+				<div>
+					<a class="brand" href="#home"
+						><span class="brand-mark">N</span><span>NovaTech</span></a
+					>
+					<p>
+						Your destination for future-ready electronics, smart devices, PC
+						components, and reliable tech support.
+					</p>
+				</div>
+				<div>
+					<h3>Shop</h3>
+					<a href="#categories">Categories</a><a href="#deals">Flash sales</a
+					><a href="#trending">Best sellers</a>
+				</div>
+				<div>
+					<h3>Support</h3>
+					<a href="#">Warranty</a><a href="#">Delivery</a
+					><a href="#">Returns</a>
+				</div>
+				<div>
+					<h3>Contact</h3>
+					<a href="#contact">Send us a message</a>
+					<p>support@novatech.store</p>
+					<p>+254 700 000 000</p>
+					<p>Nairobi, Kenya</p>
+				</div>
+			</div>
+			<p class="copyright">© 2026 NovaTech. All rights reserved.</p>
+		</footer>
+
+		<script src="JS/script.js"></script>
+	</body>
+</html>
