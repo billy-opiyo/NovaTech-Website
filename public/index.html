@@ -46,19 +46,6 @@
 					<a href="#contact">Contact</a>
 				</div>
 
-				<form class="nav-search" role="search">
-					<label class="sr-only" for="siteSearch"
-						>Search products and categories</label
-					>
-					<input
-						id="siteSearch"
-						type="search"
-						placeholder="Search phones, laptops, consoles..."
-						autocomplete="off"
-					/>
-					<button type="submit" aria-label="Submit search">⌕</button>
-				</form>
-
 				<div class="nav-actions" aria-label="Store actions">
 					<button class="icon-button" type="button" aria-label="Wishlist">
 						♡
@@ -68,6 +55,19 @@
 					</button>
 				</div>
 			</nav>
+
+			<form class="nav-search" role="search">
+				<label class="sr-only" for="siteSearch"
+					>Search products and categories</label
+				>
+				<input
+					id="siteSearch"
+					type="search"
+					placeholder="Search phones, laptops, consoles..."
+					autocomplete="off"
+				/>
+				<button type="submit" aria-label="Submit search">⌕</button>
+			</form>
 		</header>
 
 		<main>
@@ -532,8 +532,14 @@
 					<p>Nairobi, Kenya</p>
 				</div>
 			</div>
-			<p class="copyright">© 2026 NovaTech. All rights reserved.</p>
+			<p class="copyright">
+				© <span id="copyrightYear"></span> NovaTech. All rights reserved.
+			</p>
 		</footer>
+
+		<button class="back-to-top" type="button" aria-label="Back to top">
+			↑
+		</button>
 
 		<script src="JS/script.js"></script>
 	</body>
