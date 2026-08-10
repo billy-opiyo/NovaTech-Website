@@ -1,7 +1,10 @@
 {
   "name": "electronics-store",
   "private": true,
-  "workspaces": ["frontend", "backend"],
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "dev": "yarn workspace frontend dev",
     "build": "yarn workspace frontend build",
@@ -9,5 +12,9 @@
     "db:migrate": "yarn workspace backend prisma migrate dev",
     "db:push": "yarn workspace backend prisma db push",
     "db:seed": "yarn workspace backend prisma db seed"
+  },
+  "dependencies": {
+    "lucide-react": "^1.31.0",
+    "react-icons": "^5.7.0"
   }
 }

@@ -1,29 +1,29 @@
 import Link from "next/link"
-import { Facebook, Instagram, MessageCircleMore, Music2 } from "lucide-react"
+import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
 
 const socialLinks = [
 	{
 		label: "Facebook",
 		href: "https://facebook.com",
-		icon: Facebook,
+		icon: FaFacebookF,
 		color: "bg-blue-600 hover:bg-blue-700",
 	},
 	{
 		label: "Instagram",
 		href: "https://instagram.com",
-		icon: Instagram,
+		icon: FaInstagram,
 		color: "bg-pink-600 hover:bg-pink-700",
 	},
 	{
 		label: "TikTok",
 		href: "https://tiktok.com",
-		icon: Music2,
+		icon: FaTiktok,
 		color: "bg-black hover:bg-neutral-800",
 	},
 	{
 		label: "WhatsApp",
 		href: "https://wa.me/254700000000",
-		icon: MessageCircleMore,
+		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	},
 ]

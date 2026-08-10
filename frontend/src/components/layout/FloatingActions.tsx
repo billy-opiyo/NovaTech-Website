@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { ArrowUp, MessageCircleMore } from "lucide-react"
+import { FaWhatsapp, FaArrowUp } from "react-icons/fa"
 
 export default function FloatingActions() {
 	const [showToTop, setShowToTop] = useState(false)
@@ -30,7 +30,7 @@ export default function FloatingActions() {
 				aria-label="Chat on WhatsApp"
 				className="fixed bottom-20 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#25D366]/40 focus:outline-none focus:ring-4 focus:ring-[#25D366]/30 sm:h-14 sm:w-14 md:bottom-6 md:left-6"
 			>
-				<MessageCircleMore className="h-5 w-5 sm:h-6 sm:w-6" />
+				<FaWhatsapp className="h-5 w-5 sm:h-6 sm:w-6" />
 			</Link>
 
 			{showToTop && (
@@ -40,7 +40,7 @@ export default function FloatingActions() {
 					aria-label="Back to top"
 					className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/30 sm:h-14 sm:w-14 md:bottom-6 md:right-6"
 				>
-					<ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
+					<FaArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
 				</button>
 			)}
 		</>
