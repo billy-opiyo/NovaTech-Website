@@ -749,16 +749,57 @@ export default function ProductDetailPage() {
 				</div>
 			</div>
 
-			{/* Related Products Section Placeholder */}
 			<section>
 				<h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-					{Array.from({ length: 4 }).map((_, i) => (
-						<div key={i} className="glass-card animate-pulse">
-							<div className="h-40 bg-gray-300 dark:bg-gray-600 rounded-xl mb-4" />
-							<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2" />
-							<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
-						</div>
+					{[
+						{
+							name: "AirPods Pro 2",
+							price: 24999,
+							image:
+								"https://placehold.co/400x400/1e293b/white?text=AirPods+Pro",
+							href: "/products?category=accessories&subcategory=headphones",
+						},
+						{
+							name: "iPhone 15",
+							price: 139999,
+							image: "https://placehold.co/400x400/1e293b/white?text=iPhone+15",
+							href: "/products?category=phones&subcategory=iphone",
+						},
+						{
+							name: "Samsung Galaxy Watch 6",
+							price: 31999,
+							image:
+								"https://placehold.co/400x400/1e293b/white?text=Galaxy+Watch",
+							href: "/products?category=accessories&subcategory=smartwatches",
+						},
+						{
+							name: "Dell XPS 13",
+							price: 209999,
+							image: "https://placehold.co/400x400/1e293b/white?text=Dell+XPS",
+							href: "/products?category=laptops&subcategory=dell",
+						},
+					].map((item) => (
+						<Link
+							key={item.name}
+							href={item.href}
+							className="glass-card block group"
+						>
+							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-4">
+								<Image
+									src={item.image}
+									alt={item.name}
+									fill
+									className="object-cover group-hover:scale-105 transition-transform duration-500"
+								/>
+							</div>
+							<h3 className="font-medium mb-2 group-hover:text-primary transition-colors">
+								{item.name}
+							</h3>
+							<p className="text-primary font-semibold">
+								KES {item.price.toLocaleString()}
+							</p>
+						</Link>
 					))}
 				</div>
 			</section>

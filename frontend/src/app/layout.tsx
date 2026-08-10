@@ -8,8 +8,8 @@ import MobileNav from "@/components/layout/MobileNav"
 
 export const metadata: Metadata = {
 	title: {
-		default: "ElectroBuy - Kenya's Electronics Store",
-		template: "%s | ElectroBuy",
+		default: "NovaTech Store - Kenya's Electronics Store",
+		template: "%s | NovaTech Store",
 	},
 	description:
 		"Shop genuine phones, laptops, accessories with warranty. Fast delivery across Kenya.",
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 	openGraph: {
 		type: "website",
 		locale: "en_KE",
-		url: "https://electrobuy.co.ke",
-		siteName: "ElectroBuy",
-		title: "ElectroBuy - Kenya's Electronics Store",
+		url: "https://novatechstore.co.ke",
+		siteName: "NovaTech Store",
+		title: "NovaTech Store - Kenya's Electronics Store",
 		description:
 			"Shop genuine phones, laptops, accessories with warranty. Fast delivery across Kenya.",
 	},
