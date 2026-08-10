@@ -41,3 +41,7 @@ export default function FloatingActions() {
 				>
 					<FaArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
 				</button>
+			)}
+		</>
+	)
+}
