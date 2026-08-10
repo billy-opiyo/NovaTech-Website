@@ -1,1 +1,13 @@
-
+{
+  "name": "electronics-store",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "yarn workspace frontend dev",
+    "build": "yarn workspace frontend build",
+    "start": "yarn workspace frontend start",
+    "db:migrate": "yarn workspace backend prisma migrate dev",
+    "db:push": "yarn workspace backend prisma db push",
+    "db:seed": "yarn workspace backend prisma db seed"
+  }
+}
