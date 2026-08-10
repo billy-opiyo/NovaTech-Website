@@ -301,7 +301,7 @@ export default function AdminProductsPage() {
 					<select
 						value={sortBy}
 						onChange={(e) => setSortBy(e.target.value)}
-						className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-sm focus:outline-none"
+						className="form-select form-select-sm"
 					>
 						<option value="newest">Newest</option>
 						<option value="oldest">Oldest</option>

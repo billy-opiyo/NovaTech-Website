@@ -188,7 +188,7 @@ export default function WishlistPage() {
 					<select
 						value={sortBy}
 						onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-						className="px-4 py-2 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+						className="form-select form-select-sm"
 					>
 						<option value="recent">Recently Added</option>
 						<option value="price-asc">Price: Low to High</option>
