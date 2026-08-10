@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 
 export async function GET(
 	req: NextRequest,
-	{ params }: { params: { id: string } },
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (!session?.user) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
 
+		const { id } = await params
 		const order = await prisma.order.findUnique({
-			where: { id: params.id },
+			where: { id },
 			include: {
 				items: {
 					include: {
@@ -51,10 +51,10 @@ export async function GET(
 
 export async function PATCH(
 	req: NextRequest,
-	{ params }: { params: { id: string } },
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (
 			!session?.user ||
 			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")
@@ -62,10 +62,11 @@ export async function PATCH(
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 
+		const { id } = await params
 		const { status, trackingNumber } = await req.json()
 
 		const order = await prisma.order.update({
-			where: { id: params.id },
+			where: { id },
 			data: {
 				status,
 				...(trackingNumber && { trackingNumber }),

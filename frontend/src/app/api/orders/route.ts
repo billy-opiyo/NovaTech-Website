@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { z } from "zod"
 
@@ -32,7 +31,7 @@ const orderSchema = z.object({
 
 export async function GET(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (!session?.user) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
@@ -63,7 +62,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
 

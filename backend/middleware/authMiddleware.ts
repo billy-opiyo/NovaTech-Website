@@ -1,9 +1,8 @@
-import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
 
 export async function requireAuth(req: NextRequest) {
-	const session = await getServerSession(authOptions)
+	const session = await getServerSession()
 	if (!session?.user) {
 		return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 	}
@@ -11,7 +10,7 @@ export async function requireAuth(req: NextRequest) {
 }
 
 export async function requireAdmin(req: NextRequest) {
-	const session = await getServerSession(authOptions)
+	const session = await getServerSession()
 	if (
 		!session?.user ||
 		(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")

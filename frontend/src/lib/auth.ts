@@ -4,7 +4,7 @@ import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcrypt"
 import prisma from "backend/lib/db"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions = {
 	providers: [
 		Google({
 			clientId: process.env.AUTH_GOOGLE_ID!,
@@ -43,14 +43,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 		}),
 	],
 	callbacks: {
-		async jwt({ token, user }) {
+		async jwt({ token, user }: any) {
 			if (user) {
 				token.role = user.role
 				token.id = user.id
 			}
 			return token
 		},
-		async session({ session, token }) {
+		async session({ session, token }: any) {
 			if (session.user) {
 				session.user.role = token.role as string
 				session.user.id = token.id as string
@@ -63,6 +63,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 		error: "/auth/error",
 	},
 	session: {
-		strategy: "jwt",
+		strategy: "jwt" as const,
 	},
-})
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authOptions)
+
+export async function getServerSession() {
+	return auth()
+}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
 import * as productService from "../services/productService"
 import { productSchema } from "../validators/productValidator"
 
@@ -8,8 +7,8 @@ export async function getProducts(req: NextRequest) {
 	try {
 		const url = new URL(req.url)
 		const searchParams = url.searchParams
-		const products = await productService.getFilteredProducts(searchParams)
-		return NextResponse.json({ products, total: products.length })
+		const result = await productService.getFilteredProducts(searchParams)
+		return NextResponse.json(result)
 	} catch (error: any) {
 		return NextResponse.json({ message: error.message }, { status: 500 })
 	}
@@ -32,7 +31,7 @@ export async function getProductBySlug(slug: string) {
 
 export async function createProduct(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (
 			!session?.user ||
 			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")

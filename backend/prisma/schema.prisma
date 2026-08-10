@@ -27,6 +27,7 @@ model User {
   cartItems     CartItem[]
   addresses     Address[]
   supportTickets SupportTicket[]
+  notifications Notification[]
 }
 
 model Account {

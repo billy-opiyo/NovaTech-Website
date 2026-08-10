@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { motion } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -8,7 +8,7 @@ import Link from "next/link"
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 
-export default function SignInPage() {
+function SignInForm() {
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const callbackUrl = searchParams.get("callbackUrl") || "/"
@@ -176,5 +176,19 @@ export default function SignInPage() {
 				</div>
 			</motion.div>
 		</div>
+	)
+}
+
+export default function SignInPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-[70vh] flex items-center justify-center">
+					Loading…
+				</div>
+			}
+		>
+			<SignInForm />
+		</Suspense>
 	)
 }

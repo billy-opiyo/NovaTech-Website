@@ -1,6 +1,8 @@
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+const resend = process.env.RESEND_API_KEY
+	? new Resend(process.env.RESEND_API_KEY)
+	: null
 const FROM_EMAIL = "ElectroBuy <orders@electrobuy.co.ke>"
 
 interface EmailOptions {
@@ -10,6 +12,11 @@ interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: EmailOptions) {
+	if (!resend) {
+		console.warn("RESEND_API_KEY is not configured. Skipping email send.")
+		return { id: null }
+	}
+
 	try {
 		const data = await resend.emails.send({
 			from: FROM_EMAIL,

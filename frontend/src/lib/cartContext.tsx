@@ -160,10 +160,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const shippingEstimate = subtotal > 50000 ? 0 : 500 // Free shipping over KES 50,000
 	const total = subtotal + shippingEstimate
 
-	if (!mounted) {
-		return <>{children}</>
-	}
-
 	return (
 		<CartContext.Provider
 			value={{

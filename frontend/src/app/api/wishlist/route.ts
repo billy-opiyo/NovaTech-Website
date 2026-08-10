@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 
 export async function GET(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (!session?.user) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
@@ -37,8 +36,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (!session?.user) {
+			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+		}
+
+		const userId = session.user.id
+		if (!userId) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
 
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
 
 		const existing = await prisma.wishlistItem.findFirst({
 			where: {
-				userId: session.user.id,
+				userId,
 				productId,
 			},
 		})
@@ -60,7 +64,7 @@ export async function POST(req: NextRequest) {
 
 		const wishlistItem = await prisma.wishlistItem.create({
 			data: {
-				userId: session.user.id,
+				userId,
 				productId,
 			},
 			include: {
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
 	try {
-		const session = await getServerSession(authOptions)
+		const session = await getServerSession()
 		if (!session?.user) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
