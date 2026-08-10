@@ -26,7 +26,8 @@ export function RecommendedForYou() {
 				id: "rec-1",
 				name: "Samsung Galaxy S24 Ultra",
 				brand: "Samsung",
-				image: "https://placehold.co/300x300/1e293b/white?text=S24+Ultra",
+				image:
+					"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=600&q=80",
 				price: 134999,
 				rating: 4.7,
 				reason: "Based on your phone searches",
@@ -35,7 +36,8 @@ export function RecommendedForYou() {
 				id: "rec-2",
 				name: "AirPods Pro 2",
 				brand: "Apple",
-				image: "https://placehold.co/300x300/1e293b/white?text=AirPods",
+				image:
+					"https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=600&q=80",
 				price: 32999,
 				discountedPrice: 29999,
 				rating: 4.8,
@@ -45,7 +47,8 @@ export function RecommendedForYou() {
 				id: "rec-3",
 				name: 'Samsung 65" OLED TV',
 				brand: "Samsung",
-				image: "https://placehold.co/300x300/1e293b/white?text=OLED+TV",
+				image:
+					"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
 				price: 199999,
 				rating: 4.6,
 				reason: "Customers also viewed",
@@ -54,7 +57,8 @@ export function RecommendedForYou() {
 				id: "rec-4",
 				name: "Logitech MX Master 3S",
 				brand: "Logitech",
-				image: "https://placehold.co/300x300/1e293b/white?text=MX+Master",
+				image:
+					"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80",
 				price: 14999,
 				rating: 4.9,
 				reason: "Popular in accessories",
@@ -201,7 +205,8 @@ export function TrendingNow() {
 				id: "trend-1",
 				name: "iPhone 15 Pro Max",
 				brand: "Apple",
-				image: "https://placehold.co/300x300/1e293b/white?text=iPhone+15",
+				image:
+					"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
 				price: 159999,
 				discountedPrice: 149999,
 				rating: 4.8,
@@ -211,7 +216,8 @@ export function TrendingNow() {
 				id: "trend-2",
 				name: "MacBook Air M3",
 				brand: "Apple",
-				image: "https://placehold.co/300x300/1e293b/white?text=MacBook",
+				image:
+					"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
 				price: 189999,
 				discountedPrice: 174999,
 				rating: 4.9,
@@ -221,7 +227,8 @@ export function TrendingNow() {
 				id: "trend-3",
 				name: "Sony WH-1000XM5",
 				brand: "Sony",
-				image: "https://placehold.co/300x300/1e293b/white?text=Sony+WH",
+				image:
+					"https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=600&q=80",
 				price: 34999,
 				rating: 4.6,
 				reason: "💥 Trending in Audio",
@@ -230,7 +237,8 @@ export function TrendingNow() {
 				id: "trend-4",
 				name: "PlayStation 5",
 				brand: "Sony",
-				image: "https://placehold.co/300x300/1e293b/white?text=PS5",
+				image:
+					"https://images.unsplash.com/photo-1587202372775-f4b746c6bd84?auto=format&fit=crop&w=600&q=80",
 				price: 74999,
 				rating: 4.9,
 				reason: "🎮 Hot in Gaming",

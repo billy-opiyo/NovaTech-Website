@@ -22,22 +22,26 @@ const categoryData: Record<
 		subcategories: [
 			{
 				name: "iPhone",
-				image: "https://placehold.co/400x300/1e293b/white?text=iPhone",
+				image:
+					"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80",
 				slug: "iphone",
 			},
 			{
 				name: "Samsung Galaxy",
-				image: "https://placehold.co/400x300/1e293b/white?text=Samsung",
+				image:
+					"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=800&q=80",
 				slug: "samsung",
 			},
 			{
 				name: "Google Pixel",
-				image: "https://placehold.co/400x300/1e293b/white?text=Pixel",
+				image:
+					"https://images.unsplash.com/photo-1510557880182-3ef88e0b9da8?auto=format&fit=crop&w=800&q=80",
 				slug: "pixel",
 			},
 			{
 				name: "OnePlus",
-				image: "https://placehold.co/400x300/1e293b/white?text=OnePlus",
+				image:
+					"https://images.unsplash.com/photo-1512499617640-c2f9993581af?auto=format&fit=crop&w=800&q=80",
 				slug: "oneplus",
 			},
 		],
@@ -49,22 +53,26 @@ const categoryData: Record<
 		subcategories: [
 			{
 				name: "MacBook",
-				image: "https://placehold.co/400x300/1e293b/white?text=MacBook",
+				image:
+					"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
 				slug: "macbook",
 			},
 			{
 				name: "Dell",
-				image: "https://placehold.co/400x300/1e293b/white?text=Dell",
+				image:
+					"https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80",
 				slug: "dell",
 			},
 			{
 				name: "HP",
-				image: "https://placehold.co/400x300/1e293b/white?text=HP",
+				image:
+					"https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=800&q=80",
 				slug: "hp",
 			},
 			{
 				name: "Gaming Laptops",
-				image: "https://placehold.co/400x300/1e293b/white?text=Gaming",
+				image:
+					"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
 				slug: "gaming-laptops",
 			},
 		],
@@ -76,17 +84,20 @@ const categoryData: Record<
 		subcategories: [
 			{
 				name: "iPad",
-				image: "https://placehold.co/400x300/1e293b/white?text=iPad",
+				image:
+					"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
 				slug: "ipad",
 			},
 			{
 				name: "Samsung Galaxy Tab",
-				image: "https://placehold.co/400x300/1e293b/white?text=Galaxy+Tab",
+				image:
+					"https://images.unsplash.com/photo-1555529669-185670d0b904?auto=format&fit=crop&w=800&q=80",
 				slug: "galaxy-tab",
 			},
 			{
 				name: "Microsoft Surface",
-				image: "https://placehold.co/400x300/1e293b/white?text=Surface",
+				image:
+					"https://images.unsplash.com/photo-1532124347401-0cca7a27cfe9?auto=format&fit=crop&w=800&q=80",
 				slug: "surface",
 			},
 		],
@@ -98,22 +109,26 @@ const categoryData: Record<
 		subcategories: [
 			{
 				name: "Headphones",
-				image: "https://placehold.co/400x300/1e293b/white?text=Headphones",
+				image:
+					"https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=800&q=80",
 				slug: "headphones",
 			},
 			{
 				name: "Chargers & Cables",
-				image: "https://placehold.co/400x300/1e293b/white?text=Chargers",
+				image:
+					"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
 				slug: "chargers",
 			},
 			{
 				name: "Cases & Covers",
-				image: "https://placehold.co/400x300/1e293b/white?text=Cases",
+				image:
+					"https://images.unsplash.com/photo-1496180727794-817822f65950?auto=format&fit=crop&w=800&q=80",
 				slug: "cases",
 			},
 			{
 				name: "Smartwatches",
-				image: "https://placehold.co/400x300/1e293b/white?text=Watches",
+				image:
+					"https://images.unsplash.com/photo-1525186402429-7b3aef8d2ca3?auto=format&fit=crop&w=800&q=80",
 				slug: "smartwatches",
 			},
 		],
@@ -125,17 +140,20 @@ const categoryData: Record<
 		subcategories: [
 			{
 				name: "Consoles",
-				image: "https://placehold.co/400x300/1e293b/white?text=Consoles",
+				image:
+					"https://images.unsplash.com/photo-1587202372775-f4b746c6bd84?auto=format&fit=crop&w=800&q=80",
 				slug: "consoles",
 			},
 			{
 				name: "Gaming PCs",
-				image: "https://placehold.co/400x300/1e293b/white?text=Gaming+PCs",
+				image:
+					"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
 				slug: "gaming-pcs",
 			},
 			{
 				name: "Controllers",
-				image: "https://placehold.co/400x300/1e293b/white?text=Controllers",
+				image:
+					"https://images.unsplash.com/photo-1510552776732-03e61cf4b144?auto=format&fit=crop&w=800&q=80",
 				slug: "controllers",
 			},
 		],

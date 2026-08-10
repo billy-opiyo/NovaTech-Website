@@ -45,7 +45,8 @@ const mockProducts: AdminProduct[] = [
 		price: 159999,
 		stock: 25,
 		status: "active",
-		image: "https://placehold.co/100x100/1e293b/white?text=IP15",
+		image:
+			"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=200&q=80",
 		sales: 145,
 		rating: 4.8,
 		lastUpdated: "2024-08-20",
@@ -58,7 +59,8 @@ const mockProducts: AdminProduct[] = [
 		price: 189999,
 		stock: 15,
 		status: "active",
-		image: "https://placehold.co/100x100/1e293b/white?text=MBA",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80",
 		sales: 89,
 		rating: 4.9,
 		lastUpdated: "2024-08-19",
@@ -71,7 +73,8 @@ const mockProducts: AdminProduct[] = [
 		price: 134999,
 		stock: 30,
 		status: "active",
-		image: "https://placehold.co/100x100/1e293b/white?text=S24",
+		image:
+			"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=200&q=80",
 		sales: 112,
 		rating: 4.7,
 		lastUpdated: "2024-08-18",
@@ -84,7 +87,8 @@ const mockProducts: AdminProduct[] = [
 		price: 34999,
 		stock: 0,
 		status: "out_of_stock",
-		image: "https://placehold.co/100x100/1e293b/white?text=WH",
+		image:
+			"https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=200&q=80",
 		sales: 67,
 		rating: 4.6,
 		lastUpdated: "2024-08-17",
@@ -97,7 +101,8 @@ const mockProducts: AdminProduct[] = [
 		price: 159999,
 		stock: 8,
 		status: "active",
-		image: "https://placehold.co/100x100/1e293b/white?text=XPS",
+		image:
+			"https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=200&q=80",
 		sales: 34,
 		rating: 4.5,
 		lastUpdated: "2024-08-16",
@@ -110,7 +115,8 @@ const mockProducts: AdminProduct[] = [
 		price: 74999,
 		stock: 10,
 		status: "active",
-		image: "https://placehold.co/100x100/1e293b/white?text=PS5",
+		image:
+			"https://images.unsplash.com/photo-1587202372775-f4b746c6bd84?auto=format&fit=crop&w=200&q=80",
 		sales: 78,
 		rating: 4.9,
 		lastUpdated: "2024-08-15",
@@ -123,7 +129,8 @@ const mockProducts: AdminProduct[] = [
 		price: 2999,
 		stock: 50,
 		status: "archived",
-		image: "https://placehold.co/100x100/1e293b/white?text=OLD",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80",
 		sales: 12,
 		rating: 3.2,
 		lastUpdated: "2024-06-01",
@@ -136,7 +143,8 @@ const mockProducts: AdminProduct[] = [
 		price: 8999,
 		stock: 100,
 		status: "draft",
-		image: "https://placehold.co/100x100/1e293b/white?text=NEW",
+		image:
+			"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=200&q=80",
 		sales: 0,
 		rating: 0,
 		lastUpdated: "2024-08-21",

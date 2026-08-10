@@ -50,7 +50,8 @@ const mockCompareProducts: CompareProduct[] = [
 		id: "prod-1",
 		name: "MacBook Air M3",
 		brand: "Apple",
-		image: "https://placehold.co/300x300/1e293b/white?text=MacBook+Air",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
 		price: 189999,
 		discountedPrice: 174999,
 		rating: 4.8,
@@ -71,7 +72,8 @@ const mockCompareProducts: CompareProduct[] = [
 		id: "prod-2",
 		name: "Dell XPS 15",
 		brand: "Dell",
-		image: "https://placehold.co/300x300/1e293b/white?text=Dell+XPS",
+		image:
+			"https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80",
 		price: 159999,
 		rating: 4.5,
 		specs: {
@@ -91,7 +93,8 @@ const mockCompareProducts: CompareProduct[] = [
 		id: "prod-3",
 		name: "HP Spectre x360",
 		brand: "HP",
-		image: "https://placehold.co/300x300/1e293b/white?text=HP+Spectre",
+		image:
+			"https://images.unsplash.com/photo-1496180727794-817822f65950?auto=format&fit=crop&w=600&q=80",
 		price: 144999,
 		discountedPrice: 134999,
 		rating: 4.6,

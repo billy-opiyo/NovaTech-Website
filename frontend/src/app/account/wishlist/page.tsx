@@ -36,7 +36,8 @@ const mockWishlist: WishlistProduct[] = [
 		slug: "iphone-15-pro-max",
 		price: 159999,
 		discountedPrice: 149999,
-		image: "https://placehold.co/400x400/1e293b/white?text=iPhone+15",
+		image:
+			"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=500&q=80",
 		rating: 4.8,
 		stock: 25,
 		addedAt: "2024-08-20",
@@ -49,7 +50,8 @@ const mockWishlist: WishlistProduct[] = [
 		slug: "macbook-air-m3",
 		price: 189999,
 		discountedPrice: 174999,
-		image: "https://placehold.co/400x400/1e293b/white?text=MacBook+Air",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
 		rating: 4.9,
 		stock: 15,
 		addedAt: "2024-08-18",
@@ -61,7 +63,8 @@ const mockWishlist: WishlistProduct[] = [
 		brand: "Sony",
 		slug: "sony-wh-1000xm5",
 		price: 34999,
-		image: "https://placehold.co/400x400/1e293b/white?text=Sony+WH",
+		image:
+			"https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=500&q=80",
 		rating: 4.6,
 		stock: 40,
 		addedAt: "2024-08-15",
@@ -73,7 +76,8 @@ const mockWishlist: WishlistProduct[] = [
 		brand: "Samsung",
 		slug: "samsung-galaxy-s24-ultra",
 		price: 134999,
-		image: "https://placehold.co/400x400/1e293b/white?text=Galaxy+S24",
+		image:
+			"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=500&q=80",
 		rating: 4.7,
 		stock: 30,
 		addedAt: "2024-08-10",
@@ -85,7 +89,8 @@ const mockWishlist: WishlistProduct[] = [
 		brand: "Sony",
 		slug: "playstation-5",
 		price: 74999,
-		image: "https://placehold.co/400x400/1e293b/white?text=PS5",
+		image:
+			"https://images.unsplash.com/photo-1587202372775-f4b746c6bd84?auto=format&fit=crop&w=500&q=80",
 		rating: 4.9,
 		stock: 10,
 		addedAt: "2024-08-05",

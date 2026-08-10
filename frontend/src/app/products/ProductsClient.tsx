@@ -104,7 +104,9 @@ const mockProducts: Product[] = Array.from({ length: 24 }, (_, i) => ({
 	discountedPrice:
 		Math.random() > 0.6 ? Math.floor(Math.random() * 130000) + 3000 : undefined,
 	brand: brands[Math.floor(Math.random() * brands.length)],
-	images: [`https://placehold.co/400x400/1e293b/white?text=Product+${i + 1}`],
+	images: [
+		"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
+	],
 	category: categories[Math.floor(Math.random() * 5) + 1],
 	rating: Math.random() * 2 + 3,
 	reviewCount: Math.floor(Math.random() * 500) + 10,

@@ -67,14 +67,16 @@ export default function SearchOverlay() {
 				type: "product",
 				text: "iPhone 15 Pro Max 256GB",
 				href: "/products/iphone-15-pro-max",
-				image: "https://placehold.co/50x50/1e293b/white?text=IP",
+				image:
+					"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=100&q=80",
 				price: 159999,
 			},
 			{
 				type: "product",
 				text: "iPhone 15 Plus",
 				href: "/products/iphone-15-plus",
-				image: "https://placehold.co/50x50/1e293b/white?text=IP",
+				image:
+					"https://images.unsplash.com/photo-1510557880182-3ef88e0b9da8?auto=format&fit=crop&w=100&q=80",
 				price: 129999,
 			},
 			{

@@ -8,22 +8,26 @@ import { ArrowRight, Star } from "lucide-react"
 const categories = [
 	{
 		name: "Phones",
-		image: "https://placehold.co/300x200/0070f3/white?text=Phones",
+		image:
+			"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80",
 		slug: "phones",
 	},
 	{
 		name: "Laptops",
-		image: "https://placehold.co/300x200/0070f3/white?text=Laptops",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
 		slug: "laptops",
 	},
 	{
 		name: "Tablets",
-		image: "https://placehold.co/300x200/0070f3/white?text=Tablets",
+		image:
+			"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
 		slug: "tablets",
 	},
 	{
 		name: "Accessories",
-		image: "https://placehold.co/300x200/0070f3/white?text=Accessories",
+		image:
+			"https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80",
 		slug: "accessories",
 	},
 ]
@@ -34,14 +38,16 @@ const featuredProducts = [
 		name: "iPhone 15 Pro Max",
 		price: 159999,
 		discountedPrice: 149999,
-		image: "https://placehold.co/300x300/1e293b/white?text=iPhone+15",
+		image:
+			"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=80",
 		rating: 4.8,
 	},
 	{
 		id: "2",
 		name: "Samsung Galaxy S24 Ultra",
 		price: 134999,
-		image: "https://placehold.co/300x300/1e293b/white?text=Galaxy+S24",
+		image:
+			"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=700&q=80",
 		rating: 4.7,
 	},
 	{
@@ -49,14 +55,16 @@ const featuredProducts = [
 		name: "MacBook Air M3",
 		price: 189999,
 		discountedPrice: 174999,
-		image: "https://placehold.co/300x300/1e293b/white?text=MacBook+Air",
+		image:
+			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&q=80",
 		rating: 4.9,
 	},
 	{
 		id: "4",
 		name: "Sony WH-1000XM5",
 		price: 34999,
-		image: "https://placehold.co/300x300/1e293b/white?text=Sony+WH",
+		image:
+			"https://images.unsplash.com/photo-1512499617640-c2f9993581af?auto=format&fit=crop&w=700&q=80",
 		rating: 4.6,
 	},
 ]
