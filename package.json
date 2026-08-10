@@ -1,20 +1,21 @@
 {
-  "name": "electronics-store",
-  "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
-  "scripts": {
-    "dev": "yarn workspace frontend dev",
-    "build": "yarn workspace frontend build",
-    "start": "yarn workspace frontend start",
-    "db:migrate": "yarn workspace backend prisma migrate dev",
-    "db:push": "yarn workspace backend prisma db push",
-    "db:seed": "yarn workspace backend prisma db seed"
-  },
-  "dependencies": {
-    "lucide-react": "^1.31.0",
-    "react-icons": "^5.7.0"
-  }
+	"name": "electronics-store",
+	"private": true,
+	"workspaces": [
+		"frontend",
+		"backend"
+	],
+	"scripts": {
+		"dev": "npm --workspace frontend run dev",
+		"dev:open": "start \"\" http://localhost:3000 && npm --workspace frontend run dev",
+		"build": "npm --workspace frontend run build",
+		"start": "npm --workspace frontend run start",
+		"db:migrate": "npm --workspace backend run db:migrate",
+		"db:push": "npm --workspace backend run db:push",
+		"db:seed": "npm --workspace backend run db:seed"
+	},
+	"dependencies": {
+		"lucide-react": "^1.31.0",
+		"react-icons": "^5.7.0"
+	}
 }

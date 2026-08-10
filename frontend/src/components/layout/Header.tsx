@@ -26,14 +26,13 @@ export default function Header() {
 				<div className="flex justify-between items-center py-3 sm:py-4 gap-2">
 					{/* Logo */}
 					<Link href="/" className="flex items-center gap-2 min-w-0">
-					<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white text-lg font-black shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-						N
-					</div>
-					<span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
-						NovaTech Store
-					</span>
-
-					{/* Desktop Nav */}
+						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white text-lg font-black shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
+							N
+						</div>
+						<span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
+							NovaTech Store
+						</span>
+					</Link>
 					<nav className="hidden md:flex gap-4 lg:gap-6">
 						{navLinks.map((link) => (
 							<Link
