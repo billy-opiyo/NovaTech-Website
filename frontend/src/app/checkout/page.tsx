@@ -1,0 +1,792 @@
+"use client"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useCart } from "@/lib/cartContext"
+import {
+	ArrowLeft,
+	Check,
+	ChevronRight,
+	ChevronLeft,
+	Truck,
+	Store,
+	CreditCard,
+	Smartphone,
+	MapPin,
+	User,
+	Phone,
+	Mail,
+	Home,
+	AlertCircle,
+	Shield,
+	Package,
+	Clock,
+} from "lucide-react"
+import clsx from "clsx"
+
+interface ShippingAddress {
+	fullName: string
+	phone: string
+	email: string
+	county: string
+	town: string
+	address: string
+	landmark?: string
+}
+
+interface DeliveryOption {
+	id: string
+	name: string
+	description: string
+	price: number
+	duration: string
+	icon: React.ReactNode
+}
+
+const kenyaCounties = [
+	"Nairobi",
+	"Mombasa",
+	"Kisumu",
+	"Nakuru",
+	"Eldoret",
+	"Thika",
+	"Nyeri",
+	"Machakos",
+	"Meru",
+	"Nanyuki",
+	"Kitale",
+	"Malindi",
+	"Kakamega",
+	"Kisii",
+	"Embu",
+	"Garissa",
+	"Other",
+]
+
+const deliveryOptions: DeliveryOption[] = [
+	{
+		id: "standard",
+		name: "Standard Delivery",
+		description: "Via partner courier",
+		price: 500,
+		duration: "2-5 business days",
+		icon: <Truck size={24} />,
+	},
+	{
+		id: "express",
+		name: "Express Delivery",
+		description: "Priority shipping",
+		price: 1000,
+		duration: "1-2 business days",
+		icon: <Package size={24} />,
+	},
+	{
+		id: "pickup",
+		name: "Store Pickup",
+		description: "Nairobi CBD",
+		price: 0,
+		duration: "Ready in 2 hours",
+		icon: <Store size={24} />,
+	},
+]
+
+const paymentMethods = [
+	{
+		id: "mpesa",
+		name: "M-Pesa",
+		icon: <Smartphone size={20} />,
+		description: "Pay via Lipa na M-Pesa",
+	},
+	{
+		id: "cod",
+		name: "Cash on Delivery",
+		icon: <CreditCard size={20} />,
+		description: "Pay when you receive",
+	},
+]
+
+type CheckoutStep = "shipping" | "delivery" | "payment" | "review"
+
+export default function CheckoutPage() {
+	const router = useRouter()
+	const { items, subtotal, total, itemCount, clearCart } = useCart()
+	const [currentStep, setCurrentStep] = useState<CheckoutStep>("shipping")
+	const [isProcessing, setIsProcessing] = useState(false)
+	const [orderComplete, setOrderComplete] = useState(false)
+	const [orderNumber, setOrderNumber] = useState("")
+
+	const [shipping, setShipping] = useState<ShippingAddress>({
+		fullName: "",
+		phone: "",
+		email: "",
+		county: "",
+		town: "",
+		address: "",
+		landmark: "",
+	})
+	const [selectedDelivery, setSelectedDelivery] = useState<string>("standard")
+	const [selectedPayment, setSelectedPayment] = useState<string>("mpesa")
+	const [mpesaPhone, setMpesaPhone] = useState("")
+	const [saveInfo, setSaveInfo] = useState(false)
+	const [errors, setErrors] = useState<
+		Partial<Record<keyof ShippingAddress | "payment", string>>
+	>({})
+
+	const deliveryCost =
+		deliveryOptions.find((d) => d.id === selectedDelivery)?.price || 0
+	const orderTotal = total + deliveryCost
+
+	const validateShipping = () => {
+		const newErrors: typeof errors = {}
+		if (!shipping.fullName.trim()) newErrors.fullName = "Full name is required"
+		if (!shipping.phone.match(/^07\d{8}$/))
+			newErrors.phone = "Valid Kenyan phone number required (07XXXXXXXX)"
+		if (!shipping.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+			newErrors.email = "Valid email is required"
+		if (!shipping.county) newErrors.county = "County is required"
+		if (!shipping.town.trim()) newErrors.town = "Town is required"
+		if (!shipping.address.trim()) newErrors.address = "Address is required"
+		setErrors(newErrors)
+		return Object.keys(newErrors).length === 0
+	}
+
+	const validatePayment = () => {
+		if (selectedPayment === "mpesa" && !mpesaPhone.match(/^07\d{8}$/)) {
+			setErrors({ payment: "Valid M-Pesa phone number required" })
+			return false
+		}
+		setErrors({})
+		return true
+	}
+
+	const handleNext = () => {
+		if (currentStep === "shipping" && validateShipping()) {
+			setCurrentStep("delivery")
+		} else if (currentStep === "delivery") {
+			setCurrentStep("payment")
+		} else if (currentStep === "payment" && validatePayment()) {
+			setCurrentStep("review")
+		}
+	}
+
+	const handleBack = () => {
+		if (currentStep === "delivery") setCurrentStep("shipping")
+		else if (currentStep === "payment") setCurrentStep("delivery")
+		else if (currentStep === "review") setCurrentStep("payment")
+	}
+
+	const handlePlaceOrder = async () => {
+		setIsProcessing(true)
+		await new Promise((resolve) => setTimeout(resolve, 2000))
+		setOrderNumber(`EB-${Date.now().toString(36).toUpperCase()}`)
+		setOrderComplete(true)
+		clearCart()
+		setIsProcessing(false)
+	}
+
+	const steps: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
+		{ key: "shipping", label: "Shipping", icon: <MapPin size={18} /> },
+		{ key: "delivery", label: "Delivery", icon: <Truck size={18} /> },
+		{ key: "payment", label: "Payment", icon: <CreditCard size={18} /> },
+		{ key: "review", label: "Review", icon: <Check size={18} /> },
+	]
+
+	if (items.length === 0 && !orderComplete) {
+		return (
+			<div className="text-center py-20">
+				<h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+				<Link href="/products" className="btn-primary">
+					Continue Shopping
+				</Link>
+			</div>
+		)
+	}
+
+	if (orderComplete) {
+		return (
+			<motion.div
+				initial={{ opacity: 0, scale: 0.9 }}
+				animate={{ opacity: 1, scale: 1 }}
+				className="max-w-2xl mx-auto text-center py-16"
+			>
+				<div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
+					<Check size={48} className="text-green-500" />
+				</div>
+				<h1 className="text-3xl font-bold mb-4">Order Confirmed!</h1>
+				<p className="text-gray-500 mb-2">Thank you for your purchase.</p>
+				<p className="text-lg font-semibold mb-6">Order #{orderNumber}</p>
+				<p className="text-sm text-gray-500 mb-8">
+					A confirmation email has been sent to {shipping.email}. You will
+					receive updates via WhatsApp on {shipping.phone}.
+				</p>
+				<div className="flex gap-4 justify-center">
+					<Link href="/account/orders" className="btn-primary">
+						Track Order
+					</Link>
+					<Link
+						href="/products"
+						className="border border-primary text-primary px-6 py-2 rounded-lg hover:bg-primary hover:text-white transition"
+					>
+						Continue Shopping
+					</Link>
+				</div>
+			</motion.div>
+		)
+	}
+
+	return (
+		<div>
+			<Link
+				href="/cart"
+				className="flex items-center gap-1 text-gray-500 hover:text-primary transition mb-8"
+			>
+				<ArrowLeft size={18} /> Back to Cart
+			</Link>
+
+			<div className="flex items-center justify-center mb-12">
+				{steps.map((step, i) => (
+					<div key={step.key} className="flex items-center">
+						<div
+							className={clsx(
+								"flex items-center gap-2 px-4 py-2 rounded-full text-sm transition",
+								steps.findIndex((s) => s.key === currentStep) >= i
+									? "bg-primary text-white"
+									: "bg-gray-200 dark:bg-gray-700 text-gray-500",
+							)}
+						>
+							{step.icon}
+							<span className="hidden sm:inline">{step.label}</span>
+						</div>
+						{i < steps.length - 1 && (
+							<div
+								className={clsx(
+									"w-8 h-0.5 mx-1",
+									steps.findIndex((s) => s.key === currentStep) > i
+										? "bg-primary"
+										: "bg-gray-300 dark:bg-gray-600",
+								)}
+							/>
+						)}
+					</div>
+				))}
+			</div>
+
+			<div className="grid lg:grid-cols-3 gap-8">
+				<div className="lg:col-span-2">
+					<AnimatePresence mode="wait">
+						{currentStep === "shipping" && (
+							<motion.div
+								key="shipping"
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: 1, x: 0 }}
+								exit={{ opacity: 0, x: 20 }}
+								className="glass-card p-6 md:p-8"
+							>
+								<h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+									<MapPin size={24} className="text-primary" /> Shipping
+									Information
+								</h2>
+
+								<div className="grid md:grid-cols-2 gap-4">
+									<div className="md:col-span-2">
+										<label className="block text-sm font-medium mb-1">
+											Full Name *
+										</label>
+										<input
+											type="text"
+											value={shipping.fullName}
+											onChange={(e) =>
+												setShipping({ ...shipping, fullName: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="John Doe"
+										/>
+										{errors.fullName && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.fullName}
+											</p>
+										)}
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium mb-1">
+											Phone Number *
+										</label>
+										<input
+											type="tel"
+											value={shipping.phone}
+											onChange={(e) =>
+												setShipping({ ...shipping, phone: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="0712345678"
+										/>
+										{errors.phone && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.phone}
+											</p>
+										)}
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium mb-1">
+											Email Address *
+										</label>
+										<input
+											type="email"
+											value={shipping.email}
+											onChange={(e) =>
+												setShipping({ ...shipping, email: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="john@example.com"
+										/>
+										{errors.email && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.email}
+											</p>
+										)}
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium mb-1">
+											County *
+										</label>
+										<select
+											value={shipping.county}
+											onChange={(e) =>
+												setShipping({ ...shipping, county: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+										>
+											<option value="">Select County</option>
+											{kenyaCounties.map((county) => (
+												<option key={county} value={county}>
+													{county}
+												</option>
+											))}
+										</select>
+										{errors.county && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.county}
+											</p>
+										)}
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium mb-1">
+											Town/City *
+										</label>
+										<input
+											type="text"
+											value={shipping.town}
+											onChange={(e) =>
+												setShipping({ ...shipping, town: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="e.g., Westlands"
+										/>
+										{errors.town && (
+											<p className="text-red-500 text-xs mt-1">{errors.town}</p>
+										)}
+									</div>
+
+									<div className="md:col-span-2">
+										<label className="block text-sm font-medium mb-1">
+											Delivery Address *
+										</label>
+										<input
+											type="text"
+											value={shipping.address}
+											onChange={(e) =>
+												setShipping({ ...shipping, address: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="House/Apartment number, Street name"
+										/>
+										{errors.address && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.address}
+											</p>
+										)}
+									</div>
+
+									<div className="md:col-span-2">
+										<label className="block text-sm font-medium mb-1">
+											Landmark (Optional)
+										</label>
+										<input
+											type="text"
+											value={shipping.landmark}
+											onChange={(e) =>
+												setShipping({ ...shipping, landmark: e.target.value })
+											}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="e.g., Near Kenyatta Hospital"
+										/>
+									</div>
+
+									<div className="md:col-span-2">
+										<label className="flex items-center gap-2 cursor-pointer">
+											<input
+												type="checkbox"
+												checked={saveInfo}
+												onChange={(e) => setSaveInfo(e.target.checked)}
+												className="accent-primary rounded"
+											/>
+											<span className="text-sm">
+												Save this information for next time
+											</span>
+										</label>
+									</div>
+								</div>
+
+								<div className="flex justify-end mt-8">
+									<button
+										onClick={handleNext}
+										className="btn-primary flex items-center gap-2"
+									>
+										Continue to Delivery <ChevronRight size={18} />
+									</button>
+								</div>
+							</motion.div>
+						)}
+
+						{currentStep === "delivery" && (
+							<motion.div
+								key="delivery"
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: 1, x: 0 }}
+								exit={{ opacity: 0, x: 20 }}
+								className="glass-card p-6 md:p-8"
+							>
+								<h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+									<Truck size={24} className="text-primary" /> Delivery Method
+								</h2>
+
+								<div className="space-y-4">
+									{deliveryOptions.map((option) => (
+										<label
+											key={option.id}
+											className={clsx(
+												"flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition",
+												selectedDelivery === option.id
+													? "border-primary bg-primary/5"
+													: "border-gray-200 dark:border-gray-700 hover:border-primary/50",
+											)}
+										>
+											<input
+												type="radio"
+												name="delivery"
+												value={option.id}
+												checked={selectedDelivery === option.id}
+												onChange={(e) => setSelectedDelivery(e.target.value)}
+												className="mt-1 accent-primary"
+											/>
+											<div className="flex-1">
+												<div className="flex items-center gap-2">
+													<span className="text-primary">{option.icon}</span>
+													<span className="font-semibold">{option.name}</span>
+												</div>
+												<p className="text-sm text-gray-500 mt-1">
+													{option.description}
+												</p>
+												<p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+													<Clock size={14} /> {option.duration}
+												</p>
+											</div>
+											<span className="font-semibold">
+												{option.price === 0
+													? "FREE"
+													: `KES ${option.price.toLocaleString()}`}
+											</span>
+										</label>
+									))}
+								</div>
+
+								<div className="flex justify-between mt-8">
+									<button
+										onClick={handleBack}
+										className="flex items-center gap-1 text-gray-500 hover:text-primary transition"
+									>
+										<ChevronLeft size={18} /> Back
+									</button>
+									<button
+										onClick={handleNext}
+										className="btn-primary flex items-center gap-2"
+									>
+										Continue to Payment <ChevronRight size={18} />
+									</button>
+								</div>
+							</motion.div>
+						)}
+
+						{currentStep === "payment" && (
+							<motion.div
+								key="payment"
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: 1, x: 0 }}
+								exit={{ opacity: 0, x: 20 }}
+								className="glass-card p-6 md:p-8"
+							>
+								<h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+									<CreditCard size={24} className="text-primary" /> Payment
+									Method
+								</h2>
+
+								<div className="space-y-4">
+									{paymentMethods.map((method) => (
+										<label
+											key={method.id}
+											className={clsx(
+												"flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition",
+												selectedPayment === method.id
+													? "border-primary bg-primary/5"
+													: "border-gray-200 dark:border-gray-700 hover:border-primary/50",
+											)}
+										>
+											<input
+												type="radio"
+												name="payment"
+												value={method.id}
+												checked={selectedPayment === method.id}
+												onChange={(e) => setSelectedPayment(e.target.value)}
+												className="mt-1 accent-primary"
+											/>
+											<div className="flex-1">
+												<div className="flex items-center gap-2">
+													<span className="text-primary">{method.icon}</span>
+													<span className="font-semibold">{method.name}</span>
+												</div>
+												<p className="text-sm text-gray-500 mt-1">
+													{method.description}
+												</p>
+											</div>
+										</label>
+									))}
+								</div>
+
+								{selectedPayment === "mpesa" && (
+									<motion.div
+										initial={{ opacity: 0, height: 0 }}
+										animate={{ opacity: 1, height: "auto" }}
+										className="mt-6"
+									>
+										<label className="block text-sm font-medium mb-2">
+											M-Pesa Phone Number *
+										</label>
+										<input
+											type="tel"
+											value={mpesaPhone}
+											onChange={(e) => setMpesaPhone(e.target.value)}
+											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+											placeholder="0712345678"
+										/>
+										<p className="text-xs text-gray-500 mt-2">
+											You will receive an M-Pesa prompt on this number to
+											complete payment.
+										</p>
+										{errors.payment && (
+											<p className="text-red-500 text-xs mt-1">
+												{errors.payment}
+											</p>
+										)}
+									</motion.div>
+								)}
+
+								<div className="flex justify-between mt-8">
+									<button
+										onClick={handleBack}
+										className="flex items-center gap-1 text-gray-500 hover:text-primary transition"
+									>
+										<ChevronLeft size={18} /> Back
+									</button>
+									<button
+										onClick={handleNext}
+										className="btn-primary flex items-center gap-2"
+									>
+										Review Order <ChevronRight size={18} />
+									</button>
+								</div>
+							</motion.div>
+						)}
+
+						{currentStep === "review" && (
+							<motion.div
+								key="review"
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: 1, x: 0 }}
+								exit={{ opacity: 0, x: 20 }}
+								className="glass-card p-6 md:p-8"
+							>
+								<h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+									<Check size={24} className="text-primary" /> Review Your Order
+								</h2>
+
+								<div className="mb-6">
+									<h3 className="font-medium mb-2 flex items-center gap-2">
+										<MapPin size={16} /> Shipping Address
+									</h3>
+									<div className="bg-black/5 dark:bg-white/5 rounded-lg p-4 text-sm">
+										<p className="font-medium">{shipping.fullName}</p>
+										<p>{shipping.phone}</p>
+										<p>
+											{shipping.address}, {shipping.town}
+										</p>
+										<p>{shipping.county}</p>
+									</div>
+								</div>
+
+								<div className="mb-6">
+									<h3 className="font-medium mb-2">
+										Order Items ({itemCount})
+									</h3>
+									<div className="space-y-3">
+										{items.map((item) => (
+											<div
+												key={item.id}
+												className="flex gap-3 bg-black/5 dark:bg-white/5 rounded-lg p-3"
+											>
+												<div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0">
+													<Image
+														src={item.image}
+														alt={item.name}
+														fill
+														className="object-cover"
+													/>
+												</div>
+												<div className="flex-1 min-w-0">
+													<p className="font-medium truncate">{item.name}</p>
+													<p className="text-sm text-gray-500">
+														Qty: {item.quantity}
+													</p>
+												</div>
+												<p className="font-medium">
+													KES {(item.price * item.quantity).toLocaleString()}
+												</p>
+											</div>
+										))}
+									</div>
+								</div>
+
+								<div className="grid md:grid-cols-2 gap-4 mb-6">
+									<div className="bg-black/5 dark:bg-white/5 rounded-lg p-4">
+										<p className="text-sm text-gray-500">Delivery Method</p>
+										<p className="font-medium">
+											{
+												deliveryOptions.find((d) => d.id === selectedDelivery)
+													?.name
+											}
+										</p>
+									</div>
+									<div className="bg-black/5 dark:bg-white/5 rounded-lg p-4">
+										<p className="text-sm text-gray-500">Payment Method</p>
+										<p className="font-medium">
+											{
+												paymentMethods.find((p) => p.id === selectedPayment)
+													?.name
+											}
+										</p>
+									</div>
+								</div>
+
+								<div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
+									<div className="flex justify-between text-sm">
+										<span>Subtotal</span>
+										<span>KES {subtotal.toLocaleString()}</span>
+									</div>
+									<div className="flex justify-between text-sm">
+										<span>Delivery</span>
+										<span>
+											{deliveryCost === 0
+												? "FREE"
+												: `KES ${deliveryCost.toLocaleString()}`}
+										</span>
+									</div>
+									<div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
+										<span>Total</span>
+										<span>KES {orderTotal.toLocaleString()}</span>
+									</div>
+								</div>
+
+								<div className="flex justify-between mt-8">
+									<button
+										onClick={handleBack}
+										className="flex items-center gap-1 text-gray-500 hover:text-primary transition"
+									>
+										<ChevronLeft size={18} /> Back
+									</button>
+									<button
+										onClick={handlePlaceOrder}
+										disabled={isProcessing}
+										className="btn-primary flex items-center gap-2 disabled:opacity-50"
+									>
+										{isProcessing ? (
+											<>
+												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+												Processing...
+											</>
+										) : (
+											<>
+												<Shield size={18} /> Place Order - KES{" "}
+												{orderTotal.toLocaleString()}
+											</>
+										)}
+									</button>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+				</div>
+
+				<div className="hidden lg:block">
+					<div className="glass-card p-6 sticky top-24">
+						<h3 className="font-semibold text-lg mb-4">Order Summary</h3>
+						<div className="space-y-3 max-h-64 overflow-y-auto mb-4">
+							{items.map((item) => (
+								<div key={item.id} className="flex gap-2 text-sm">
+									<div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
+										<Image
+											src={item.image}
+											alt={item.name}
+											fill
+											className="object-cover"
+										/>
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="truncate">{item.name}</p>
+										<p className="text-gray-500">x{item.quantity}</p>
+									</div>
+									<p className="font-medium">
+										KES {(item.price * item.quantity).toLocaleString()}
+									</p>
+								</div>
+							))}
+						</div>
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2 text-sm">
+							<div className="flex justify-between">
+								<span className="text-gray-500">Subtotal</span>
+								<span>KES {subtotal.toLocaleString()}</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-gray-500">Delivery</span>
+								<span>
+									{deliveryCost === 0
+										? "FREE"
+										: `KES ${deliveryCost.toLocaleString()}`}
+								</span>
+							</div>
+							<div className="flex justify-between font-bold text-lg pt-2 border-t">
+								<span>Total</span>
+								<span>KES {orderTotal.toLocaleString()}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
