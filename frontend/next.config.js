@@ -10,7 +10,6 @@ const nextConfig = {
 	},
 	transpilePackages: ["backend"], // allow frontend to import from backend workspace
 	outputFileTracingRoot: path.join(__dirname, ".."),
-	typedRoutes: true,
 }
 
 module.exports = nextConfig
