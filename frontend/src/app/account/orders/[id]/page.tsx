@@ -90,8 +90,17 @@ const statusColor: Record<Order["status"], string> = {
 	cancelled: "bg-red-500/20 text-red-700",
 }
 
-export default function AccountOrderPage({ params }: { params: Params }) {
-	const order = mockOrders.find((item) => item.id === params.id)
+export default async function AccountOrderPage({
+	params,
+}: {
+	params?: Promise<Params>
+}) {
+	const resolvedParams = await params
+	if (!resolvedParams?.id) {
+		notFound()
+	}
+
+	const order = mockOrders.find((item) => item.id === resolvedParams.id)
 	if (!order) {
 		notFound()
 	}
