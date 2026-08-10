@@ -64,7 +64,7 @@ export default function Footer() {
 
 				<div>
 					<h4 className="font-semibold mb-3">Stay Connected</h4>
-					<div className="flex gap-3">
+					<div className="flex justify-center sm:justify-start gap-3">
 						{socialLinks.map(({ label, href, icon: Icon, color }) => (
 							<Link
 								key={label}
@@ -72,7 +72,7 @@ export default function Footer() {
 								target="_blank"
 								rel="noreferrer"
 								aria-label={label}
-								className={`flex h-10 w-10 items-center justify-center rounded-full text-white transition-transform duration-200 hover:scale-105 ${color}`}
+								className={`flex h-10 w-10 items-center justify-center rounded-[18px] text-white transition-transform duration-200 hover:scale-105 ${color}`}
 							>
 								<Icon size={18} />
 							</Link>
