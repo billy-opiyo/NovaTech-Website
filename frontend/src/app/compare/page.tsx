@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -138,15 +138,15 @@ export default function ComparePage() {
 
 	return (
 		<div>
-			<div className="flex items-center gap-2 mb-8">
+			<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 sm:mb-8">
 				<Link
 					href="/products"
-					className="flex items-center gap-1 text-gray-500 hover:text-primary transition"
+					className="flex items-center gap-1 text-gray-500 hover:text-primary transition text-sm sm:text-base"
 				>
 					<ArrowLeft size={18} /> Back to Products
 				</Link>
-				<span className="text-gray-400">|</span>
-				<h1 className="text-2xl font-bold">Compare Products</h1>
+				<span className="hidden sm:inline text-gray-400">|</span>
+				<h1 className="text-xl sm:text-2xl font-bold">Compare Products</h1>
 			</div>
 
 			{compareItems.length === 0 ? (
@@ -158,14 +158,16 @@ export default function ComparePage() {
 					<div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
 						<Plus size={40} className="text-gray-400" />
 					</div>
-					<h2 className="text-2xl font-bold mb-4">Compare Products</h2>
-					<p className="text-gray-500 mb-8 max-w-md mx-auto">
+					<h2 className="text-xl sm:text-2xl font-bold mb-4">
+						Compare Products
+					</h2>
+					<p className="text-gray-500 mb-8 max-w-md mx-auto text-sm sm:text-base">
 						Add products to compare their specifications side by side. You can
 						compare up to 4 products at once.
 					</p>
 					<button
 						onClick={() => setSearchOpen(true)}
-						className="btn-primary inline-flex items-center gap-2"
+						className="btn-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
 					>
 						<Plus size={18} /> Add Products
 					</button>
@@ -176,122 +178,21 @@ export default function ComparePage() {
 						<button
 							onClick={() => setSearchOpen(true)}
 							disabled={compareItems.length >= 4}
-							className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
+							className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 w-full sm:w-auto"
 						>
 							<Plus size={18} /> Add Product ({compareItems.length}/4)
 						</button>
 					</div>
 
 					<div className="overflow-x-auto">
-						<div className="glass-card p-6 min-w-[800px]">
-							<div
-								className="grid"
-								style={{
-									gridTemplateColumns: `200px repeat(${compareItems.length}, 1fr)`,
-								}}
-							>
-								<div className="p-4 font-semibold text-gray-500">Product</div>
-								{compareItems.map((product) => (
-									<div key={product.id} className="p-4 text-center relative">
-										<button
-											onClick={() => removeFromCompare(product.id)}
-											className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 transition"
-										>
-											<X size={16} />
-										</button>
-										<div className="relative h-32 w-32 mx-auto mb-3 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
-											<Image
-												src={product.image}
-												alt={product.name}
-												fill
-												className="object-cover"
-											/>
-										</div>
-										<p className="text-xs text-gray-500 uppercase tracking-wider">
-											{product.brand}
-										</p>
-										<h3 className="font-semibold text-sm mt-1 line-clamp-2">
-											{product.name}
-										</h3>
-										<div className="flex items-center justify-center gap-1 mt-2">
-											<Star
-												size={14}
-												className="text-yellow-500 fill-yellow-500"
-											/>
-											<span className="text-sm font-medium">
-												{product.rating}
-											</span>
-										</div>
-										<div className="mt-2">
-											{product.discountedPrice ? (
-												<>
-													<span className="font-bold text-primary">
-														KES {product.discountedPrice.toLocaleString()}
-													</span>
-													<br />
-													<span className="text-xs line-through text-gray-400">
-														KES {product.price.toLocaleString()}
-													</span>
-												</>
-											) : (
-												<span className="font-bold">
-													KES {product.price.toLocaleString()}
-												</span>
-											)}
-										</div>
-									</div>
-								))}
-
-								{allSpecs.map((spec) => (
-									<div key={spec} className="contents">
-										<div className="p-4 font-medium text-sm border-t border-gray-200 dark:border-gray-700 bg-black/5 dark:bg-white/5">
-											{spec}
-										</div>
-										{compareItems.map((product) => {
-											const value = product.specs[spec]
-											const isBest = getBestValue(spec)
-											return (
-												<div
-													key={`${product.id}-${spec}`}
-													className={clsx(
-														"p-4 text-sm text-center border-t border-gray-200 dark:border-gray-700",
-														isBest === product.id && "bg-green-500/5",
-													)}
-												>
-													{value || (
-														<Minus
-															size={14}
-															className="mx-auto text-gray-300"
-														/>
-													)}
-													{isBest === product.id && (
-														<Check
-															size={12}
-															className="inline ml-1 text-green-500"
-														/>
-													)}
-												</div>
-											)
-										})}
-									</div>
-								))}
-
-								<div className="p-4 border-t border-gray-200 dark:border-gray-700"></div>
-								{compareItems.map((product) => (
-									<div
-										key={`action-${product.id}`}
-										className="p-4 text-center border-t border-gray-200 dark:border-gray-700"
-									>
-										<Link
-											href={`/products/${product.id}`}
-											className="btn-primary text-sm w-full block text-center"
-										>
-											View Details
-										</Link>
-									</div>
-								))}
-							</div>
-						</div>
+						{/* Responsive: show stacked cards on small screens */}
+						{/* detect small screens in JS */}
+						<CompareGrid
+							compareItems={compareItems}
+							allSpecs={allSpecs}
+							removeFromCompare={removeFromCompare}
+							getBestValue={getBestValue}
+						/>
 					</div>
 				</>
 			)}
@@ -375,6 +276,204 @@ export default function ComparePage() {
 					</>
 				)}
 			</AnimatePresence>
+		</div>
+	)
+}
+
+function CompareGrid({
+	compareItems,
+	allSpecs,
+	removeFromCompare,
+	getBestValue,
+}: {
+	compareItems: CompareProduct[]
+	allSpecs: string[]
+	removeFromCompare: (id: string) => void
+	getBestValue: (spec: string) => string | null
+}) {
+	const [isSmall, setIsSmall] = useState(false)
+
+	useEffect(() => {
+		const update = () => setIsSmall(window.innerWidth < 640)
+		update()
+		window.addEventListener("resize", update)
+		return () => window.removeEventListener("resize", update)
+	}, [])
+
+	if (isSmall) {
+		return (
+			<div className="space-y-4">
+				{compareItems.map((product) => (
+					<div key={product.id} className="glass-card p-4">
+						<div className="flex items-center gap-4">
+							<div className="relative h-20 w-20 rounded-xl overflow-hidden bg-gray-100">
+								<Image
+									src={product.image}
+									alt={product.name}
+									fill
+									className="object-cover"
+								/>
+							</div>
+							<div className="flex-1 min-w-0">
+								<p className="text-xs text-gray-500 uppercase tracking-wider">
+									{product.brand}
+								</p>
+								<h3 className="font-semibold text-sm line-clamp-2">
+									{product.name}
+								</h3>
+								<div className="flex items-center gap-2 mt-1">
+									<Star size={14} className="text-yellow-500 fill-yellow-500" />
+									<span className="text-sm font-medium">{product.rating}</span>
+								</div>
+								<div className="mt-2">
+									{product.discountedPrice ? (
+										<>
+											<span className="font-bold text-primary">
+												KES {product.discountedPrice.toLocaleString()}
+											</span>
+											<br />
+											<span className="text-xs line-through text-gray-400">
+												KES {product.price.toLocaleString()}
+											</span>
+										</>
+									) : (
+										<span className="font-bold">
+											KES {product.price.toLocaleString()}
+										</span>
+									)}
+								</div>
+							</div>
+							<button
+								onClick={() => removeFromCompare(product.id)}
+								className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 transition"
+							>
+								<X size={16} />
+							</button>
+						</div>
+
+						<div className="grid grid-cols-2 gap-2 mt-4 text-sm">
+							{allSpecs.map((spec) => (
+								<div key={spec} className="border-t pt-2">
+									<div className="text-xs text-gray-500 font-medium">
+										{spec}
+									</div>
+									<div className="mt-1">{product.specs[spec] || "-"}</div>
+								</div>
+							))}
+						</div>
+
+						<div className="mt-4">
+							<Link
+								href={`/products/${product.id}`}
+								className="btn-primary text-sm w-full block text-center"
+							>
+								View Details
+							</Link>
+						</div>
+					</div>
+				))}
+			</div>
+		)
+	}
+
+	return (
+		<div className="glass-card p-4 sm:p-6 min-w-[760px]">
+			<div
+				className="grid"
+				style={{
+					gridTemplateColumns: `200px repeat(${compareItems.length}, 1fr)`,
+				}}
+			>
+				<div className="p-4 font-semibold text-gray-500">Product</div>
+				{compareItems.map((product) => (
+					<div key={product.id} className="p-4 text-center relative">
+						<button
+							onClick={() => removeFromCompare(product.id)}
+							className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 transition"
+						>
+							<X size={16} />
+						</button>
+						<div className="relative h-32 w-32 mx-auto mb-3 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+							<Image
+								src={product.image}
+								alt={product.name}
+								fill
+								className="object-cover"
+							/>
+						</div>
+						<p className="text-xs text-gray-500 uppercase tracking-wider">
+							{product.brand}
+						</p>
+						<h3 className="font-semibold text-sm mt-1 line-clamp-2">
+							{product.name}
+						</h3>
+						<div className="flex items-center justify-center gap-1 mt-2">
+							<Star size={14} className="text-yellow-500 fill-yellow-500" />
+							<span className="text-sm font-medium">{product.rating}</span>
+						</div>
+						<div className="mt-2">
+							{product.discountedPrice ? (
+								<>
+									<span className="font-bold text-primary">
+										KES {product.discountedPrice.toLocaleString()}
+									</span>
+									<br />
+									<span className="text-xs line-through text-gray-400">
+										KES {product.price.toLocaleString()}
+									</span>
+								</>
+							) : (
+								<span className="font-bold">
+									KES {product.price.toLocaleString()}
+								</span>
+							)}
+						</div>
+					</div>
+				))}
+
+				{allSpecs.map((spec) => (
+					<div key={spec} className="contents">
+						<div className="p-4 font-medium text-sm border-t border-gray-200 dark:border-gray-700 bg-black/5 dark:bg-white/5">
+							{spec}
+						</div>
+						{compareItems.map((product) => {
+							const value = product.specs[spec]
+							const isBest = getBestValue(spec)
+							return (
+								<div
+									key={`${product.id}-${spec}`}
+									className={clsx(
+										"p-4 text-sm text-center border-t border-gray-200 dark:border-gray-700",
+										isBest === product.id && "bg-green-500/5",
+									)}
+								>
+									{value || (
+										<Minus size={14} className="mx-auto text-gray-300" />
+									)}
+									{isBest === product.id && (
+										<Check size={12} className="inline ml-1 text-green-500" />
+									)}
+								</div>
+							)
+						})}
+					</div>
+				))}
+
+				<div className="p-4 border-t border-gray-200 dark:border-gray-700"></div>
+				{compareItems.map((product) => (
+					<div
+						key={`action-${product.id}`}
+						className="p-4 text-center border-t border-gray-200 dark:border-gray-700"
+					>
+						<Link
+							href={`/products/${product.id}`}
+							className="btn-primary text-sm w-full block text-center"
+						>
+							View Details
+						</Link>
+					</div>
+				))}
+			</div>
 		</div>
 	)
 }

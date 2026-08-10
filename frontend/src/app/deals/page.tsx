@@ -28,7 +28,7 @@ const dealCards = [
 export default function DealsPage() {
 	return (
 		<div className="space-y-10">
-			<section className="glass-card rounded-3xl p-8 md:p-12 text-center">
+			<section className="glass-card rounded-3xl p-6 sm:p-8 md:p-12 text-center">
 				<div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-4">
 					<Percent size={16} />
 					Today&apos;s Deals
@@ -42,7 +42,7 @@ export default function DealsPage() {
 				</p>
 			</section>
 
-			<section className="grid gap-6 md:grid-cols-3">
+			<section className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
 				{dealCards.map((deal) => (
 					<div key={deal.title} className="glass-card rounded-2xl p-6">
 						<span className="mb-4 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
@@ -62,7 +62,7 @@ export default function DealsPage() {
 				))}
 			</section>
 
-			<section className="grid gap-6 md:grid-cols-3">
+			<section className="grid gap-6 grid-cols-1 md:grid-cols-3">
 				<div className="glass-card rounded-2xl p-6">
 					<Truck className="mb-4 text-primary" size={28} />
 					<h3 className="mb-2 text-lg font-semibold">Fast delivery</h3>

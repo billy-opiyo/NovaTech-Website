@@ -61,16 +61,18 @@ const menuItems = [
 export default function AccountPage() {
 	return (
 		<div>
-			<h1 className="text-3xl font-bold mb-8">My Account</h1>
+			<h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">
+				My Account
+			</h1>
 
-			<div className="grid lg:grid-cols-3 gap-8">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 				<div className="lg:col-span-1">
 					<motion.div
 						initial={{ opacity: 0, y: 20 }}
 						animate={{ opacity: 1, y: 0 }}
-						className="glass-card p-6 text-center"
+						className="glass-card p-5 sm:p-6 text-center"
 					>
-						<div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+						<div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
 							<User size={40} className="text-primary" />
 						</div>
 						<h2 className="text-xl font-semibold">John Doe</h2>
@@ -78,7 +80,7 @@ export default function AccountPage() {
 						<p className="text-xs text-gray-400 mt-1">
 							Member since August 2024
 						</p>
-						<button className="mt-4 text-sm text-red-500 hover:text-red-600 flex items-center gap-1 mx-auto">
+						<button className="mt-4 text-sm text-red-500 hover:text-red-600 flex items-center justify-center justify-center justify-center justify-center gap-1 mx-auto">
 							<LogOut size={14} /> Sign Out
 						</button>
 					</motion.div>
@@ -121,10 +123,10 @@ export default function AccountPage() {
 						initial={{ opacity: 0, y: 20 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ delay: 0.2 }}
-						className="glass-card p-6"
+						className="glass-card p-4 sm:p-6"
 					>
-						<div className="flex justify-between items-center mb-6">
-							<h2 className="text-xl font-semibold flex items-center gap-2">
+						<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+							<h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
 								<ShoppingBag size={24} className="text-primary" /> Recent Orders
 							</h2>
 							<Link
@@ -140,7 +142,7 @@ export default function AccountPage() {
 								<Link
 									key={order.id}
 									href={`/account/orders/${order.id}`}
-									className="flex items-center justify-between p-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition"
+									className="flex flex-col gap-3 p-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition sm:flex-row sm:items-center sm:justify-between"
 								>
 									<div>
 										<p className="font-semibold">Order #{order.id}</p>
@@ -148,7 +150,7 @@ export default function AccountPage() {
 											<Clock size={12} /> {order.date}
 										</p>
 									</div>
-									<div className="text-center">
+									<div className="text-left sm:text-center">
 										<span
 											className={`text-xs px-2 py-1 rounded-full ${
 												order.status === "Delivered"
@@ -161,19 +163,22 @@ export default function AccountPage() {
 											{order.status}
 										</span>
 									</div>
-									<div className="text-right">
+									<div className="text-left sm:text-right">
 										<p className="font-semibold">
 											KES {order.total.toLocaleString()}
 										</p>
 										<p className="text-sm text-gray-500">{order.items} items</p>
 									</div>
-									<ChevronRight size={16} className="text-gray-400" />
+									<ChevronRight
+										size={16}
+										className="text-gray-400 self-end sm:self-center"
+									/>
 								</Link>
 							))}
 						</div>
 					</motion.div>
 
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
 						{[
 							{ icon: Package, label: "Total Orders", value: "12" },
 							{ icon: Clock, label: "Pending", value: "2" },
@@ -188,7 +193,7 @@ export default function AccountPage() {
 								className="glass-card p-4 text-center"
 							>
 								<stat.icon className="mx-auto mb-2 text-primary" size={24} />
-								<p className="text-2xl font-bold">{stat.value}</p>
+								<p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
 								<p className="text-xs text-gray-500">{stat.label}</p>
 							</motion.div>
 						))}

@@ -22,18 +22,18 @@ export default function Header() {
 
 	return (
 		<header className="sticky top-0 z-50 glass backdrop-blur-lg border-b border-white/10">
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div className="flex justify-between items-center py-4">
+			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
+				<div className="flex justify-between items-center py-3 sm:py-4 gap-2">
 					{/* Logo */}
-					<Link href="/" className="flex items-center gap-2">
-						<ShoppingCart className="w-8 h-8 text-primary" />
-						<span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+					<Link href="/" className="flex items-center gap-2 min-w-0">
+						<ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+						<span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
 							NovaTech Store
 						</span>
 					</Link>
 
 					{/* Desktop Nav */}
-					<nav className="hidden md:flex gap-6">
+					<nav className="hidden md:flex gap-4 lg:gap-6">
 						{navLinks.map((link) => (
 							<Link
 								key={link.href}
@@ -46,7 +46,7 @@ export default function Header() {
 					</nav>
 
 					{/* Right side icons */}
-					<div className="flex items-center gap-4">
+					<div className="flex items-center gap-2 sm:gap-4">
 						<button
 							onClick={toggleTheme}
 							className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"

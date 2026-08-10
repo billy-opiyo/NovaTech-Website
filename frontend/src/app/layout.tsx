@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cartContext"
 import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
+import FloatingActions from "@/components/layout/FloatingActions"
 
 export const metadata: Metadata = {
 	title: {
@@ -45,11 +46,12 @@ export default function RootLayout({
 				<ThemeProvider>
 					<CartProvider>
 						<Header />
-						<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+						<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
 							{children}
 						</main>
 						<Footer />
 						<MobileNav />
+						<FloatingActions />
 					</CartProvider>
 				</ThemeProvider>
 			</body>

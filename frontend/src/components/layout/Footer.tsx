@@ -33,7 +33,7 @@ export default function Footer() {
 
 	return (
 		<footer className="glass border-t border-white/10 mt-20">
-			<div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+			<div className="max-w-7xl mx-auto px-4 py-10 sm:py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
 				<div>
 					<h3 className="text-lg font-bold mb-4">NovaTech Store</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">

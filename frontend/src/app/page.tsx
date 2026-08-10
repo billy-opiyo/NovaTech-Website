@@ -78,30 +78,30 @@ export default function HomePage() {
 	return (
 		<div className="space-y-24">
 			{/* Hero Banner */}
-			<section className="relative rounded-3xl overflow-hidden glass-card p-8 md:p-16 text-center">
+			<section className="relative rounded-3xl overflow-hidden glass-card p-6 sm:p-8 md:p-16 text-center">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.8 }}
 				>
-					<h1 className="text-4xl md:text-6xl font-extrabold mb-4">
+					<h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold mb-4 leading-tight">
 						Upgrade Your Tech
 						<span className="block text-primary">With Genuine Deals</span>
 					</h1>
-					<p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+					<p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
 						Kenya’s most trusted electronics store. Shop latest phones, laptops,
 						and accessories with warranty & fast delivery.
 					</p>
-					<div className="flex gap-4 justify-center">
+					<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
 						<Link
 							href="/category/phones"
-							className="btn-primary flex items-center gap-2"
+							className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
 						>
 							Shop Phones <ArrowRight size={18} />
 						</Link>
 						<Link
 							href="/deals"
-							className="border border-primary text-primary hover:bg-primary hover:text-white px-6 py-2 rounded-lg transition"
+							className="border border-primary text-primary hover:bg-primary hover:text-white px-6 py-2 rounded-lg transition w-full sm:w-auto text-center"
 						>
 							Today&apos;s Deals
 						</Link>
@@ -114,7 +114,7 @@ export default function HomePage() {
 				<h2 className="text-3xl font-bold mb-8 text-center">
 					Shop by Category
 				</h2>
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 					{categories.map((cat, i) => (
 						<motion.div
 							key={cat.slug}
@@ -146,8 +146,8 @@ export default function HomePage() {
 
 			{/* Featured Products */}
 			<section>
-				<div className="flex justify-between items-center mb-8">
-					<h2 className="text-3xl font-bold">Featured Products</h2>
+				<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8">
+					<h2 className="text-2xl sm:text-3xl font-bold">Featured Products</h2>
 					<Link
 						href="/products"
 						className="text-primary hover:underline flex items-center gap-1"
@@ -155,7 +155,7 @@ export default function HomePage() {
 						View All <ArrowRight size={16} />
 					</Link>
 				</div>
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 					{featuredProducts.map((product, i) => (
 						<motion.div
 							key={product.id}
@@ -205,10 +205,10 @@ export default function HomePage() {
 
 			{/* Testimonials */}
 			<section>
-				<h2 className="text-3xl font-bold mb-8 text-center">
+				<h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center">
 					What Our Customers Say
 				</h2>
-				<div className="grid md:grid-cols-2 gap-6">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 					{testimonials.map((t, i) => (
 						<motion.div
 							key={i}
@@ -230,18 +230,18 @@ export default function HomePage() {
 			</section>
 
 			{/* Newsletter */}
-			<section className="glass-card p-8 text-center">
+			<section className="glass-card p-6 sm:p-8 text-center">
 				<h2 className="text-2xl font-bold mb-4">Stay Updated</h2>
 				<p className="text-gray-600 dark:text-gray-300 mb-6">
 					Get exclusive deals and new arrivals straight to your inbox.
 				</p>
-				<form className="flex max-w-md mx-auto gap-2">
+				<form className="flex flex-col sm:flex-row max-w-md mx-auto gap-2">
 					<input
 						type="email"
 						placeholder="you@example.com"
 						className="flex-1 px-4 py-2 rounded-lg bg-white/20 dark:bg-black/20 border border-white/30 focus:outline-none focus:ring-2 focus:ring-primary"
 					/>
-					<button type="submit" className="btn-primary">
+					<button type="submit" className="btn-primary w-full sm:w-auto">
 						Subscribe
 					</button>
 				</form>

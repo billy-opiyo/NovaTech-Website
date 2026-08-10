@@ -75,20 +75,20 @@ export default function CartPage() {
 
 	return (
 		<div>
-			<div className="flex items-center gap-2 mb-8">
+			<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 sm:mb-8">
 				<Link
 					href="/products"
-					className="flex items-center gap-1 text-gray-500 hover:text-primary transition"
+					className="flex items-center gap-1 text-gray-500 hover:text-primary transition text-sm sm:text-base"
 				>
 					<ArrowLeft size={18} /> Continue Shopping
 				</Link>
-				<span className="text-gray-400">|</span>
-				<h1 className="text-2xl font-bold">
+				<span className="hidden sm:inline text-gray-400">|</span>
+				<h1 className="text-xl sm:text-2xl font-bold">
 					Shopping Cart ({itemCount} items)
 				</h1>
 			</div>
 
-			<div className="grid lg:grid-cols-3 gap-8">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 				{/* Cart Items */}
 				<div className="lg:col-span-2 space-y-6">
 					{/* Free Shipping Banner */}
@@ -126,11 +126,11 @@ export default function CartPage() {
 								exit={{ opacity: 0, x: 20, height: 0 }}
 								className="glass-card p-4 md:p-6"
 							>
-								<div className="flex gap-4 md:gap-6">
+								<div className="flex flex-col gap-4 sm:flex-row md:gap-6">
 									{/* Product Image */}
 									<Link
 										href={`/products/${item.slug}`}
-										className="relative h-24 w-24 md:h-32 md:w-32 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
+										className="relative h-24 w-full sm:w-24 md:h-32 md:w-32 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
 									>
 										<Image
 											src={item.image}
@@ -164,9 +164,9 @@ export default function CartPage() {
 											</p>
 										</div>
 
-										<div className="flex items-center justify-between mt-4">
+										<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4">
 											{/* Quantity Controls */}
-											<div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+											<div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg w-fit">
 												<button
 													onClick={() =>
 														updateQuantity(item.id, item.quantity - 1)
@@ -190,7 +190,7 @@ export default function CartPage() {
 											</div>
 
 											{/* Actions */}
-											<div className="flex items-center gap-3">
+											<div className="flex flex-wrap items-center gap-2 sm:gap-3">
 												<button
 													onClick={() => saveForLater(item.id)}
 													className="text-sm text-gray-500 hover:text-primary transition flex items-center gap-1"
