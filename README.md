@@ -397,7 +397,7 @@ npm run dev:open
 - ✔️ **Frontend storefront** — Home, Products (filtering/sorting/search/pagination UI), Product Detail, Cart, Checkout (full payment integration), Deals, Compare, Category, Contact, Wishlist
 - ✔️ **Shopping cart** — Client-side state with `localStorage` persistence, save-for-later, quantity & stock management, shipping/total calculation
 - ✔️ **Authentication** — NextAuth v5 with Google OAuth + Credentials (bcrypt), JWT sessions, role-based access
-- ✔️ **Admin panel UI** — Layout, sidebar navigation, Products management table, Orders management table
+- ✔️ **Admin panel UI** — Layout, sidebar navigation, Dashboard, Analytics, Products management, Orders management, Customers, Reviews, Coupons, Inventory, Deliveries, Support Tickets, Messages, Settings, Security, Activity Log
 - ✔️ **Dark/light theme** — ThemeProvider with system preference detection
 - ✔️ **Global search** — Search overlay with keyboard shortcut & suggestions
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
@@ -427,7 +427,6 @@ npm run dev:open
 - ⚠️ **Notifications (SMS/WhatsApp)** — Send functions are **stubs** returning mock responses
 - ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `analytics`, `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
-- ⚠️ **Admin analytics/customers/coupons/inventory/reviews pages** — sidebar links exist; pages are not yet implemented
 - ⚠️ **frontend `middleware.ts`** — currently a passthrough (no route protection logic yet)
 
 ---
