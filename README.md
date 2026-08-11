@@ -22,16 +22,16 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 
 ## 🛠 Tech Stack
 
-| Layer        | Technology                                                        |
-| ------------ | ----------------------------------------------------------------- |
-| **Frontend** | Next.js 15 (App Router), React 19, TypeScript                 |
-| **Styling**  | Tailwind CSS 3, Framer Motion (animations), lucide-react / react-icons (icons) |
-| **Backend**  | Prisma ORM 5, PostgreSQL (Neon), Zod (validation), bcrypt        |
-| **Auth**     | NextAuth v5 (beta) — Google OAuth + Credentials, JWT sessions    |
-| **Email**    | Resend                                                           |
-| **Storage**  | Cloudflare R2 (AWS SDK v3)                                       |
-| **Rate Limiting** | In-memory middleware (60 req/min per IP)                     |
-| **Monorepo** | npm workspaces (`frontend` + `backend`)                          |
+| Layer             | Technology                                                                     |
+| ----------------- | ------------------------------------------------------------------------------ |
+| **Frontend**      | Next.js 15 (App Router), React 19, TypeScript                                  |
+| **Styling**       | Tailwind CSS 3, Framer Motion (animations), lucide-react / react-icons (icons) |
+| **Backend**       | Prisma ORM 5, PostgreSQL (Neon), Zod (validation), bcrypt                      |
+| **Auth**          | NextAuth v5 (beta) — Google OAuth + Credentials, JWT sessions                  |
+| **Email**         | Resend                                                                         |
+| **Storage**       | Cloudflare R2 (AWS SDK v3)                                                     |
+| **Rate Limiting** | In-memory middleware (60 req/min per IP)                                       |
+| **Monorepo**      | npm workspaces (`frontend` + `backend`)                                        |
 
 ---
 
@@ -39,16 +39,16 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 
 ### 🏠 Public Storefront
 
-| Feature | Description |
-| ------- | ----------- |
-| **Home Page** | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup. |
-| **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
-| **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, recommendations (Recommended for You, Recently Viewed, Trending Now). |
-| **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
-| **Deals Page** | Promotional deal cards linking into filtered product listings. |
-| **Compare Page** | Side-by-side product comparison with spec tables and highlight win/loss indicators. |
-| **Search Overlay** | Global search with `Ctrl+K` shortcut, popular searches, product suggestions, and navigation. |
-| **Dark Mode** | Class-based dark theme with system-preference detection and localStorage persistence. |
+| Feature              | Description                                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home Page**        | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup.                                                                      |
+| **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
+| **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, recommendations (Recommended for You, Recently Viewed, Trending Now). |
+| **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
+| **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
+| **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
+| **Search Overlay**   | Global search with `Ctrl+K` shortcut, popular searches, product suggestions, and navigation.                                                                                                |
+| **Dark Mode**        | Class-based dark theme with system-preference detection and localStorage persistence.                                                                                                       |
 
 ### 🛒 Shopping Cart & Checkout
 
@@ -89,17 +89,17 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 
 ### 📦 Backend API (App Router Route Handlers)
 
-| Endpoint | Methods | Description |
-| -------- | ------- | ----------- |
-| `/api/products` | GET, POST | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
-| `/api/reviews` | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews. |
-| `/api/wishlist` | GET, POST, DELETE | Read / add / remove wishlist items for authenticated users. |
-| `/api/orders` | GET, POST | List authenticated user's orders and place new orders (stock validation + transactional stock decrement + notification creation). |
-| `/api/orders/[id]` | GET, PATCH | Fetch single order (owner or admin), admin updates order status / tracking number with user notification. |
-| `/api/coupons/validate` | POST | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation. |
-| `/api/contact` | POST | Creates a support ticket and sends email via Resend. |
-| `/api/newsletter` | POST | Validates email and acknowledges subscription. |
-| `/api/auth/[...nextauth]` | GET, POST | NextAuth handlers. |
+| Endpoint                  | Methods                | Description                                                                                                                                                         |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/products`           | GET, POST              | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
+| `/api/reviews`            | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews.                                 |
+| `/api/wishlist`           | GET, POST, DELETE      | Read / add / remove wishlist items for authenticated users.                                                                                                         |
+| `/api/orders`             | GET, POST              | List authenticated user's orders and place new orders (stock validation + transactional stock decrement + notification creation).                                   |
+| `/api/orders/[id]`        | GET, PATCH             | Fetch single order (owner or admin), admin updates order status / tracking number with user notification.                                                           |
+| `/api/coupons/validate`   | POST                   | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation.                                                     |
+| `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend.                                                                                                                |
+| `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
+| `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
 
 ### 🔐 Backend Services & Utilities
 
@@ -137,8 +137,8 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
   - `POST /api/payments/webhooks/mpesa/stk-callback` — M-Pesa STK callback.
   - `POST /api/payments/webhooks/mpesa/c2b` — M-Pesa C2B callback.
 - **Resend** (`backend/notifications/resend/`) — Email send stub (used by `lib/email.ts`).
-- **SMS** (`backend/notifications/sms/`) — SMS send stub.
-- **WhatsApp** (`backend/notifications/whatsapp/`) — WhatsApp message send stub.
+- **SMS** (`backend/notifications/sms/`) — Real Twilio SMS integration with order confirmation, status updates, payment requests, and support messages.
+- **WhatsApp** (`backend/notifications/whatsapp/`) — Real WhatsApp Cloud API integration with order confirmation, status updates, payment requests, and support messages.
 
 ### 🗄 Database (Prisma Schema)
 
@@ -254,53 +254,53 @@ NovaTech Website/
 
 ## 🗄 Database Schema Overview
 
-| Model | Purpose |
-| ----- | ------- |
-| `User` | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN) |
-| `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support |
-| `Category` | Hierarchical product categories (parent/children) |
-| `Product` | Products with price, discounted price, stock, specs (JSON), images, warranty, featured/new-arrival flags |
-| `Variant` | Product variants (e.g. Color, Storage, RAM) with price modifier & stock |
-| `CartItem` | Per-user cart entries with quantity & selected variant |
-| `WishlistItem` | Per-user saved products |
-| `RecentlyViewed` | Per-user recently viewed products |
-| `Order` | Orders with status flow, shipping address (JSON), payment method, totals, tracking number |
-| `OrderItem` | Line items per order |
-| `Address` | Saved delivery addresses per user |
-| `DeliveryRegion` | Delivery cost & ETA by region |
-| `Review` | Product reviews with rating (1–5), photos, verified-purchase flag |
-| `Coupon` | Discount codes (percent/amount, min order, expiry, usage limit) |
-| `Notification` | Per-user notifications (ORDER_STATUS, PROMO, …) |
-| `SupportTicket` | Customer support tickets |
-| `AdminLog` | Audit trail of admin actions |
+| Model                                       | Purpose                                                                                                  |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `User`                                      | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN)                                                  |
+| `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support                                                                         |
+| `Category`                                  | Hierarchical product categories (parent/children)                                                        |
+| `Product`                                   | Products with price, discounted price, stock, specs (JSON), images, warranty, featured/new-arrival flags |
+| `Variant`                                   | Product variants (e.g. Color, Storage, RAM) with price modifier & stock                                  |
+| `CartItem`                                  | Per-user cart entries with quantity & selected variant                                                   |
+| `WishlistItem`                              | Per-user saved products                                                                                  |
+| `RecentlyViewed`                            | Per-user recently viewed products                                                                        |
+| `Order`                                     | Orders with status flow, shipping address (JSON), payment method, totals, tracking number                |
+| `OrderItem`                                 | Line items per order                                                                                     |
+| `Address`                                   | Saved delivery addresses per user                                                                        |
+| `DeliveryRegion`                            | Delivery cost & ETA by region                                                                            |
+| `Review`                                    | Product reviews with rating (1–5), photos, verified-purchase flag                                        |
+| `Coupon`                                    | Discount codes (percent/amount, min order, expiry, usage limit)                                          |
+| `Notification`                              | Per-user notifications (ORDER_STATUS, PROMO, …)                                                          |
+| `SupportTicket`                             | Customer support tickets                                                                                 |
+| `AdminLog`                                  | Audit trail of admin actions                                                                             |
 
 ---
 
 ## 🌍 Environment Variables
 
-| Variable | Description |
-| -------- | ----------- |
-| `DATABASE_URL` | PostgreSQL connection string (Neon pooled recommended) |
-| `AUTH_SECRET` | NextAuth.js secret |
-| `AUTH_GOOGLE_ID` | Google OAuth client ID |
-| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `R2_ACCOUNT_ID` | Cloudflare R2 account ID |
-| `R2_ACCESS_KEY_ID` | Cloudflare R2 access key |
-| `R2_SECRET_ACCESS_KEY` | Cloudflare R2 secret key |
-| `R2_BUCKET_NAME` | Cloudflare R2 bucket name |
-| `NEXT_PUBLIC_R2_PUBLIC_URL` | Public base URL for R2-hosted files |
-| `RESEND_API_KEY` | Resend email API key |
-| `WHATSAPP_TOKEN` | WhatsApp Cloud API token |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID |
-| `NEXT_PUBLIC_APP_URL` | Public app URL (e.g. `http://localhost:3000`) |
-| `MPESA_CONSUMER_KEY` | M-Pesa Daraja consumer key |
-| `MPESA_CONSUMER_SECRET` | M-Pesa Daraja consumer secret |
-| `MPESA_PASSKEY` | M-Pesa Daraja passkey (STK Push) |
-| `MPESA_SHORTCODE` | M-Pesa business shortcode (e.g. `174379`) |
-| `MPESA_ENV` | M-Pesa environment: `sandbox` or `production` |
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend) |
+| Variable                             | Description                                            |
+| ------------------------------------ | ------------------------------------------------------ |
+| `DATABASE_URL`                       | PostgreSQL connection string (Neon pooled recommended) |
+| `AUTH_SECRET`                        | NextAuth.js secret                                     |
+| `AUTH_GOOGLE_ID`                     | Google OAuth client ID                                 |
+| `AUTH_GOOGLE_SECRET`                 | Google OAuth client secret                             |
+| `R2_ACCOUNT_ID`                      | Cloudflare R2 account ID                               |
+| `R2_ACCESS_KEY_ID`                   | Cloudflare R2 access key                               |
+| `R2_SECRET_ACCESS_KEY`               | Cloudflare R2 secret key                               |
+| `R2_BUCKET_NAME`                     | Cloudflare R2 bucket name                              |
+| `NEXT_PUBLIC_R2_PUBLIC_URL`          | Public base URL for R2-hosted files                    |
+| `RESEND_API_KEY`                     | Resend email API key                                   |
+| `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
+| `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |
+| `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
+| `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
+| `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
+| `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
+| `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
+| `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
+| `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
+| `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
 
 ---
 
@@ -360,33 +360,33 @@ npm run dev:open
 
 ### Root (`package.json`)
 
-| Script | Command | Description |
-| ------ | ------- | ----------- |
-| `dev` | `npm --workspace frontend run dev` | Start Next.js dev server |
-| `dev:open` | `start http://localhost:3000 && npm --workspace frontend run dev` | Dev server + open browser |
-| `build` | `npm --workspace frontend run build` | Production build |
-| `start` | `npm --workspace frontend run start` | Start production server |
-| `db:migrate` | `npm --workspace backend run db:migrate` | Run Prisma migrations |
-| `db:push` | `npm --workspace backend run db:push` | Push schema (no migration files) |
-| `db:seed` | `npm --workspace backend run db:seed` | Seed database |
+| Script       | Command                                                           | Description                      |
+| ------------ | ----------------------------------------------------------------- | -------------------------------- |
+| `dev`        | `npm --workspace frontend run dev`                                | Start Next.js dev server         |
+| `dev:open`   | `start http://localhost:3000 && npm --workspace frontend run dev` | Dev server + open browser        |
+| `build`      | `npm --workspace frontend run build`                              | Production build                 |
+| `start`      | `npm --workspace frontend run start`                              | Start production server          |
+| `db:migrate` | `npm --workspace backend run db:migrate`                          | Run Prisma migrations            |
+| `db:push`    | `npm --workspace backend run db:push`                             | Push schema (no migration files) |
+| `db:seed`    | `npm --workspace backend run db:seed`                             | Seed database                    |
 
 ### Frontend (`frontend/package.json`)
 
-| Script | Description |
-| ------ | ----------- |
-| `dev` | `next dev` |
+| Script  | Description  |
+| ------- | ------------ |
+| `dev`   | `next dev`   |
 | `build` | `next build` |
 | `start` | `next start` |
 
 ### Backend (`backend/package.json`)
 
-| Script | Description |
-| ------ | ----------- |
-| `build` | `tsc` (TypeScript compile) |
-| `db:generate` | `prisma generate` |
-| `db:migrate` | `prisma migrate dev` |
-| `db:push` | `prisma db push` |
-| `db:seed` | Runs `prisma/seed.ts` |
+| Script        | Description                |
+| ------------- | -------------------------- |
+| `build`       | `tsc` (TypeScript compile) |
+| `db:generate` | `prisma generate`          |
+| `db:migrate`  | `prisma migrate dev`       |
+| `db:push`     | `prisma db push`           |
+| `db:seed`     | Runs `prisma/seed.ts`      |
 
 ---
 
@@ -409,6 +409,13 @@ npm run dev:open
 - ✔️ **Newsletter API** — Validated subscription endpoint
 - ✔️ **Rate limiting** — 60 req/min per IP on sensitive endpoints
 - ✔️ **Email** — Resend integration with branded order-confirmation template
+- ✔️ **SMS notifications** — Real Twilio SMS integration with:
+  - Order confirmation SMS
+  - Order status update SMS (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)
+  - Payment request SMS
+  - Support message SMS
+  - Graceful "not configured" behavior when `TWILIO_*` env vars are absent
+  - Kenyan phone number formatting (+254 prefix)
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
@@ -424,7 +431,6 @@ npm run dev:open
 
 ### Partially Implemented / Stubs
 
-- ⚠️ **Notifications (SMS/WhatsApp)** — Send functions are **stubs** returning mock responses
 - ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `analytics`, `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
 - ⚠️ **frontend `middleware.ts`** — currently a passthrough (no route protection logic yet)
