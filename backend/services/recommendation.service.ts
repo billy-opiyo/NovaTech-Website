@@ -166,10 +166,11 @@ export async function getRecommendedForUser(
 
 		const categoryProducts = await prisma.product.findMany({
 			where: {
-				category: {
-					name: {
-						in: topCategories,
-					},
+				categoryId: {
+					in: (await prisma.category.findMany({
+						where: { name: { in: topCategories } },
+						select: { id: true },
+					})).map((c) => c.id),
 				},
 				stock: {
 					gt: 0,
@@ -185,7 +186,7 @@ export async function getRecommendedForUser(
 			},
 			take: 20,
 			orderBy: {
-				rating: "desc",
+				createdAt: "desc",
 			},
 		})
 
@@ -194,12 +195,12 @@ export async function getRecommendedForUser(
 				const existing = recommendations.get(product.id)
 				if (existing) {
 					existing.score += 8
-					existing.reason = `Popular in ${product.category.name}`
+					existing.reason = "Popular in categories you like"
 				} else {
 					recommendations.set(product.id, {
 						...formatProduct(product),
 						score: 8,
-						reason: `Popular in ${product.category.name}`,
+						reason: "Popular in categories you like",
 					})
 				}
 			}
@@ -287,7 +288,7 @@ export async function getTrendingProducts(limit: number = 12): Promise<TrendingP
 			take: limit,
 		})
 
-		return products.map((product) => formatProduct(product))
+		return products.map((product) => formatProduct(product) as TrendingProduct)
 	}
 
 	// Fetch full product details

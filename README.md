@@ -451,10 +451,32 @@ npm run dev:open
   - Deals and on-sale products
   - RESTful API at `/api/recommendations` with multiple recommendation types
 
-### Partially Implemented / Stubs
+### Backend Service Layer (Express Structure)
 
-- ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `order` services are **empty placeholders** (core logic lives in the App Router API routes)
-- ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
+The backend service layer has been fully implemented with proper separation of concerns:
+
+- **`backend/services/order.service.ts`** — Complete order business logic:
+  - `createOrder()` — Create order with stock validation and transactional updates
+  - `getOrdersByUserId()` — Fetch paginated user orders
+  - `getOrderById()` — Get single order with authorization checks
+  - `updateOrderStatus()` — Admin order status updates with notifications
+  - `getAllOrders()` — Admin listing with optional status filter
+  - `getOrderStats()` — Order statistics for analytics dashboard
+
+- **`backend/controllers/order.controller.ts`** — HTTP request handlers:
+  - Request/response handling with error management
+  - Parameter extraction and validation
+  - Service layer integration
+
+- **`backend/routes/orders.route.ts`** — Express route definitions:
+  - `GET /` — List user's orders
+  - `GET /stats` — Order statistics (admin only)
+  - `GET /all` — List all orders (admin only)
+  - `GET /:id` — Get single order
+  - `POST /` — Create new order
+  - `PATCH /:id` — Update order status (admin only)
+
+**Note:** The Next.js App Router API routes in `frontend/src/app/api/` remain the primary API interface. The backend Express structure is ready for future deployment as a separate API service.
 
 ---
 
