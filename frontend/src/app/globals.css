@@ -1,3 +1,4 @@
+@config '../../tailwind.config.ts';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,12 +24,13 @@
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 80px;
   }
 
   body {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-    transition: background-color 300ms ease, color 300ms ease;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   html,
@@ -94,10 +96,11 @@
   .form-select option {
     background-color: #ffffff;
     color: #111827;
+    padding: 8px 12px;
   }
 
   .dark .form-select option {
-    background-color: #0f172a;
-    color: #e2e8f0;
+    background-color: #1e293b;
+    color: #f1f5f9;
   }
 }

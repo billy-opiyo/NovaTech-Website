@@ -1,7 +1,7 @@
 import path from "path"
-import type { NextConfig } from "next"
+import NextConfig from "next"
 
-const nextConfig: NextConfig = {
+const nextConfig = {
 	reactStrictMode: true,
 	outputFileTracingRoot: path.join(__dirname, ".."),
 	images: {
@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
 		],
 	},
 	experimental: {
-		typedRoutes: true,
+		// typedRoutes: true, // Disabled due to Next.js 15 compatibility
 	},
 }
 
