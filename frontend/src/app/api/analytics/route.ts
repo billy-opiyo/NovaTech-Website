@@ -7,6 +7,7 @@ import {
 	getTopProducts,
 	getRegionSales,
 	getPaymentMethodStats,
+	getGrowthComparison,
 } from "backend/services/analytics.service"
 
 export async function GET(req: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 		const timeRange = searchParams.get("timeRange") || "7d"
 
 		// Fetch all analytics data in parallel
-		const [overview, salesData, categorySales, topProducts, regionSales, paymentMethods] =
+		const [overview, salesData, categorySales, topProducts, regionSales, paymentMethods, growth] =
 			await Promise.all([
 				getAnalyticsOverview(timeRange),
 				getSalesData(timeRange),
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 				getTopProducts(timeRange, 5),
 				getRegionSales(timeRange),
 				getPaymentMethodStats(timeRange),
+				getGrowthComparison(timeRange),
 			])
 
 		return NextResponse.json({
@@ -42,6 +44,7 @@ export async function GET(req: NextRequest) {
 			topProducts,
 			regionSales,
 			paymentMethods,
+			growth,
 		})
 	} catch (error: any) {
 		console.error("Analytics API error:", error)

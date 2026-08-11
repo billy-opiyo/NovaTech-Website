@@ -6,10 +6,7 @@ import clsx from "clsx"
 
 interface Order {
 	id: string
-	date: string
-	status: "pending" | "confirmed" | "processing" | "shipped" | "out_for_delivery" | "delivered" | "cancelled"
-	total: number
-	items: number
+	status: string
 	trackingNumber?: string
 	estimatedDelivery?: string
 	customerName: string
@@ -21,42 +18,13 @@ interface Order {
 		streetAddress: string
 	}
 	courierService?: string
-	trackingHistory?: Array<{
+	trackingHistory: Array<{
 		status: string
 		timestamp: string
 		description: string
 		location?: string
 	}>
 }
-
-const mockOrders: Order[] = [
-	{
-		id: "EB-20240815-001",
-		date: "2024-08-15",
-		status: "delivered",
-		total: 174999,
-		items: 2,
-		trackingNumber: "KN-TRK-12345",
-		estimatedDelivery: "2024-08-18",
-		customerName: "John Doe",
-		customerEmail: "john@example.com",
-		customerPhone: "+254712345678",
-		shippingAddress: {
-			county: "Nairobi",
-			town: "Westlands",
-			streetAddress: "123 Waiyaki Way",
-		},
-		courierService: "G4S",
-		trackingHistory: [
-			{ status: "pending", timestamp: "2024-08-15T10:30:00Z", description: "Order placed successfully", location: "Nairobi" },
-			{ status: "confirmed", timestamp: "2024-08-15T14:20:00Z", description: "Payment confirmed, order processing", location: "Nairobi" },
-			{ status: "processing", timestamp: "2024-08-16T09:00:00Z", description: "Order packed and ready for shipping", location: "Nairobi Warehouse" },
-			{ status: "shipped", timestamp: "2024-08-16T16:45:00Z", description: "Package dispatched via G4S", location: "Nairobi" },
-			{ status: "out_for_delivery", timestamp: "2024-08-18T08:30:00Z", description: "Out for delivery - Courier assigned", location: "Westlands, Nairobi" },
-			{ status: "delivered", timestamp: "2024-08-18T11:15:00Z", description: "Package delivered successfully", location: "123 Waiyaki Way, Westlands" },
-		],
-	},
-]
 
 const statusSteps = [
 	{ key: "pending", label: "Order Placed", icon: Package },
@@ -67,7 +35,7 @@ const statusSteps = [
 	{ key: "delivered", label: "Delivered", icon: CheckCircle2 },
 ]
 
-const statusLabels: Record<Order["status"], string> = {
+const statusLabels: Record<string, string> = {
 	pending: "Pending",
 	confirmed: "Confirmed",
 	processing: "Processing",
@@ -77,7 +45,7 @@ const statusLabels: Record<Order["status"], string> = {
 	cancelled: "Cancelled",
 }
 
-function getStatusIndex(status: Order["status"]): number {
+function getStatusIndex(status: string): number {
 	return statusSteps.findIndex((step) => step.key === status)
 }
 
@@ -93,24 +61,46 @@ function formatDate(dateString: string): string {
 }
 
 export default function OrderTrackingPage() {
-	const [orderId, setOrderId] = useState<string>("")
 	const [order, setOrder] = useState<Order | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [error, setError] = useState<string | null>(null)
 
 	useEffect(() => {
 		// Extract order ID from URL path
 		const path = window.location.pathname
 		const id = path.split("/").pop()
+		
 		if (id) {
-			setOrderId(id)
-			const foundOrder = mockOrders.find((item) => item.id === id)
-			if (!foundOrder) {
-				window.location.href = "/account/orders"
-			}
-			setOrder(foundOrder || null)
+			fetchTrackingData(id)
+		} else {
+			setLoading(false)
+			setError("Order ID not found")
 		}
-		setLoading(false)
 	}, [])
+
+	const fetchTrackingData = async (id: string) => {
+		try {
+			setLoading(true)
+			setError(null)
+			const response = await fetch(`/api/orders/${id}/tracking`)
+
+			if (!response.ok) {
+				if (response.status === 404) {
+					window.location.href = "/account/orders"
+					return
+				}
+				throw new Error("Failed to fetch tracking data")
+			}
+
+			const data = await response.json()
+			setOrder(data)
+		} catch (err: any) {
+			setError(err.message)
+			console.error("Error fetching tracking data:", err)
+		} finally {
+			setLoading(false)
+		}
+	}
 
 	if (loading) {
 		return (
@@ -122,11 +112,11 @@ export default function OrderTrackingPage() {
 		)
 	}
 
-	if (!order) {
+	if (error || !order) {
 		return (
 			<div className="max-w-5xl mx-auto space-y-6 py-8 px-4 sm:px-6 lg:px-8">
 				<div className="flex items-center justify-center py-12">
-					<div className="text-lg text-gray-500">Order not found</div>
+					<div className="text-lg text-red-500">{error || "Order not found"}</div>
 				</div>
 			</div>
 		)
@@ -138,12 +128,12 @@ export default function OrderTrackingPage() {
 	return (
 		<div className="max-w-5xl mx-auto space-y-6 py-8 px-4 sm:px-6 lg:px-8">
 			<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-				<div>
-					<h1 className="text-2xl md:text-3xl font-bold">Track Order</h1>
-					<p className="text-sm text-gray-500 mt-2">
-						Order {order.id} • Placed on {formatDate(order.date)}
-					</p>
-				</div>
+			<div>
+				<h1 className="text-2xl md:text-3xl font-bold">Track Order</h1>
+				<p className="text-sm text-gray-500 mt-2">
+					Order #{order.id.slice(-8).toUpperCase()}
+				</p>
+			</div>
 				<div className="flex items-center gap-3">
 					<a href={`/account/orders/${order.id}`} className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition text-sm font-medium">
 						View Order Details

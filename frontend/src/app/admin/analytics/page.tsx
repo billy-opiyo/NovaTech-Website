@@ -70,6 +70,7 @@ export default function AdminAnalyticsPage() {
 	const [topProducts, setTopProducts] = useState<TopProduct[]>([])
 	const [regionData, setRegionData] = useState<any[]>([])
 	const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+	const [growthData, setGrowthData] = useState<any>(null)
 
 	useEffect(() => {
 		fetchAnalytics()
@@ -87,13 +88,23 @@ export default function AdminAnalyticsPage() {
 
 			const data = await response.json()
 
-			// Transform overview metrics
+			// Store growth data
+			if (data.growth) {
+				setGrowthData(data.growth)
+			}
+
+			// Transform overview metrics with real growth data
+			const formatGrowth = (growth: number) => {
+				const sign = growth >= 0 ? "+" : ""
+				return `${sign}${growth.toFixed(1)}%`
+			}
+
 			setMetricsCards([
 				{
 					title: "Total Revenue",
 					value: `KES ${data.overview.totalRevenue.toLocaleString()}`,
-					change: "+12.5%",
-					changeType: "positive" as const,
+					change: data.growth ? formatGrowth(data.growth.revenueGrowth) : "+0%",
+					changeType: data.growth && data.growth.revenueGrowth >= 0 ? "positive" : "negative",
 					icon: DollarSign,
 					color: "text-green-500",
 					bgColor: "bg-green-500/10",
@@ -101,8 +112,8 @@ export default function AdminAnalyticsPage() {
 				{
 					title: "Total Orders",
 					value: data.overview.totalOrders.toLocaleString(),
-					change: "+8.2%",
-					changeType: "positive" as const,
+					change: data.growth ? formatGrowth(data.growth.ordersGrowth) : "+0%",
+					changeType: data.growth && data.growth.ordersGrowth >= 0 ? "positive" : "negative",
 					icon: ShoppingCart,
 					color: "text-blue-500",
 					bgColor: "bg-blue-500/10",
@@ -110,8 +121,8 @@ export default function AdminAnalyticsPage() {
 				{
 					title: "Average Order Value",
 					value: `KES ${Math.round(data.overview.averageOrderValue).toLocaleString()}`,
-					change: "+5.1%",
-					changeType: "positive" as const,
+					change: data.growth ? formatGrowth(data.growth.aovGrowth) : "+0%",
+					changeType: data.growth && data.growth.aovGrowth >= 0 ? "positive" : "negative",
 					icon: TrendingUp,
 					color: "text-purple-500",
 					bgColor: "bg-purple-500/10",
@@ -119,8 +130,8 @@ export default function AdminAnalyticsPage() {
 				{
 					title: "Conversion Rate",
 					value: `${data.overview.conversionRate.toFixed(2)}%`,
-					change: "-0.4%",
-					changeType: "negative" as const,
+					change: data.growth ? formatGrowth(data.growth.conversionGrowth) : "+0%",
+					changeType: data.growth && data.growth.conversionGrowth >= 0 ? "positive" : "negative",
 					icon: Users,
 					color: "text-orange-500",
 					bgColor: "bg-orange-500/10",
@@ -154,8 +165,46 @@ export default function AdminAnalyticsPage() {
 		}
 	}
 
-	const maxRevenue = salesData.length > 0 ? Math.max(...salesData.map((d) => d.revenue)) : 1
-	const maxOrders = salesData.length > 0 ? Math.max(...salesData.map((d) => d.orders)) : 1
+	const handleExport = async (format: "csv" | "json") => {
+		try {
+			const response = await fetch(`/api/analytics/export?timeRange=${timeRange}&format=${format}`)
+
+			if (!response.ok) {
+				throw new Error("Failed to export data")
+			}
+
+			if (format === "json") {
+				const data = await response.json()
+				const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+				const url = URL.createObjectURL(blob)
+				const a = document.createElement("a")
+				a.href = url
+				a.download = `analytics-${timeRange}-${new Date().toISOString().split("T")[0]}.json`
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				URL.revokeObjectURL(url)
+			} else {
+				const blob = await response.blob()
+				const url = URL.createObjectURL(blob)
+				const a = document.createElement("a")
+				a.href = url
+				a.download = `analytics-${timeRange}-${new Date().toISOString().split("T")[0]}.csv`
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				URL.revokeObjectURL(url)
+			}
+		} catch (err: any) {
+			console.error("Error exporting analytics:", err)
+			alert("Failed to export analytics data")
+		}
+	}
+
+	const maxRevenue =
+		salesData.length > 0 ? Math.max(...salesData.map((d) => d.revenue)) : 1
+	const maxOrders =
+		salesData.length > 0 ? Math.max(...salesData.map((d) => d.orders)) : 1
 
 	return (
 		<div className="space-y-6">
@@ -177,7 +226,9 @@ export default function AdminAnalyticsPage() {
 					<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 						<div>
 							<h1 className="text-2xl md:text-3xl font-bold">Analytics</h1>
-							<p className="text-gray-500 mt-1">Track your store performance and insights</p>
+							<p className="text-gray-500 mt-1">
+								Track your store performance and insights
+							</p>
 						</div>
 						<div className="flex gap-3">
 							<select
@@ -190,9 +241,25 @@ export default function AdminAnalyticsPage() {
 								<option value="3m">Last 3 months</option>
 								<option value="1y">Last year</option>
 							</select>
-							<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-								<Download size={18} /> Export
-							</button>
+							<div className="relative group">
+								<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+									<Download size={18} /> Export
+								</button>
+								<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+									<button
+										onClick={() => handleExport("csv")}
+										className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-sm"
+									>
+										Export as CSV
+									</button>
+									<button
+										onClick={() => handleExport("json")}
+										className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg text-sm"
+									>
+										Export as JSON
+									</button>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -244,15 +311,22 @@ export default function AdminAnalyticsPage() {
 							<div className="flex items-center justify-between mb-6">
 								<div>
 									<h2 className="text-xl font-bold">Revenue Overview</h2>
-									<p className="text-sm text-gray-500 mt-1">Daily revenue for the period</p>
+									<p className="text-sm text-gray-500 mt-1">
+										Daily revenue for the period
+									</p>
 								</div>
 							</div>
 							<div className="h-64 flex items-end gap-2">
 								{salesData.map((data, index) => (
-									<div key={data.period} className="flex-1 flex flex-col items-center gap-2">
+									<div
+										key={data.period}
+										className="flex-1 flex flex-col items-center gap-2"
+									>
 										<motion.div
 											initial={{ height: 0 }}
-											animate={{ height: `${(data.revenue / maxRevenue) * 100}%` }}
+											animate={{
+												height: `${(data.revenue / maxRevenue) * 100}%`,
+											}}
 											transition={{ duration: 1, delay: index * 0.1 }}
 											className="w-full bg-gradient-to-t from-primary to-accent rounded-t-lg relative group cursor-pointer"
 										>
@@ -276,15 +350,22 @@ export default function AdminAnalyticsPage() {
 							<div className="flex items-center justify-between mb-6">
 								<div>
 									<h2 className="text-xl font-bold">Orders Overview</h2>
-									<p className="text-sm text-gray-500 mt-1">Daily orders for the period</p>
+									<p className="text-sm text-gray-500 mt-1">
+										Daily orders for the period
+									</p>
 								</div>
 							</div>
 							<div className="h-64 flex items-end gap-2">
 								{salesData.map((data, index) => (
-									<div key={data.period} className="flex-1 flex flex-col items-center gap-2">
+									<div
+										key={data.period}
+										className="flex-1 flex flex-col items-center gap-2"
+									>
 										<motion.div
 											initial={{ height: 0 }}
-											animate={{ height: `${(data.orders / maxOrders) * 100}%` }}
+											animate={{
+												height: `${(data.orders / maxOrders) * 100}%`,
+											}}
 											transition={{ duration: 1, delay: index * 0.1 }}
 											className="w-full bg-gradient-to-t from-blue-500 to-cyan-500 rounded-t-lg relative group cursor-pointer"
 										>
@@ -313,7 +394,9 @@ export default function AdminAnalyticsPage() {
 								{categorySales.map((category, index) => (
 									<div key={category.category}>
 										<div className="flex items-center justify-between mb-2">
-											<span className="text-sm font-medium">{category.category}</span>
+											<span className="text-sm font-medium">
+												{category.category}
+											</span>
 											<span className="text-sm text-gray-500">
 												KES {(category.sales / 1000000).toFixed(2)}M
 											</span>
@@ -326,7 +409,9 @@ export default function AdminAnalyticsPage() {
 												className={clsx("h-3 rounded-full", category.color)}
 											/>
 										</div>
-										<p className="text-xs text-gray-500 mt-1">{category.percentage.toFixed(1)}% of total sales</p>
+										<p className="text-xs text-gray-500 mt-1">
+											{category.percentage.toFixed(1)}% of total sales
+										</p>
 									</div>
 								))}
 							</div>
@@ -342,7 +427,9 @@ export default function AdminAnalyticsPage() {
 							<div className="flex items-center justify-between mb-6">
 								<div>
 									<h2 className="text-xl font-bold">Top Selling Products</h2>
-									<p className="text-sm text-gray-500 mt-1">Best performers this period</p>
+									<p className="text-sm text-gray-500 mt-1">
+										Best performers this period
+									</p>
 								</div>
 							</div>
 							<div className="space-y-4">
@@ -363,10 +450,16 @@ export default function AdminAnalyticsPage() {
 											/>
 										</div>
 										<div className="flex-1 min-w-0">
-											<p className="font-medium text-sm truncate">{product.name}</p>
-											<p className="text-xs text-gray-500">{product.category}</p>
+											<p className="font-medium text-sm truncate">
+												{product.name}
+											</p>
+											<p className="text-xs text-gray-500">
+												{product.category}
+											</p>
 											<div className="flex items-center gap-3 mt-1">
-												<span className="text-xs text-gray-500">{product.sales} sales</span>
+												<span className="text-xs text-gray-500">
+													{product.sales} sales
+												</span>
 												<span className="text-xs text-gray-400">
 													KES {(product.revenue / 1000000).toFixed(2)}M
 												</span>
@@ -417,12 +510,16 @@ export default function AdminAnalyticsPage() {
 										<p className="text-lg font-bold text-primary">
 											KES {(region.sales / 1000000).toFixed(2)}M
 										</p>
-										<p className="text-xs text-gray-500 mt-1">{region.orders} orders</p>
+										<p className="text-xs text-gray-500 mt-1">
+											{region.orders} orders
+										</p>
 									</motion.div>
 								))}
 							</div>
 						) : (
-							<p className="text-gray-500 text-center py-8">No sales data available for this period</p>
+							<p className="text-gray-500 text-center py-8">
+								No sales data available for this period
+							</p>
 						)}
 					</motion.div>
 
@@ -450,7 +547,9 @@ export default function AdminAnalyticsPage() {
 										<p className="text-xl font-bold mb-2">
 											KES {payment.amount.toLocaleString()}
 										</p>
-										<p className="text-sm text-gray-500">{payment.orders} orders</p>
+										<p className="text-sm text-gray-500">
+											{payment.orders} orders
+										</p>
 										<div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 											<motion.div
 												initial={{ width: 0 }}
@@ -463,7 +562,9 @@ export default function AdminAnalyticsPage() {
 								))}
 							</div>
 						) : (
-							<p className="text-gray-500 text-center py-8">No payment data available for this period</p>
+							<p className="text-gray-500 text-center py-8">
+								No payment data available for this period
+							</p>
 						)}
 					</motion.div>
 				</>

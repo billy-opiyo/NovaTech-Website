@@ -1,12 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import Image from "next/image"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
 	Ticket,
 	Search,
-	Filter,
 	Eye,
 	MessageSquare,
 	Clock,
@@ -16,6 +14,10 @@ import {
 	Download,
 	Mail,
 	Phone,
+	Users,
+	Send,
+	Package,
+	UserCheck,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -23,89 +25,32 @@ interface SupportTicket {
 	id: string
 	customerName: string
 	customerEmail: string
-	customerPhone: string
+	customerPhone?: string
 	subject: string
 	description: string
-	category: "technical" | "billing" | "shipping" | "product" | "other"
-	priority: "low" | "medium" | "high" | "urgent"
-	status: "open" | "in_progress" | "waiting_customer" | "resolved" | "closed"
+	category: string
+	priority: string
+	status: string
 	createdAt: string
 	updatedAt: string
 	assignedTo?: string
 	attachments?: string[]
+	replies?: Array<{
+		id: string
+		reply: string
+		isAdmin: boolean
+		createdAt: string
+	}>
 }
 
-const mockTickets: SupportTicket[] = [
-	{
-		id: "tkt-1",
-		customerName: "John Doe",
-		customerEmail: "john@example.com",
-		customerPhone: "0712345678",
-		subject: "Product not working as expected",
-		description: "I purchased a laptop 3 days ago and it keeps shutting down randomly. I've tried charging it but the issue persists.",
-		category: "technical",
-		priority: "high",
-		status: "in_progress",
-		createdAt: "2024-08-24",
-		updatedAt: "2024-08-24",
-		assignedTo: "Support Team A",
-	},
-	{
-		id: "tkt-2",
-		customerName: "Sarah Kimani",
-		customerEmail: "sarah@example.com",
-		customerPhone: "0723456789",
-		subject: "Wrong item delivered",
-		description: "I ordered a phone but received a different model. The IMEI number doesn't match what I ordered.",
-		category: "shipping",
-		priority: "urgent",
-		status: "open",
-		createdAt: "2024-08-24",
-		updatedAt: "2024-08-24",
-	},
-	{
-		id: "tkt-3",
-		customerName: "Mike Omondi",
-		customerEmail: "mike@example.com",
-		customerPhone: "0734567890",
-		subject: "Refund not processed",
-		description: "I returned an item 2 weeks ago but haven't received my refund yet. Order number: EB-20240810-123",
-		category: "billing",
-		priority: "high",
-		status: "waiting_customer",
-		createdAt: "2024-08-23",
-		updatedAt: "2024-08-24",
-		assignedTo: "Billing Team",
-	},
-	{
-		id: "tkt-4",
-		customerName: "Jane Wambui",
-		customerEmail: "jane@example.com",
-		customerPhone: "0745678901",
-		subject: "Question about warranty",
-		description: "Does the product come with international warranty? I'll be traveling abroad next month.",
-		category: "product",
-		priority: "low",
-		status: "resolved",
-		createdAt: "2024-08-22",
-		updatedAt: "2024-08-23",
-		assignedTo: "Support Team B",
-	},
-	{
-		id: "tkt-5",
-		customerName: "Brian Kipchoge",
-		customerEmail: "brian@example.com",
-		customerPhone: "0756789012",
-		subject: "Coupon code not working",
-		description: "I'm trying to apply the SUMMER25 coupon but it says it's expired. Can you help?",
-		category: "other",
-		priority: "medium",
-		status: "closed",
-		createdAt: "2024-08-21",
-		updatedAt: "2024-08-22",
-		assignedTo: "Support Team A",
-	},
-]
+interface TicketStats {
+	total: number
+	open: number
+	inProgress: number
+	waiting: number
+	resolved: number
+	closed: number
+}
 
 const statusFilters = ["All", "Open", "In Progress", "Waiting Customer", "Resolved", "Closed"]
 const priorityFilters = ["All", "Urgent", "High", "Medium", "Low"]
@@ -118,23 +63,137 @@ export default function AdminSupportPage() {
 	const [categoryFilter, setCategoryFilter] = useState("All")
 	const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
 	const [showDetails, setShowDetails] = useState(false)
-
-	const filteredTickets = mockTickets.filter((ticket) => {
-		const matchesSearch =
-			ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			ticket.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			ticket.description.toLowerCase().includes(searchQuery.toLowerCase())
-		const matchesStatus =
-			statusFilter === "All" ||
-			ticket.status.toLowerCase().replace("_", " ") === statusFilter.toLowerCase()
-		const matchesPriority =
-			priorityFilter === "All" ||
-			ticket.priority.toLowerCase() === priorityFilter.toLowerCase()
-		const matchesCategory =
-			categoryFilter === "All" ||
-			ticket.category.toLowerCase() === categoryFilter.toLowerCase()
-		return matchesSearch && matchesStatus && matchesPriority && matchesCategory
+	const [tickets, setTickets] = useState<SupportTicket[]>([])
+	const [stats, setStats] = useState<TicketStats>({
+		total: 0,
+		open: 0,
+		inProgress: 0,
+		waiting: 0,
+		resolved: 0,
+		closed: 0,
 	})
+	const [loading, setLoading] = useState(true)
+	const [replyText, setReplyText] = useState("")
+
+	useEffect(() => {
+		fetchTickets()
+		fetchStats()
+	}, [statusFilter, priorityFilter, categoryFilter, searchQuery])
+
+	const fetchTickets = async () => {
+		try {
+			setLoading(true)
+			const params = new URLSearchParams({
+				status: statusFilter,
+				priority: priorityFilter,
+				category: categoryFilter,
+				search: searchQuery,
+			})
+			const response = await fetch(`/api/support/tickets?${params.toString()}`)
+
+			if (!response.ok) {
+				throw new Error("Failed to fetch tickets")
+			}
+
+			const data = await response.json()
+			setTickets(
+				data.tickets.map((t: any) => ({
+					...t,
+					createdAt: t.createdAt,
+					updatedAt: t.updatedAt,
+				})),
+			)
+		} catch (err) {
+			console.error("Error fetching tickets:", err)
+		} finally {
+			setLoading(false)
+		}
+	}
+
+	const fetchStats = async () => {
+		try {
+			const response = await fetch(`/api/support/tickets?stats=true`)
+			if (response.ok) {
+				const data = await response.json()
+				setStats(data)
+			}
+		} catch (err) {
+			console.error("Error fetching stats:", err)
+		}
+	}
+
+	const handleViewDetails = (ticket: SupportTicket) => {
+		setSelectedTicket(ticket)
+		setShowDetails(true)
+		setReplyText("")
+	}
+
+	const handleStatusChange = async (ticketId: string, newStatus: string) => {
+		try {
+			const response = await fetch(`/api/support/tickets/${ticketId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: newStatus }),
+			})
+
+			if (response.ok) {
+				setTickets(
+					tickets.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t)),
+				)
+				if (selectedTicket?.id === ticketId) {
+					setSelectedTicket({ ...selectedTicket, status: newStatus })
+				}
+			}
+		} catch (err) {
+			console.error("Error updating ticket status:", err)
+		}
+	}
+
+	const handleSendReply = async () => {
+		if (!replyText.trim() || !selectedTicket) return
+
+		try {
+			const response = await fetch(`/api/support/tickets/${selectedTicket.id}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ reply: replyText }),
+			})
+
+			if (response.ok) {
+				const newReply = await response.json()
+				if (selectedTicket) {
+					setSelectedTicket({
+						...selectedTicket,
+						replies: [...(selectedTicket.replies || []), newReply],
+					})
+				}
+				setReplyText("")
+			}
+		} catch (err) {
+			console.error("Error sending reply:", err)
+		}
+	}
+
+	const handleExport = async () => {
+		try {
+			const response = await fetch("/api/analytics/export?timeRange=30d&format=csv")
+			if (response.ok) {
+				const blob = await response.blob()
+				const url = URL.createObjectURL(blob)
+				const a = document.createElement("a")
+				a.href = url
+				a.download = `support-tickets-${new Date().toISOString().split("T")[0]}.csv`
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				URL.revokeObjectURL(url)
+			}
+		} catch (err) {
+			console.error("Error exporting tickets:", err)
+		}
+	}
+
+	const filteredTickets = tickets
 
 	const getStatusBadge = (status: string) => {
 		const styles: Record<string, string> = {
@@ -168,23 +227,27 @@ export default function AdminSupportPage() {
 		return styles[priority] || "bg-gray-500/20 text-gray-600"
 	}
 
-	const getCategoryIcon = (category: string) => {
-		const icons: Record<string, React.ElementType> = {
-			technical: AlertTriangle,
-			billing: Mail,
-			shipping: Package,
-			product: Ticket,
-			other: MessageSquare,
+	const getCategoryIcon = (category: string): React.ReactNode => {
+		const icons: Record<string, React.ReactNode> = {
+			technical: <AlertTriangle size={24} />,
+			billing: <Mail size={24} />,
+			shipping: <Package size={24} />,
+			product: <Ticket size={24} />,
+			other: <MessageSquare size={24} />,
 		}
-		return icons[category] || MessageSquare
+		return icons[category] || <MessageSquare size={24} />
 	}
 
-	const ticketStats = {
-		total: mockTickets.length,
-		open: mockTickets.filter((t) => t.status === "open").length,
-		inProgress: mockTickets.filter((t) => t.status === "in_progress").length,
-		waiting: mockTickets.filter((t) => t.status === "waiting_customer").length,
-		resolved: mockTickets.filter((t) => t.status === "resolved").length,
+	const getCategoryLabel = (category: string) => {
+		return category.charAt(0).toUpperCase() + category.slice(1)
+	}
+
+	const getPriorityLabel = (priority: string) => {
+		return priority.charAt(0).toUpperCase() + priority.slice(1)
+	}
+
+	const getStatusLabel = (status: string) => {
+		return status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())
 	}
 
 	return (
@@ -196,7 +259,10 @@ export default function AdminSupportPage() {
 					<p className="text-gray-500 mt-1">Manage customer support requests</p>
 				</div>
 				<div className="flex gap-3">
-					<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+					<button
+						onClick={handleExport}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+					>
 						<Download size={18} /> Export
 					</button>
 				</div>
@@ -205,30 +271,10 @@ export default function AdminSupportPage() {
 			{/* Stats Grid */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 				{[
-					{
-						label: "Total Tickets",
-						value: ticketStats.total.toString(),
-						icon: Ticket,
-						color: "text-blue-500",
-					},
-					{
-						label: "Open",
-						value: ticketStats.open.toString(),
-						icon: AlertTriangle,
-						color: "text-red-500",
-					},
-					{
-						label: "In Progress",
-						value: ticketStats.inProgress.toString(),
-						icon: Clock,
-						color: "text-yellow-500",
-					},
-					{
-						label: "Resolved",
-						value: ticketStats.resolved.toString(),
-						icon: CheckCircle2,
-						color: "text-green-500",
-					},
+					{ label: "Total Tickets", value: stats.total.toString(), icon: Ticket, color: "text-blue-500" },
+					{ label: "Open", value: stats.open.toString(), icon: AlertTriangle, color: "text-red-500" },
+					{ label: "In Progress", value: stats.inProgress.toString(), icon: Clock, color: "text-yellow-500" },
+					{ label: "Resolved", value: stats.resolved.toString(), icon: CheckCircle2, color: "text-green-500" },
 				].map((stat, index) => (
 					<motion.div
 						key={stat.label}
@@ -252,10 +298,7 @@ export default function AdminSupportPage() {
 			<div className="glass-card p-4 mb-6 space-y-4">
 				<div className="flex flex-col md:flex-row gap-4">
 					<div className="relative flex-1">
-						<Search
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-							size={18}
-						/>
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
 						<input
 							type="text"
 							placeholder="Search tickets by subject, customer, or description..."
@@ -273,9 +316,7 @@ export default function AdminSupportPage() {
 								onClick={() => setStatusFilter(filter)}
 								className={clsx(
 									"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
-									statusFilter === filter
-										? "bg-primary text-white"
-										: "bg-white/10 hover:bg-white/20",
+									statusFilter === filter ? "bg-primary text-white" : "bg-white/10 hover:bg-white/20",
 								)}
 							>
 								{filter}
@@ -289,9 +330,21 @@ export default function AdminSupportPage() {
 								onClick={() => setPriorityFilter(filter)}
 								className={clsx(
 									"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
-									priorityFilter === filter
-										? "bg-primary text-white"
-										: "bg-white/10 hover:bg-white/20",
+									priorityFilter === filter ? "bg-primary text-white" : "bg-white/10 hover:bg-white/20",
+								)}
+							>
+								{filter}
+							</button>
+						))}
+					</div>
+					<div className="flex gap-2 overflow-x-auto">
+						{categoryFilters.map((filter) => (
+							<button
+								key={filter}
+								onClick={() => setCategoryFilter(filter)}
+								className={clsx(
+									"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
+									categoryFilter === filter ? "bg-primary text-white" : "bg-white/10 hover:bg-white/20",
 								)}
 							>
 								{filter}
@@ -303,91 +356,94 @@ export default function AdminSupportPage() {
 
 			{/* Tickets List */}
 			<div className="space-y-4">
-				{filteredTickets.map((ticket, index) => {
-					const CategoryIcon = getCategoryIcon(ticket.category)
-					return (
-						<motion.div
-							key={ticket.id}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: index * 0.05 }}
-							className="glass-card p-6 hover:scale-[1.01] transition cursor-pointer"
-						>
-							<div className="flex items-start gap-4">
-								{/* Category Icon */}
-								<div className="p-3 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-									<CategoryIcon size={24} />
-								</div>
-
-								{/* Ticket Content */}
-								<div className="flex-1 min-w-0">
-									<div className="flex items-start justify-between mb-2">
-										<div>
-											<h3 className="font-semibold text-sm mb-1">{ticket.subject}</h3>
-											<p className="text-xs text-gray-500">
-												{ticket.id} • {ticket.customerName} • {ticket.createdAt}
-											</p>
-										</div>
-										<div className="flex items-center gap-2 flex-shrink-0">
-											<span
-												className={clsx(
-													"px-2 py-1 rounded-full text-xs font-medium",
-													getPriorityBadge(ticket.priority),
-												)}
-											>
-												{ticket.priority.toUpperCase()}
-											</span>
-											<span
-												className={clsx(
-													"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-													getStatusBadge(ticket.status),
-												)}
-											>
-												{getStatusIcon(ticket.status)}
-												{ticket.status.replace("_", " ").toUpperCase()}
-											</span>
-										</div>
+				{loading ? (
+					<div className="text-center py-16">
+						<div className="text-lg text-gray-500">Loading tickets...</div>
+					</div>
+				) : (
+					filteredTickets.map((ticket, index) => {
+						const CategoryIcon = getCategoryIcon(ticket.category)
+						return (
+							<motion.div
+								key={ticket.id}
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: index * 0.05 }}
+								className="glass-card p-6 hover:scale-[1.01] transition cursor-pointer"
+								onClick={() => handleViewDetails(ticket)}
+							>
+								<div className="flex items-start gap-4">
+									{/* Category Icon */}
+									<div className="p-3 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+										{CategoryIcon}
 									</div>
 
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-										{ticket.description}
-									</p>
-
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-4 text-xs text-gray-500">
-											<span className="capitalize">{ticket.category}</span>
-											{ticket.assignedTo && (
-												<span>Assigned to: {ticket.assignedTo}</span>
-											)}
+									{/* Ticket Content */}
+									<div className="flex-1 min-w-0">
+										<div className="flex items-start justify-between mb-2">
+											<div>
+												<h3 className="font-semibold text-sm mb-1">{ticket.subject}</h3>
+												<p className="text-xs text-gray-500">
+													{ticket.id} • {ticket.customerName} • {new Date(ticket.createdAt).toLocaleDateString()}
+												</p>
+											</div>
+											<div className="flex items-center gap-2 flex-shrink-0">
+												<span
+													className={clsx(
+														"px-2 py-1 rounded-full text-xs font-medium",
+														getPriorityBadge(ticket.priority),
+													)}
+												>
+													{ticket.priority.toUpperCase()}
+												</span>
+												<span
+													className={clsx(
+														"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+														getStatusBadge(ticket.status),
+													)}
+												>
+													{getStatusIcon(ticket.status)}
+													{ticket.status.replace("_", " ").toUpperCase()}
+												</span>
+											</div>
 										</div>
 
-										<div className="flex items-center gap-1">
+										<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+											{ticket.description}
+										</p>
+
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-4 text-xs text-gray-500">
+												<span className="capitalize">{getCategoryLabel(ticket.category)}</span>
+												{ticket.assignedTo && <span>Assigned to: {ticket.assignedTo}</span>}
+												{ticket.replies && ticket.replies.length > 0 && (
+													<span className="flex items-center gap-1">
+														<MessageSquare size={12} />
+														{ticket.replies.length} replies
+													</span>
+												)}
+											</div>
+
 											<button
-												onClick={() => {
-													setSelectedTicket(ticket)
-													setShowDetails(true)
+												onClick={(e) => {
+													e.stopPropagation()
+													handleViewDetails(ticket)
 												}}
 												className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 												title="View Details"
 											>
 												<Eye size={16} />
 											</button>
-											<button
-												className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-												title="Reply"
-											>
-												<MessageSquare size={16} />
-											</button>
 										</div>
 									</div>
 								</div>
-							</div>
-						</motion.div>
-					)
-				})}
+							</motion.div>
+						)
+					})
+				)}
 			</div>
 
-			{filteredTickets.length === 0 && (
+			{!loading && filteredTickets.length === 0 && (
 				<div className="text-center py-16">
 					<Ticket className="mx-auto mb-4 text-gray-400" size={48} />
 					<h3 className="text-lg font-semibold mb-2">No tickets found</h3>
@@ -410,7 +466,7 @@ export default function AdminSupportPage() {
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
 							exit={{ opacity: 0, scale: 0.9 }}
-							className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto"
+							className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl z-50 max-h-[90vh] overflow-y-auto"
 						>
 							<div className="glass-card p-6">
 								<div className="flex items-center justify-between mb-6">
@@ -425,18 +481,20 @@ export default function AdminSupportPage() {
 									<div>
 										<div className="flex items-start justify-between mb-2">
 											<h3 className="font-semibold text-lg">{selectedTicket.subject}</h3>
-											<span
-												className={clsx(
-													"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-													getStatusBadge(selectedTicket.status),
-												)}
+											<select
+												value={selectedTicket.status}
+												onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}
+												className="form-select text-sm"
 											>
-												{getStatusIcon(selectedTicket.status)}
-												{selectedTicket.status.replace("_", " ").toUpperCase()}
-											</span>
+												<option value="open">Open</option>
+												<option value="in_progress">In Progress</option>
+												<option value="waiting_customer">Waiting Customer</option>
+												<option value="resolved">Resolved</option>
+												<option value="closed">Closed</option>
+											</select>
 										</div>
 										<p className="text-xs text-gray-500">
-											{selectedTicket.id} • Created {selectedTicket.createdAt}
+											{selectedTicket.id} • Created {new Date(selectedTicket.createdAt).toLocaleDateString()} • Last updated {new Date(selectedTicket.updatedAt).toLocaleDateString()}
 										</p>
 									</div>
 
@@ -444,8 +502,11 @@ export default function AdminSupportPage() {
 
 									{/* Customer Info */}
 									<div>
-										<h3 className="font-semibold mb-3">Customer Information</h3>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<h3 className="font-semibold mb-3 flex items-center gap-2">
+											<Users size={18} />
+											Customer Information
+										</h3>
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 											<div className="flex items-center gap-2">
 												<Users size={18} className="text-gray-400" />
 												<div>
@@ -460,13 +521,15 @@ export default function AdminSupportPage() {
 													<p className="text-sm font-medium">{selectedTicket.customerEmail}</p>
 												</div>
 											</div>
-											<div className="flex items-center gap-2">
-												<Phone size={18} className="text-gray-400" />
-												<div>
-													<p className="text-xs text-gray-500">Phone</p>
-													<p className="text-sm font-medium">{selectedTicket.customerPhone}</p>
+											{selectedTicket.customerPhone && (
+												<div className="flex items-center gap-2">
+													<Phone size={18} className="text-gray-400" />
+													<div>
+														<p className="text-xs text-gray-500">Phone</p>
+														<p className="text-sm font-medium">{selectedTicket.customerPhone}</p>
+													</div>
 												</div>
-											</div>
+											)}
 										</div>
 									</div>
 
@@ -485,14 +548,14 @@ export default function AdminSupportPage() {
 									{/* Ticket Meta */}
 									<div>
 										<h3 className="font-semibold mb-3">Details</h3>
-										<div className="grid grid-cols-2 gap-4">
+										<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 											<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
 												<p className="text-xs text-gray-500">Category</p>
-												<p className="text-sm font-medium capitalize">{selectedTicket.category}</p>
+												<p className="text-sm font-medium capitalize">{getCategoryLabel(selectedTicket.category)}</p>
 											</div>
 											<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
 												<p className="text-xs text-gray-500">Priority</p>
-												<p className="text-sm font-medium capitalize">{selectedTicket.priority}</p>
+												<p className="text-sm font-medium capitalize">{getPriorityLabel(selectedTicket.priority)}</p>
 											</div>
 											<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
 												<p className="text-xs text-gray-500">Assigned To</p>
@@ -500,17 +563,66 @@ export default function AdminSupportPage() {
 											</div>
 											<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
 												<p className="text-xs text-gray-500">Last Updated</p>
-												<p className="text-sm font-medium">{selectedTicket.updatedAt}</p>
+												<p className="text-sm font-medium">{new Date(selectedTicket.updatedAt).toLocaleString()}</p>
 											</div>
 										</div>
 									</div>
 
+									{/* Replies Section */}
+									{selectedTicket.replies && selectedTicket.replies.length > 0 && (
+										<div>
+											<h3 className="font-semibold mb-3">Conversation</h3>
+											<div className="space-y-4">
+												{selectedTicket.replies.map((reply) => (
+													<div
+														key={reply.id}
+														className={clsx(
+															"p-4 rounded-xl",
+															reply.isAdmin ? "bg-primary/10 ml-auto" : "bg-gray-50 dark:bg-gray-800",
+														)}
+													>
+														<div className="flex items-center gap-2 mb-2">
+															{reply.isAdmin ? (
+																<UserCheck size={14} className="text-primary" />
+															) : (
+																<Users size={14} className="text-gray-400" />
+															)}
+															<span className="text-xs font-medium">
+																{reply.isAdmin ? "Support Agent" : selectedTicket.customerName}
+															</span>
+															<span className="text-xs text-gray-500">
+																{new Date(reply.createdAt).toLocaleString()}
+															</span>
+														</div>
+														<p className="text-sm">{reply.reply}</p>
+													</div>
+												))}
+											</div>
+										</div>
+									)}
+
+									{/* Reply Box */}
+									<div>
+										<h3 className="font-semibold mb-3">Send Reply</h3>
+										<textarea
+											value={replyText}
+											onChange={(e) => setReplyText(e.target.value)}
+											placeholder="Type your response here..."
+											className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+											rows={4}
+										/>
+										<button
+											onClick={handleSendReply}
+											disabled={!replyText.trim()}
+											className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition disabled:opacity-50"
+										>
+											<Send size={16} />
+											Send Reply
+										</button>
+									</div>
+
 									{/* Actions */}
 									<div className="flex gap-3">
-										<button className="btn-primary flex-1">Reply to Ticket</button>
-										<button className="flex-1 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition">
-											Change Status
-										</button>
 										<button
 											onClick={() => setShowDetails(false)}
 											className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"

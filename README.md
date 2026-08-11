@@ -480,11 +480,14 @@ The backend service layer has been fully implemented with proper separation of c
 
 ---
 
+## ✅ Recently Implemented
+
+- **Admin analytics enhancements** — Growth comparison calculations (period-over-period), CSV/JSON export functionality, and real-time growth data in metric cards
+- **Order tracking & delivery notifications** — Real-time order tracking page connected to API, tracking history generated from order status changes, SMS/WhatsApp delivery notifications for all status transitions (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)
+- **Support ticket system in admin** — Full backend API for ticket management, real-time ticket listing with filters, ticket detail modal with conversation view, reply functionality, and status updates with automatic customer notifications
+
 ## 🔮 Planned / Next Steps
 
-- Enhance admin analytics with growth comparisons and export functionality
-- Add order tracking and delivery notifications (SMS/WhatsApp)
-- Add support ticket system in admin
 - Set up deployment (Vercel for frontend, Neon for DB, Cloudflare for storage)
 
 ---

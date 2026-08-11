@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
-import prisma from "backend/lib/db"
+import { createTicket } from "backend/services/support.service"
 import { sendEmail } from "backend/lib/email"
 
 const contactSchema = z.object({
@@ -11,6 +11,7 @@ const contactSchema = z.object({
 	subject: z.string().min(3),
 	message: z.string().min(10),
 	orderNumber: z.string().optional(),
+	category: z.enum(["technical", "billing", "shipping", "product", "other"]).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -21,13 +22,14 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = contactSchema.parse(body)
 
-		const ticket = await prisma.supportTicket.create({
-			data: {
-				userId: "guest",
-				subject: validated.subject,
-				message: `From: ${validated.name} (${validated.email})\nPhone: ${validated.phone || "N/A"}\nOrder: ${validated.orderNumber || "N/A"}\n\n${validated.message}`,
-				status: "OPEN",
-			},
+		const ticket = await createTicket({
+			customerName: validated.name,
+			customerEmail: validated.email,
+			customerPhone: validated.phone || "",
+			subject: validated.subject,
+			description: `${validated.message}\n\nOrder: ${validated.orderNumber || "N/A"}`,
+			category: validated.category || "other",
+			priority: "medium",
 		})
 
 		await sendEmail({
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
 			{
 				message:
 					"Message sent successfully! We will get back to you within 24 hours.",
+				ticketId: ticket.id,
 			},
 			{ status: 201 },
 		)
