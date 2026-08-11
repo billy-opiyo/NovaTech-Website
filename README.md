@@ -407,6 +407,13 @@ npm run dev:open
 - ✔️ **Coupon API** — Real DB-backed validation (expiry, usage limit, min order, discount)
 - ✔️ **Contact API** — Support ticket creation + email notification
 - ✔️ **Newsletter API** — Validated subscription endpoint
+- ✔️ **Analytics API** — Real-time analytics dashboard with:
+  - Revenue, orders, average order value, and conversion rate metrics
+  - Daily sales and orders charts (7d, 30d, 3m, 1y time ranges)
+  - Category sales breakdown with percentages
+  - Top selling products with revenue
+  - Regional sales distribution
+  - Payment method breakdown (M-Pesa, Card, COD)
 - ✔️ **Rate limiting** — 60 req/min per IP on sensitive endpoints
 - ✔️ **Email** — Resend integration with branded order-confirmation template
 - ✔️ **SMS notifications** — Real Twilio SMS integration with:
@@ -432,15 +439,15 @@ npm run dev:open
 
 ### Partially Implemented / Stubs
 
-- ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `analytics`, `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
+- ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
 
 ---
 
 ## 🔮 Planned / Next Steps
 
-- Implement backend analytics, inventory alerts, and recommendation engine
-- Add admin analytics, customers, coupons, inventory, reviews management pages
+- Implement backend inventory alerts and recommendation engine
+- Enhance admin analytics with growth comparisons and export functionality
 - Add order tracking and delivery notifications (SMS/WhatsApp)
 - Add support ticket system in admin
 - Set up deployment (Vercel for frontend, Neon for DB, Cloudflare for storage)
