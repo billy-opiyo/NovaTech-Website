@@ -156,7 +156,7 @@ NovaTech Website/
 ├── tsconfig.json                 # Root TypeScript config
 ├── .env.example                  # Example environment variables
 ├── frontend/                     # Next.js 15 frontend
-│   ├── middleware.ts             # Next.js middleware (matcher config)
+│   ├── middleware.ts             # Next.js middleware (route protection)
 │   ├── next.config.ts
 │   ├── tailwind.config.ts        # Tailwind theme (primary/accent/dark colors)
 │   ├── postcss.config.js
@@ -428,12 +428,12 @@ npm run dev:open
   - Real-time payment status indicators
   - Error handling with user-friendly messages
   - Post-payment order confirmation with email notifications
+- ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 
 ### Partially Implemented / Stubs
 
 - ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `analytics`, `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
-- ⚠️ **frontend `middleware.ts`** — currently a passthrough (no route protection logic yet)
 
 ---
 
