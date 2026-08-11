@@ -757,26 +757,28 @@ export default function ProductDetailPage() {
 							name: "AirPods Pro 2",
 							price: 24999,
 							image:
-								"https://placehold.co/400x400/1e293b/white?text=AirPods+Pro",
+								"https://images.unsplash.com/photo-1606220588913-b3aacb434709?auto=format&fit=crop&w=800&q=80",
 							href: "/products?category=accessories&subcategory=headphones",
 						},
 						{
 							name: "iPhone 15",
 							price: 139999,
-							image: "https://placehold.co/400x400/1e293b/white?text=iPhone+15",
+							image:
+								"https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
 							href: "/products?category=phones&subcategory=iphone",
 						},
 						{
 							name: "Samsung Galaxy Watch 6",
 							price: 31999,
 							image:
-								"https://placehold.co/400x400/1e293b/white?text=Galaxy+Watch",
+								"https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
 							href: "/products?category=accessories&subcategory=smartwatches",
 						},
 						{
 							name: "Dell XPS 13",
 							price: 209999,
-							image: "https://placehold.co/400x400/1e293b/white?text=Dell+XPS",
+							image:
+								"https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&w=800&q=80",
 							href: "/products?category=laptops&subcategory=dell",
 						},
 					].map((item) => (

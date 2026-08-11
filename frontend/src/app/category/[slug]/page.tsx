@@ -12,6 +12,13 @@ const categoryData: Record<
 	{
 		title: string
 		description: string
+		trendingProducts: {
+			id: string
+			name: string
+			price: number
+			image: string
+			href: string
+		}[]
 		subcategories: { name: string; image: string; slug: string }[]
 	}
 > = {
@@ -19,6 +26,40 @@ const categoryData: Record<
 		title: "Smartphones",
 		description:
 			"Discover the latest smartphones from top brands. 5G, great cameras, and amazing deals.",
+		trendingProducts: [
+			{
+				id: "trend-1",
+				name: "iPhone 15 Pro Max",
+				price: 159999,
+				image:
+					"https://images.unsplash.com/photo-1696446701796-da75a6db0f7d?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=phones&subcategory=iphone",
+			},
+			{
+				id: "trend-2",
+				name: "Samsung Galaxy S24 Ultra",
+				price: 134999,
+				image:
+					"https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=phones&subcategory=samsung",
+			},
+			{
+				id: "trend-3",
+				name: "Google Pixel 8 Pro",
+				price: 124999,
+				image:
+					"https://images.unsplash.com/photo-1598327105666-5b89351aff31?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=phones&subcategory=pixel",
+			},
+			{
+				id: "trend-4",
+				name: "OnePlus 12",
+				price: 89999,
+				image:
+					"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=phones&subcategory=oneplus",
+			},
+		],
 		subcategories: [
 			{
 				name: "iPhone",
@@ -50,6 +91,40 @@ const categoryData: Record<
 		title: "Laptops",
 		description:
 			"Powerful laptops for work, gaming, and creativity. Find your perfect match.",
+		trendingProducts: [
+			{
+				id: "trend-5",
+				name: "MacBook Air M3",
+				price: 189999,
+				image:
+					"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=laptops&subcategory=macbook",
+			},
+			{
+				id: "trend-6",
+				name: "Dell XPS 15",
+				price: 179999,
+				image:
+					"https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=laptops&subcategory=dell",
+			},
+			{
+				id: "trend-7",
+				name: "HP Spectre x360",
+				price: 169999,
+				image:
+					"https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=laptops&subcategory=hp",
+			},
+			{
+				id: "trend-8",
+				name: "ASUS ROG Strix G16",
+				price: 219999,
+				image:
+					"https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=laptops&subcategory=gaming-laptops",
+			},
+		],
 		subcategories: [
 			{
 				name: "MacBook",
@@ -81,6 +156,32 @@ const categoryData: Record<
 		title: "Tablets",
 		description:
 			"Versatile tablets for entertainment, productivity, and creativity.",
+		trendingProducts: [
+			{
+				id: "trend-9",
+				name: "iPad Pro M2",
+				price: 149999,
+				image:
+					"https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=tablets&subcategory=ipad",
+			},
+			{
+				id: "trend-10",
+				name: "Samsung Galaxy Tab S9",
+				price: 119999,
+				image:
+					"https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=tablets&subcategory=galaxy-tab",
+			},
+			{
+				id: "trend-11",
+				name: "Microsoft Surface Pro 9",
+				price: 139999,
+				image:
+					"https://images.unsplash.com/photo-1632846708552-0e0c8c7c1c0e?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=tablets&subcategory=surface",
+			},
+		],
 		subcategories: [
 			{
 				name: "iPad",
@@ -106,6 +207,40 @@ const categoryData: Record<
 		title: "Accessories",
 		description:
 			"Essential accessories for your devices. Cases, chargers, headphones, and more.",
+		trendingProducts: [
+			{
+				id: "trend-12",
+				name: "Sony WH-1000XM5",
+				price: 34999,
+				image:
+					"https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=accessories&subcategory=headphones",
+			},
+			{
+				id: "trend-13",
+				name: "Apple Watch Ultra 2",
+				price: 79999,
+				image:
+					"https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=accessories&subcategory=smartwatches",
+			},
+			{
+				id: "trend-14",
+				name: "Anker 65W Charger",
+				price: 4999,
+				image:
+					"https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=accessories&subcategory=chargers",
+			},
+			{
+				id: "trend-15",
+				name: "Spigen Phone Case",
+				price: 2999,
+				image:
+					"https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=accessories&subcategory=cases",
+			},
+		],
 		subcategories: [
 			{
 				name: "Headphones",
@@ -137,6 +272,40 @@ const categoryData: Record<
 		title: "Gaming",
 		description:
 			"Level up your gaming setup with consoles, gaming PCs, and accessories.",
+		trendingProducts: [
+			{
+				id: "trend-16",
+				name: "PlayStation 5",
+				price: 79999,
+				image:
+					"https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=gaming&subcategory=consoles",
+			},
+			{
+				id: "trend-17",
+				name: "Nintendo Switch OLED",
+				price: 54999,
+				image:
+					"https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=gaming&subcategory=consoles",
+			},
+			{
+				id: "trend-18",
+				name: "Xbox Series X",
+				price: 74999,
+				image:
+					"https://images.unsplash.com/photo-1621259182978-fbf93132d53d?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=gaming&subcategory=consoles",
+			},
+			{
+				id: "trend-19",
+				name: "Logitech G Pro X",
+				price: 12999,
+				image:
+					"https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80",
+				href: "/products?category=gaming&subcategory=controllers",
+			},
+		],
 		subcategories: [
 			{
 				name: "Consoles",
@@ -165,8 +334,10 @@ export default function CategoryPage() {
 	const category = categoryData[slug] || {
 		title: "Category",
 		description: "Browse products in this category.",
+		trendingProducts: [],
 		subcategories: [],
 	}
+	const trendingProducts = categoryData[slug]?.trendingProducts || []
 
 	return (
 		<div>
@@ -232,12 +403,27 @@ export default function CategoryPage() {
 					</Link>
 				</div>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-					{Array.from({ length: 4 }).map((_, i) => (
-						<div key={i} className="glass-card animate-pulse">
-							<div className="h-40 bg-gray-300 dark:bg-gray-600 rounded-xl mb-4" />
-							<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2" />
-							<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
-						</div>
+					{trendingProducts.map((product) => (
+						<Link
+							key={product.id}
+							href={product.href}
+							className="glass-card block group"
+						>
+							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-4">
+								<Image
+									src={product.image}
+									alt={product.name}
+									fill
+									className="object-cover group-hover:scale-105 transition-transform duration-500"
+								/>
+							</div>
+							<h3 className="font-medium mb-2 group-hover:text-primary transition-colors">
+								{product.name}
+							</h3>
+							<p className="text-primary font-semibold">
+								KES {product.price.toLocaleString()}
+							</p>
+						</Link>
 					))}
 				</div>
 			</section>
