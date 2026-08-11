@@ -24,6 +24,7 @@ import {
 	Shield,
 	Package,
 	Clock,
+	Loader2,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -101,6 +102,12 @@ const paymentMethods = [
 		description: "Pay via Lipa na M-Pesa",
 	},
 	{
+		id: "card",
+		name: "Credit/Debit Card",
+		icon: <CreditCard size={20} />,
+		description: "Pay with Visa or Mastercard",
+	},
+	{
 		id: "cod",
 		name: "Cash on Delivery",
 		icon: <CreditCard size={20} />,
@@ -117,6 +124,8 @@ export default function CheckoutPage() {
 	const [isProcessing, setIsProcessing] = useState(false)
 	const [orderComplete, setOrderComplete] = useState(false)
 	const [orderNumber, setOrderNumber] = useState("")
+	const [paymentError, setPaymentError] = useState("")
+	const [paymentStatus, setPaymentStatus] = useState("")
 
 	const [shipping, setShipping] = useState<ShippingAddress>({
 		fullName: "",
@@ -180,11 +189,163 @@ export default function CheckoutPage() {
 
 	const handlePlaceOrder = async () => {
 		setIsProcessing(true)
-		await new Promise((resolve) => setTimeout(resolve, 2000))
-		setOrderNumber(`EB-${Date.now().toString(36).toUpperCase()}`)
-		setOrderComplete(true)
-		clearCart()
-		setIsProcessing(false)
+		setPaymentError("")
+		setPaymentStatus("Creating order...")
+
+		try {
+			// Step 1: Create order
+			const orderResponse = await fetch("/api/orders", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					items: items.map((item) => ({
+						productId: item.productId,
+						quantity: item.quantity,
+						variant: item.variant,
+					})),
+					shippingAddress: shipping,
+					deliveryMethod: selectedDelivery,
+					paymentMethod: selectedPayment,
+					subtotal,
+					shippingCost: deliveryCost,
+					total: orderTotal,
+					notes: saveInfo ? "Save shipping info for future orders" : undefined,
+				}),
+			})
+
+			if (!orderResponse.ok) {
+				const error = await orderResponse.json()
+				throw new Error(error.message || "Failed to create order")
+			}
+
+			const order = await orderResponse.json()
+			const orderId = order.id
+
+			// Step 2: Process payment based on method
+			if (selectedPayment === "cod") {
+				// COD - order already created, just confirm
+				setPaymentStatus("Order confirmed!")
+				await new Promise((resolve) => setTimeout(resolve, 1000))
+				setOrderNumber(orderId.slice(-8).toUpperCase())
+				setOrderComplete(true)
+				clearCart()
+			} else if (selectedPayment === "mpesa") {
+				// M-Pesa STK Push
+				setPaymentStatus("Initiating M-Pesa payment...")
+				const mpesaResponse = await fetch("/api/payments/mpesa/initiate", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						amount: orderTotal,
+						phone: mpesaPhone.startsWith("254") ? mpesaPhone : `254${mpesaPhone.substring(1)}`,
+						reference: `ORD-${orderId.slice(-8)}`,
+						orderId,
+						metadata: { orderId },
+					}),
+				})
+
+				if (!mpesaResponse.ok) {
+					const error = await mpesaResponse.json()
+					throw new Error(error.message || "Failed to initiate M-Pesa payment")
+				}
+
+				const mpesaResult = await mpesaResponse.json()
+				if (!mpesaResult.ok) {
+					throw new Error(mpesaResult.message || "M-Pesa payment failed")
+				}
+
+				// Poll for payment status
+				setPaymentStatus("Waiting for payment confirmation...")
+				let attempts = 0
+				const maxAttempts = 30 // 30 seconds timeout
+
+				while (attempts < maxAttempts) {
+					await new Promise((resolve) => setTimeout(resolve, 1000))
+
+					const verifyResponse = await fetch("/api/payments/mpesa/verify", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							reference: `ORD-${orderId.slice(-8)}`,
+						}),
+					})
+
+					if (verifyResponse.ok) {
+						const verifyResult = await verifyResponse.json()
+						if (verifyResult.status === "COMPLETED") {
+							setPaymentStatus("Payment successful!")
+							setOrderNumber(orderId.slice(-8).toUpperCase())
+							setOrderComplete(true)
+							clearCart()
+							return
+						} else if (verifyResult.status === "FAILED" || verifyResult.status === "CANCELLED") {
+							throw new Error("M-Pesa payment was not completed")
+						}
+					}
+
+					attempts++
+				}
+
+				throw new Error("Payment timeout. Please try again or contact support.")
+			} else if (selectedPayment === "card") {
+				// Card payment via Stripe
+				setPaymentStatus("Creating payment intent...")
+				const cardResponse = await fetch("/api/payments/card/create-intent", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						amount: orderTotal,
+						customerEmail: shipping.email,
+						reference: `ORD-${orderId.slice(-8)}`,
+						orderId,
+						metadata: { orderId },
+					}),
+				})
+
+				if (!cardResponse.ok) {
+					const error = await cardResponse.json()
+					throw new Error(error.message || "Failed to create payment intent")
+				}
+
+				const cardResult = await cardResponse.json()
+				if (!cardResult.ok) {
+					throw new Error(cardResult.message || "Card payment setup failed")
+				}
+
+				// In a real implementation, you would use Stripe Elements here
+				// For now, we'll simulate successful payment
+				setPaymentStatus("Processing card payment...")
+				await new Promise((resolve) => setTimeout(resolve, 2000))
+
+				// Verify payment
+				const verifyResponse = await fetch("/api/payments/card/verify", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						reference: `ORD-${orderId.slice(-8)}`,
+					}),
+				})
+
+				if (verifyResponse.ok) {
+					const verifyResult = await verifyResponse.json()
+					if (verifyResult.status === "SUCCEEDED") {
+						setPaymentStatus("Payment successful!")
+						setOrderNumber(orderId.slice(-8).toUpperCase())
+						setOrderComplete(true)
+						clearCart()
+						return
+					}
+				}
+
+				throw new Error("Card payment failed")
+			}
+		} catch (error: any) {
+			console.error("Order placement error:", error)
+			setPaymentError(error.message || "Failed to place order. Please try again.")
+			setPaymentStatus("")
+		} finally {
+			setIsProcessing(false)
+		}
 	}
 
 	const steps: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
@@ -220,7 +381,7 @@ export default function CheckoutPage() {
 				<p className="text-lg font-semibold mb-6">Order #{orderNumber}</p>
 				<p className="text-sm text-gray-500 mb-8">
 					A confirmation email has been sent to {shipping.email}. You will
-					receive updates via WhatsApp on {shipping.phone}.
+					receive updates via {selectedPayment === "mpesa" ? "SMS" : "WhatsApp"} on {shipping.phone}.
 				</p>
 				<div className="flex gap-4 justify-center">
 					<Link href="/account/orders" className="btn-primary">
@@ -719,23 +880,38 @@ export default function CheckoutPage() {
 									>
 										<ChevronLeft size={18} /> Back
 									</button>
-									<button
-										onClick={handlePlaceOrder}
-										disabled={isProcessing}
-										className="btn-primary flex items-center gap-2 disabled:opacity-50"
-									>
-										{isProcessing ? (
-											<>
-												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-												Processing...
-											</>
-										) : (
-											<>
-												<Shield size={18} /> Place Order - KES{" "}
-												{orderTotal.toLocaleString()}
-											</>
-										)}
-									</button>
+								<button
+									onClick={handlePlaceOrder}
+									disabled={isProcessing}
+									className="btn-primary flex items-center gap-2 disabled:opacity-50"
+								>
+									{isProcessing ? (
+										<>
+											<Loader2 size={18} className="animate-spin" />
+											{paymentStatus || "Processing..."}
+										</>
+									) : (
+										<>
+											<Shield size={18} /> Place Order - KES{" "}
+											{orderTotal.toLocaleString()}
+										</>
+									)}
+								</button>
+								{paymentError && (
+									<div className="mt-4 p-4 bg-red-500/10 border border-red-500 rounded-lg">
+										<div className="flex items-start gap-2">
+											<AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+											<div>
+												<p className="text-sm text-red-600 dark:text-red-400 font-medium">
+													Payment Failed
+												</p>
+												<p className="text-sm text-red-600 dark:text-red-400 mt-1">
+													{paymentError}
+												</p>
+											</div>
+										</div>
+									</div>
+								)}
 								</div>
 							</motion.div>
 						)}

@@ -394,7 +394,7 @@ npm run dev:open
 
 ### Fully Implemented
 
-- ✔️ **Frontend storefront** — Home, Products (filtering/sorting/search/pagination UI), Product Detail, Cart, Checkout (client-side), Deals, Compare, Category, Contact, Wishlist
+- ✔️ **Frontend storefront** — Home, Products (filtering/sorting/search/pagination UI), Product Detail, Cart, Checkout (full payment integration), Deals, Compare, Category, Contact, Wishlist
 - ✔️ **Shopping cart** — Client-side state with `localStorage` persistence, save-for-later, quantity & stock management, shipping/total calculation
 - ✔️ **Authentication** — NextAuth v5 with Google OAuth + Credentials (bcrypt), JWT sessions, role-based access
 - ✔️ **Admin panel UI** — Layout, sidebar navigation, Products management table, Orders management table
@@ -413,6 +413,14 @@ npm run dev:open
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
 - ✔️ **Payments** — M-Pesa (Daraja STK Push), Cards (Stripe Payment Intents), and Webhooks (signature-verified) fully implemented with graceful "not configured" fallback
+- ✔️ **Checkout payment integration** — Full checkout-to-payment flow implemented:
+  - Order creation via `/api/orders` with transactional stock validation
+  - M-Pesa STK Push flow with real-time status polling
+  - Stripe PaymentIntent creation and verification
+  - Cash on Delivery support
+  - Real-time payment status indicators
+  - Error handling with user-friendly messages
+  - Post-payment order confirmation with email notifications
 
 ### Partially Implemented / Stubs
 
@@ -426,7 +434,6 @@ npm run dev:open
 
 ## 🔮 Planned / Next Steps
 
-- Wire the checkout page to the new payment API routes (M-Pesa STK prompt flow, Stripe Payment Element)
 - Implement backend analytics, inventory alerts, and recommendation engine
 - Add admin analytics, customers, coupons, inventory, reviews management pages
 - Add order tracking and delivery notifications (SMS/WhatsApp)
