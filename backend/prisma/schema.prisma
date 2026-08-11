@@ -173,6 +173,35 @@ model Order {
   updatedAt     DateTime @updatedAt
 
   items         OrderItem[]
+  payments      Payment[]
+}
+
+model Payment {
+  id                String         @id @default(cuid())
+  orderId           String?
+  order             Order?         @relation(fields: [orderId], references: [id])
+  provider          String // "mpesa" | "stripe"
+  amount            Float
+  currency          String         @default("KES")
+  status            PaymentStatus  @default(PENDING)
+  providerReference String?        @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
+  phoneNumber       String?
+  customerEmail     String?
+  metadata          Json?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([orderId])
+  @@index([providerReference])
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
 }
 
 model OrderItem {

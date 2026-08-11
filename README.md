@@ -113,11 +113,29 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 - **`backend/security/index.ts`** — Email sanitization, password strength check, secret masking, object sanitization.
 - **`backend/actions/index.ts`** — Action-record and background-task queue stubs.
 
-### 💳 Payments & Notifications (Scaffolding)
+### 💳 Payments (Real Provider Integration)
 
-- **M-Pesa** (`backend/payments/mpesa/`) — Initiate & verify payment stubs.
-- **Cards** (`backend/payments/cards/`) — Card payment intent & verification stubs.
-- **Webhooks** (`backend/payments/webhooks/`) — Generic webhook event handler stub.
+- **M-Pesa** (`backend/payments/mpesa/`) — Real Daraja STK Push integration via native `fetch`:
+  - `initiateMpesaPayment` — STK Push request, stores `Payment` row (PENDING).
+  - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
+  - `simulateMpesaPayment` — Sandbox C2B simulate helper.
+  - Graceful "not configured" behavior when `MPESA_*` env vars are absent.
+- **Cards** (`backend/payments/cards/`) — Real Stripe Payment Intents:
+  - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
+  - `verifyCardPayment` — Retrieves PaymentIntent, maps status, confirms order.
+  - Graceful "not configured" behavior when `STRIPE_SECRET_KEY` is absent.
+- **Webhooks** (`backend/payments/webhooks/`) — Provider-verified handlers:
+  - Stripe signature verification (`stripe.webhooks.constructEvent`).
+  - M-Pesa STK Push callback + C2B validation/confirmation processing.
+  - Updates `Payment` + `Order` status on success/failure/refund.
+- **API Routes** (`frontend/src/app/api/payments/`):
+  - `POST /api/payments/mpesa/initiate` — Initiate STK Push.
+  - `POST /api/payments/mpesa/verify` — Verify STK Push status.
+  - `POST /api/payments/card/create-intent` — Create Stripe PaymentIntent.
+  - `POST /api/payments/card/verify` — Verify PaymentIntent status.
+  - `POST /api/payments/webhooks/stripe` — Stripe webhook (signature verified).
+  - `POST /api/payments/webhooks/mpesa/stk-callback` — M-Pesa STK callback.
+  - `POST /api/payments/webhooks/mpesa/c2b` — M-Pesa C2B callback.
 - **Resend** (`backend/notifications/resend/`) — Email send stub (used by `lib/email.ts`).
 - **SMS** (`backend/notifications/sms/`) — SMS send stub.
 - **WhatsApp** (`backend/notifications/whatsapp/`) — WhatsApp message send stub.
@@ -275,6 +293,14 @@ NovaTech Website/
 | `WHATSAPP_TOKEN` | WhatsApp Cloud API token |
 | `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID |
 | `NEXT_PUBLIC_APP_URL` | Public app URL (e.g. `http://localhost:3000`) |
+| `MPESA_CONSUMER_KEY` | M-Pesa Daraja consumer key |
+| `MPESA_CONSUMER_SECRET` | M-Pesa Daraja consumer secret |
+| `MPESA_PASSKEY` | M-Pesa Daraja passkey (STK Push) |
+| `MPESA_SHORTCODE` | M-Pesa business shortcode (e.g. `174379`) |
+| `MPESA_ENV` | M-Pesa environment: `sandbox` or `production` |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend) |
 
 ---
 
@@ -386,10 +412,10 @@ npm run dev:open
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
+- ✔️ **Payments** — M-Pesa (Daraja STK Push), Cards (Stripe Payment Intents), and Webhooks (signature-verified) fully implemented with graceful "not configured" fallback
 
 ### Partially Implemented / Stubs
 
-- ⚠️ **Payments** — M-Pesa, card, and webhook modules are **stubs** (return mock success responses; no real provider integration yet)
 - ⚠️ **Notifications (SMS/WhatsApp)** — Send functions are **stubs** returning mock responses
 - ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `analytics`, `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
@@ -400,8 +426,7 @@ npm run dev:open
 
 ## 🔮 Planned / Next Steps
 
-- Integrate real M-Pesa STK Push (Daraja API)
-- Integrate real card payments (e.g. Stripe / PesaPal)
+- Wire the checkout page to the new payment API routes (M-Pesa STK prompt flow, Stripe Payment Element)
 - Implement backend analytics, inventory alerts, and recommendation engine
 - Add admin analytics, customers, coupons, inventory, reviews management pages
 - Add order tracking and delivery notifications (SMS/WhatsApp)
