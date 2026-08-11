@@ -6,4 +6,5 @@ dist/
 .env.production
 .env.*.local
 *.log
-package.json
+*.tsbuildinfo
+frontend-tres.txt

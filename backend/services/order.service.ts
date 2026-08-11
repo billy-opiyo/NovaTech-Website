@@ -175,7 +175,6 @@ export async function getOrderById(orderId: string, userId?: string) {
 				select: {
 					name: true,
 					email: true,
-					phone: true,
 				},
 			},
 		},
@@ -219,7 +218,6 @@ export async function updateOrderStatus(
 				select: {
 					name: true,
 					email: true,
-					phone: true,
 				},
 			},
 		},
@@ -236,11 +234,13 @@ export async function updateOrderStatus(
 		})
 	}
 
+	const shippingPhone = (order.shippingAddress as any)?.phone
+
 	// Send SMS notification if phone number exists
-	if (order.user?.phone) {
+	if (shippingPhone) {
 		try {
 			await sendOrderStatusUpdate(
-				order.user.phone,
+				shippingPhone,
 				order.id.slice(-8).toUpperCase(),
 				status,
 			)
@@ -250,7 +250,7 @@ export async function updateOrderStatus(
 	}
 
 	// Send WhatsApp notification if phone number exists
-	if (order.user?.phone) {
+	if (shippingPhone) {
 		try {
 			const statusMessages: Record<string, string> = {
 				CONFIRMED: "Your order has been confirmed and is being prepared.",
@@ -266,8 +266,8 @@ export async function updateOrderStatus(
 				`Your order #${order.id.slice(-8).toUpperCase()} status: ${status}`
 
 			await sendWhatsAppMessage({
-				to: order.user.phone,
-				message: `ElectroBuy Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
+				to: shippingPhone.replace(/^0/, "254"),
+				text: `ElectroBuy Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
 			})
 		} catch (error) {
 			console.error("Failed to send WhatsApp notification:", error)

@@ -1,4 +1,7 @@
 import prisma from "../lib/db"
+import { sendEmail } from "../lib/email"
+
+const SUPPORT_EMAIL = "support@electrobuy.co.ke"
 
 export interface SupportTicketData {
 	customerName: string
@@ -104,8 +107,45 @@ export async function createTicket(data: SupportTicketData) {
 		},
 	})
 
-	// TODO: Send email notification to support team
-	// TODO: Send confirmation email to customer
+	// Send email notification to support team (non-blocking)
+	try {
+		await sendEmail({
+			to: SUPPORT_EMAIL,
+			subject: `New Support Ticket: ${ticket.subject}`,
+			html: `
+				<h2>New Support Request</h2>
+				<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+				<p><strong>Name:</strong> ${ticket.customerName}</p>
+				<p><strong>Email:</strong> ${ticket.customerEmail}</p>
+				<p><strong>Phone:</strong> ${ticket.customerPhone || "N/A"}</p>
+				<p><strong>Category:</strong> ${ticket.category}</p>
+				<p><strong>Priority:</strong> ${ticket.priority}</p>
+				${ticket.orderId ? `<p><strong>Order:</strong> ${ticket.orderId}</p>` : ""}
+				<p><strong>Subject:</strong> ${ticket.subject}</p>
+				<p><strong>Message:</strong> ${ticket.description}</p>
+			`,
+		})
+	} catch (emailError) {
+		console.error("Failed to send support team notification:", emailError)
+	}
+
+	// Send confirmation email to customer (non-blocking)
+	try {
+		await sendEmail({
+			to: ticket.customerEmail,
+			subject: `We received your request: ${ticket.subject}`,
+			html: `
+				<h2>Hello ${ticket.customerName},</h2>
+				<p>Thank you for contacting ElectroBuy support. We have received your request and our team will get back to you within 24 hours.</p>
+				<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+				<p><strong>Subject:</strong> ${ticket.subject}</p>
+				<p><strong>Priority:</strong> ${ticket.priority}</p>
+				<p>You can reply to this email to provide additional information.</p>
+			`,
+		})
+	} catch (emailError) {
+		console.error("Failed to send customer confirmation email:", emailError)
+	}
 
 	return ticket
 }
@@ -126,7 +166,31 @@ export async function updateTicket(id: string, data: UpdateTicketData) {
 		},
 	})
 
-	// TODO: Send notification to customer about status update
+	// Send notification to customer about status update (non-blocking)
+	if (data.status) {
+		try {
+			const statusLabels: Record<string, string> = {
+				open: "Open",
+				in_progress: "In Progress",
+				waiting_customer: "Waiting for your response",
+				resolved: "Resolved",
+				closed: "Closed",
+			}
+
+			await sendEmail({
+				to: ticket.customerEmail,
+				subject: `Support Ticket #${ticket.id.slice(-8).toUpperCase()} status updated`,
+				html: `
+					<h2>Hello ${ticket.customerName},</h2>
+					<p>Your support ticket regarding <strong>"${ticket.subject}"</strong> has been updated to status: <strong>${statusLabels[data.status] || data.status}</strong>.</p>
+					<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+					<p>If you have any questions, please reply to this email.</p>
+				`,
+			})
+		} catch (emailError) {
+			console.error("Failed to send status update email:", emailError)
+		}
+	}
 
 	return ticket
 }
@@ -140,7 +204,32 @@ export async function addTicketReply(ticketId: string, reply: string, isAdmin: b
 		},
 	})
 
-	// TODO: Send email notification to customer about new reply
+	// Send email notification to customer about new reply (admin replies only)
+	if (isAdmin) {
+		try {
+			const ticket = await prisma.supportTicket.findUnique({
+				where: { id: ticketId },
+			})
+
+			if (ticket) {
+				await sendEmail({
+					to: ticket.customerEmail,
+					subject: `New reply on your support ticket #${ticket.id.slice(-8).toUpperCase()}`,
+					html: `
+						<h2>Hello ${ticket.customerName},</h2>
+						<p>You have a new reply on your support ticket regarding <strong>"${ticket.subject}"</strong>:</p>
+						<div style="background: #f9fafb; border-left: 4px solid #0070f3; padding: 16px; margin: 16px 0;">
+							${reply}
+						</div>
+						<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+						<p>Reply to this email to continue the conversation.</p>
+					`,
+				})
+			}
+		} catch (emailError) {
+			console.error("Failed to send reply notification email:", emailError)
+		}
+	}
 
 	return ticketReply
 }

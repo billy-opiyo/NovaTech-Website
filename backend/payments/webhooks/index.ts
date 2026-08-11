@@ -1,4 +1,5 @@
 import prisma from "../../lib/db"
+import { sendOrderConfirmationEmail } from "../../lib/email"
 import { getStripeClient, getStripeWebhookSecret } from "../../lib/stripeClient"
 import { isMpesaConfigured } from "../../lib/daraja"
 import type { Prisma } from "@prisma/client"
@@ -234,13 +235,42 @@ async function updatePaymentByProviderReference(
 			},
 		})
 
-		if (payment.orderId) {
-			await prisma.order.update({
+		if (payment.orderId && status === "COMPLETED") {
+			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
-				data: {
-					status: status === "COMPLETED" ? "CONFIRMED" : undefined,
+				data: { status: "CONFIRMED" },
+				include: {
+					items: {
+						include: {
+							product: {
+								select: {
+									name: true,
+									slug: true,
+									images: true,
+								},
+							},
+						},
+					},
 				},
 			})
+
+			// Send order confirmation email (non-blocking)
+			try {
+				const email = updatedOrder.userId
+					? (
+							await prisma.user.findUnique({
+								where: { id: updatedOrder.userId },
+								select: { email: true },
+							})
+						)?.email
+					: (updatedOrder.shippingAddress as any)?.email
+
+				if (email) {
+					await sendOrderConfirmationEmail(email, updatedOrder)
+				}
+			} catch (emailError) {
+				console.error("Failed to send order confirmation email:", emailError)
+			}
 		}
 
 		return payment

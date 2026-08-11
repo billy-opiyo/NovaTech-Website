@@ -97,8 +97,9 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 | `/api/orders`             | GET, POST              | List authenticated user's orders and place new orders (stock validation + transactional stock decrement + notification creation).                                   |
 | `/api/orders/[id]`        | GET, PATCH             | Fetch single order (owner or admin), admin updates order status / tracking number with user notification.                                                           |
 | `/api/coupons/validate`   | POST                   | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation.                                                     |
-| `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend.                                                                                                                |
+| `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend (support team + customer confirmation).                                                                         |
 | `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
+| `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2 (images only, 5MB max).                                                                                                 |
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
 
 ### 🔐 Backend Services & Utilities
@@ -111,7 +112,7 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 - **`backend/validators/productValidator.ts`** — Zod schema for product creation.
 - **`backend/services/productService.ts`** — Prisma queries for filtered listing, slug lookup, search, and creation.
 - **`backend/security/index.ts`** — Email sanitization, password strength check, secret masking, object sanitization.
-- **`backend/actions/index.ts`** — Action-record and background-task queue stubs.
+- **`backend/actions/index.ts`** — Action-record logging to `AdminLog` and background-task queue.
 
 ### 💳 Payments (Real Provider Integration)
 
@@ -136,9 +137,9 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
   - `POST /api/payments/webhooks/stripe` — Stripe webhook (signature verified).
   - `POST /api/payments/webhooks/mpesa/stk-callback` — M-Pesa STK callback.
   - `POST /api/payments/webhooks/mpesa/c2b` — M-Pesa C2B callback.
-- **Resend** (`backend/notifications/resend/`) — Email send stub (used by `lib/email.ts`).
+- **Resend** (`backend/notifications/resend/`) — Real Resend email sending (re-exports from `lib/email.ts`).
 - **SMS** (`backend/notifications/sms/`) — Real Twilio SMS integration with order confirmation, status updates, payment requests, and support messages.
-- **WhatsApp** (`backend/notifications/whatsapp/`) — Real WhatsApp Cloud API integration with order confirmation, status updates, payment requests, and support messages.
+- **WhatsApp** (`backend/notifications/whatsapp/`) — Real WhatsApp Cloud API integration with order confirmation, status updates, payment requests, and support messages. Wired into `order.service.ts` for automated order status notifications.
 
 ### 🗄 Database (Prisma Schema)
 
@@ -223,29 +224,27 @@ NovaTech Website/
 │   │   ├── storage.ts           # Cloudflare R2 file operations
 │   │   └── whatsapp.ts          # WhatsApp helper
 │   ├── middleware/
-│   │   ├── rateLimiter.ts       # In-memory IP rate limiting (60 req/min)
-│   │   ├── auth.middleware.ts   # (placeholder)
-│   │   ├── security.middleware.ts
-│   │   ├── validate.ts
-│   │   └── validation.middleware.ts
+│   │   └── rateLimiter.ts       # In-memory IP rate limiting (60 req/min)
 │   ├── controllers/
-│   │   ├── productController.ts # Product GET/POST/search handlers
-│   │   └── (other stubs)
+│   │   └── productController.ts # Product GET/POST/search handlers
 │   ├── services/
+│   │   ├── order.service.ts     # Order business logic
+│   │   ├── support.service.ts   # Support ticket management with email notifications
+│   │   ├── inventory.service.ts # Stock management
 │   │   ├── productService.ts    # Product queries (filter, by slug, search, create)
-│   │   └── (other stubs)
+│   │   └── analytics.service.ts # Analytics queries
 │   ├── validators/
 │   │   └── productValidator.ts  # Zod product schema
 │   ├── payments/
-│   │   ├── mpesa/               # M-Pesa payment stubs
-│   │   ├── cards/               # Card payment stubs
-│   │   └── webhooks/            # Webhook handler stub
+│   │   ├── mpesa/               # M-Pesa Daraja STK Push integration
+│   │   ├── cards/               # Stripe Payment Intents integration
+│   │   └── webhooks/            # Stripe + M-Pesa webhook handlers
 │   ├── notifications/
-│   │   ├── resend/              # Email stub
-│   │   ├── sms/                 # SMS stub
-│   │   └── whatsapp/            # WhatsApp stub
+│   │   ├── resend/              # Real Resend email sending
+│   │   ├── sms/                 # Real Twilio SMS integration
+│   │   └── whatsapp/            # Real WhatsApp Cloud API integration
 │   ├── security/                # Sanitization utilities
-│   ├── actions/                 # Action records & background task stubs
+│   ├── actions/                 # AdminLog audit + background task queue
 │   └── types/                   # Shared types
 └── tests/                        # Test directory
 ```
@@ -451,32 +450,33 @@ npm run dev:open
   - Deals and on-sale products
   - RESTful API at `/api/recommendations` with multiple recommendation types
 
-### Backend Service Layer (Express Structure)
+### Backend Service Layer
 
-The backend service layer has been fully implemented with proper separation of concerns:
+The backend service layer is fully implemented with proper separation of concerns, used by the Next.js App Router API routes:
 
 - **`backend/services/order.service.ts`** — Complete order business logic:
   - `createOrder()` — Create order with stock validation and transactional updates
   - `getOrdersByUserId()` — Fetch paginated user orders
   - `getOrderById()` — Get single order with authorization checks
-  - `updateOrderStatus()` — Admin order status updates with notifications
+  - `updateOrderStatus()` — Admin order status updates with SMS/WhatsApp notifications
   - `getAllOrders()` — Admin listing with optional status filter
   - `getOrderStats()` — Order statistics for analytics dashboard
 
-- **`backend/controllers/order.controller.ts`** — HTTP request handlers:
-  - Request/response handling with error management
-  - Parameter extraction and validation
-  - Service layer integration
+- **`backend/services/support.service.ts`** — Support ticket management with email notifications:
+  - `createTicket()` — Creates ticket + sends email to support team and customer confirmation
+  - `updateTicket()` — Updates ticket + notifies customer of status changes
+  - `addTicketReply()` — Adds reply + notifies customer of new admin replies
+  - `getAllTickets()` / `getTicketById()` / `getTicketStats()` — Ticket queries
 
-- **`backend/routes/orders.route.ts`** — Express route definitions:
-  - `GET /` — List user's orders
-  - `GET /stats` — Order statistics (admin only)
-  - `GET /all` — List all orders (admin only)
-  - `GET /:id` — Get single order
-  - `POST /` — Create new order
-  - `PATCH /:id` — Update order status (admin only)
+- **`backend/services/inventory.service.ts`** — Stock management with low-stock detection, alerts, and reorder suggestions
 
-**Note:** The Next.js App Router API routes in `frontend/src/app/api/` remain the primary API interface. The backend Express structure is ready for future deployment as a separate API service.
+- **`backend/services/productService.ts`** — Product queries (filter, by slug, search, create)
+
+- **`backend/payments/`** — M-Pesa (Daraja STK Push), Stripe Cards, and Webhook handlers with order confirmation emails
+
+- **`backend/notifications/`** — Real WhatsApp Cloud API, Twilio SMS, and Resend email integrations
+
+**Note:** The Next.js App Router API routes in `frontend/src/app/api/` are the primary API interface. The backend services are shared modules used by these routes.
 
 ---
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
+import { sendOrderConfirmationEmail } from "backend/lib/email"
 import { z } from "zod"
 
 const orderSchema = z.object({
@@ -143,6 +144,16 @@ export async function POST(req: NextRequest) {
 
 			return newOrder
 		})
+
+		// Send order confirmation email (non-blocking - don't fail the order if email fails)
+		try {
+			await sendOrderConfirmationEmail(
+				validated.shippingAddress.email,
+				order,
+			)
+		} catch (emailError) {
+			console.error("Failed to send order confirmation email:", emailError)
+		}
 
 		return NextResponse.json(order, { status: 201 })
 	} catch (error: any) {
