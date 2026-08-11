@@ -436,6 +436,13 @@ npm run dev:open
   - Error handling with user-friendly messages
   - Post-payment order confirmation with email notifications
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
+- ✔️ **Inventory service** — Complete inventory management backend with:
+  - Low stock and out-of-stock product detection
+  - Inventory overview with total value and stock counts
+  - Stock alerts (WARNING/CRITICAL severity)
+  - Reorder suggestions based on sales velocity
+  - Stock update endpoints for products and variants
+  - Stock movement history tracking
 
 ### Partially Implemented / Stubs
 
