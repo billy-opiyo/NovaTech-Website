@@ -443,17 +443,23 @@ npm run dev:open
   - Reorder suggestions based on sales velocity
   - Stock update endpoints for products and variants
   - Stock movement history tracking
+- ✔️ **Recommendation engine** — Complete product recommendation system with:
+  - Personalized recommendations based on user behavior (recent views, purchase history, wishlist)
+  - Trending products based on sales velocity (30-day window)
+  - Similar products by category, price range, and ratings
+  - Featured products and new arrivals
+  - Deals and on-sale products
+  - RESTful API at `/api/recommendations` with multiple recommendation types
 
 ### Partially Implemented / Stubs
 
-- ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `inventory`, `recommendation`, `order` services are **empty placeholders** (core logic lives in the App Router API routes)
+- ⚠️ **Backend controllers/services** — `order`, `payment`, `review`, `auth` controllers and `order` services are **empty placeholders** (core logic lives in the App Router API routes)
 - ⚠️ **Backend route files** (`backend/routes/`) — empty placeholders
 
 ---
 
 ## 🔮 Planned / Next Steps
 
-- Implement backend inventory alerts and recommendation engine
 - Enhance admin analytics with growth comparisons and export functionality
 - Add order tracking and delivery notifications (SMS/WhatsApp)
 - Add support ticket system in admin
