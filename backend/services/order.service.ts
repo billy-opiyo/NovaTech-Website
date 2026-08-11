@@ -1,5 +1,7 @@
 import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
+import { sendOrderStatusUpdate } from "../notifications/sms"
+import { sendWhatsAppMessage } from "../notifications/whatsapp"
 
 export interface CreateOrderData {
 	userId?: string
@@ -232,6 +234,44 @@ export async function updateOrderStatus(
 				message: `Order #${order.id.slice(-8).toUpperCase()} status updated to ${status}.`,
 			},
 		})
+	}
+
+	// Send SMS notification if phone number exists
+	if (order.user?.phone) {
+		try {
+			await sendOrderStatusUpdate(
+				order.user.phone,
+				order.id.slice(-8).toUpperCase(),
+				status,
+			)
+		} catch (error) {
+			console.error("Failed to send SMS notification:", error)
+		}
+	}
+
+	// Send WhatsApp notification if phone number exists
+	if (order.user?.phone) {
+		try {
+			const statusMessages: Record<string, string> = {
+				CONFIRMED: "Your order has been confirmed and is being prepared.",
+				PROCESSING: "We are processing your order.",
+				SHIPPED: `Your order has been shipped! Tracking number: ${trackingNumber || "N/A"}`,
+				OUT_FOR_DELIVERY: "Your order is out for delivery and will arrive today!",
+				DELIVERED: "Your order has been delivered. Thank you for shopping with us!",
+				CANCELLED: "Your order has been cancelled. Contact support for assistance.",
+			}
+
+			const message =
+				statusMessages[status] ||
+				`Your order #${order.id.slice(-8).toUpperCase()} status: ${status}`
+
+			await sendWhatsAppMessage({
+				to: order.user.phone,
+				message: `ElectroBuy Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
+			})
+		} catch (error) {
+			console.error("Failed to send WhatsApp notification:", error)
+		}
 	}
 
 	return order

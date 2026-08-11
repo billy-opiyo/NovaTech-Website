@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
+import { updateOrderStatus } from "backend/services/order.service"
 
 export async function GET(
 	req: NextRequest,
@@ -65,23 +66,7 @@ export async function PATCH(
 		const { id } = await params
 		const { status, trackingNumber } = await req.json()
 
-		const order = await prisma.order.update({
-			where: { id },
-			data: {
-				status,
-				...(trackingNumber && { trackingNumber }),
-			},
-		})
-
-		if (order.userId) {
-			await prisma.notification.create({
-				data: {
-					userId: order.userId,
-					type: "ORDER_STATUS",
-					message: `Your order #${order.id.slice(-8).toUpperCase()} status updated to ${status.replace(/_/g, " ")}.`,
-				},
-			})
-		}
+		const order = await updateOrderStatus(id, status, trackingNumber)
 
 		return NextResponse.json(order)
 	} catch (error: any) {

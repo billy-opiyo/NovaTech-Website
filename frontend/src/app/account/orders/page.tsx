@@ -12,6 +12,7 @@ import {
 	Truck,
 	Calendar,
 	Eye,
+	Navigation,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -223,24 +224,31 @@ export default function OrdersPage() {
 									<p className="font-bold text-lg">
 										KES {order.total.toLocaleString()}
 									</p>
-									<div className="flex gap-2">
-										<button
-											onClick={() => {
-												setSelectedOrder(order)
-												setShowTracking(true)
-											}}
-											className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-											title="Track Order"
-										>
-											<Eye size={18} />
-										</button>
-										<Link
-											href={`/account/orders/${order.id}`}
-											className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-										>
-											<ChevronRight size={18} />
-										</Link>
-									</div>
+								<div className="flex gap-2">
+									<Link
+										href={`/account/orders/${order.id}/track`}
+										className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+										title="Track Order"
+									>
+										<Navigation size={18} />
+									</Link>
+									<button
+										onClick={() => {
+											setSelectedOrder(order)
+											setShowTracking(true)
+										}}
+										className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+										title="Quick View"
+									>
+										<Eye size={18} />
+									</button>
+									<Link
+										href={`/account/orders/${order.id}`}
+										className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+									>
+										<ChevronRight size={18} />
+									</Link>
+								</div>
 								</div>
 							</div>
 
