@@ -3,6 +3,7 @@ import NextConfig from "next"
 
 const nextConfig = {
 	reactStrictMode: true,
+	devIndicators: false,
 	outputFileTracingRoot: path.join(__dirname, ".."),
 	images: {
 		remotePatterns: [
