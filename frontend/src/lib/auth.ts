@@ -16,21 +16,31 @@ export const authOptions = {
 				email: { label: "Email", type: "email" },
 				password: { label: "Password", type: "password" },
 			},
-			async authorize(credentials) {
-				if (!credentials?.email || !credentials?.password) return null
+			async authorize(credentials, request) {
+				const email = String(credentials?.email || "").trim().toLowerCase()
+				const ipAddress = request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim()
+				const userAgent = request?.headers?.get("user-agent") || undefined
+				if (!email || !credentials?.password) return null
 
 				const user = await prisma.user.findUnique({
-					where: { email: credentials.email as string },
+					where: { email },
 				})
 
-				if (!user || !user.passwordHash) return null
+				if (!user || !user.passwordHash) {
+					await prisma.loginEvent.create({ data: { email, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					return null
+				}
 
 				const isValid = await bcrypt.compare(
 					credentials.password as string,
 					user.passwordHash,
 				)
 
-				if (!isValid) return null
+				if (!isValid) {
+					await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					return null
+				}
+				await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: true } }).catch(() => undefined)
 
 				return {
 					id: user.id,

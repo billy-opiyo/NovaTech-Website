@@ -62,42 +62,29 @@ export default function SearchOverlay() {
 			setSuggestions([])
 			return
 		}
-
-		const mockSuggestions: SearchSuggestion[] = [
-			{
-				type: "product",
-				text: "iPhone 15 Pro Max 256GB",
-				href: "/products/iphone-15-pro-max",
-				image:
-					"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=100&q=80",
-				price: 159999,
-			},
-			{
-				type: "product",
-				text: "iPhone 15 Plus",
-				href: "/products/iphone-15-plus",
-				image:
-					"https://images.unsplash.com/photo-1510557880182-3ef88e0b9da8?auto=format&fit=crop&w=100&q=80",
-				price: 129999,
-			},
-			{
-				type: "category",
-				text: "Phones",
-				href: "/category/phones",
-			},
-			{
-				type: "brand",
-				text: "Apple",
-				href: "/products?brand=apple",
-			},
-			{
-				type: "recent",
-				text: query,
-				href: `/search?q=${encodeURIComponent(query)}`,
-			},
-		]
-
-		setSuggestions(mockSuggestions)
+		const controller = new AbortController()
+		const loadSuggestions = async () => {
+			try {
+				const response = await fetch(`/api/products?q=${encodeURIComponent(query)}&limit=6`, {
+					signal: controller.signal,
+					cache: "no-store",
+				})
+				if (!response.ok) throw new Error("Search failed")
+				const data = await response.json()
+				const products: SearchSuggestion[] = (data.products || []).map((product: any) => ({
+					type: "product",
+					text: product.name,
+					href: `/products/${product.slug}`,
+					image: product.images?.[0],
+					price: product.discountedPrice ?? product.price,
+				}))
+				setSuggestions(products)
+			} catch (error) {
+				if ((error as Error).name !== "AbortError") setSuggestions([])
+			}
+		}
+		loadSuggestions()
+		return () => controller.abort()
 	}, [query])
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {

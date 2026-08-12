@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -151,6 +151,7 @@ function CheckoutPageContent() {
 	const [errors, setErrors] = useState<
 		Partial<Record<keyof ShippingAddress | "payment", string>>
 	>({})
+	const idempotencyKey = useRef<string | null>(null)
 
 	const deliveryCost =
 		deliveryOptions.find((d) => d.id === selectedDelivery)?.price || 0
@@ -205,6 +206,7 @@ function CheckoutPageContent() {
 	}
 
 	const handlePlaceOrder = async () => {
+		if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID()
 		setIsProcessing(true)
 		setPaymentError("")
 		setPaymentStatus("Creating order...")
@@ -213,7 +215,7 @@ function CheckoutPageContent() {
 			// Step 1: Create order
 			const orderResponse = await fetch("/api/orders", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
 				body: JSON.stringify({
 					items: items.map((item) => ({
 						productId: item.productId,

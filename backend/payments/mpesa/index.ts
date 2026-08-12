@@ -60,6 +60,25 @@ export async function initiateMpesaPayment({
 		amount = order.total
 	}
 
+	const existing = await prisma.payment.findFirst({
+		where: { provider: "mpesa", metadata: { path: ["reference"], equals: reference } },
+	})
+	if (existing) {
+		const metadata = (existing.metadata || {}) as Record<string, unknown>
+		return {
+			ok: existing.status !== "FAILED" && existing.status !== "CANCELLED",
+			provider: "mpesa",
+			reference,
+			checkoutRequestId: existing.providerReference || "",
+			phone: existing.phoneNumber || phone,
+			amount: existing.amount,
+			currency: existing.currency,
+			status: existing.status,
+			message: "Existing M-Pesa request returned for this order.",
+			metadata: { paymentId: existing.id, merchantRequestId: metadata.merchantRequestId },
+		}
+	}
+
 	const normalizedPhone = normalizePhone(phone)
 
 	const callback =

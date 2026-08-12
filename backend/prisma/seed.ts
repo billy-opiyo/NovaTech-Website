@@ -4,9 +4,16 @@ import bcrypt from "bcrypt"
 const prisma = new PrismaClient()
 
 async function main() {
+	if (process.env.NODE_ENV === "production") {
+		throw new Error("The development seed is disabled in production. Use db:init-admin with explicit credentials.")
+	}
+	const seedPassword = process.env.SEED_ADMIN_PASSWORD
+	if (!seedPassword || seedPassword.length < 16) {
+		throw new Error("SEED_ADMIN_PASSWORD must be set to a random value of at least 16 characters for development seeding.")
+	}
 	console.log("🌱 Seeding database...")
 
-	const adminHash = await bcrypt.hash("admin123", 12)
+	const adminHash = await bcrypt.hash(seedPassword, 12)
 	const admin = await prisma.user.upsert({
 where: { email: "admin@novatechstore.co.ke" },
 		update: {},

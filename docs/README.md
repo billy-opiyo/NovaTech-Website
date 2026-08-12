@@ -22,6 +22,61 @@ The latest implementation updates include:
 - Added `/admin/dashboard` as the canonical dashboard route; `/admin` now redirects to it, and the support tickets link uses `/admin/support`.
 - Improved select controls for light and dark themes and disabled the development indicator overlay.
 
+### Production-readiness implementation
+
+The current implementation also includes the following production hardening work:
+
+- Replaced mock search and compare data with live, database-backed product queries.
+- Replaced the mock admin datasets for customers, coupons, reviews, deliveries, messages, security, and products with API-backed screens.
+- Added coupon creation, activation/deactivation, deletion, review moderation, delivery status updates, support replies, and product price/stock editing.
+- Added Prisma migration history under `backend/prisma/migrations/`, including the initial schema and webhook receipt support.
+- Added indexes and constraints for payment references, order idempotency keys, review moderation, login events, and distributed rate-limit buckets.
+- Replaced process-local rate limiting with PostgreSQL-backed rate-limit buckets for multi-instance deployments.
+- Added checkout order idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa flows.
+- Added admin audit logging for order status, product, coupon, and review changes.
+- Added login event recording for successful and failed credential authentication attempts.
+- Separated development seed data from production setup. Development seeding requires `SEED_ADMIN_PASSWORD`; production admin initialization uses `npm --workspace backend run db:init-admin` with explicit `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` values.
+- Added Playwright browser tests, Ubuntu CI checks, staging health checks, and database backup/restore verification scripts.
+- Strengthened production environment validation for HTTPS app URLs, `AUTH_SECRET`, payment providers, R2 storage, and transactional email.
+
+## Production verification
+
+The following checks are available from the repository root:
+
+```bash
+npm run check:env
+npm run db:deploy
+npm --workspace backend run build
+npm --workspace frontend exec tsc -- --noEmit --incremental false
+npm test
+npm run build
+npm run test:e2e
+npm run check:staging
+npm run check:backup
+```
+
+Required variables for the external checks are:
+
+- `STAGING_URL` for `npm run check:staging`.
+- `BACKUP_DATABASE_URL` and `RESTORE_DATABASE_URL` for `npm run check:backup`.
+- Provider sandbox credentials and `E2E_PAYMENT_PROVIDER` for payment E2E coverage.
+
+The Playwright tests are configured in [`playwright.config.ts`](../playwright.config.ts), the CI workflow is in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), and browser tests are in [`tests/e2e`](../tests/e2e).
+
+## Current launch status
+
+The application should not be marked production-ready until the external staging gates pass. Code-level checks currently pass, but launch configuration remains intentionally incomplete until the following are verified:
+
+- Staging database migration deployment and health checks.
+- Browser checkout and payment sandbox workflows.
+- Stripe/M-Pesa webhook verification against provider sandboxes.
+- PostgreSQL backup and restore verification.
+- Linux production build and deployment smoke test.
+- Dependency vulnerability remediation or documented risk acceptance.
+- Final production credentials, seeded credential rotation, monitoring, and alerting.
+
+Credentials are intentionally not documented here and must be configured only after the implementation and staging gates pass.
+
 ## Page links
 
 Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://novatechstore.co.ke`.

@@ -11,9 +11,30 @@ if (missing.length) {
 }
 
 const configuredProviders = providerGroups.filter(([, names]) => names.every((name) => process.env[name]))
-if (process.env.NODE_ENV === "production" && configuredProviders.length === 0) {
-	console.error("Production requires one complete payment provider configuration (M-Pesa or Stripe).")
-	process.exitCode = 1
+if (process.env.NODE_ENV === "production") {
+	if ((process.env.AUTH_SECRET || "").length < 32) {
+		console.error("Production AUTH_SECRET must be at least 32 characters.")
+		process.exitCode = 1
+	}
+	try {
+		const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL || "")
+		if (appUrl.protocol !== "https:") throw new Error("https required")
+	} catch {
+		console.error("Production NEXT_PUBLIC_APP_URL must be a valid HTTPS URL.")
+		process.exitCode = 1
+	}
+	if (configuredProviders.length === 0) {
+		console.error("Production requires one complete payment provider configuration (M-Pesa or Stripe).")
+		process.exitCode = 1
+	}
+	if (!["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "NEXT_PUBLIC_R2_PUBLIC_URL"].every((name) => process.env[name])) {
+		console.error("Production requires complete R2 storage configuration.")
+		process.exitCode = 1
+	}
+	if (!process.env.RESEND_API_KEY) {
+		console.error("Production requires RESEND_API_KEY for transactional email.")
+		process.exitCode = 1
+	}
 }
 
 if (!process.env.NEXT_PUBLIC_R2_PUBLIC_URL) {

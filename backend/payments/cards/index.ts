@@ -48,6 +48,25 @@ export async function createCardPaymentIntent({
 		amount = order.total
 	}
 
+	const existing = await prisma.payment.findFirst({
+		where: { provider: "stripe", metadata: { path: ["reference"], equals: reference } },
+	})
+	if (existing) {
+		const metadata = (existing.metadata || {}) as Record<string, unknown>
+		return {
+			ok: existing.status !== "FAILED" && existing.status !== "CANCELLED",
+			provider: "stripe",
+			reference,
+			clientSecret: String(metadata.clientSecret || ""),
+			amount: existing.amount,
+			currency: existing.currency,
+			customerEmail: existing.customerEmail || customerEmail,
+			status: existing.status,
+			message: "Existing payment intent returned for this order.",
+			metadata: { paymentId: existing.id, paymentIntentId: existing.providerReference },
+		}
+	}
+
 	const stripe = getStripeClient()
 
 	const paymentIntent = await stripe.paymentIntents.create({
@@ -70,8 +89,9 @@ export async function createCardPaymentIntent({
 			status: "PENDING",
 			providerReference: paymentIntent.id,
 			customerEmail,
-			metadata: {
+		metadata: {
 				reference,
+				clientSecret: paymentIntent.client_secret,
 				...(metadata || {}),
 			},
 		},

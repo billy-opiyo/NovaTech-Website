@@ -20,7 +20,7 @@ export async function getReviews(req: NextRequest) {
 
 		const [reviews, total] = await Promise.all([
 			prisma.review.findMany({
-				where: { productId },
+				where: { productId, moderationStatus: "APPROVED" },
 				include: {
 					user: {
 						select: {

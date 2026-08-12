@@ -17,18 +17,19 @@ model User {
   image         String?
   role          Role      @default(CUSTOMER)
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  orders        Order[]
-  reviews       Review[]
-  wishlistItems WishlistItem[]
-  cartItems     CartItem[]
-  addresses     Address[]
+  accounts       Account[]
+  sessions       Session[]
+  orders         Order[]
+  reviews        Review[]
+  wishlistItems  WishlistItem[]
+  cartItems      CartItem[]
+  addresses      Address[]
   supportTickets SupportTicket[]
-  notifications Notification[]
-  adminLogs     AdminLog[]
+  notifications  Notification[]
+  adminLogs      AdminLog[]
+  loginEvents    LoginEvent[]
 }
 
 model Account {
@@ -72,57 +73,57 @@ enum Role {
 
 // --- Products ---
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
   description String?
   imageUrl    String?
   parentId    String?
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
 }
 
 model Product {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  description   String
-  brand         String
-  sku           String   @unique
-  price         Float
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  brand           String
+  sku             String   @unique
+  price           Float
   discountedPrice Float?
-  stock         Int      @default(0)
-  isFeatured    Boolean  @default(false)
-  isNewArrival  Boolean  @default(false)
-  warranty      String?
-  weight        Float?
-  dimensions    String?
-  specs         Json?    // Flexible specs (CPU, RAM, etc.)
-  images        String[] // URLs to R2
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  stock           Int      @default(0)
+  isFeatured      Boolean  @default(false)
+  isNewArrival    Boolean  @default(false)
+  warranty        String?
+  weight          Float?
+  dimensions      String?
+  specs           Json? // Flexible specs (CPU, RAM, etc.)
+  images          String[] // URLs to R2
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  categoryId    String
-  category      Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  variants      Variant[]
-  reviews       Review[]
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
-  wishlistItems WishlistItem[]
+  variants       Variant[]
+  reviews        Review[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
   recentlyViewed RecentlyViewed[]
 }
 
 model Variant {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name      String   // e.g., "Color", "Storage", "RAM"
-  value     String   // e.g., "Red", "256GB", "16GB"
-  priceModifier Float? @default(0)
-  stock     Int      @default(0)
-  sku       String?  @unique
+  id            String  @id @default(cuid())
+  productId     String
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String // e.g., "Color", "Storage", "RAM"
+  value         String // e.g., "Red", "256GB", "16GB"
+  priceModifier Float?  @default(0)
+  stock         Int     @default(0)
+  sku           String? @unique
 }
 
 // --- Cart & Wishlist ---
@@ -133,7 +134,7 @@ model CartItem {
   productId String
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Int      @default(1)
-  variant   String?  // store selected variant (e.g., "Color:Red")
+  variant   String? // store selected variant (e.g., "Color:Red")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -153,44 +154,46 @@ model RecentlyViewed {
   productId String
   product   Product  @relation(fields: [productId], references: [id])
   viewedAt  DateTime @default(now())
+
   @@unique([userId, productId])
 }
 
 // --- Orders & Delivery ---
 model Order {
-  id            String    @id @default(cuid())
-  userId        String?
-  user          User?     @relation(fields: [userId], references: [id])
-  guestEmail    String?
-  status        OrderStatus @default(PENDING)
-  subtotal      Float
-  shippingCost  Float     @default(0)
-  total         Float
-  paymentMethod String?
+  id              String      @id @default(cuid())
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  guestEmail      String?
+  status          OrderStatus @default(PENDING)
+  subtotal        Float
+  shippingCost    Float       @default(0)
+  total           Float
+  paymentMethod   String?
   shippingAddress Json
-  trackingNumber String?
-  notes         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime @updatedAt
+  trackingNumber  String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  idempotencyKey  String?     @unique
 
-  items         OrderItem[]
-  payments      Payment[]
+  items    OrderItem[]
+  payments Payment[]
 }
 
 model Payment {
-  id                String         @id @default(cuid())
+  id                String        @id @default(cuid())
   orderId           String?
-  order             Order?         @relation(fields: [orderId], references: [id])
+  order             Order?        @relation(fields: [orderId], references: [id])
   provider          String // "mpesa" | "stripe"
   amount            Float
-  currency          String         @default("KES")
-  status            PaymentStatus  @default(PENDING)
-  providerReference String?        @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
+  currency          String        @default("KES")
+  status            PaymentStatus @default(PENDING)
+  providerReference String?       @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
   phoneNumber       String?
   customerEmail     String?
   metadata          Json?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   @@index([orderId])
   @@index([providerReference])
@@ -239,47 +242,57 @@ model Address {
 }
 
 model DeliveryRegion {
-  id        String  @id @default(cuid())
-  name      String  // e.g., "Nairobi"
-  cost      Float   // KES
-  minDays   Int
-  maxDays   Int
+  id      String @id @default(cuid())
+  name    String // e.g., "Nairobi"
+  cost    Float // KES
+  minDays Int
+  maxDays Int
 }
 
 // --- Reviews ---
 model Review {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rating    Int      // 1-5
-  title     String?
-  comment   String?
-  photos    String[] // URLs
-  isVerifiedPurchase Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String                 @id @default(cuid())
+  userId             String
+  user               User                   @relation(fields: [userId], references: [id])
+  productId          String
+  product            Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating             Int // 1-5
+  title              String?
+  comment            String?
+  photos             String[] // URLs
+  isVerifiedPurchase Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  moderationStatus   ReviewModerationStatus @default(PENDING)
+
+  @@index([productId, moderationStatus])
+}
+
+enum ReviewModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
 }
 
 // --- Coupons & Notifications ---
 model Coupon {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id              String   @id @default(cuid())
+  code            String   @unique
   discountPercent Float?
   discountAmount  Float?
-  minOrderValue  Float?
-  expiresAt   DateTime
-  usageLimit  Int?
-  usedCount   Int      @default(0)
-  isActive    Boolean  @default(true)
+  minOrderValue   Float?
+  expiresAt       DateTime
+  usageLimit      Int?
+  usedCount       Int      @default(0)
+  isActive        Boolean  @default(true)
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  type      String   // e.g., ORDER_STATUS, PROMO
+  type      String // e.g., ORDER_STATUS, PROMO
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -287,9 +300,9 @@ model Notification {
 
 // --- Support & Admin Logs ---
 model SupportTicket {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
   customerName  String
   customerEmail String
   customerPhone String?
@@ -297,14 +310,14 @@ model SupportTicket {
   description   String
   category      TicketCategory @default(OTHER)
   priority      TicketPriority @default(MEDIUM)
-  status        TicketStatus @default(OPEN)
+  status        TicketStatus   @default(OPEN)
   orderId       String?
   assignedTo    String?
   attachments   String[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  replies       TicketReply[]
+  replies TicketReply[]
 }
 
 enum TicketCategory {
@@ -331,21 +344,55 @@ enum TicketStatus {
 }
 
 model TicketReply {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   ticketId  String
   ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   reply     String
-  isAdmin   Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isAdmin   Boolean       @default(false)
+  createdAt DateTime      @default(now())
 }
 
 model AdminLog {
   id        String   @id @default(cuid())
   adminId   String
   admin     User?    @relation(fields: [adminId], references: [id])
-  action    String   // e.g., "UPDATED_PRODUCT", "DELETED_REVIEW"
+  action    String // e.g., "UPDATED_PRODUCT", "DELETED_REVIEW"
   details   Json?
   createdAt DateTime @default(now())
 
   @@index([adminId])
+}
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email     String
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([email, createdAt])
+}
+
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+  expiresAt   DateTime
+
+  @@id([key, windowStart])
+  @@index([expiresAt])
+}
+
+model WebhookReceipt {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
 }

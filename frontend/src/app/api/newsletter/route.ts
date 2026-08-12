@@ -7,7 +7,7 @@ const newsletterSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-	const rateLimitResponse = rateLimiter(req)
+	const rateLimitResponse = await rateLimiter(req, "newsletter")
 	if (rateLimitResponse) return rateLimitResponse
 
 	try {

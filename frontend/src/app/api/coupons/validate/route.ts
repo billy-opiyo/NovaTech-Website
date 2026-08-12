@@ -3,7 +3,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
 
 export async function POST(req: NextRequest) {
-	const rateLimitResponse = rateLimiter(req)
+	const rateLimitResponse = await rateLimiter(req, "coupon-validate")
 	if (rateLimitResponse) return rateLimitResponse
 
 	try {

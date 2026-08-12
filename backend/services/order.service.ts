@@ -27,11 +27,16 @@ export interface CreateOrderData {
 	total: number
 	couponCode?: string
 	notes?: string
+	idempotencyKey?: string
 }
 
 export async function createOrder(data: CreateOrderData) {
 	return prisma.$transaction(async (tx) => {
 		if (!data.items.length) throw new Error("At least one item is required")
+		if (data.idempotencyKey) {
+			const existing = await tx.order.findUnique({ where: { idempotencyKey: data.idempotencyKey }, include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } } })
+			if (existing) return existing
+		}
 
 		// Prices, discounts, shipping, and stock are authoritative on the server.
 		const products = await Promise.all(

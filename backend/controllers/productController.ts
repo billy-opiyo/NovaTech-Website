@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import * as productService from "../services/productService"
 import { productSchema } from "../validators/productValidator"
+import { createActionRecord } from "../actions"
 
 export async function getProducts(req: NextRequest) {
 	try {
@@ -57,4 +58,25 @@ export async function searchProducts(req: NextRequest) {
 	} catch (error: any) {
 		return NextResponse.json({ message: error.message }, { status: 500 })
 	}
+}
+
+export async function updateProduct(req: NextRequest, slug: string) {
+	try {
+		const session = await getServerSession()
+		if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+		const body = await req.json()
+		const product = await productService.updateProduct(slug, body)
+		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, productId: product.id })
+		return NextResponse.json(product)
+	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }
+}
+
+export async function deleteProduct(req: NextRequest, slug: string) {
+	try {
+		const session = await getServerSession()
+		if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+		const product = await productService.deleteProduct(slug)
+		await createActionRecord("DELETED_PRODUCT", { adminId: session.user.id, productId: product.id })
+		return NextResponse.json({ ok: true })
+	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }
 }

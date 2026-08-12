@@ -5,7 +5,7 @@ import { sendEmail } from "backend/lib/email"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 
 export async function POST(req: NextRequest) {
-	const limited = rateLimiter(req)
+	const limited = await rateLimiter(req, "auth-forgot-password")
 	if (limited) return limited
 	try {
 		const { email } = await req.json()

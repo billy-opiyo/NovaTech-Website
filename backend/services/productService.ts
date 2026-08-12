@@ -77,6 +77,7 @@ export async function getFilteredProducts(params: URLSearchParams) {
 				category: true,
 				variants: true,
 				reviews: {
+					where: { moderationStatus: "APPROVED" },
 					select: {
 						rating: true,
 					},
@@ -115,6 +116,7 @@ export async function getProductBySlug(slug: string) {
 			category: true,
 			variants: true,
 			reviews: {
+				where: { moderationStatus: "APPROVED" },
 				include: {
 					user: {
 						select: {
@@ -209,4 +211,20 @@ export async function createProduct(data: any) {
 			variants: true,
 		},
 	})
+}
+
+export async function updateProduct(slug: string, data: any) {
+	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival"]
+	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
+	if (update.price !== undefined) update.price = Number(update.price)
+	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
+	if (update.stock !== undefined) update.stock = Number(update.stock)
+	return prisma.product.update({ where: { slug }, data: update, include: { category: true, variants: true } })
+}
+
+export async function deleteProduct(slug: string) {
+	const product = await prisma.product.findUnique({ where: { slug }, select: { id: true, orderItems: { select: { id: true }, take: 1 } } })
+	if (!product) throw new Error("Product not found")
+	if (product.orderItems.length) throw new Error("Products with order history cannot be deleted; set stock to zero instead")
+	return prisma.product.delete({ where: { slug } })
 }

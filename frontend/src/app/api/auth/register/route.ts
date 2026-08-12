@@ -6,7 +6,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import { registerSchema } from "backend/validators/authValidator"
 
 export async function POST(req: NextRequest) {
-	const rateLimitResponse = rateLimiter(req)
+	const rateLimitResponse = await rateLimiter(req, "auth-register")
 	if (rateLimitResponse) return rateLimitResponse
 
 	try {

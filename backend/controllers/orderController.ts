@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/auth"
 import * as orderService from "../services/order.service"
 import { orderSchema, orderStatusSchema } from "../validators/orderValidator"
 import { z } from "zod"
+import { createActionRecord } from "../actions"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -40,6 +41,7 @@ export async function createOrder(req: NextRequest) {
 			total: validated.total,
 			couponCode: validated.couponCode,
 			notes: validated.notes,
+			idempotencyKey: req.headers.get("idempotency-key") || undefined,
 		})
 
 		// Send order confirmation email (non-blocking - don't fail the order if email fails)
@@ -112,6 +114,7 @@ export async function updateOrderStatus(
 			validated.status,
 			validated.trackingNumber,
 		)
+		await createActionRecord("UPDATED_ORDER_STATUS", { adminId: session.user.id, orderId: id, status: validated.status })
 
 		return NextResponse.json(order)
 	} catch (error: any) {

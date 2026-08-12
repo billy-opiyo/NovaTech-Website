@@ -38,10 +38,9 @@ export async function queueBackgroundTask(
 	taskName: string,
 	payload?: Record<string, unknown>,
 ): Promise<ActionResult> {
-	// Simple in-memory queue — in a real deployment this would use
-	// a job queue like BullMQ, RabbitMQ, or Cloud Tasks.
-	// For now we just log and execute lightweight tasks immediately.
-	console.log(`[Background Task] Queueing: ${taskName}`, payload || {})
+	// This is an explicit synchronous dispatch boundary. Durable work must be
+	// handed to the provider/worker responsible for the task before returning.
+	console.log(`[Background Task] Dispatching: ${taskName}`, payload || {})
 
 	// Execute lightweight notification tasks immediately
 	try {
@@ -72,7 +71,7 @@ export async function queueBackgroundTask(
 	return {
 		ok: true,
 		action: "queue_background_task",
-		message: `${taskName} queued for background processing.`,
+		message: `${taskName} dispatched successfully.`,
 		createdAt: new Date().toISOString(),
 		metadata: {
 			taskName,

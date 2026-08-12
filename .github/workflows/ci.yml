@@ -1,0 +1,47 @@
+name: CI and staging gates
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: novatech
+          POSTGRES_PASSWORD: novatech
+          POSTGRES_DB: novatech_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U novatech -d novatech_test"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    env:
+      DATABASE_URL: postgresql://novatech:novatech@localhost:5432/novatech_test
+      AUTH_SECRET: ci-only-secret-that-is-long-enough-for-tests
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:deploy
+      - run: npm --workspace backend run build
+      - run: npm test
+      - run: npm --workspace frontend exec tsc -- --noEmit --incremental false
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run start > next.log 2>&1 &
+      - run: |
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:3000/api/health && exit 0
+            sleep 2
+          done
+          cat next.log
+          exit 1
+      - run: npm run test:e2e

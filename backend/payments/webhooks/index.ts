@@ -54,6 +54,15 @@ export async function handleStripeEvent(
 	receivedAt = new Date().toISOString(),
 ): Promise<WebhookResult> {
 	const type = String(payload.type || "unknown")
+	const eventId = String(payload.id || "")
+	if (eventId) {
+		try {
+			await prisma.webhookReceipt.create({ data: { provider: "stripe", eventId } })
+		} catch (error: any) {
+			if (error?.code === "P2002") return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Duplicate Stripe event acknowledged." }
+			throw error
+		}
+	}
 	const data = payload.data as { object?: Record<string, unknown> } | undefined
 	const paymentIntentId =
 		(data?.object?.id as string) ||
@@ -214,7 +223,8 @@ async function updatePaymentByProviderReference(
 			},
 		})
 
-		if (!payment) return null
+	if (!payment) return null
+	if (payment.status === status || (payment.status === "COMPLETED" && status !== "REFUNDED")) return payment
 		if (extra.amount !== undefined && Math.abs(payment.amount - extra.amount) > 0.01) {
 			console.error(`Webhook amount mismatch for ${providerReference}`)
 			return null
