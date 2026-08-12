@@ -42,6 +42,32 @@
     scroll-behavior: smooth;
   }
 
+  select {
+    color-scheme: light;
+  }
+
+  .dark select {
+    color-scheme: dark;
+  }
+
+  select option,
+  select optgroup {
+    background-color: #ffffff;
+    color: #111827;
+    padding: 8px 12px;
+  }
+
+  .dark select option,
+  .dark select optgroup {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .dark select option:checked {
+    background-color: #0070f3;
+    color: #ffffff;
+  }
+
   *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -94,13 +120,6 @@
   }
 
   .form-select option {
-    background-color: #ffffff;
-    color: #111827;
     padding: 8px 12px;
-  }
-
-  .dark .form-select option {
-    background-color: #1e293b;
-    color: #f1f5f9;
   }
 }
