@@ -205,8 +205,10 @@ export function verifyStkCallbackPassword(
 	const expected = Buffer.from(
 		`${shortcode}${passkey}${timestamp}`,
 	).toString("base64")
-	return crypto.timingSafeEqual(
-		Buffer.from(expected),
-		Buffer.from(password),
-	)
+	const expectedBuffer = Buffer.from(expected)
+	const providedBuffer = Buffer.from(password)
+	// timingSafeEqual throws when buffer lengths differ; malformed provider
+	// input should simply fail verification instead of crashing the webhook.
+	if (expectedBuffer.length !== providedBuffer.length) return false
+	return crypto.timingSafeEqual(expectedBuffer, providedBuffer)
 }

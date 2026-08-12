@@ -6,6 +6,9 @@ export class ApiError extends Error {
 
 	constructor(message: string, status: number, errors?: unknown) {
 		super(message)
+		// Preserve instanceof checks when this code is transpiled to older
+		// CommonJS targets (Error subclasses otherwise lose their prototype).
+		Object.setPrototypeOf(this, new.target.prototype)
 		this.name = "ApiError"
 		this.status = status
 		this.errors = errors
