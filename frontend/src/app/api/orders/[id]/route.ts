@@ -1,75 +1,16 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth"
-import prisma from "backend/lib/db"
-import { updateOrderStatus } from "backend/services/order.service"
+import { NextRequest } from "next/server"
+import { getOrderById, updateOrderStatus } from "backend/controllers/orderController"
 
 export async function GET(
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
-	try {
-		const session = await getServerSession()
-		if (!session?.user) {
-			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-		}
-
-		const { id } = await params
-		const order = await prisma.order.findUnique({
-			where: { id },
-			include: {
-				items: {
-					include: {
-						product: {
-							select: {
-								name: true,
-								slug: true,
-								images: true,
-								brand: true,
-							},
-						},
-					},
-				},
-			},
-		})
-
-		if (!order) {
-			return NextResponse.json({ message: "Order not found" }, { status: 404 })
-		}
-
-		if (
-			order.userId !== session.user.id &&
-			session.user.role !== "ADMIN" &&
-			session.user.role !== "SUPERADMIN"
-		) {
-			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
-		}
-
-		return NextResponse.json(order)
-	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
-	}
+	return getOrderById(req, { params })
 }
 
 export async function PATCH(
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
-	try {
-		const session = await getServerSession()
-		if (
-			!session?.user ||
-			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")
-		) {
-			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
-		}
-
-		const { id } = await params
-		const { status, trackingNumber } = await req.json()
-
-		const order = await updateOrderStatus(id, status, trackingNumber)
-
-		return NextResponse.json(order)
-	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
-	}
+	return updateOrderStatus(req, { params })
 }

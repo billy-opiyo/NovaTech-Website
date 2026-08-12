@@ -191,18 +191,16 @@ export async function getRecommendedForUser(
 		})
 
 		for (const product of categoryProducts) {
-			if (!recommendations.has(product.id)) {
-				const existing = recommendations.get(product.id)
-				if (existing) {
-					existing.score += 8
-					existing.reason = "Popular in categories you like"
-				} else {
-					recommendations.set(product.id, {
-						...formatProduct(product),
-						score: 8,
-						reason: "Popular in categories you like",
-					})
-				}
+			const existing = recommendations.get(product.id)
+			if (existing) {
+				existing.score += 8
+				existing.reason = "Popular in categories you like"
+			} else {
+				recommendations.set(product.id, {
+					...formatProduct(product),
+					score: 8,
+					reason: "Popular in categories you like",
+				})
 			}
 		}
 	}

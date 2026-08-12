@@ -1,11 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
 	Activity,
 	Search,
-	Filter,
 	Eye,
 	Download,
 	User,
@@ -18,160 +17,147 @@ import {
 	XCircle,
 	AlertTriangle,
 	Info,
+	RefreshCw,
+	Star,
 } from "lucide-react"
 import clsx from "clsx"
 
-interface ActivityLog {
+interface AdminLog {
 	id: string
-	userId: string
-	userName: string
-	userRole: string
+	adminId: string
 	action: string
-	description: string
-	category: "user" | "product" | "order" | "settings" | "security" | "other"
-	ipAddress: string
-	timestamp: string
-	status: "success" | "failed" | "warning"
-	details?: string
+	details: Record<string, unknown> | null
+	createdAt: string
+	admin?: {
+		name: string | null
+		email: string | null
+	} | null
 }
 
-const mockActivityLogs: ActivityLog[] = [
-	{
-		id: "act-1",
-		userId: "user-1",
-		userName: "Admin User",
-		userRole: "SUPERADMIN",
-		action: "Updated Product",
-		description: "Updated stock quantity for iPhone 15 Pro Max",
-		category: "product",
-		ipAddress: "192.168.1.100",
-		timestamp: "2024-08-24 09:45:00",
-		status: "success",
-		details: "Changed stock from 20 to 25 units",
-	},
-	{
-		id: "act-2",
-		userId: "user-2",
-		userName: "John Doe",
-		userRole: "ADMIN",
-		action: "Order Status Update",
-		description: "Changed order EB-20240824-005 status from Processing to Shipped",
-		category: "order",
-		ipAddress: "192.168.1.101",
-		timestamp: "2024-08-24 09:30:00",
-		status: "success",
-	},
-	{
-		id: "act-3",
-		userId: "user-1",
-		userName: "Admin User",
-		userRole: "SUPERADMIN",
-		action: "Login Attempt Failed",
-		description: "Failed login attempt from unknown IP",
-		category: "security",
-		ipAddress: "203.0.113.45",
-		timestamp: "2024-08-24 03:22:00",
-		status: "failed",
-		details: "Invalid credentials provided",
-	},
-	{
-		id: "act-4",
-		userId: "user-3",
-		userName: "Sarah Kimani",
-		userRole: "ADMIN",
-		action: "Coupon Created",
-		description: "Created new coupon code TECH20 for 20% off laptops",
-		category: "settings",
-		ipAddress: "192.168.1.102",
-		timestamp: "2024-08-24 08:15:00",
-		status: "success",
-	},
-	{
-		id: "act-5",
-		userId: "user-2",
-		userName: "John Doe",
-		userRole: "ADMIN",
-		action: "Customer Status Changed",
-		description: "Changed customer status to VIP",
-		category: "user",
-		ipAddress: "192.168.1.101",
-		timestamp: "2024-08-23 16:20:00",
-		status: "success",
-		details: "Customer ID: cust-123",
-	},
-	{
-		id: "act-6",
-		userId: "user-1",
-		userName: "Admin User",
-		userRole: "SUPERADMIN",
-		action: "Settings Updated",
-		description: "Updated email configuration settings",
-		category: "settings",
-		ipAddress: "192.168.1.100",
-		timestamp: "2024-08-23 14:10:00",
-		status: "success",
-	},
-]
+interface LogsResponse {
+	logs: AdminLog[]
+	total: number
+	page: number
+	totalPages: number
+	actions: string[]
+}
 
-const statusFilters = ["All", "Success", "Failed", "Warning"]
-const categoryFilters = ["All", "User", "Product", "Order", "Settings", "Security", "Other"]
+interface LogStats {
+	totalLogs: number
+	todayLogs: number
+	mostCommonActions: { action: string; _count: { _all: number } }[]
+}
+
+const actionIcons: Record<string, React.ElementType> = {
+	UPDATED_PRODUCT: Package,
+	CREATED_PRODUCT: Package,
+	DELETED_PRODUCT: Package,
+	UPDATED_ORDER: ShoppingCart,
+	DELETED_REVIEW: Star,
+	UPDATED_SETTINGS: Settings,
+	LOGIN: Shield,
+	LOGOUT: Shield,
+}
+
+function getActionIcon(action: string) {
+	const key = Object.keys(actionIcons).find((k) => action.includes(k))
+	return actionIcons[key || ""] || Activity
+}
+
+function getStatusBadge(action: string) {
+	if (action.includes("FAILED") || action.includes("DELETE")) {
+		return "bg-red-500/20 text-red-600"
+	}
+	if (action.includes("LOGIN") || action.includes("SECURITY")) {
+		return "bg-yellow-500/20 text-yellow-600"
+	}
+	return "bg-green-500/20 text-green-600"
+}
+
+function getStatusIcon(action: string) {
+	if (action.includes("FAILED") || action.includes("DELETE")) {
+		return <XCircle size={14} />
+	}
+	if (action.includes("LOGIN") || action.includes("SECURITY")) {
+		return <AlertTriangle size={14} />
+	}
+	return <CheckCircle2 size={14} />
+}
+
+function formatDate(iso: string) {
+	return new Date(iso).toLocaleString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	})
+}
 
 export default function AdminActivityPage() {
+	const [logs, setLogs] = useState<AdminLog[]>([])
+	const [stats, setStats] = useState<LogStats | null>(null)
+	const [actions, setActions] = useState<string[]>([])
 	const [searchQuery, setSearchQuery] = useState("")
-	const [statusFilter, setStatusFilter] = useState("All")
-	const [categoryFilter, setCategoryFilter] = useState("All")
-	const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null)
+	const [actionFilter, setActionFilter] = useState("All")
+	const [page, setPage] = useState(1)
+	const [totalPages, setTotalPages] = useState(1)
+	const [total, setTotal] = useState(0)
+	const [isLoading, setIsLoading] = useState(true)
+	const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null)
 	const [showDetails, setShowDetails] = useState(false)
 
-	const filteredLogs = mockActivityLogs.filter((log) => {
-		const matchesSearch =
-			log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			log.ipAddress.includes(searchQuery)
-		const matchesStatus =
-			statusFilter === "All" || log.status.toLowerCase() === statusFilter.toLowerCase()
-		const matchesCategory =
-			categoryFilter === "All" || log.category.toLowerCase() === categoryFilter.toLowerCase()
-		return matchesSearch && matchesStatus && matchesCategory
+	const fetchLogs = useCallback(async () => {
+		setIsLoading(true)
+		try {
+			const params = new URLSearchParams({
+				page: page.toString(),
+				limit: "20",
+			})
+			if (actionFilter !== "All") params.set("action", actionFilter)
+			if (searchQuery) params.set("search", searchQuery)
+
+			const [logsRes, statsRes] = await Promise.all([
+				fetch(`/api/admin/logs?${params.toString()}`),
+				fetch("/api/admin/logs?stats=true"),
+			])
+
+			if (logsRes.ok) {
+				const data: LogsResponse = await logsRes.json()
+				setLogs(data.logs)
+				setTotal(data.total)
+				setTotalPages(data.totalPages)
+				setActions(data.actions)
+			}
+			if (statsRes.ok) {
+				setStats(await statsRes.json())
+			}
+		} catch (error) {
+			console.error("Failed to fetch admin logs:", error)
+		} finally {
+			setIsLoading(false)
+		}
+	}, [page, actionFilter, searchQuery])
+
+	useEffect(() => {
+		fetchLogs()
+	}, [fetchLogs])
+
+	const filteredLogs = logs.filter((log) => {
+		if (!searchQuery) return true
+		const q = searchQuery.toLowerCase()
+		return (
+			log.action.toLowerCase().includes(q) ||
+			log.admin?.name?.toLowerCase().includes(q) ||
+			log.admin?.email?.toLowerCase().includes(q) ||
+			log.adminId.toLowerCase().includes(q)
+		)
 	})
 
-	const getStatusBadge = (status: string) => {
-		const styles: Record<string, string> = {
-			success: "bg-green-500/20 text-green-600",
-			failed: "bg-red-500/20 text-red-600",
-			warning: "bg-yellow-500/20 text-yellow-600",
-		}
-		return styles[status] || "bg-gray-500/20 text-gray-600"
-	}
-
-	const getStatusIcon = (status: string) => {
-		const icons: Record<string, React.ReactNode> = {
-			success: <CheckCircle2 size={14} />,
-			failed: <XCircle size={14} />,
-			warning: <AlertTriangle size={14} />,
-		}
-		return icons[status] || <Info size={14} />
-	}
-
-	const getCategoryIcon = (category: string) => {
-		const icons: Record<string, React.ElementType> = {
-			user: User,
-			product: Package,
-			order: ShoppingCart,
-			settings: Settings,
-			security: Shield,
-			other: Activity,
-		}
-		return icons[category] || Activity
-	}
-
 	const activityStats = {
-		total: mockActivityLogs.length,
-		success: mockActivityLogs.filter((l) => l.status === "success").length,
-		failed: mockActivityLogs.filter((l) => l.status === "failed").length,
-		warning: mockActivityLogs.filter((l) => l.status === "warning").length,
-		today: mockActivityLogs.filter((l) => l.timestamp.startsWith("2024-08-24")).length,
+		total: stats?.totalLogs ?? total,
+		today: stats?.todayLogs ?? 0,
+		success: stats?.mostCommonActions?.length ?? 0,
 	}
 
 	return (
@@ -183,6 +169,12 @@ export default function AdminActivityPage() {
 					<p className="text-gray-500 mt-1">Track all admin actions and system events</p>
 				</div>
 				<div className="flex gap-3">
+					<button
+						onClick={fetchLogs}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+					>
+						<RefreshCw size={18} /> Refresh
+					</button>
 					<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
 						<Download size={18} /> Export Logs
 					</button>
@@ -199,22 +191,22 @@ export default function AdminActivityPage() {
 						color: "text-blue-500",
 					},
 					{
-						label: "Successful",
-						value: activityStats.success.toString(),
-						icon: CheckCircle2,
-						color: "text-green-500",
-					},
-					{
-						label: "Failed",
-						value: activityStats.failed.toString(),
-						icon: XCircle,
-						color: "text-red-500",
-					},
-					{
 						label: "Today",
 						value: activityStats.today.toString(),
 						icon: Clock,
 						color: "text-purple-500",
+					},
+					{
+						label: "Distinct Actions",
+						value: actions.length.toString(),
+						icon: CheckCircle2,
+						color: "text-green-500",
+					},
+					{
+						label: "Page",
+						value: `${page}/${totalPages}`,
+						icon: Info,
+						color: "text-yellow-500",
 					},
 				].map((stat, index) => (
 					<motion.div
@@ -237,112 +229,113 @@ export default function AdminActivityPage() {
 
 			{/* Filters */}
 			<div className="glass-card p-4 mb-6 space-y-4">
-				<div className="flex flex-col md:flex-row gap-4">
-					<div className="relative flex-1">
-						<Search
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-							size={18}
-						/>
-						<input
-							type="text"
-							placeholder="Search by user, action, description, or IP..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
-						/>
-					</div>
+				<div className="relative flex-1">
+					<Search
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+						size={18}
+					/>
+					<input
+						type="text"
+						placeholder="Search by action, admin name, or email..."
+						value={searchQuery}
+						onChange={(e) => {
+							setSearchQuery(e.target.value)
+							setPage(1)
+						}}
+						className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
+					/>
 				</div>
-				<div className="flex flex-col md:flex-row gap-2">
-					<div className="flex gap-2 overflow-x-auto">
-						{statusFilters.map((filter) => (
-							<button
-								key={filter}
-								onClick={() => setStatusFilter(filter)}
-								className={clsx(
-									"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
-									statusFilter === filter
-										? "bg-primary text-white"
-										: "bg-white/10 hover:bg-white/20",
-								)}
-							>
-								{filter}
-							</button>
-						))}
-					</div>
-					<div className="flex gap-2 overflow-x-auto">
-						{categoryFilters.map((filter) => (
-							<button
-								key={filter}
-								onClick={() => setCategoryFilter(filter)}
-								className={clsx(
-									"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
-									categoryFilter === filter
-										? "bg-primary text-white"
-										: "bg-white/10 hover:bg-white/20",
-								)}
-							>
-								{filter}
-							</button>
-						))}
-					</div>
+				<div className="flex gap-2 overflow-x-auto">
+					<button
+						onClick={() => {
+							setActionFilter("All")
+							setPage(1)
+						}}
+						className={clsx(
+							"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
+							actionFilter === "All"
+								? "bg-primary text-white"
+								: "bg-white/10 hover:bg-white/20",
+						)}
+					>
+						All
+					</button>
+					{actions.map((action) => (
+						<button
+							key={action}
+							onClick={() => {
+								setActionFilter(action)
+								setPage(1)
+							}}
+							className={clsx(
+								"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition",
+								actionFilter === action
+									? "bg-primary text-white"
+									: "bg-white/10 hover:bg-white/20",
+							)}
+						>
+							{action.replace(/_/g, " ")}
+						</button>
+					))}
 				</div>
 			</div>
 
 			{/* Activity Timeline */}
-			<div className="space-y-4">
-				{filteredLogs.map((log, index) => {
-					const CategoryIcon = getCategoryIcon(log.category)
-					return (
-						<motion.div
-							key={log.id}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: index * 0.05 }}
-							className="glass-card p-6 hover:scale-[1.01] transition cursor-pointer"
-						>
-							<div className="flex items-start gap-4">
-								{/* Category Icon */}
-								<div className="p-3 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-									<CategoryIcon size={24} />
-								</div>
-
-								{/* Activity Content */}
-								<div className="flex-1 min-w-0">
-									<div className="flex items-start justify-between mb-2">
-										<div>
-											<h3 className="font-semibold text-sm mb-1">{log.action}</h3>
-											<p className="text-xs text-gray-500">
-												{log.userName} • {log.userRole} • {log.timestamp}
-											</p>
-										</div>
-										<span
-											className={clsx(
-												"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0",
-												getStatusBadge(log.status),
-											)}
-										>
-											{getStatusIcon(log.status)}
-											{log.status.toUpperCase()}
-										</span>
+			{isLoading ? (
+				<div className="text-center py-16">
+					<div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+					<p className="text-gray-500">Loading activity logs...</p>
+				</div>
+			) : (
+				<div className="space-y-4">
+					{filteredLogs.map((log, index) => {
+						const CategoryIcon = getActionIcon(log.action)
+						return (
+							<motion.div
+								key={log.id}
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: index * 0.05 }}
+								className="glass-card p-6 hover:scale-[1.01] transition cursor-pointer"
+							>
+								<div className="flex items-start gap-4">
+									<div className="p-3 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+										<CategoryIcon size={24} />
 									</div>
 
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-										{log.description}
-									</p>
-
-									{log.details && (
-										<p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg mb-3">
-											{log.details}
-										</p>
-									)}
-
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-4 text-xs text-gray-500">
-											<span className="capitalize">{log.category}</span>
-											<span>IP: {log.ipAddress}</span>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-start justify-between mb-2">
+											<div>
+												<h3 className="font-semibold text-sm mb-1">
+													{log.action.replace(/_/g, " ")}
+												</h3>
+												<p className="text-xs text-gray-500">
+													{log.admin?.name || log.adminId} •{" "}
+													{log.admin?.email || "Unknown"} • {formatDate(log.createdAt)}
+												</p>
+											</div>
+											<span
+												className={clsx(
+													"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0",
+													getStatusBadge(log.action),
+												)}
+											>
+												{getStatusIcon(log.action)}
+												{log.action.includes("FAILED") ? "FAILED" : "SUCCESS"}
+											</span>
 										</div>
 
-										<div className="flex items-center gap-1">
+										{log.details && (
+											<pre className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg mb-3 overflow-x-auto">
+												{JSON.stringify(log.details, null, 2)}
+											</pre>
+										)}
+
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-4 text-xs text-gray-500">
+												<span>ID: {log.id.slice(-8).toUpperCase()}</span>
+											</div>
+
 											<button
 												onClick={() => {
 													setSelectedLog(log)
@@ -356,17 +349,40 @@ export default function AdminActivityPage() {
 										</div>
 									</div>
 								</div>
-							</div>
-						</motion.div>
-					)
-				})}
-			</div>
+							</motion.div>
+						)
+					})}
 
-			{filteredLogs.length === 0 && (
-				<div className="text-center py-16">
-					<Activity className="mx-auto mb-4 text-gray-400" size={48} />
-					<h3 className="text-lg font-semibold mb-2">No activity logs found</h3>
-					<p className="text-gray-500">Try adjusting your search or filters</p>
+					{filteredLogs.length === 0 && (
+						<div className="text-center py-16">
+							<Activity className="mx-auto mb-4 text-gray-400" size={48} />
+							<h3 className="text-lg font-semibold mb-2">No activity logs found</h3>
+							<p className="text-gray-500">Try adjusting your search or filters</p>
+						</div>
+					)}
+
+					{/* Pagination */}
+					{totalPages > 1 && (
+						<div className="flex items-center justify-center gap-2 pt-4">
+							<button
+								disabled={page <= 1}
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+								className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+							>
+								Previous
+							</button>
+							<span className="text-sm text-gray-500">
+								Page {page} of {totalPages}
+							</span>
+							<button
+								disabled={page >= totalPages}
+								onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+								className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+							>
+								Next
+							</button>
+						</div>
+					)}
 				</div>
 			)}
 
@@ -396,57 +412,63 @@ export default function AdminActivityPage() {
 								</div>
 
 								<div className="space-y-6">
-									{/* Activity Header */}
 									<div>
 										<div className="flex items-start justify-between mb-2">
-											<h3 className="font-semibold text-lg">{selectedLog.action}</h3>
+											<h3 className="font-semibold text-lg">
+												{selectedLog.action.replace(/_/g, " ")}
+											</h3>
 											<span
 												className={clsx(
 													"inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-													getStatusBadge(selectedLog.status),
+													getStatusBadge(selectedLog.action),
 												)}
 											>
-												{getStatusIcon(selectedLog.status)}
-												{selectedLog.status.toUpperCase()}
+												{getStatusIcon(selectedLog.action)}
+												{selectedLog.action.includes("FAILED") ? "FAILED" : "SUCCESS"}
 											</span>
 										</div>
 										<p className="text-xs text-gray-500">
-											{selectedLog.id} • {selectedLog.timestamp}
+											{selectedLog.id} • {formatDate(selectedLog.createdAt)}
 										</p>
 									</div>
 
 									<hr className="border-gray-200 dark:border-gray-700" />
 
-									{/* User Info */}
 									<div>
-										<h3 className="font-semibold mb-3">User Information</h3>
+										<h3 className="font-semibold mb-3">Admin Information</h3>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 											<div className="flex items-center gap-2">
 												<User size={18} className="text-gray-400" />
 												<div>
 													<p className="text-xs text-gray-500">Name</p>
-													<p className="text-sm font-medium">{selectedLog.userName}</p>
+													<p className="text-sm font-medium">
+														{selectedLog.admin?.name || "Unknown"}
+													</p>
 												</div>
 											</div>
 											<div className="flex items-center gap-2">
 												<Shield size={18} className="text-gray-400" />
 												<div>
-													<p className="text-xs text-gray-500">Role</p>
-													<p className="text-sm font-medium">{selectedLog.userRole}</p>
+													<p className="text-xs text-gray-500">Admin ID</p>
+													<p className="text-sm font-medium">{selectedLog.adminId}</p>
 												</div>
 											</div>
 											<div className="flex items-center gap-2">
 												<Activity size={18} className="text-gray-400" />
 												<div>
-													<p className="text-xs text-gray-500">User ID</p>
-													<p className="text-sm font-medium">{selectedLog.userId}</p>
+													<p className="text-xs text-gray-500">Email</p>
+													<p className="text-sm font-medium">
+														{selectedLog.admin?.email || "N/A"}
+													</p>
 												</div>
 											</div>
 											<div className="flex items-center gap-2">
 												<Clock size={18} className="text-gray-400" />
 												<div>
 													<p className="text-xs text-gray-500">Timestamp</p>
-													<p className="text-sm font-medium">{selectedLog.timestamp}</p>
+													<p className="text-sm font-medium">
+														{formatDate(selectedLog.createdAt)}
+													</p>
 												</div>
 											</div>
 										</div>
@@ -454,40 +476,27 @@ export default function AdminActivityPage() {
 
 									<hr className="border-gray-200 dark:border-gray-700" />
 
-									{/* Activity Details */}
 									<div>
 										<h3 className="font-semibold mb-3">Activity Information</h3>
 										<div className="space-y-4">
 											<div>
-												<p className="text-xs text-gray-500 mb-1">Description</p>
+												<p className="text-xs text-gray-500 mb-1">Action</p>
 												<p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
-													{selectedLog.description}
+													{selectedLog.action.replace(/_/g, " ")}
 												</p>
 											</div>
 											{selectedLog.details && (
 												<div>
-													<p className="text-xs text-gray-500 mb-1">Additional Details</p>
-													<p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
-														{selectedLog.details}
-													</p>
+													<p className="text-xs text-gray-500 mb-1">Details</p>
+													<pre className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl overflow-x-auto">
+														{JSON.stringify(selectedLog.details, null, 2)}
+													</pre>
 												</div>
 											)}
-											<div className="grid grid-cols-2 gap-4">
-												<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
-													<p className="text-xs text-gray-500">Category</p>
-													<p className="text-sm font-medium capitalize">{selectedLog.category}</p>
-												</div>
-												<div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
-													<p className="text-xs text-gray-500">IP Address</p>
-													<p className="text-sm font-medium font-mono">{selectedLog.ipAddress}</p>
-												</div>
-											</div>
 										</div>
 									</div>
 
-									{/* Actions */}
 									<div className="flex gap-3">
-										<button className="btn-primary flex-1">View Related Data</button>
 										<button
 											onClick={() => setShowDetails(false)}
 											className="flex-1 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"

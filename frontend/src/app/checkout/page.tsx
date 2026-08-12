@@ -6,6 +6,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/cartContext"
+import CheckoutSteps from "@/components/checkout/CheckoutSteps"
+import OrderSummary from "@/components/checkout/OrderSummary"
 import {
 	ArrowLeft,
 	Check,
@@ -16,10 +18,6 @@ import {
 	CreditCard,
 	Smartphone,
 	MapPin,
-	User,
-	Phone,
-	Mail,
-	Home,
 	AlertCircle,
 	Shield,
 	Package,
@@ -348,13 +346,6 @@ export default function CheckoutPage() {
 		}
 	}
 
-	const steps: { key: CheckoutStep; label: string; icon: React.ReactNode }[] = [
-		{ key: "shipping", label: "Shipping", icon: <MapPin size={18} /> },
-		{ key: "delivery", label: "Delivery", icon: <Truck size={18} /> },
-		{ key: "payment", label: "Payment", icon: <CreditCard size={18} /> },
-		{ key: "review", label: "Review", icon: <Check size={18} /> },
-	]
-
 	if (items.length === 0 && !orderComplete) {
 		return (
 			<div className="text-center py-20">
@@ -407,33 +398,7 @@ export default function CheckoutPage() {
 				<ArrowLeft size={18} /> Back to Cart
 			</Link>
 
-			<div className="flex items-center justify-center mb-12">
-				{steps.map((step, i) => (
-					<div key={step.key} className="flex items-center">
-						<div
-							className={clsx(
-								"flex items-center gap-2 px-4 py-2 rounded-full text-sm transition",
-								steps.findIndex((s) => s.key === currentStep) >= i
-									? "bg-primary text-white"
-									: "bg-gray-200 dark:bg-gray-700 text-gray-500",
-							)}
-						>
-							{step.icon}
-							<span className="hidden sm:inline">{step.label}</span>
-						</div>
-						{i < steps.length - 1 && (
-							<div
-								className={clsx(
-									"w-8 h-0.5 mx-1",
-									steps.findIndex((s) => s.key === currentStep) > i
-										? "bg-primary"
-										: "bg-gray-300 dark:bg-gray-600",
-								)}
-							/>
-						)}
-					</div>
-				))}
-			</div>
+			<CheckoutSteps currentStep={currentStep} />
 
 			<div className="grid lg:grid-cols-3 gap-8">
 				<div className="lg:col-span-2">
@@ -919,48 +884,12 @@ export default function CheckoutPage() {
 				</div>
 
 				<div className="hidden lg:block">
-					<div className="glass-card p-6 sticky top-24">
-						<h3 className="font-semibold text-lg mb-4">Order Summary</h3>
-						<div className="space-y-3 max-h-64 overflow-y-auto mb-4">
-							{items.map((item) => (
-								<div key={item.id} className="flex gap-2 text-sm">
-									<div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
-										<Image
-											src={item.image}
-											alt={item.name}
-											fill
-											className="object-cover"
-										/>
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="truncate">{item.name}</p>
-										<p className="text-gray-500">x{item.quantity}</p>
-									</div>
-									<p className="font-medium">
-										KES {(item.price * item.quantity).toLocaleString()}
-									</p>
-								</div>
-							))}
-						</div>
-						<div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2 text-sm">
-							<div className="flex justify-between">
-								<span className="text-gray-500">Subtotal</span>
-								<span>KES {subtotal.toLocaleString()}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-gray-500">Delivery</span>
-								<span>
-									{deliveryCost === 0
-										? "FREE"
-										: `KES ${deliveryCost.toLocaleString()}`}
-								</span>
-							</div>
-							<div className="flex justify-between font-bold text-lg pt-2 border-t">
-								<span>Total</span>
-								<span>KES {orderTotal.toLocaleString()}</span>
-							</div>
-						</div>
-					</div>
+					<OrderSummary
+						items={items}
+						subtotal={subtotal}
+						deliveryCost={deliveryCost}
+						total={orderTotal}
+					/>
 				</div>
 			</div>
 		</div>

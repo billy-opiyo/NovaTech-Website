@@ -84,7 +84,7 @@ export async function getLowStockProducts(threshold: number = 10): Promise<LowSt
 		if (product.variants.length > 0) {
 			return product.variants.map((variant) => ({
 				...baseProduct,
-				variant: `${variant.name}`,
+				variant: `${variant.name}: ${variant.value}`,
 				currentStock: variant.stock,
 			}))
 		}
@@ -135,7 +135,7 @@ export async function getOutOfStockProducts(): Promise<LowStockProduct[]> {
 		if (product.variants.length > 0) {
 			return product.variants.map((variant) => ({
 				...baseProduct,
-				variant: `${variant.name}`,
+				variant: `${variant.name}: ${variant.value}`,
 				currentStock: 0,
 			}))
 		}
@@ -199,7 +199,7 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 	const totalInventoryValue = productsWithValue.reduce((sum, product) => {
 		const baseValue = product.price * product.stock
 		const variantValue = product.variants.reduce(
-			(vSum, variant) => vSum + (product.price + variant.priceModifier) * variant.stock,
+			(vSum, variant) => vSum + (product.price + (variant.priceModifier ?? 0)) * variant.stock,
 			0
 		)
 		return sum + baseValue + variantValue
@@ -352,7 +352,9 @@ export async function getReorderSuggestions(daysToConsider: number = 30): Promis
 				select: {
 					id: true,
 					name: true,
+					value: true,
 					stock: true,
+					priceModifier: true,
 				},
 			},
 		},
@@ -394,34 +396,23 @@ export async function getReorderSuggestions(daysToConsider: number = 30): Promis
 			})
 		}
 
-		// Check variants
+		// Check variants (threshold-based; OrderItem has no variantId relation,
+		// so per-variant sales velocity cannot be computed)
 		for (const variant of product.variants) {
-			const variantVelocity = salesVelocity.get(variant.id) || 0
-			const variantDailyVelocity = variantVelocity / daysToConsider
 			const variantStock = variant.stock
 
-			if (variantStock <= threshold || (variantDailyVelocity > 0 && variantStock / variantDailyVelocity < 14)) {
-				const suggestedQty = Math.max(
-					Math.ceil(variantDailyVelocity * 30),
-					threshold - variantStock + 10
-				)
+			if (variantStock <= threshold) {
+				const suggestedQty = Math.max(10, threshold - variantStock + 10)
 
-				const priority =
-					variantStock === 0
-						? "HIGH"
-						: variantDailyVelocity > 0 && variantStock / variantDailyVelocity < 7
-							? "HIGH"
-							: variantDailyVelocity > 0 && variantStock / variantDailyVelocity < 14
-								? "MEDIUM"
-								: "LOW"
+				const priority = variantStock === 0 ? "HIGH" : "LOW"
 
 				suggestions.push({
 					productId: product.id,
-					productName: `${product.name} (${variant.name})`,
+					productName: `${product.name} (${variant.name}: ${variant.value})`,
 					currentStock: variantStock,
 					threshold,
 					suggestedQuantity: suggestedQty,
-					estimatedCost: suggestedQty * (product.price + variant.priceModifier),
+					estimatedCost: suggestedQty * (product.price + (variant.priceModifier ?? 0)),
 					priority,
 				})
 			}

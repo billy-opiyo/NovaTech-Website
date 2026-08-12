@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --- User & Authentication ---
@@ -27,6 +28,7 @@ model User {
   addresses     Address[]
   supportTickets SupportTicket[]
   notifications Notification[]
+  adminLogs     AdminLog[]
 }
 
 model Account {
@@ -340,7 +342,10 @@ model TicketReply {
 model AdminLog {
   id        String   @id @default(cuid())
   adminId   String
+  admin     User?    @relation(fields: [adminId], references: [id])
   action    String   // e.g., "UPDATED_PRODUCT", "DELETED_REVIEW"
   details   Json?
   createdAt DateTime @default(now())
+
+  @@index([adminId])
 }
