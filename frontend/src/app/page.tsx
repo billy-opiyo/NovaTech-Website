@@ -26,7 +26,12 @@ export default function HomePage() {
 								<div>
 									<p className="font-medium">Call Us</p>
 									<p className="text-gray-600">Mon - Sat, 8AM - 6PM</p>
-									<p className="text-primary">+254 700 123 456</p>
+									<a
+										href="tel:+254700123456"
+										className="text-primary hover:underline transition-colors"
+									>
+										+254 700 123 456
+									</a>
 								</div>
 							</div>
 							<div className="flex items-start gap-3">
@@ -34,7 +39,12 @@ export default function HomePage() {
 								<div>
 									<p className="font-medium">Email Us</p>
 									<p className="text-gray-600">We reply within 24 hours</p>
-									<p className="text-primary">support@novatechstore.co.ke</p>
+									<a
+										href="mailto:support@novatechstore.co.ke"
+										className="text-primary hover:underline transition-colors"
+									>
+										support@novatechstore.co.ke
+									</a>
 								</div>
 							</div>
 						</div>
@@ -53,7 +63,7 @@ export default function HomePage() {
 
 						<div>
 							<h3 className="font-semibold mb-3">Quick Links</h3>
-							<div className="space-y-2">
+							<div className="space-y-4">
 								<Link
 									href="/contact"
 									className="text-primary hover:underline transition-colors"
