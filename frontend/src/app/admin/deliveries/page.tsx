@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import Image from "next/image"
 import {
 	Truck,
@@ -16,6 +16,8 @@ import {
 	XCircle,
 	AlertTriangle,
 	Download,
+	Users,
+	DollarSign,
 } from "lucide-react"
 import clsx from "clsx"
 

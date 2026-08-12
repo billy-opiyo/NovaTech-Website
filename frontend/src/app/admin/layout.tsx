@@ -29,7 +29,7 @@ const sidebarLinks = [
 	{
 		section: "Main",
 		items: [
-			{ icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
+			{ icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
 			{ icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
 		],
 	},
@@ -46,7 +46,7 @@ const sidebarLinks = [
 	{
 		section: "Support",
 		items: [
-			{ icon: Ticket, label: "Support Tickets", href: "/admin/tickets" },
+			{ icon: Ticket, label: "Support Tickets", href: "/admin/support" },
 			{ icon: MessageSquare, label: "Messages", href: "/admin/messages" },
 		],
 	},
@@ -173,7 +173,7 @@ function SidebarContent({
 	return (
 		<div className="flex flex-col h-full">
 			<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-				<Link href="/admin" className="flex items-center gap-3">
+				<Link href="/admin/dashboard" className="flex items-center gap-3">
 					<Zap className="text-primary flex-shrink-0" size={28} />
 					{!collapsed && (
 						<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">

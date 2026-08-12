@@ -11,6 +11,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 		const { id: orderId } = await params
 		const order = await getOrderById(orderId, session.user.id)
+		if (!order.shippingAddress) {
+			return NextResponse.json({ message: "Order has no shipping address" }, { status: 422 })
+		}
+		const shippingAddress = order.shippingAddress as {
+			county: string
+			address: string
+			fullName: string
+			email: string
+			phone: string
+			town: string
+		}
 
 		// Build tracking history from order status and timestamps
 		const trackingHistory = []
@@ -58,7 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 				status: "out_for_delivery",
 				timestamp: order.updatedAt.toISOString(),
 				description: "Out for delivery - Courier assigned",
-				location: order.shippingAddress.county,
+				location: shippingAddress.county,
 			})
 		}
 
@@ -67,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 				status: "delivered",
 				timestamp: order.updatedAt.toISOString(),
 				description: "Package delivered successfully",
-				location: order.shippingAddress.address,
+				location: shippingAddress.address,
 			})
 		}
 
@@ -82,13 +93,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 			estimatedDelivery: estimatedDelivery.toISOString(),
 			courierService: "Standard Courier",
 			trackingHistory,
-			customerName: order.shippingAddress.fullName,
-			customerEmail: order.shippingAddress.email,
-			customerPhone: order.shippingAddress.phone,
+			customerName: shippingAddress.fullName,
+			customerEmail: shippingAddress.email,
+			customerPhone: shippingAddress.phone,
 			shippingAddress: {
-				county: order.shippingAddress.county,
-				town: order.shippingAddress.town,
-				streetAddress: order.shippingAddress.address,
+				county: shippingAddress.county,
+				town: shippingAddress.town,
+				streetAddress: shippingAddress.address,
 			},
 		})
 	} catch (error: any) {

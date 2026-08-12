@@ -18,21 +18,21 @@ import {
 
 const mockOrders = [
 	{
-		id: "EB-001",
+			id: "EB-20240815-001",
 		date: "2024-08-15",
 		status: "Delivered",
 		total: 174999,
 		items: 2,
 	},
 	{
-		id: "EB-002",
+			id: "EB-20240820-002",
 		date: "2024-08-20",
 		status: "Processing",
 		total: 34999,
 		items: 1,
 	},
 	{
-		id: "EB-003",
+			id: "EB-20240825-003",
 		date: "2024-08-25",
 		status: "Shipped",
 		total: 89999,

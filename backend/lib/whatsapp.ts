@@ -3,14 +3,14 @@ const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!
 const API_VERSION = "v18.0"
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}`
 
-interface WhatsAppMessage {
+export interface WhatsAppPayload {
 	to: string
 	templateName?: string
 	templateParams?: string[]
 	text?: string
 }
 
-export async function sendWhatsAppMessage(message: WhatsAppMessage) {
+export async function sendWhatsAppMessage(message: WhatsAppPayload) {
 	try {
 		let body: any
 

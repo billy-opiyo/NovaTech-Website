@@ -17,6 +17,8 @@ import {
 	Activity,
 	Smartphone,
 	Monitor,
+	MapPin,
+	Edit,
 } from "lucide-react"
 import clsx from "clsx"
 

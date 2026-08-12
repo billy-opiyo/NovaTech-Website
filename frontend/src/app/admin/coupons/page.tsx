@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import Image from "next/image"
 import {
 	Plus,
@@ -10,7 +10,7 @@ import {
 	Trash2,
 	Ticket,
 	Calendar,
-	Percentage,
+	Percent,
 	Users,
 	ShoppingCart,
 	Eye,
@@ -316,7 +316,7 @@ export default function AdminCouponsPage() {
 										<div className="flex items-center gap-1 text-sm">
 											{coupon.type === "percentage" ? (
 												<>
-													<Percentage size={14} className="text-gray-400" />
+															<Percent size={14} className="text-gray-400" />
 													<span>Percentage</span>
 												</>
 											) : (
@@ -481,7 +481,7 @@ export default function AdminCouponsPage() {
 										<h3 className="font-semibold mb-3">Coupon Information</h3>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 											<div className="flex items-center gap-2">
-												<Percentage size={18} className="text-gray-400" />
+														<Percent size={18} className="text-gray-400" />
 												<div>
 													<p className="text-xs text-gray-500">Discount Type</p>
 													<p className="text-sm font-medium">

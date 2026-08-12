@@ -27,6 +27,7 @@ export interface Product {
 }
 
 export interface ProductQuery {
+	[key: string]: string | number | undefined
 	page?: number
 	limit?: number
 	category?: string
