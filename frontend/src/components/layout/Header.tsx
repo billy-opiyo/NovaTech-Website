@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import { Moon, Sun, ShoppingCart, Menu, X } from "lucide-react"
@@ -26,8 +27,14 @@ export default function Header() {
 				<div className="flex justify-between items-center py-3 sm:py-4 gap-2">
 					{/* Logo */}
 					<Link href="/" className="flex items-center gap-2 min-w-0">
-						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white text-lg font-black shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-							N
+						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
+							<Image
+								src="/images/NovaTech icon.png"
+								alt="NovaTech logo"
+								fill
+								sizes="(max-width: 640px) 40px, 44px"
+								className="object-contain"
+							/>
 						</div>
 						<span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
 							NovaTech Store
