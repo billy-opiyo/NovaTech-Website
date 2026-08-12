@@ -66,8 +66,8 @@ export async function getFilteredProducts(params: URLSearchParams) {
 			orderBy = { createdAt: "desc" }
 	}
 
-	const page = parseInt(params.get("page") || "1")
-	const limit = parseInt(params.get("limit") || "20")
+	const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1)
+	const limit = Math.min(100, Math.max(1, Number.parseInt(params.get("limit") || "20", 10) || 20))
 	const skip = (page - 1) * limit
 
 	const [products, total] = await Promise.all([

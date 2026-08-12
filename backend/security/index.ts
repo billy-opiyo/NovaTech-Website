@@ -13,13 +13,13 @@ export function isStrongPassword(password: string): boolean {
 }
 
 export function sanitizeObject<T extends Record<string, unknown>>(input: T): T {
-	const sanitized = { ...input }
+	const sanitized: Record<string, unknown> = { ...input }
 
 	for (const [key, value] of Object.entries(sanitized)) {
 		if (typeof value === "string") {
-			sanitized[key] = value.trim() as T[Extract<keyof T, string>]
+			sanitized[key] = value.trim()
 		}
 	}
 
-	return sanitized
+	return sanitized as T
 }

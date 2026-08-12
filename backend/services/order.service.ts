@@ -31,12 +31,21 @@ export interface CreateOrderData {
 
 export async function createOrder(data: CreateOrderData) {
 	return prisma.$transaction(async (tx) => {
+		if (!data.items.length) throw new Error("At least one item is required")
+
+		// Prices, discounts, shipping, and stock are authoritative on the server.
+		const products = await Promise.all(
+			data.items.map((item) => tx.product.findUnique({
+				where: { id: item.productId },
+				select: { id: true, stock: true, name: true, price: true, discountedPrice: true },
+			})),
+		)
+		const productById = new Map(products.filter(Boolean).map((product) => [product!.id, product!]))
+		let subtotal = 0
+
 		// Validate stock availability
 		for (const item of data.items) {
-			const product = await tx.product.findUnique({
-				where: { id: item.productId },
-				select: { stock: true, name: true },
-			})
+			const product = productById.get(item.productId)
 
 			if (!product) {
 				throw new Error(`Product not found: ${item.productId}`)
@@ -47,23 +56,32 @@ export async function createOrder(data: CreateOrderData) {
 					`Insufficient stock for ${product.name}. Available: ${product.stock}`,
 				)
 			}
+			subtotal += (product.discountedPrice ?? product.price) * item.quantity
 		}
 
+		let discount = 0
+		if (data.couponCode) {
+			const coupon = await tx.coupon.findUnique({ where: { code: data.couponCode.trim().toUpperCase() } })
+			if (!coupon || !coupon.isActive || coupon.expiresAt < new Date() || (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit)) {
+				throw new Error("Invalid or expired coupon")
+			}
+			if (coupon.minOrderValue && subtotal < coupon.minOrderValue) throw new Error("Order does not meet the coupon minimum")
+			discount = coupon.discountPercent ? subtotal * coupon.discountPercent / 100 : (coupon.discountAmount || 0)
+		}
+		const requestedShipping = data.deliveryMethod === "pickup" ? 0 : data.deliveryMethod === "express" ? 1000 : 500
+		const shippingCost = subtotal - discount >= 50000 ? 0 : requestedShipping
+		const total = Math.max(0, subtotal - discount + shippingCost)
+
 		// Get product prices for order items
-		const orderItems = await Promise.all(
-			data.items.map(async (item) => {
-				const product = await tx.product.findUnique({
-					where: { id: item.productId },
-					select: { price: true, discountedPrice: true },
-				})
+		const orderItems = data.items.map((item) => {
+				const product = productById.get(item.productId)!
 				return {
 					productId: item.productId,
 					quantity: item.quantity,
-					price: product?.discountedPrice || product?.price || 0,
+					price: product.discountedPrice ?? product.price,
 					variant: item.variant,
 				}
-			}),
-		)
+			})
 
 		// Create order
 		const order = await tx.order.create({
@@ -71,9 +89,9 @@ export async function createOrder(data: CreateOrderData) {
 				userId: data.userId,
 				guestEmail: data.guestEmail,
 				status: "PENDING",
-				subtotal: data.subtotal,
-				shippingCost: data.shippingCost,
-				total: data.total,
+				subtotal,
+				shippingCost,
+				total,
 				paymentMethod: data.paymentMethod,
 				shippingAddress: data.shippingAddress,
 				notes: data.notes,
@@ -95,6 +113,13 @@ export async function createOrder(data: CreateOrderData) {
 				},
 			},
 		})
+
+		if (data.couponCode) {
+			await tx.coupon.update({
+				where: { code: data.couponCode.trim().toUpperCase() },
+				data: { usedCount: { increment: 1 } },
+			})
+		}
 
 		// Decrement stock
 		for (const item of data.items) {
@@ -355,4 +380,22 @@ export async function getOrderStats() {
 		cancelledOrders,
 		totalRevenue: totalRevenue._sum.total || 0,
 	}
+}
+
+export async function cancelPendingOrder(orderId: string) {
+	return prisma.$transaction(async (tx) => {
+		const order = await tx.order.findUnique({
+			where: { id: orderId },
+			include: { items: true },
+		})
+		if (!order || order.status !== "PENDING") return order
+
+		for (const item of order.items) {
+			await tx.product.update({
+				where: { id: item.productId },
+				data: { stock: { increment: item.quantity } },
+			})
+		}
+		return tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } })
+	})
 }

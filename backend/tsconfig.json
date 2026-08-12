@@ -1,21 +1,25 @@
 {
 	"compilerOptions": {
 		"target": "ES2020",
-		"module": "node16",
-		"moduleResolution": "node16",
+		"module": "CommonJS",
+		"moduleResolution": "Node",
 		"lib": ["ES2020", "DOM"],
 		"types": ["node"],
 		"outDir": "dist",
-		"rootDir": ".",
+		"rootDir": "..",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["../frontend/src/*"]
+		},
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true
 	},
-	"include": ["**/*.ts"],
+	"include": ["**/*.ts", "../frontend/src/types/**/*.d.ts"],
 	"exclude": ["node_modules", "dist"]
 }

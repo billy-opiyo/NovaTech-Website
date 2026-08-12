@@ -16,7 +16,7 @@ import {
 	Filter,
 } from "lucide-react"
 import clsx from "clsx"
-import { productImageByName } from "@/constants/productImages"
+import { getProducts } from "@/services/products"
 
 // Types
 interface Product {
@@ -71,82 +71,6 @@ const sortOptions = [
 	{ value: "rating", label: "Top Rated" },
 ]
 
-// Mock products for demonstration
-const mockProducts: Product[] = Array.from({ length: 24 }, (_, i) => ({
-	id: `prod-${i + 1}`,
-	name: [
-		"iPhone 15 Pro Max",
-		"Samsung Galaxy S24 Ultra",
-		"MacBook Air M3",
-		"Dell XPS 15",
-		"Sony WH-1000XM5",
-		"iPad Pro M2",
-		"Samsung Galaxy Tab S9",
-		"Apple Watch Ultra 2",
-		'LG OLED C3 65"',
-		"PlayStation 5",
-		"ASUS ROG Gaming Laptop",
-		"HP Spectre x360",
-		"OnePlus 12",
-		"Xiaomi 14 Pro",
-		"AirPods Pro 2",
-		"Samsung Galaxy Buds3 Pro",
-		"Lenovo ThinkPad X1",
-		"Dell UltraSharp Monitor",
-		"Canon EOS R6",
-		"DJI Mini 4 Pro",
-		"Nintendo Switch OLED",
-		"JBL Charge 5",
-		"Razer DeathAdder V3",
-		"Logitech MX Master 3S",
-	][i % 24],
-	slug: `product-${i + 1}`,
-	price: Math.floor(Math.random() * 150000) + 5000,
-	discountedPrice:
-		Math.random() > 0.6 ? Math.floor(Math.random() * 130000) + 3000 : undefined,
-	brand: brands[Math.floor(Math.random() * brands.length)],
-	images: [
-		productImageByName[
-			[
-				"iphone 15 pro max",
-				"samsung galaxy s24 ultra",
-				"macbook air m3",
-				"dell xps 15",
-				"sony wh-1000xm5",
-				"ipad pro m2",
-				"samsung galaxy tab s9",
-				"apple watch ultra 2",
-				'lg oled c3 65"',
-				"playstation 5",
-				"asus rog gaming laptop",
-				"hp spectre x360",
-				"oneplus 12",
-				"xiaomi 14 pro",
-				"airpods pro 2",
-				"samsung galaxy buds3 pro",
-				"lenovo thinkpad x1",
-				"dell ultrasharp monitor",
-				"canon eos r6",
-				"dji mini 4 pro",
-				"nintendo switch oled",
-				"jbl charge 5",
-				"razer deathadder v3",
-				"logitech mx master 3s",
-			][i]
-		],
-	],
-	category: categories[Math.floor(Math.random() * 5) + 1],
-	rating: Math.random() * 2 + 3,
-	reviewCount: Math.floor(Math.random() * 500) + 10,
-	stock: Math.floor(Math.random() * 50),
-	specs: {
-		Processor: "Apple M3",
-		RAM: "16GB",
-		Storage: "512GB SSD",
-		Display: '15.6" FHD',
-	},
-}))
-
 export default function ProductsClient() {
 	const searchParams = useSearchParams()
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
@@ -160,72 +84,31 @@ export default function ProductsClient() {
 		inStock: false,
 		onSale: false,
 	})
-	const [filteredProducts, setFilteredProducts] =
-		useState<Product[]>(mockProducts)
+	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 	const [isLoading, setIsLoading] = useState(false)
 
 	const applyFilters = useCallback(() => {
 		setIsLoading(true)
-		setTimeout(() => {
-			let results = [...mockProducts]
-
-			if (searchQuery) {
-				const query = searchQuery.toLowerCase()
-				results = results.filter(
-					(p) =>
-						p.name.toLowerCase().includes(query) ||
-						p.brand.toLowerCase().includes(query) ||
-						p.category.name.toLowerCase().includes(query),
-				)
-			}
-
-			if (filters.category) {
-				results = results.filter((p) => p.category.slug === filters.category)
-			}
-
-			if (filters.brands.length > 0) {
-				results = results.filter((p) => filters.brands.includes(p.brand))
-			}
-
-			results = results.filter((p) => {
-				const price = p.discountedPrice || p.price
-				return price >= filters.priceRange[0] && price <= filters.priceRange[1]
+		getProducts({
+			q: searchQuery || undefined,
+			category: filters.category || undefined,
+			brands: filters.brands.length ? filters.brands.join(",") : undefined,
+			minPrice: filters.priceRange[0] || undefined,
+			maxPrice: filters.priceRange[1] < 200000 ? filters.priceRange[1] : undefined,
+			inStock: filters.inStock ? "true" : undefined,
+			onSale: filters.onSale ? "true" : undefined,
+			sortBy: filters.sortBy,
+			limit: 100,
+		})
+			.then((response) => {
+				setFilteredProducts(response.products.map((product: any) => ({
+					...product,
+					rating: product.averageRating,
+					reviewCount: product.reviewCount,
+				})))
 			})
-
-			if (filters.inStock) {
-				results = results.filter((p) => p.stock > 0)
-			}
-
-			if (filters.onSale) {
-				results = results.filter((p) => p.discountedPrice !== undefined)
-			}
-
-			switch (filters.sortBy) {
-				case "price-asc":
-					results.sort(
-						(a, b) =>
-							(a.discountedPrice || a.price) - (b.discountedPrice || b.price),
-					)
-					break
-				case "price-desc":
-					results.sort(
-						(a, b) =>
-							(b.discountedPrice || b.price) - (a.discountedPrice || a.price),
-					)
-					break
-				case "rating":
-					results.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-					break
-				default:
-					results.sort(
-						(a, b) =>
-							parseInt(b.id.split("-")[1]) - parseInt(a.id.split("-")[1]),
-					)
-			}
-
-			setFilteredProducts(results)
-			setIsLoading(false)
-		}, 300)
+			.catch(() => setFilteredProducts([]))
+			.finally(() => setIsLoading(false))
 	}, [searchQuery, filters])
 
 	useEffect(() => {

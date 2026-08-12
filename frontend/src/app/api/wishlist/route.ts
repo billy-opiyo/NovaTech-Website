@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
 
-		const { productId } = await req.json()
+		const body = await req.json().catch(() => ({}))
+		const productId = body.productId
 
 		const existing = await prisma.wishlistItem.findFirst({
 			where: {
@@ -87,12 +88,7 @@ export async function DELETE(req: NextRequest) {
 
 		const { productId } = await req.json()
 
-		await prisma.wishlistItem.deleteMany({
-			where: {
-				userId: session.user.id,
-				productId,
-			},
-		})
+		await prisma.wishlistItem.deleteMany({ where: { userId: session.user.id, ...(productId ? { productId } : {}) } })
 
 		return NextResponse.json({ message: "Removed from wishlist" })
 	} catch (error: any) {

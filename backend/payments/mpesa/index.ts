@@ -11,6 +11,7 @@ import type {
 	MpesaInitiateResult,
 	MpesaVerifyResult,
 } from "../../types/payments"
+import { cancelPendingOrder } from "../../services/order.service"
 
 export type MpesaPayload = {
 	amount: number
@@ -49,6 +50,14 @@ export async function initiateMpesaPayment({
 
 	if (amount <= 0) {
 		throw new Error("Amount must be greater than zero")
+	}
+
+	if (orderId) {
+		const order = await prisma.order.findUnique({ where: { id: orderId }, select: { total: true, status: true } })
+		if (!order) throw new Error("Order not found")
+		if (order.status !== "PENDING") throw new Error("Order is no longer payable")
+		if (Math.abs(order.total - amount) > 0.01) throw new Error("Payment amount does not match the order")
+		amount = order.total
 	}
 
 	const normalizedPhone = normalizePhone(phone)
@@ -197,6 +206,7 @@ export async function verifyMpesaPayment(
 			}
 		}
 	}
+	if (!completed && payment?.orderId) await cancelPendingOrder(payment.orderId)
 
 	return {
 		ok: completed,

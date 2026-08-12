@@ -37,12 +37,24 @@ export default function CartPage() {
 	const [couponCode, setCouponCode] = useState("")
 	const [couponApplied, setCouponApplied] = useState(false)
 	const [couponDiscount, setCouponDiscount] = useState(0)
+	const [couponError, setCouponError] = useState("")
 
-	const handleApplyCoupon = () => {
-		// Mock coupon validation
-		if (couponCode.toUpperCase() === "TECH10" && !couponApplied) {
+	const handleApplyCoupon = async () => {
+		if (!couponCode.trim() || couponApplied) return
+		setCouponError("")
+		try {
+			const response = await fetch("/api/coupons/validate", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ code: couponCode, subtotal }),
+			})
+			const result = await response.json()
+			if (!response.ok || !result.valid) throw new Error(result.message || "Invalid coupon")
 			setCouponApplied(true)
-			setCouponDiscount(subtotal * 0.1)
+			setCouponDiscount(result.discount)
+			localStorage.setItem("checkoutCoupon", couponCode.trim().toUpperCase())
+		} catch (error: any) {
+			setCouponError(error.message || "Unable to validate coupon")
 		}
 	}
 
@@ -297,10 +309,11 @@ export default function CartPage() {
 								</button>
 							</div>
 							{couponApplied && (
-								<p className="text-green-500 text-xs mt-1 flex items-center gap-1">
-									<AlertCircle size={12} /> 10% discount applied!
-								</p>
-							)}
+									<p className="text-green-500 text-xs mt-1 flex items-center gap-1">
+										<AlertCircle size={12} /> Coupon applied successfully.
+									</p>
+								)}
+								{couponError && <p className="mt-1 text-xs text-red-500">{couponError}</p>}
 						</div>
 
 						{/* Price Breakdown */}
@@ -323,7 +336,7 @@ export default function CartPage() {
 							</div>
 							{couponDiscount > 0 && (
 								<div className="flex justify-between text-green-500">
-									<span>Discount (TECH10)</span>
+										<span>Discount ({couponCode.toUpperCase()})</span>
 									<span>-KES {couponDiscount.toLocaleString()}</span>
 								</div>
 							)}

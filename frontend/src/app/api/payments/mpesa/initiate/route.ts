@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
 import { initiateMpesaPayment } from "backend/payments/mpesa"
+import { getServerSession } from "@/lib/auth"
+import prisma from "backend/lib/db"
 
 const mpesaInitiateSchema = z.object({
 	amount: z.number().positive(),
@@ -18,6 +20,15 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
 		const validated = mpesaInitiateSchema.parse(body)
+		if (validated.orderId) {
+			const order = await prisma.order.findUnique({ where: { id: validated.orderId }, select: { userId: true, shippingAddress: true } })
+			const session = await getServerSession()
+			const shippingPhone = (order?.shippingAddress as { phone?: string } | null)?.phone
+			const normalized = validated.phone.replace(/^254/, "0")
+			if (!order || (order.userId && order.userId !== session?.user?.id) || (!order.userId && shippingPhone !== normalized)) {
+				return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
+			}
+		}
 
 		const result = await initiateMpesaPayment({
 			amount: validated.amount,

@@ -1,4 +1,5 @@
 import prisma from "../../lib/db"
+import Stripe from "stripe"
 import { sendOrderConfirmationEmail } from "../../lib/email"
 import { getStripeClient, getStripeWebhookSecret } from "../../lib/stripeClient"
 import { isMpesaConfigured } from "../../lib/daraja"
@@ -8,6 +9,7 @@ import type {
 	MpesaC2BPayload,
 	WebhookResult,
 } from "../../types/payments"
+import { cancelPendingOrder } from "../../services/order.service"
 
 export type WebhookEvent = {
 	provider: string
@@ -213,6 +215,10 @@ async function updatePaymentByProviderReference(
 		})
 
 		if (!payment) return null
+		if (extra.amount !== undefined && Math.abs(payment.amount - extra.amount) > 0.01) {
+			console.error(`Webhook amount mismatch for ${providerReference}`)
+			return null
+		}
 
 		const existingMetadata =
 			payment.metadata as Prisma.InputJsonValue | undefined
@@ -272,6 +278,7 @@ async function updatePaymentByProviderReference(
 				console.error("Failed to send order confirmation email:", emailError)
 			}
 		}
+		if (payment.orderId && status !== "COMPLETED") await cancelPendingOrder(payment.orderId)
 
 		return payment
 	} catch (error) {
@@ -288,7 +295,9 @@ async function updatePaymentByProviderReference(
 export function verifyStripeWebhookSignature(
 	rawBody: string,
 	signature: string,
-) {
+):
+	| { ok: false; error: string }
+	| { ok: true; event: Stripe.Event } {
 	const secret = getStripeWebhookSecret()
 	if (!secret) {
 		return { ok: false, error: "STRIPE_WEBHOOK_SECRET is not configured" }

@@ -8,7 +8,7 @@ import { getProductImage } from "@/constants/productImages"
 
 const featuredProducts = [
 	{
-		id: "1",
+		id: "iphone-15-pro-max",
 		name: "iPhone 15 Pro Max",
 		price: 159999,
 		discountedPrice: 149999,
@@ -17,7 +17,7 @@ const featuredProducts = [
 		rating: 4.8,
 	},
 	{
-		id: "2",
+		id: "samsung-galaxy-s24-ultra",
 		name: "Samsung Galaxy S24 Ultra",
 		price: 134999,
 		image:
@@ -25,7 +25,7 @@ const featuredProducts = [
 		rating: 4.7,
 	},
 	{
-		id: "3",
+		id: "macbook-air-m3",
 		name: "MacBook Air M3",
 		price: 189999,
 		discountedPrice: 174999,
@@ -34,7 +34,7 @@ const featuredProducts = [
 		rating: 4.9,
 	},
 	{
-		id: "4",
+		id: "sony-wh-1000xm5",
 		name: "Sony WH-1000XM5",
 		price: 34999,
 		image:

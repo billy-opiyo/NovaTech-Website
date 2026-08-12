@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -25,6 +25,8 @@ import {
 	Loader2,
 } from "lucide-react"
 import clsx from "clsx"
+import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js"
+import { loadStripe } from "@stripe/stripe-js"
 
 interface ShippingAddress {
 	fullName: string
@@ -115,7 +117,13 @@ const paymentMethods = [
 
 type CheckoutStep = "shipping" | "delivery" | "payment" | "review"
 
-export default function CheckoutPage() {
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+	? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+	: null
+
+function CheckoutPageContent() {
+	const stripe = useStripe()
+	const elements = useElements()
 	const router = useRouter()
 	const { items, subtotal, total, itemCount, clearCart } = useCart()
 	const [currentStep, setCurrentStep] = useState<CheckoutStep>("shipping")
@@ -124,6 +132,8 @@ export default function CheckoutPage() {
 	const [orderNumber, setOrderNumber] = useState("")
 	const [paymentError, setPaymentError] = useState("")
 	const [paymentStatus, setPaymentStatus] = useState("")
+	const [couponCode, setCouponCode] = useState("")
+	const [couponDiscount, setCouponDiscount] = useState(0)
 
 	const [shipping, setShipping] = useState<ShippingAddress>({
 		fullName: "",
@@ -144,7 +154,16 @@ export default function CheckoutPage() {
 
 	const deliveryCost =
 		deliveryOptions.find((d) => d.id === selectedDelivery)?.price || 0
-	const orderTotal = total + deliveryCost
+	const orderTotal = Math.max(0, subtotal - couponDiscount + deliveryCost)
+
+	useEffect(() => {
+		const savedCoupon = localStorage.getItem("checkoutCoupon")
+		if (!savedCoupon) return
+		setCouponCode(savedCoupon)
+		fetch("/api/coupons/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: savedCoupon, subtotal }) })
+			.then((response) => response.ok ? response.json() : null)
+			.then((result) => { if (result?.valid) setCouponDiscount(result.discount) })
+	}, [subtotal])
 
 	const validateShipping = () => {
 		const newErrors: typeof errors = {}
@@ -207,6 +226,7 @@ export default function CheckoutPage() {
 					subtotal,
 					shippingCost: deliveryCost,
 					total: orderTotal,
+					couponCode: couponCode || undefined,
 					notes: saveInfo ? "Save shipping info for future orders" : undefined,
 				}),
 			})
@@ -310,10 +330,17 @@ export default function CheckoutPage() {
 					throw new Error(cardResult.message || "Card payment setup failed")
 				}
 
-				// In a real implementation, you would use Stripe Elements here
-				// For now, we'll simulate successful payment
-				setPaymentStatus("Processing card payment...")
-				await new Promise((resolve) => setTimeout(resolve, 2000))
+					if (!stripe || !elements) throw new Error("Card payments are not available yet")
+					const cardElement = elements.getElement(CardElement)
+					if (!cardElement) throw new Error("Enter your card details")
+					setPaymentStatus("Confirming card payment...")
+					const confirmation = await stripe.confirmCardPayment(cardResult.clientSecret, {
+						payment_method: {
+							card: cardElement,
+							billing_details: { name: shipping.fullName, email: shipping.email, phone: shipping.phone },
+						},
+					})
+					if (confirmation.error) throw new Error(confirmation.error.message || "Card payment failed")
 
 				// Verify payment
 				const verifyResponse = await fetch("/api/payments/card/verify", {
@@ -326,7 +353,7 @@ export default function CheckoutPage() {
 
 				if (verifyResponse.ok) {
 					const verifyResult = await verifyResponse.json()
-					if (verifyResult.status === "SUCCEEDED") {
+						if (verifyResult.status === "COMPLETED") {
 						setPaymentStatus("Payment successful!")
 						setOrderNumber(orderId.slice(-8).toUpperCase())
 						setOrderComplete(true)
@@ -717,10 +744,16 @@ export default function CheckoutPage() {
 										</p>
 										{errors.payment && (
 											<p className="text-red-500 text-xs mt-1">
-												{errors.payment}
-											</p>
-										)}
-									</motion.div>
+																{errors.payment}
+																</p>
+															)}
+															</motion.div>
+														)}
+
+								{selectedPayment === "card" && (
+									<div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-black/10">
+										<CardElement options={{ style: { base: { fontSize: "16px" } } }} />
+									</div>
 								)}
 
 								<div className="flex justify-between mt-8">
@@ -894,4 +927,8 @@ export default function CheckoutPage() {
 			</div>
 		</div>
 	)
+}
+
+export default function CheckoutPage() {
+	return <Elements stripe={stripePromise}><CheckoutPageContent /></Elements>
 }

@@ -15,7 +15,7 @@ export async function getOrders(req: NextRequest) {
 		const page = parseInt(url.searchParams.get("page") || "1", 10)
 		const limit = parseInt(url.searchParams.get("limit") || "20", 10)
 
-		const result = await orderService.getOrdersByUserId(session.user.id, page, limit)
+		const result = await orderService.getOrdersByUserId(session.user.id!, page, limit)
 		return NextResponse.json(result)
 	} catch (error: any) {
 		return NextResponse.json({ message: error.message }, { status: 500 })
@@ -29,7 +29,7 @@ export async function createOrder(req: NextRequest) {
 		const validated = orderSchema.parse(body)
 
 		const order = await orderService.createOrder({
-			userId: session?.user?.id,
+			userId: session?.user?.id || undefined,
 			guestEmail: !session?.user ? validated.shippingAddress.email : undefined,
 			items: validated.items,
 			shippingAddress: validated.shippingAddress,
@@ -73,14 +73,11 @@ export async function getOrderById(
 		}
 
 		const { id } = await params
-		const order = await orderService.getOrderById(id, session.user.id)
+		const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN"
+		const order = await orderService.getOrderById(id, isAdmin ? undefined : session.user.id!)
 
 		// Allow admins to view any order
-		if (
-			order.userId !== session.user.id &&
-			session.user.role !== "ADMIN" &&
-			session.user.role !== "SUPERADMIN"
-		) {
+		if (!isAdmin && order.userId !== session.user.id) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 

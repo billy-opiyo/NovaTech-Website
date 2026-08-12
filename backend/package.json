@@ -7,6 +7,7 @@
 		"build": "tsc",
 		"db:generate": "prisma generate",
 		"db:migrate": "prisma migrate dev",
+		"db:deploy": "prisma migrate deploy",
 		"db:push": "prisma db push",
 		"db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
 	},

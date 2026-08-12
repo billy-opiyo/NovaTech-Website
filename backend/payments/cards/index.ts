@@ -2,6 +2,7 @@ import prisma from "../../lib/db"
 import { sendOrderConfirmationEmail } from "../../lib/email"
 import { getStripeClient, isStripeConfigured } from "../../lib/stripeClient"
 import type { CardIntentResult, CardVerifyResult } from "../../types/payments"
+import { cancelPendingOrder } from "../../services/order.service"
 
 export type CardPaymentPayload = {
 	amount: number
@@ -37,6 +38,14 @@ export async function createCardPaymentIntent({
 
 	if (amount <= 0) {
 		throw new Error("Amount must be greater than zero")
+	}
+
+	if (orderId) {
+		const order = await prisma.order.findUnique({ where: { id: orderId }, select: { total: true, status: true } })
+		if (!order) throw new Error("Order not found")
+		if (order.status !== "PENDING") throw new Error("Order is no longer payable")
+		if (Math.abs(order.total - amount) > 0.01) throw new Error("Payment amount does not match the order")
+		amount = order.total
 	}
 
 	const stripe = getStripeClient()
@@ -186,6 +195,7 @@ export async function verifyCardPayment(
 			}
 		}
 	}
+	if (!ok && payment?.orderId) await cancelPendingOrder(payment.orderId)
 
 	return {
 		ok,

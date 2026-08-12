@@ -13,6 +13,8 @@
 		"test": "node --test --test-concurrency=1 --require ./tests/register.cjs tests/**/*.test.ts",
 		"test:watch": "node --test --test-concurrency=1 --watch --require ./tests/register.cjs tests/**/*.test.ts",
 		"db:migrate": "npm --workspace backend run db:migrate",
+		"db:deploy": "npm --workspace backend run db:deploy",
+		"check:env": "node scripts/check-env.mjs",
 		"db:push": "npm --workspace backend run db:push",
 		"db:seed": "npm --workspace backend run db:seed"
 	},
