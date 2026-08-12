@@ -159,7 +159,7 @@ export default function ContactPage() {
 						icon: Mail,
 						title: "Email Us",
 						description: "We reply within 24 hours",
-						details: "support@electrobuy.co.ke",
+details: "support@novatechstore.co.ke",
 						color: "bg-green-500",
 					},
 					{

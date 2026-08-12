@@ -132,7 +132,7 @@ export default function WishlistPage() {
 			try {
 				await navigator.share({
 					title: product.name,
-					text: `Check out ${product.name} on ElectroBuy!`,
+text: `Check out ${product.name} on NovaTech Store!`,
 					url: `${window.location.origin}/products/${product.slug}`,
 				})
 			} catch {

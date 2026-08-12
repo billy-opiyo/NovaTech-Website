@@ -763,6 +763,17 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 						</span>
 					)}
 				</div>
+				<div className="absolute bottom-3 left-3 right-3 flex items-center justify-center">
+					<a
+						href={`https://wa.me/254700000000?text=Hello%20NovaTech%20Store%2C%20I%20would%20like%20to%20order%20the%20${product.name}%20-%20KES%20${product.price.toLocaleString()}.%20Please%20send%20me%20order%20details.`}
+						target="_blank"
+						rel="noreferrer"
+						className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"
+						aria-label="Order on WhatsApp"
+					>
+						Order on WhatsApp
+					</a>
+				</div>
 			</Link>
 		</motion.div>
 	)
@@ -840,6 +851,17 @@ function ProductListItem({
 								KES {product.price.toLocaleString()}
 							</span>
 						)}
+					</div>
+					<div className="absolute bottom-2 left-2 right-2 flex items-center justify-center">
+						<a
+							href={`https://wa.me/254700000000?text=Hello%20NovaTech%20Store%2C%20I%20would%20like%20to%20order%20the%20${product.name}%20-%20KES%20${product.price.toLocaleString()}.%20Please%20send%20me%20order%20details.`}
+							target="_blank"
+							rel="noreferrer"
+							className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"
+							aria-label="Order on WhatsApp"
+						>
+							Order on WhatsApp
+						</a>
 					</div>
 				</div>
 			</Link>

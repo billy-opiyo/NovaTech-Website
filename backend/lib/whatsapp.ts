@@ -101,7 +101,7 @@ export async function sendOrderStatusUpdate(
 
 	return sendWhatsAppMessage({
 		to: phone.replace(/^0/, "254"),
-		text: `📦 *ElectroBuy Order Update*\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack your order: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
+text: `📦 *NovaTech Store Order Update*\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack your order: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
 	})
 }
 

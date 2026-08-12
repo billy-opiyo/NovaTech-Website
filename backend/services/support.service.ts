@@ -1,7 +1,7 @@
 import prisma from "../lib/db"
 import { sendEmail } from "../lib/email"
 
-const SUPPORT_EMAIL = "support@electrobuy.co.ke"
+const SUPPORT_EMAIL = "support@novatechstore.co.ke"
 
 export interface SupportTicketData {
 	customerName: string

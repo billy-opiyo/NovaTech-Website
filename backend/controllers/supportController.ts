@@ -164,7 +164,7 @@ export async function submitContact(req: NextRequest) {
 		})
 
 		await sendEmail({
-			to: "support@electrobuy.co.ke",
+to: "support@novatechstore.co.ke",
 			subject: `New Support Ticket: ${validated.subject}`,
 			html: `
 				<h2>New Support Request</h2>

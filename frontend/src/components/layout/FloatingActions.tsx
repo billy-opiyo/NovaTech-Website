@@ -28,7 +28,7 @@ export default function FloatingActions() {
 				target="_blank"
 				rel="noreferrer"
 				aria-label="Chat on WhatsApp"
-				className="fixed bottom-20 left-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#25D366]/40 focus:outline-none focus:ring-4 focus:ring-[#25D366]/30 md:bottom-6 md:left-6"
+className="fixed bottom-16 left-3 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e8e3e] text-white shadow-lg shadow-[#1e8e3e]/20 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#1e8e3e]/30 focus:outline-none focus:ring-4 focus:ring-[#1e8e3e]/30 md:bottom-5 md:left-5"
 			>
 				<FaWhatsapp className="h-6 w-6" />
 			</Link>

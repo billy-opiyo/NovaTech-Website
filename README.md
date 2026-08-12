@@ -337,7 +337,7 @@ npm run db:seed        # Seed admin user, categories, products
 The seed creates a **SUPERADMIN** account:
 
 ```
-Email:    admin@electrobuy.co.ke
+Email:    admin@novatechstore.co.ke
 Password: admin123
 ```
 

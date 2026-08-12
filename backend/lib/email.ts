@@ -3,7 +3,7 @@ import { Resend } from "resend"
 const resend = process.env.RESEND_API_KEY
 	? new Resend(process.env.RESEND_API_KEY)
 	: null
-const FROM_EMAIL = "ElectroBuy <orders@electrobuy.co.ke>"
+const FROM_EMAIL = "NovaTech Store <orders@novatechstore.co.ke>"
 
 interface EmailOptions {
 	to: string
@@ -35,7 +35,7 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
 	const html = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
       <div style="background: linear-gradient(135deg, #0070f3, #f97316); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0;">ElectroBuy</h1>
+<h1 style="color: white; margin: 0;">NovaTech Store</h1>
         <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Order Confirmation</p>
       </div>
       <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px;">

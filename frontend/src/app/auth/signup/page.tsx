@@ -68,7 +68,7 @@ export default function SignUpPage() {
 				<div className="glass-card p-8">
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
-						<p className="text-gray-500">Join ElectroBuy for exclusive deals</p>
+<p className="text-gray-500">Join NovaTech Store for exclusive deals</p>
 					</div>
 
 					{error && (

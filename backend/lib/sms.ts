@@ -67,7 +67,7 @@ export async function sendOrderConfirmation(
 ) {
 	return sendSmsMessage({
 		to: phone,
-		message: `ElectroBuy: Your order #${orderId} has been confirmed. Total: KES ${total.toLocaleString()}. Thank you for shopping with us!`,
+message: `NovaTech Store: Your order #${orderId} has been confirmed. Total: KES ${total.toLocaleString()}. Thank you for shopping with us!`,
 	})
 }
 
@@ -90,7 +90,7 @@ export async function sendOrderStatusUpdate(
 
 	return sendSmsMessage({
 		to: phone,
-		message: `ElectroBuy Order Update\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
+message: `NovaTech Store Order Update\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
 	})
 }
 
@@ -101,13 +101,13 @@ export async function sendPaymentRequest(
 ) {
 	return sendSmsMessage({
 		to: phone,
-		message: `ElectroBuy: Payment request for order #${orderId}. Amount: KES ${amount.toLocaleString()}. You will receive an M-Pesa prompt shortly.`,
+message: `NovaTech Store: Payment request for order #${orderId}. Amount: KES ${amount.toLocaleString()}. You will receive an M-Pesa prompt shortly.`,
 	})
 }
 
 export async function sendSupportMessage(phone: string, customerName: string) {
 	return sendSmsMessage({
 		to: phone,
-		message: `Hello ${customerName}, thank you for contacting ElectroBuy support. We will get back to you shortly.`,
+message: `Hello ${customerName}, thank you for contacting NovaTech Store support. We will get back to you shortly.`,
 	})
 }
