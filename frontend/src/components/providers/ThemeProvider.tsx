@@ -12,19 +12,17 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-	const [theme, setTheme] = useState<Theme>("light")
-	const [mounted, setMounted] = useState(false)
+	// The head script applies the saved theme before the first paint. Keep the
+	// initial React value dark as well so hydration does not briefly render light mode.
+	const [theme, setTheme] = useState<Theme>("dark")
 
 	useEffect(() => {
-		setMounted(true)
-		const stored = localStorage.getItem("theme") as Theme | null
-		if (stored) {
-			setTheme(stored)
-			document.documentElement.classList.toggle("dark", stored === "dark")
-		} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-			setTheme("dark")
-			document.documentElement.classList.add("dark")
-		}
+		const stored = localStorage.getItem("theme")
+		const next: Theme = stored === "light" ? "light" : "dark"
+
+		setTheme(next)
+		document.documentElement.classList.toggle("dark", next === "dark")
+		document.documentElement.style.colorScheme = next
 	}, [])
 
 	const toggleTheme = () => {
@@ -32,6 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 		setTheme(next)
 		localStorage.setItem("theme", next)
 		document.documentElement.classList.toggle("dark", next === "dark")
+		document.documentElement.style.colorScheme = next
 	}
 
 	return (

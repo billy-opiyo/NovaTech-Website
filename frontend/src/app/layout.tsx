@@ -35,12 +35,28 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
+				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `(() => {
+							try {
+								const stored = localStorage.getItem("theme");
+								const theme = stored === "light" ? "light" : "dark";
+								document.documentElement.classList.toggle("dark", theme === "dark");
+								document.documentElement.style.colorScheme = theme;
+							} catch {
+								document.documentElement.classList.add("dark");
+								document.documentElement.style.colorScheme = "dark";
+							}
+						})();`,
+					}}
+				/>
 				<link rel="icon" href="/favicon.ico" />
 				<meta
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"
 				/>
-				<meta name="theme-color" content="#0070f3" />
+				<meta name="theme-color" content="#0f172a" />
 			</head>
 			<body className="min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text transition-colors duration-300">
 				<ThemeProvider>
