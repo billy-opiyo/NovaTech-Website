@@ -28,6 +28,20 @@ const socialLinks = [
 	},
 ]
 
+const customerServiceLinks = [
+	{ label: "Contact Us", href: "/contact" },
+	{ label: "FAQs", href: "/faqs" },
+	{ label: "Return Policy", href: "/return-policy" },
+	{ label: "Warranty", href: "/warranty" },
+]
+
+const quickLinks = [
+	{ label: "About Us", href: "/about" },
+	{ label: "Shop", href: "/products" },
+	{ label: "Track Order", href: "/account/orders" },
+	{ label: "Blog", href: "/blog" },
+]
+
 export default function Footer() {
 	const year = new Date().getFullYear()
 
@@ -45,20 +59,26 @@ export default function Footer() {
 				<div>
 					<h4 className="font-semibold mb-3">Customer Service</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						<li>Contact Us</li>
-						<li>FAQs</li>
-						<li>Return Policy</li>
-						<li>Warranty</li>
+						{customerServiceLinks.map(({ label, href }) => (
+							<li key={href}>
+								<Link href={href} className="hover:text-primary transition-colors">
+									{label}
+								</Link>
+							</li>
+						))}
 					</ul>
 				</div>
 
 				<div>
 					<h4 className="font-semibold mb-3">Quick Links</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						<li>About Us</li>
-						<li>Shop</li>
-						<li>Track Order</li>
-						<li>Blog</li>
+						{quickLinks.map(({ label, href }) => (
+							<li key={href}>
+								<Link href={href} className="hover:text-primary transition-colors">
+									{label}
+								</Link>
+							</li>
+						))}
 					</ul>
 				</div>
 
