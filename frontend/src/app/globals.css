@@ -165,12 +165,16 @@
 }
 
 .splash-wordmark {
-  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
-  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-family: "Bookman Old Style", Bookman, "URW Bookman", Georgia, serif;
+  font-size: clamp(1.6rem, 7vw, 3.4rem);
   font-weight: 700;
   line-height: 1.1;
-  color: #fff;
-  text-shadow: 0 4px 24px rgba(0, 112, 243, 0.45);
+  white-space: nowrap;
+  letter-spacing: -0.025em;
+  background: linear-gradient(90deg, #0070f3, #f97316);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .splash-wordmark span {
