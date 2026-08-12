@@ -1,0 +1,6 @@
+import Link from "next/link"
+import { ArrowLeft, Home, SearchX } from "lucide-react"
+
+export default function NotFoundState({ title = "That page took a wrong turn.", description = "The link may be broken or the page may have moved. Let’s get you back to the latest NovaTech deals." }: { title?: string; description?: string }) {
+	return <div className="flex min-h-[65vh] items-center justify-center py-12"><div className="glass-card w-full max-w-xl p-8 text-center sm:p-12"><div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary"><SearchX size={42} /></div><p className="mb-2 text-sm font-bold uppercase tracking-[0.25em] text-primary">Error 404</p><h1 className="text-3xl font-bold sm:text-4xl">{title}</h1><p className="mx-auto mt-4 max-w-md text-gray-600 dark:text-gray-400">{description}</p><div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Link href="/" className="btn-primary inline-flex items-center justify-center gap-2"><Home size={18} /> Go home</Link><Link href="/products" className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 px-4 py-2 font-semibold text-primary transition hover:bg-primary/10"><ArrowLeft size={18} /> Browse products</Link></div></div></div>
+}

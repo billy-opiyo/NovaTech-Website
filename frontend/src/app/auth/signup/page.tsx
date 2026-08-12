@@ -16,6 +16,7 @@ export default function SignUpPage() {
 		email: "",
 		password: "",
 		confirmPassword: "",
+		acceptedTerms: false,
 	})
 
 	const handleSignUp = async (e: React.FormEvent) => {
@@ -50,7 +51,7 @@ export default function SignUpPage() {
 				throw new Error(data.message || "Registration failed")
 			}
 
-			router.push("/auth/signin?registered=true")
+			router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email.trim().toLowerCase())}`)
 		} catch (err: any) {
 			setError(err.message || "Something went wrong")
 		} finally {
@@ -184,6 +185,19 @@ export default function SignUpPage() {
 								and early access
 							</p>
 						</div>
+
+						<label className="flex items-start gap-2 text-sm text-gray-500">
+							<input
+								type="checkbox"
+								checked={formData.acceptedTerms}
+								onChange={(e) => setFormData({ ...formData, acceptedTerms: e.target.checked })}
+								className="mt-1 accent-primary"
+								required
+							/>
+							<span>
+								I agree to the <Link href="/terms" className="text-primary hover:underline">Terms and Conditions</Link>, <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>, and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.
+							</span>
+						</label>
 
 						<button
 							type="submit"

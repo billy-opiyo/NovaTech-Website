@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
+import NotFoundState from "@/components/content/NotFoundState"
 
 const categoryData: Record<
 	string,
@@ -338,6 +339,7 @@ export default function CategoryPage() {
 		trendingProducts: [],
 		subcategories: [],
 	}
+	if (!categoryData[slug]) return <NotFoundState title="Category not found" description="That product category is not available. Explore the full NovaTech Store catalogue instead." />
 	const trendingProducts = categoryData[slug]?.trendingProducts || []
 
 	return (

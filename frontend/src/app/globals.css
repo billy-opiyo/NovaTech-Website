@@ -123,3 +123,79 @@
     padding: 8px 12px;
   }
 }
+
+@keyframes splash-write {
+  0% { opacity: 0; transform: translateY(10px) rotate(3deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 112, 243, 0.18); }
+  50% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(0, 112, 243, 0); }
+}
+
+@keyframes splash-dots {
+  0%, 20% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 20%, #183b72 0%, #081326 48%, #050b16 100%);
+  color: white;
+}
+
+.splash-logo {
+  display: flex;
+  height: 112px;
+  width: 112px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  animation: splash-pulse 2.2s ease-in-out infinite;
+}
+
+.splash-wordmark {
+  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 4px 24px rgba(0, 112, 243, 0.45);
+}
+
+.splash-wordmark span {
+  display: inline-block;
+  opacity: 0;
+  animation: splash-write 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.splash-progress {
+  background: linear-gradient(90deg, #38bdf8, #0070f3, #f97316);
+  transition: width 80ms linear;
+}
+
+.splash-ellipsis {
+  display: inline-block;
+  width: 1.1em;
+  animation: splash-dots 1s steps(1, end) infinite;
+}
+
+.splash-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(2px);
+  opacity: 0.35;
+}
+
+.splash-orb-one { top: -12rem; right: -8rem; height: 30rem; width: 30rem; background: #0070f3; }
+.splash-orb-two { bottom: -15rem; left: -10rem; height: 32rem; width: 32rem; background: #f97316; }

@@ -7,6 +7,7 @@ type Theme = "light" | "dark"
 interface ThemeContextValue {
 	theme: Theme
 	toggleTheme: () => void
+	setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
@@ -25,8 +26,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 		document.documentElement.style.colorScheme = next
 	}, [])
 
-	const toggleTheme = () => {
-		const next = theme === "dark" ? "light" : "dark"
+	const applyTheme = (next: Theme) => {
 		setTheme(next)
 		localStorage.setItem("theme", next)
 		document.documentElement.classList.toggle("dark", next === "dark")
@@ -34,7 +34,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	}
 
 	return (
-		<ThemeContext.Provider value={{ theme, toggleTheme }}>
+		<ThemeContext.Provider
+			value={{
+				theme,
+				toggleTheme: () => applyTheme(theme === "dark" ? "light" : "dark"),
+				setTheme: applyTheme,
+			}}
+		>
 			{children}
 		</ThemeContext.Provider>
 	)

@@ -7,6 +7,7 @@ import { useParams } from "next/navigation"
 import { AlertCircle, ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
+import NotFoundState from "@/components/content/NotFoundState"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -60,7 +61,7 @@ export default function ProductDetailPage() {
 			.catch((reason) => setError(reason.message || "Unable to load product"))
 	}, [slug])
 
-	if (error) return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-2xl font-bold">Product unavailable</h1><p className="mt-2 text-gray-500">{error}</p><Link href="/products" className="btn-primary mt-6 inline-flex">Back to products</Link></div>
+	if (error) return <NotFoundState title="Product not found" description="We could not find that product. It may have been removed or the link may be out of date." />
 	if (!product) return <div className="mx-auto max-w-7xl py-20 text-center text-gray-500">Loading product…</div>
 	const loadedProduct = product
 

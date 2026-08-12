@@ -19,8 +19,9 @@ where: { email: "admin@novatechstore.co.ke" },
 		update: {},
 		create: {
 			name: "Admin User",
-email: "admin@novatechstore.co.ke",
+			email: "admin@novatechstore.co.ke",
 			passwordHash: adminHash,
+			emailVerified: new Date(),
 			role: "SUPERADMIN",
 		},
 	})

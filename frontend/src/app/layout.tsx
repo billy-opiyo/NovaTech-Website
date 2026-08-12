@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
+import SplashScreen from "@/components/layout/SplashScreen"
 
 export const metadata: Metadata = {
 	title: {
@@ -61,6 +62,7 @@ export default function RootLayout({
 			<body className="min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text transition-colors duration-300">
 				<ThemeProvider>
 					<CartProvider>
+						<SplashScreen />
 						<Header />
 						<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
 							{children}

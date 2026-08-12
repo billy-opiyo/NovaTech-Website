@@ -42,6 +42,12 @@ const quickLinks = [
 	{ label: "Blog", href: "/blog" },
 ]
 
+const legalLinks = [
+	{ label: "Privacy Policy", href: "/privacy-policy" },
+	{ label: "Cookie Policy", href: "/cookie-policy" },
+	{ label: "Terms", href: "/terms" },
+]
+
 export default function Footer() {
 	const year = new Date().getFullYear()
 
@@ -101,6 +107,9 @@ export default function Footer() {
 					<p className="text-xs mt-4 text-gray-500">
 						© {year} NovaTech Store. All rights reserved.
 					</p>
+					<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+						{legalLinks.map(({ label, href }) => <Link key={href} href={href} className="hover:text-primary">{label}</Link>)}
+					</div>
 				</div>
 			</div>
 		</footer>

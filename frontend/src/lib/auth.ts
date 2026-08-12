@@ -40,6 +40,10 @@ export const authOptions = {
 					await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: false } }).catch(() => undefined)
 					return null
 				}
+				if (!user.emailVerified) {
+					await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					return null
+				}
 				await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: true } }).catch(() => undefined)
 
 				return {
