@@ -132,7 +132,7 @@ const mockProducts: Product[] = Array.from({ length: 24 }, (_, i) => ({
 				"jbl charge 5",
 				"razer deathadder v3",
 				"logitech mx master 3s",
-			][i],
+			][i]
 		],
 	],
 	category: categories[Math.floor(Math.random() * 5) + 1],
