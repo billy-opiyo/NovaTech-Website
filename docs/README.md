@@ -11,6 +11,17 @@ NovaTech Store is a **monorepo** managed with **npm workspaces**, containing:
 
 The platform enables customers to browse, search, compare, and purchase genuine electronics (phones, laptops, tablets, and accessories) with warranty and fast delivery across all Kenyan counties.
 
+## Recent Changes
+
+The latest implementation updates include:
+
+- Added public company and customer-service pages for About, Blog, FAQs, Warranty, and Return Policy, linked through the footer's dynamic Customer Service and Quick Links sections.
+- Added direct `tel:` and `mailto:` links to the contact information shown on the home page.
+- Replaced the header's hardcoded logo with the NovaTech icon served through Next.js `Image`.
+- Added local product image assets and a shared `getProductImage` resolver, with fallback handling across product listings, product details, recommendations, wishlist, inventory, and admin product views.
+- Added `/admin/dashboard` as the canonical dashboard route; `/admin` now redirects to it, and the support tickets link uses `/admin/support`.
+- Improved select controls for light and dark themes and disabled the development indicator overlay.
+
 ## Page links
 
 Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://novatechstore.co.ke`.
@@ -32,6 +43,11 @@ The tables below list every UI page implemented under `frontend/src/app`. `Signe
 | Deals | Public | [Open](http://localhost:3000/deals) | [Open](https://novatechstore.co.ke/deals) |
 | Compare products | Public | [Open](http://localhost:3000/compare) | [Open](https://novatechstore.co.ke/compare) |
 | Contact | Public | [Open](http://localhost:3000/contact) | [Open](https://novatechstore.co.ke/contact) |
+| About | Public | [Open](http://localhost:3000/about) | [Open](https://novatechstore.co.ke/about) |
+| Blog | Public | [Open](http://localhost:3000/blog) | [Open](https://novatechstore.co.ke/blog) |
+| FAQs | Public | [Open](http://localhost:3000/faqs) | [Open](https://novatechstore.co.ke/faqs) |
+| Return policy | Public | [Open](http://localhost:3000/return-policy) | [Open](https://novatechstore.co.ke/return-policy) |
+| Warranty | Public | [Open](http://localhost:3000/warranty) | [Open](https://novatechstore.co.ke/warranty) |
 | Cart | Signed in | [Open](http://localhost:3000/cart) | [Open](https://novatechstore.co.ke/cart) |
 | Checkout | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://novatechstore.co.ke/checkout) |
 
