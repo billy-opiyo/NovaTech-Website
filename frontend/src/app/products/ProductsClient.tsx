@@ -368,6 +368,87 @@ export default function ProductsClient() {
 			</div>
 
 			<div className="flex gap-8">
+				<div className="flex-1">
+					<AnimatePresence mode="wait">
+						{isLoading ? (
+							<motion.div
+								key="loading"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className="grid grid-cols-2 lg:grid-cols-3 gap-6"
+							>
+								{Array.from({ length: 9 }).map((_, i) => (
+									<div key={i} className="glass-card animate-pulse">
+										<div className="h-48 bg-gray-300 dark:bg-gray-600 rounded-xl mb-4" />
+										<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2" />
+										<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
+									</div>
+								))}
+							</motion.div>
+						) : viewMode === "grid" ? (
+							<motion.div
+								key="grid"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className="grid grid-cols-2 lg:grid-cols-3 gap-6"
+							>
+								{filteredProducts.map((product, i) => (
+									<ProductCard key={product.id} product={product} index={i} />
+								))}
+							</motion.div>
+						) : (
+							<motion.div
+								key="list"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className="space-y-4"
+							>
+								{filteredProducts.map((product, i) => (
+									<ProductListItem
+										key={product.id}
+										product={product}
+										index={i}
+									/>
+								))}
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					{filteredProducts.length === 0 && !isLoading && (
+						<div className="text-center py-20 glass-card">
+							<Search className="mx-auto mb-4 text-gray-400" size={48} />
+							<h3 className="text-xl font-semibold mb-2">No products found</h3>
+							<p className="text-gray-500 mb-4">
+								Try adjusting your search or filters
+							</p>
+							<button onClick={clearFilters} className="btn-primary">
+								Clear Filters
+							</button>
+						</div>
+					)}
+
+					{filteredProducts.length > 12 && (
+						<div className="flex justify-start gap-2 mb-8">
+							{[1, 2, 3, "...", 5].map((page, i) => (
+								<button
+									key={i}
+									className={clsx(
+										"w-10 h-10 rounded-lg transition",
+										page === 1
+											? "bg-primary text-white"
+											: "glass-card hover:bg-white/20",
+									)}
+								>
+									{page}
+								</button>
+							))}
+						</div>
+					)}
+				</div>
+
 				<aside className="hidden md:block w-64 flex-shrink-0">
 					<div className="glass-card p-6 sticky top-24 space-y-6">
 						<h3 className="font-semibold text-lg flex items-center gap-2">
@@ -469,87 +550,6 @@ export default function ProductsClient() {
 						</div>
 					</div>
 				</aside>
-
-				<div className="flex-1">
-					<AnimatePresence mode="wait">
-						{isLoading ? (
-							<motion.div
-								key="loading"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								className="grid grid-cols-2 lg:grid-cols-3 gap-6"
-							>
-								{Array.from({ length: 9 }).map((_, i) => (
-									<div key={i} className="glass-card animate-pulse">
-										<div className="h-48 bg-gray-300 dark:bg-gray-600 rounded-xl mb-4" />
-										<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2" />
-										<div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
-									</div>
-								))}
-							</motion.div>
-						) : viewMode === "grid" ? (
-							<motion.div
-								key="grid"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								className="grid grid-cols-2 lg:grid-cols-3 gap-6"
-							>
-								{filteredProducts.map((product, i) => (
-									<ProductCard key={product.id} product={product} index={i} />
-								))}
-							</motion.div>
-						) : (
-							<motion.div
-								key="list"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								className="space-y-4"
-							>
-								{filteredProducts.map((product, i) => (
-									<ProductListItem
-										key={product.id}
-										product={product}
-										index={i}
-									/>
-								))}
-							</motion.div>
-						)}
-					</AnimatePresence>
-
-					{filteredProducts.length === 0 && !isLoading && (
-						<div className="text-center py-20 glass-card">
-							<Search className="mx-auto mb-4 text-gray-400" size={48} />
-							<h3 className="text-xl font-semibold mb-2">No products found</h3>
-							<p className="text-gray-500 mb-4">
-								Try adjusting your search or filters
-							</p>
-							<button onClick={clearFilters} className="btn-primary">
-								Clear Filters
-							</button>
-						</div>
-					)}
-
-					{filteredProducts.length > 12 && (
-						<div className="flex justify-center gap-2 mt-8">
-							{[1, 2, 3, "...", 5].map((page, i) => (
-								<button
-									key={i}
-									className={clsx(
-										"w-10 h-10 rounded-lg transition",
-										page === 1
-											? "bg-primary text-white"
-											: "glass-card hover:bg-white/20",
-									)}
-								>
-									{page}
-								</button>
-							))}
-						</div>
-					)}
-				</div>
 			</div>
 
 			<AnimatePresence>
