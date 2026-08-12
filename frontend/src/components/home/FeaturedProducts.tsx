@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
+import { getProductImage } from "@/constants/productImages"
 
 const featuredProducts = [
 	{
@@ -66,7 +67,7 @@ export default function FeaturedProducts() {
 						<Link href={`/products/${product.id}`} className="glass-card block group">
 							<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { getProductImage } from "@/constants/productImages"
 import { AlertCircle, CheckCircle2, Clock, Truck } from "lucide-react"
 import clsx from "clsx"
 
@@ -109,7 +110,7 @@ export default function RecentOrders() {
 					>
 						<div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
 							<Image
-								src={order.image}
+								src={getProductImage(order.image, order.product)}
 								alt={order.product}
 								fill
 								className="object-cover"

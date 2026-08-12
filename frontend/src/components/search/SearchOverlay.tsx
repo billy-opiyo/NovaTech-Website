@@ -7,6 +7,7 @@ import { Search, X, TrendingUp, Clock, ArrowRight, Zap } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
+import { getProductImage } from "@/constants/productImages"
 
 interface SearchSuggestion {
 	type: "product" | "category" | "brand" | "recent"
@@ -189,7 +190,7 @@ export default function SearchOverlay() {
 												{suggestion.type === "product" && suggestion.image && (
 													<div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
 														<Image
-															src={suggestion.image}
+									src={getProductImage(suggestion.image, suggestion.text)}
 															alt=""
 															fill
 															className="object-cover"

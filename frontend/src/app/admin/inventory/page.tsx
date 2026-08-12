@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { getProductImage } from "@/constants/productImages"
 import {
 	Package,
 	Search,
@@ -308,7 +309,7 @@ export default function AdminInventoryPage() {
 										<div className="flex items-center gap-3">
 											<div className="relative h-10 w-10 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
 												<Image
-													src={item.image}
+												src={getProductImage(item.image, item.name)}
 													alt={item.name}
 													fill
 													className="object-cover"
@@ -436,7 +437,7 @@ export default function AdminInventoryPage() {
 									<div className="flex items-center gap-4">
 										<div className="relative h-24 w-24 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
 											<Image
-												src={selectedItem.image}
+										src={getProductImage(selectedItem.image, selectedItem.name)}
 												alt={selectedItem.name}
 												fill
 												className="object-cover"

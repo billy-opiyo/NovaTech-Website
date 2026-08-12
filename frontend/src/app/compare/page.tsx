@@ -20,6 +20,7 @@ import {
 	HardDrive,
 } from "lucide-react"
 import clsx from "clsx"
+import { getProductImage } from "@/constants/productImages"
 
 interface CompareProduct {
 	id: string
@@ -258,7 +259,7 @@ export default function ComparePage() {
 											>
 												<div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
 													<Image
-														src={product.image}
+															src={getProductImage(product.image, product.name)}
 														alt={product.name}
 														fill
 														className="object-cover"
@@ -311,7 +312,7 @@ function CompareGrid({
 						<div className="flex items-center gap-4">
 							<div className="relative h-20 w-20 rounded-xl overflow-hidden bg-gray-100">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover"
@@ -398,7 +399,7 @@ function CompareGrid({
 						</button>
 						<div className="relative h-32 w-32 mx-auto mb-3 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 							<Image
-								src={product.image}
+									src={getProductImage(product.image, product.name)}
 								alt={product.name}
 								fill
 								className="object-cover"

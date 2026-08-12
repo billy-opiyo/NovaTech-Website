@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { getProductImage } from "@/constants/productImages"
 import Link from "next/link"
 import {
 	Heart,
@@ -221,7 +222,7 @@ text: `Check out ${product.name} on NovaTech Store!`,
 							<div className="relative h-56 w-full rounded-xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800">
 								<Link href={`/products/${item.slug}`}>
 									<Image
-										src={item.image}
+										src={getProductImage(item.image, item.name)}
 										alt={item.name}
 										fill
 										className="object-cover group-hover:scale-105 transition-transform duration-500"

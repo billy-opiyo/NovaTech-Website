@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { Star, Sparkles, TrendingUp, Eye } from "lucide-react"
+import { getProductImage } from "@/constants/productImages"
 
 interface RecommendedProduct {
 	id: string
@@ -87,7 +88,7 @@ export function RecommendedForYou() {
 						>
 							<div className="relative h-48 w-full rounded-xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -172,7 +173,7 @@ export function RecentlyViewed() {
 						>
 							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-3 bg-gray-100 dark:bg-gray-800">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -267,7 +268,7 @@ export function TrendingNow() {
 						>
 							<div className="relative h-48 w-full rounded-xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"

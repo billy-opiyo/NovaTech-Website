@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { getProductImage } from "@/constants/productImages"
 import { Star } from "lucide-react"
 
 interface TopProduct {
@@ -73,7 +74,7 @@ export default function TopProducts() {
 					>
 						<div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
 							<Image
-								src={product.image}
+								src={getProductImage(product.image, product.name)}
 								alt={product.name}
 								fill
 								className="object-cover"

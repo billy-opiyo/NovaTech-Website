@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
+import { getProductImage } from "@/constants/productImages"
 
 const categories = [
 	{
@@ -50,7 +51,7 @@ export default function CategoryGrid() {
 						>
 							<div className="relative h-40 w-full">
 								<Image
-									src={cat.image}
+									src={getProductImage(cat.image, cat.name)}
 									alt={cat.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"

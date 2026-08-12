@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { getProductImage } from "@/constants/productImages"
 import {
 	Plus,
 	Search,
@@ -389,7 +390,7 @@ export default function AdminProductsPage() {
 										<div className="flex items-center gap-3">
 											<div className="relative h-10 w-10 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
 												<Image
-													src={product.image}
+														src={getProductImage(product.image, product.name)}
 													alt={product.name}
 													fill
 													className="object-cover"

@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ArrowRight, Star } from "lucide-react"
+import { getProductImage } from "@/constants/productImages"
 
 const categoryData: Record<
 	string,
@@ -377,7 +378,7 @@ export default function CategoryPage() {
 						>
 							<div className="relative h-52 w-full rounded-xl overflow-hidden mb-4">
 								<Image
-									src={sub.image}
+									src={getProductImage(sub.image, sub.name)}
 									alt={sub.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -411,7 +412,7 @@ export default function CategoryPage() {
 						>
 							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-4">
 								<Image
-									src={product.image}
+									src={getProductImage(product.image, product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"

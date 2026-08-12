@@ -16,6 +16,7 @@ import {
 	Filter,
 } from "lucide-react"
 import clsx from "clsx"
+import { productImageByName } from "@/constants/productImages"
 
 // Types
 interface Product {
@@ -105,7 +106,34 @@ const mockProducts: Product[] = Array.from({ length: 24 }, (_, i) => ({
 		Math.random() > 0.6 ? Math.floor(Math.random() * 130000) + 3000 : undefined,
 	brand: brands[Math.floor(Math.random() * brands.length)],
 	images: [
-		"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=80",
+		productImageByName[
+			[
+				"iphone 15 pro max",
+				"samsung galaxy s24 ultra",
+				"macbook air m3",
+				"dell xps 15",
+				"sony wh-1000xm5",
+				"ipad pro m2",
+				"samsung galaxy tab s9",
+				"apple watch ultra 2",
+				'lg oled c3 65"',
+				"playstation 5",
+				"asus rog gaming laptop",
+				"hp spectre x360",
+				"oneplus 12",
+				"xiaomi 14 pro",
+				"airpods pro 2",
+				"samsung galaxy buds3 pro",
+				"lenovo thinkpad x1",
+				"dell ultrasharp monitor",
+				"canon eos r6",
+				"dji mini 4 pro",
+				"nintendo switch oled",
+				"jbl charge 5",
+				"razer deathadder v3",
+				"logitech mx master 3s",
+			][i],
+		],
 	],
 	category: categories[Math.floor(Math.random() * 5) + 1],
 	rating: Math.random() * 2 + 3,

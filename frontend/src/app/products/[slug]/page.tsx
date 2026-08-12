@@ -22,6 +22,7 @@ import {
 	AlertCircle,
 } from "lucide-react"
 import clsx from "clsx"
+import { getProductImage } from "@/constants/productImages"
 
 // Product type
 interface ProductDetail {
@@ -246,7 +247,7 @@ export default function ProductDetailPage() {
 						onMouseMove={handleMouseMove}
 					>
 						<Image
-							src={product.images[selectedImage]}
+							src={getProductImage(product.images[selectedImage], product.name)}
 							alt={product.name}
 							fill
 							className={clsx(
@@ -306,7 +307,7 @@ export default function ProductDetailPage() {
 								)}
 							>
 								<Image
-									src={img}
+									src={getProductImage(img, product.name)}
 									alt={`${product.name} ${i + 1}`}
 									fill
 									className="object-cover"
@@ -789,7 +790,7 @@ export default function ProductDetailPage() {
 						>
 							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-4">
 								<Image
-									src={item.image}
+									src={getProductImage(item.image, item.name)}
 									alt={item.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"
