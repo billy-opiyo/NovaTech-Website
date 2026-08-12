@@ -180,6 +180,10 @@
 .splash-wordmark span {
   display: inline-block;
   opacity: 0;
+  background: linear-gradient(90deg, #0070f3, #f97316);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: splash-write 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
