@@ -126,19 +126,29 @@
   }
 
   .search-overlay-panel {
-    top: calc(env(safe-area-inset-top) + 1rem);
-    width: calc(100% - 2rem);
-    max-height: calc(100dvh - env(safe-area-inset-top) - 2rem);
+    top: calc(env(safe-area-inset-top) + 4.5rem);
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 5.5rem);
     overflow-y: auto;
+    transform: none;
+  }
+
+  .search-overlay-panel > .glass-card {
+    width: 100%;
   }
 
   @media (min-width: 640px) {
     .search-overlay-panel {
-      top: 15%;
-      width: 100%;
-      max-width: 42rem;
+      top: calc(env(safe-area-inset-top) + 5.25rem);
+      right: auto;
+      left: 50%;
+      width: min(calc(100% - 2rem), 36rem);
+      max-width: none;
       max-height: none;
       overflow-y: visible;
+      transform: translateX(-50%);
     }
   }
 

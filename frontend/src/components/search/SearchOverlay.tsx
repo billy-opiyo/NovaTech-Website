@@ -158,7 +158,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 							initial={{ opacity: 0, y: -20, scale: 0.95 }}
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -20, scale: 0.95 }}
-							className="search-overlay-panel fixed left-1/2 z-[60] -translate-x-1/2"
+							className="search-overlay-panel fixed z-[60]"
 						>
 							<div className="glass-card p-4">
 								<div className="relative">
