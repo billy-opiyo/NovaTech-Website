@@ -4,6 +4,8 @@ A full-stack electronics e-commerce platform built for the Kenyan market. NovaTe
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
+Detailed documentation is available in [`docs/README.md`](docs/README.md), with the complete feature inventory in [`docs/features.md`](docs/features.md) and client setup guidance in [`docs/client-customization.md`](docs/client-customization.md).
+
 ---
 
 ## 📋 Table of Contents
@@ -30,7 +32,7 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 | **Auth**          | NextAuth v5 (beta) — Google OAuth + Credentials, JWT sessions                  |
 | **Email**         | Resend                                                                         |
 | **Storage**       | Cloudflare R2 (AWS SDK v3)                                                     |
-| **Rate Limiting** | In-memory middleware (60 req/min per IP)                                       |
+| **Rate Limiting** | PostgreSQL-backed distributed buckets (60 req/min per IP)                     |
 | **Monorepo**      | npm workspaces (`frontend` + `backend`)                                        |
 
 ---
@@ -47,8 +49,10 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 | **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
 | **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
 | **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
-| **Search Overlay**   | Global search with `Ctrl+K` shortcut, popular searches, product suggestions, and navigation.                                                                                                |
-| **Dark Mode**        | Class-based dark theme with system-preference detection and localStorage persistence.                                                                                                       |
+| **Search Overlay**   | Responsive global search with `Ctrl+K`, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning.                                                   |
+| **Theme System**     | Client-configured light/dark presets backed by CSS variables, with localStorage persistence and flash-free initialization.                                                                   |
+| **Responsive UI**    | Responsive header, mobile navigation, footer, homepage sections, product details, and search overlay with accessibility refinements.                                                        |
+| **Public Pages**     | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions.                                                                               |
 
 ### 🛒 Shopping Cart & Checkout
 
@@ -58,7 +62,7 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
   - Max-stock clamping
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
-- **Cart Page** — item list with quantity controls, coupon code input (`TECH10` mock), order summary, save-for-later section.
+- **Cart Page** — item list with quantity controls, database-backed coupon validation, order summary, save-for-later section.
 - **Checkout Page** — multi-step wizard:
   - Shipping address form (all Kenyan counties list)
   - Delivery method selection (Standard / Express / Pickup)
@@ -72,7 +76,17 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
   - **Credentials** (email + password, verified with `bcrypt`)
 - JWT session strategy with role (`CUSTOMER`, `ADMIN`, `SUPERADMIN`) and user ID attached to sessions.
 - Sign-in and Sign-up pages with form validation and error handling.
+- Email verification with six-digit codes and resend support.
+- Forgot-password email flow and token-based password reset.
 - `getServerSession()` helper used across API routes for protected endpoints.
+- Account loading states and middleware protection for authenticated account routes.
+
+### 🎨 Client Customization and Shared UX
+
+- Developer-managed client configuration in `frontend/src/config/client.config.ts` for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags.
+- Reusable theme presets in `frontend/src/config/theme-presets.ts`.
+- Account profile image uploads for JPG, PNG, WEBP, and GIF files up to 5 MB, with generated storage keys and R2-backed storage.
+- Branded responsive splash screen, route loading UI, shared toast notifications, responsive footer grid, actionable contact links, and shared theme/search/cart/account controls.
 
 ### 👑 Admin Panel
 
@@ -108,7 +122,7 @@ The project is a **monorepo** managed with **npm workspaces**, containing a Next
 - **`backend/lib/email.ts`** — Resend email sending with branded order-confirmation template.
 - **`backend/lib/storage.ts`** — Cloudflare R2 upload/delete/signed-URL generation.
 - **`backend/lib/whatsapp.ts`** — WhatsApp integration helper.
-- **`backend/middleware/rateLimiter.ts`** — In-memory IP-based rate limiting (60 requests / minute).
+- **`backend/middleware/rateLimiter.ts`** — PostgreSQL-backed distributed rate limiting (60 requests / minute per IP).
 - **`backend/validators/productValidator.ts`** — Zod schema for product creation.
 - **`backend/services/productService.ts`** — Prisma queries for filtered listing, slug lookup, search, and creation.
 - **`backend/security/index.ts`** — Email sanitization, password strength check, secret masking, object sanitization.
@@ -165,18 +179,10 @@ NovaTech Website/
 │       ├── app/
 │       │   ├── layout.tsx        # Root layout (ThemeProvider, CartProvider, Header/Footer)
 │       │   ├── page.tsx          # Home page
-│       │   ├── (public)/         # Public route groups
-│       │   │   ├── account/      # Account dashboard pages
-│       │   │   ├── cart/         # Cart page
-│       │   │   ├── categories/   # Category listing pages
-│       │   │   ├── checkout/     # Multi-step checkout
-│       │   │   ├── compare/      # Product comparison
-│       │   │   ├── orders/       # Order pages
-│       │   │   ├── products/     # Products catalog pages
-│       │   │   ├── support/      # Support pages
-│       │   │   └── wishlist/     # Wishlist page
-│       │   ├── account/          # Account pages (orders, wishlist)
-│       │   ├── admin/            # Admin panel
+│       │   ├── loading.tsx        # Accessible route loading state
+│       │   ├── not-found.tsx      # Branded not-found page
+│       │   ├── account/           # Account pages (orders, wishlist, settings)
+│       │   ├── admin/             # Admin panel
 │       │   │   ├── layout.tsx    # Sidebar + top bar layout
 │       │   │   ├── dashboard/    # Admin dashboard
 │       │   │   ├── products/     # Product management table
@@ -195,12 +201,20 @@ NovaTech Website/
 │       │   │   ├── coupons/validate/  # Coupon validation
 │       │   │   ├── contact/      # Support ticket creation
 │       │   │   └── newsletter/   # Newsletter subscription
-│       │   ├── auth/             # Sign-in & sign-up pages
+│       │   ├── auth/             # Sign-in, sign-up, verification, password reset
 │       │   ├── cart/             # Cart page
 │       │   ├── category/[slug]/  # Dynamic category pages
 │       │   ├── checkout/         # Checkout page
 │       │   ├── compare/          # Compare page
 │       │   ├── contact/          # Contact page
+│       │   ├── about/             # About page
+│       │   ├── blog/              # Blog page
+│       │   ├── faqs/              # FAQ page
+│       │   ├── warranty/          # Warranty page
+│       │   ├── return-policy/     # Return policy page
+│       │   ├── privacy-policy/    # Privacy policy page
+│       │   ├── cookie-policy/     # Cookie policy page
+│       │   ├── terms/             # Terms and conditions page
 │       │   ├── deals/            # Deals page
 │       │   └── products/         # Product listing + [slug] detail
 │       ├── components/
@@ -224,7 +238,7 @@ NovaTech Website/
 │   │   ├── storage.ts           # Cloudflare R2 file operations
 │   │   └── whatsapp.ts          # WhatsApp helper
 │   ├── middleware/
-│   │   └── rateLimiter.ts       # In-memory IP rate limiting (60 req/min)
+│   │   └── rateLimiter.ts       # PostgreSQL-backed IP rate limiting (60 req/min)
 │   ├── controllers/
 │   │   └── productController.ts # Product GET/POST/search handlers
 │   ├── services/
@@ -300,6 +314,13 @@ NovaTech Website/
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
+| `SEED_ADMIN_PASSWORD`                | Required only for development database seeding         |
+| `INITIAL_ADMIN_EMAIL`                | Production admin initialization email                  |
+| `INITIAL_ADMIN_PASSWORD`             | Production admin initialization password               |
+| `STAGING_URL`                        | Deployed staging URL for health checks                 |
+| `BACKUP_DATABASE_URL`                 | Source database URL for backup verification             |
+| `RESTORE_DATABASE_URL`                | Disposable restore target for backup verification      |
+| `E2E_PAYMENT_PROVIDER`                | Payment provider used by sandbox browser tests          |
 
 ---
 
@@ -366,8 +387,14 @@ npm run dev:open
 | `build`      | `npm --workspace frontend run build`                              | Production build                 |
 | `start`      | `npm --workspace frontend run start`                              | Start production server          |
 | `db:migrate` | `npm --workspace backend run db:migrate`                          | Run Prisma migrations            |
+| `db:deploy`  | `npm --workspace backend run db:deploy`                           | Deploy committed Prisma migrations |
 | `db:push`    | `npm --workspace backend run db:push`                             | Push schema (no migration files) |
 | `db:seed`    | `npm --workspace backend run db:seed`                             | Seed database                    |
+| `test`       | `node --test --test-concurrency=1 --require ./tests/register.cjs tests/**/*.test.ts` | Run the repository test suite |
+| `check:env`  | `node scripts/check-env.mjs`                                      | Validate environment variables |
+| `test:e2e`   | `playwright test`                                                  | Run Playwright browser tests    |
+| `check:staging` | `node scripts/check-staging.mjs`                               | Check deployed staging health   |
+| `check:backup` | `node scripts/verify-backup.mjs`                                | Verify PostgreSQL backup restore |
 
 ### Frontend (`frontend/package.json`)
 
@@ -397,8 +424,13 @@ npm run dev:open
 - ✔️ **Shopping cart** — Client-side state with `localStorage` persistence, save-for-later, quantity & stock management, shipping/total calculation
 - ✔️ **Authentication** — NextAuth v5 with Google OAuth + Credentials (bcrypt), JWT sessions, role-based access
 - ✔️ **Admin panel UI** — Layout, sidebar navigation, Dashboard, Analytics, Products management, Orders management, Customers, Reviews, Coupons, Inventory, Deliveries, Support Tickets, Messages, Settings, Security, Activity Log
-- ✔️ **Dark/light theme** — ThemeProvider with system preference detection
-- ✔️ **Global search** — Search overlay with keyboard shortcut & suggestions
+- ✔️ **Dark/light theme** — Configurable theme presets with CSS variables, localStorage persistence, and flash-free initialization
+- ✔️ **Global search** — Responsive search overlay with keyboard shortcut, live suggestions, and mobile positioning
+- ✔️ **Responsive and accessible UI** — Responsive shared layouts, improved focus/labels, semantic status messaging, and live toast notifications
+- ✔️ **Account enhancements** — Account loading states, corrected middleware guards, saved theme preferences, and profile image uploads up to 5 MB
+- ✔️ **Authentication flows** — Email verification with resend support and token-based password reset
+- ✔️ **Public information pages** — About, Blog, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions
+- ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
 - ✔️ **Order API** — List, create (transactional stock decrement, validation, notifications), admin status update
 - ✔️ **Review API** — Full CRUD with verified-purchase detection and role-aware deletion
@@ -413,7 +445,7 @@ npm run dev:open
   - Top selling products with revenue
   - Regional sales distribution
   - Payment method breakdown (M-Pesa, Card, COD)
-- ✔️ **Rate limiting** — 60 req/min per IP on sensitive endpoints
+- ✔️ **Rate limiting** — PostgreSQL-backed distributed buckets with a 60 req/min per-IP limit on sensitive endpoints
 - ✔️ **Email** — Resend integration with branded order-confirmation template
 - ✔️ **SMS notifications** — Real Twilio SMS integration with:
   - Order confirmation SMS
@@ -482,9 +514,18 @@ The backend service layer is fully implemented with proper separation of concern
 
 ## ✅ Recently Implemented
 
+- **Client customization and theme presets** — Centralized branding, site content, contact information, SEO, commerce defaults, feature flags, and reusable light/dark visual systems
+- **Responsive and accessible storefront refresh** — Updated header, mobile navigation, footer grid, homepage sections, product details, search overlay, focus states, labels, and live notifications
+- **Account and profile improvements** — Added account loading states, fixed account route guarding, added saved theme preferences, and added R2-backed profile image uploads with generated storage keys
+- **Authentication and legal pages** — Added email verification, password reset, Privacy Policy, Cookie Policy, and Terms and Conditions routes
+- **Branded loading experience** — Added responsive gradient splash wordmark, animated loading progress, route loading UI, SEO metadata, and image-host preconnects
 - **Admin analytics enhancements** — Growth comparison calculations (period-over-period), CSV/JSON export functionality, and real-time growth data in metric cards
 - **Order tracking & delivery notifications** — Real-time order tracking page connected to API, tracking history generated from order status changes, SMS/WhatsApp delivery notifications for all status transitions (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)
 - **Support ticket system in admin** — Full backend API for ticket management, real-time ticket listing with filters, ticket detail modal with conversation view, reply functionality, and status updates with automatic customer notifications
+
+## 🚦 Current Launch Status
+
+The implementation is feature-complete at code level, but production launch remains gated on isolated staging verification. Run environment validation, database migration deployment, builds, tests, browser checks, staging health checks, and backup/restore verification before using production credentials.
 
 ## 🔮 Planned / Next Steps
 

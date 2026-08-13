@@ -10,15 +10,17 @@
 | **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
 | **Deals Page** | Promotional deal cards linking into filtered product listings. |
 | **Compare Page** | Side-by-side product comparison with spec tables and highlight win/loss indicators. |
-| **Search Overlay** | Global search with `Ctrl+K` shortcut, popular searches, product suggestions, and navigation. |
-| **Dark Mode** | Class-based dark theme with system-preference detection and localStorage persistence. |
+| **Search Overlay** | Responsive global search with `Ctrl+K` shortcut, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning. |
+| **Theme System** | Client-configured light/dark theme presets backed by CSS variables, with localStorage persistence and flash-free initialization before the first paint. |
+| **Responsive and Accessible UI** | Shared responsive layouts across desktop and mobile breakpoints, with clearer labels, focus states, semantic status messaging, and accessible live notifications. |
+| **Public Information Pages** | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions pages. |
 
 ## 🛒 Shopping Cart & Checkout
 
 | Feature | Description |
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
-| **Cart Page** | Item list with quantity controls, coupon code input (`TECH10` mock), order summary, save-for-later section. |
+| **Cart Page** | Item list with quantity controls, database-backed coupon validation, order summary, save-for-later section. |
 | **Checkout Page** | Multi-step wizard:<br>- Shipping address form (all Kenyan counties list)<br>- Delivery method selection (Standard / Express / Pickup)<br>- Payment method selection (M-Pesa, Card, Cash on Delivery)<br>- Order summary and final confirmation |
 
 ## 👤 Authentication
@@ -28,7 +30,21 @@
 | **NextAuth v5** | Two providers:<br>- **Google OAuth**<br>- **Credentials** (email + password, verified with `bcrypt`)|
 | **JWT Sessions** | Role-based (`CUSTOMER`, `ADMIN`, `SUPERADMIN`) with user ID attached to sessions.|
 | **Sign-in/Sign-up Pages** | Form validation and error handling.|
+| **Email Verification** | Six-digit verification-code flow after registration, with resend support and expiry handling.|
+| **Password Recovery** | Forgot-password email flow and token-based password reset page.|
 | **Session Protection** | `getServerSession()` helper used across API routes for protected endpoints.|
+| **Account Loading and Route Guards** | Loading states for account screens and middleware protection for authenticated account routes.|
+
+## 🎨 Client Customization and Shared UX
+
+| Feature | Description |
+|---------|-------------|
+| **Client Configuration** | Developer-managed `frontend/src/config/client.config.ts` for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags. |
+| **Theme Presets** | Reusable visual systems in `frontend/src/config/theme-presets.ts`, selected through `themePreset` without recoding individual pages. |
+| **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
+| **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, route loading skeletons, and accessible loading status messaging. |
+| **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, and `aria-live` announcements. |
+| **Responsive Navigation** | Desktop header, mobile navigation, responsive footer grid, actionable contact links, theme toggle, cart/account actions, and shared search access. |
 
 ## 👑 Admin Panel
 
@@ -72,7 +88,7 @@
 | `backend/lib/email.ts` | Resend email sending with branded order-confirmation template. |
 | `backend/lib/storage.ts` | Cloudflare R2 file operations (upload, delete, signed-URL generation). |
 | `backend/lib/whatsapp.ts` | WhatsApp integration helper. |
-| `backend/middleware/rateLimiter.ts` | In-memory IP-based rate limiting (60 requests / minute). |
+| `backend/middleware/rateLimiter.ts` | PostgreSQL-backed distributed rate limiting for multi-instance deployments. |
 | `backend/validators/productValidator.ts` | Zod schema for product creation. |
 | `backend/services/productService.ts` | Prisma queries for filtered listing, slug lookup, search, and creation. |
 | `backend/security/index.ts` | Email sanitization, password strength check, secret masking, object sanitization. |
@@ -170,6 +186,9 @@ Core models:
 | Feature | Description |
 |---------|-------------|
 | **Rate Limiting** | 60 req/min per IP on sensitive endpoints. |
+| **Checkout Idempotency** | Reuses safe checkout/payment requests and prevents duplicate order creation across retries. |
+| **Webhook Deduplication** | Persists webhook receipts so repeated Stripe and M-Pesa callbacks are processed safely. |
+| **Audit and Login Events** | Records administrative changes and successful or failed credential-authentication attempts. |
 | **Email Sanitization** | Prevents email injection attacks. |
 | **Password Strength Check** | Validates password complexity. |
 | **Object Sanitization** | Sanitizes incoming objects for security. |
@@ -184,3 +203,14 @@ Core models:
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |
 | **Recommendation Engine** | Complete product recommendation system with:<br>- Personalized recommendations based on user behavior (recent views, purchase history, wishlist)<br>- Trending products based on sales velocity (30-day window)<br>- Similar products by category, price range, and ratings<br>- Featured products and new arrivals<br>- Deals and on-sale products<br>- RESTful API at `/api/recommendations` with multiple recommendation types |
+
+## 🧪 Testing, CI, and Release Readiness
+
+| Feature | Description |
+|---------|-------------|
+| **Automated Tests** | Repository test loader covering application and backend behavior, including security, validation, payments, and webhook cases. |
+| **Browser Tests** | Playwright E2E coverage for staging or a locally built and started application. |
+| **CI Checks** | Ubuntu-based checks for installation, environment validation, database migration deployment, builds, tests, and browser workflows. |
+| **Staging Health Check** | Verifies the deployed staging URL and database health before production promotion. |
+| **Backup Verification** | Runs PostgreSQL dump and restore checks against disposable backup/restore targets. |
+| **Environment Validation** | Validates required staging and production configuration, including secure URLs, authentication, payment, storage, and email settings. |
