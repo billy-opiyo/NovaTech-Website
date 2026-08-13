@@ -8,6 +8,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Star
 import { getProductImage } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import NotFoundState from "@/components/content/NotFoundState"
+import { useToast } from "@/components/ui/Toast"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -42,12 +43,12 @@ type Product = {
 export default function ProductDetailPage() {
 	const { slug } = useParams<{ slug: string }>()
 	const { addItem } = useCart()
+	const { addToast } = useToast()
 	const [product, setProduct] = useState<Product | null>(null)
 	const [error, setError] = useState("")
 	const [selectedImage, setSelectedImage] = useState(0)
 	const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
 	const [quantity, setQuantity] = useState(1)
-	const [added, setAdded] = useState(false)
 
 	useEffect(() => {
 		if (!slug) return
@@ -90,8 +91,7 @@ export default function ProductDetailPage() {
 			maxStock: selectedStock,
 			slug: loadedProduct.slug,
 		})
-		setAdded(true)
-		setTimeout(() => setAdded(false), 2500)
+		addToast(`${loadedProduct.name} was added to your cart.`, "success")
 	}
 
 	return (
@@ -126,7 +126,7 @@ export default function ProductDetailPage() {
 
 					{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} disabled={variant.stock < 1} onClick={() => setSelectedVariants({ ...selectedVariants, [name]: variant.value })} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}
 
-					<div className="flex items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button onClick={handleAddToCart} disabled={selectedStock < 1} className="btn-primary flex flex-1 items-center justify-center gap-2 disabled:opacity-50"><ShoppingCart size={18} />{added ? "Added to cart" : "Add to cart"}</button></div>
+					<div className="flex items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button onClick={handleAddToCart} disabled={selectedStock < 1} className="btn-primary flex flex-1 items-center justify-center gap-2 disabled:opacity-50"><ShoppingCart size={18} />Add to cart</button></div>
 					<p className="text-gray-600 dark:text-gray-300">{product.description}</p>
 				</div>
 			</section>

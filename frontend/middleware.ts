@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
 
 	// Handle protected account routes
 	const isProtectedRoute =
-		pathname.startsWith("/account") ||
+		pathname.startsWith("/account/") ||
 		pathname === "/cart" ||
 		pathname === "/checkout" ||
 		pathname === "/wishlist" ||

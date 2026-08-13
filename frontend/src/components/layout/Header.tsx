@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
-import { Moon, Sun, ShoppingCart, Menu, X } from "lucide-react"
+import { Moon, Sun, ShoppingCart, Menu, X, User } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { clientConfig } from "@/config/client.config"
 import { useCart } from "@/lib/cartContext"
@@ -67,6 +67,13 @@ export default function Header() {
 									{itemCount}
 								</span>
 							)}
+						</Link>
+						<Link
+							href="/account"
+							aria-label="Open account"
+							className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700"
+						>
+							<User size={20} />
 						</Link>
 
 						{/* Mobile menu toggle */}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bell, X, Package, Tag, AlertCircle, Truck } from "lucide-react"
 import clsx from "clsx"
@@ -16,43 +16,15 @@ interface Notification {
 
 export default function NotificationCenter() {
 	const [isOpen, setIsOpen] = useState(false)
-	const [notifications, setNotifications] = useState<Notification[]>([
-		{
-			id: "notif-1",
-			type: "order",
-			title: "Order Confirmed",
-			message: "Your order #EB-001 has been confirmed and is being processed.",
-			time: "2 hours ago",
-			read: false,
-		},
-		{
-			id: "notif-2",
-			type: "delivery",
-			title: "Out for Delivery",
-			message:
-				"Your order #EB-003 is out for delivery. Estimated arrival today.",
-			time: "30 minutes ago",
-			read: false,
-		},
-		{
-			id: "notif-3",
-			type: "promo",
-			title: "Flash Sale!",
-			message: "Up to 30% off on selected smartphones. Limited time offer!",
-			time: "1 day ago",
-			read: true,
-		},
-		{
-			id: "notif-4",
-			type: "system",
-			title: "Price Drop Alert",
-			message: "MacBook Air M3 price dropped by KES 5,000. Grab it now!",
-			time: "3 days ago",
-			read: true,
-		},
-	])
+	const [notifications, setNotifications] = useState<Notification[]>([])
 
 	const unreadCount = notifications.filter((n) => !n.read).length
+
+	useEffect(() => {
+		if (!isOpen) return
+		const timeout = window.setTimeout(() => setIsOpen(false), 4000)
+		return () => window.clearTimeout(timeout)
+	}, [isOpen])
 
 	const markAsRead = (id: string) => {
 		setNotifications((prev) =>
@@ -107,7 +79,7 @@ export default function NotificationCenter() {
 							initial={{ opacity: 0, y: -10, scale: 0.95 }}
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -10, scale: 0.95 }}
-							className="absolute right-0 top-full mt-2 w-80 md:w-96 z-50 glass-card overflow-hidden"
+							className="fixed inset-x-3 top-[max(4.5rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden glass-card sm:left-auto sm:right-4 sm:w-96"
 						>
 							<div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
 								<h3 className="font-semibold">Notifications</h3>
@@ -129,7 +101,7 @@ export default function NotificationCenter() {
 								</div>
 							</div>
 
-							<div className="max-h-96 overflow-y-auto">
+							<div className="min-h-0 flex-1 overflow-y-auto">
 								{notifications.length === 0 ? (
 									<div className="text-center py-12">
 										<Bell className="mx-auto mb-3 text-gray-400" size={32} />

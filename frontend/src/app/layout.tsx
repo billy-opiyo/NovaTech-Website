@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
 import SplashScreen from "@/components/layout/SplashScreen"
+import { ToastProvider } from "@/components/ui/Toast"
 import { clientConfig } from "@/config/client.config"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
 
@@ -66,16 +67,18 @@ export default function RootLayout({
 			</head>
 			<body className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300">
 				<ThemeProvider>
-					<CartProvider>
-						{clientConfig.features.showSplashScreen && <SplashScreen />}
-						<Header />
-						<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
-							{children}
-						</main>
-						<Footer />
-						<MobileNav />
-						<FloatingActions />
-					</CartProvider>
+					<ToastProvider>
+						<CartProvider>
+							{clientConfig.features.showSplashScreen && <SplashScreen />}
+							<Header />
+							<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+								{children}
+							</main>
+							<Footer />
+							<MobileNav />
+							<FloatingActions />
+						</CartProvider>
+					</ToastProvider>
 				</ThemeProvider>
 			</body>
 		</html>

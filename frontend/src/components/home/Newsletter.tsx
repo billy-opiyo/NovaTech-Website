@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import { CheckCircle2 } from "lucide-react"
+import { useToast } from "@/components/ui/Toast"
 
 export default function Newsletter() {
 	const [email, setEmail] = useState("")
 	const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 	const [message, setMessage] = useState("")
+	const { addToast } = useToast()
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -23,14 +25,17 @@ export default function Newsletter() {
 			if (res.ok) {
 				setStatus("success")
 				setMessage(data.message || "Subscribed successfully!")
+				addToast(data.message || "Subscribed successfully!", "success")
 				setEmail("")
 			} else {
 				setStatus("error")
 				setMessage(data.message || "Failed to subscribe")
+				addToast(data.message || "Failed to subscribe", "error")
 			}
 		} catch {
 			setStatus("error")
 			setMessage("Something went wrong. Please try again.")
+			addToast("Something went wrong. Please try again.", "error")
 		}
 	}
 

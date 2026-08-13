@@ -17,6 +17,7 @@ import {
 	Filter,
 } from "lucide-react"
 import clsx from "clsx"
+import { useToast } from "@/components/ui/Toast"
 
 interface MetricCard {
 	title: string
@@ -63,6 +64,7 @@ export default function AdminAnalyticsPage() {
 	const [selectedMetric, setSelectedMetric] = useState("revenue")
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const { addToast } = useToast()
 
 	const [metricsCards, setMetricsCards] = useState<MetricCard[]>([])
 	const [salesData, setSalesData] = useState<SalesData[]>([])
@@ -197,7 +199,7 @@ export default function AdminAnalyticsPage() {
 			}
 		} catch (err: any) {
 			console.error("Error exporting analytics:", err)
-			alert("Failed to export analytics data")
+			addToast("Failed to export analytics data", "error")
 		}
 	}
 
