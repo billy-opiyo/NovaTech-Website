@@ -33,6 +33,29 @@ export default function SplashScreen() {
 		}
 	}, [])
 
+	useEffect(() => {
+		if (!visible) return
+
+		const html = document.documentElement
+		const body = document.body
+		const previousHtmlOverflow = html.style.overflow
+		const previousBodyOverflow = body.style.overflow
+		const previousBodyTouchAction = body.style.touchAction
+		const previousHtmlOverscrollBehavior = html.style.overscrollBehavior
+
+		html.style.overflow = "hidden"
+		html.style.overscrollBehavior = "none"
+		body.style.overflow = "hidden"
+		body.style.touchAction = "none"
+
+		return () => {
+			html.style.overflow = previousHtmlOverflow
+			html.style.overscrollBehavior = previousHtmlOverscrollBehavior
+			body.style.overflow = previousBodyOverflow
+			body.style.touchAction = previousBodyTouchAction
+		}
+	}, [visible])
+
 	if (!visible) return null
 
 	return (

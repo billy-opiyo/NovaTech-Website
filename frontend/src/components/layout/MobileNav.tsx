@@ -31,6 +31,7 @@ export default function MobileNav() {
 							<button
 								key={item.label}
 								onClick={() => setSearchOpen(true)}
+								aria-label="Open search"
 								className="flex flex-col items-center gap-1 py-1 px-3 text-gray-500 hover:text-primary transition"
 							>
 								<item.icon size={22} />
@@ -62,7 +63,7 @@ export default function MobileNav() {
 
 			<div className="md:hidden h-16" />
 
-			{searchOpen && <SearchOverlay />}
+			<SearchOverlay open={searchOpen} onOpenChange={setSearchOpen} showTrigger={false} />
 		</>
 	)
 }

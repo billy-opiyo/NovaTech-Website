@@ -8,9 +8,11 @@ import SearchOverlay from "@/components/search/SearchOverlay"
 import { Moon, Sun, ShoppingCart, Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { clientConfig } from "@/config/client.config"
+import { useCart } from "@/lib/cartContext"
 
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
+	const { itemCount } = useCart()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
@@ -56,12 +58,15 @@ export default function Header() {
 						<SearchOverlay />
 						<Link
 							href="/cart"
+							aria-label="Open shopping cart"
 							className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"
 						>
 							<ShoppingCart size={20} />
-							<span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-								0
-							</span>
+							{itemCount > 0 && (
+								<span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+									{itemCount}
+								</span>
+							)}
 						</Link>
 
 						{/* Mobile menu toggle */}
