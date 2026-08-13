@@ -7,24 +7,25 @@ import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
 import SplashScreen from "@/components/layout/SplashScreen"
+import { clientConfig } from "@/config/client.config"
+import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
+
+const activeTheme = getThemePreset(clientConfig.themePreset)
 
 export const metadata: Metadata = {
 	title: {
-		default: "NovaTech Store - Kenya's Electronics Store",
-		template: "%s | NovaTech Store",
+		default: clientConfig.brand.name,
+		template: `%s | ${clientConfig.brand.name}`,
 	},
-	description:
-		"Shop genuine phones, laptops, accessories with warranty. Fast delivery across Kenya.",
-	keywords:
-		"electronics, Kenya, phones, laptops, accessories, M-Pesa, online shopping",
+	description: clientConfig.seo.description,
+	keywords: clientConfig.seo.keywords,
 	openGraph: {
 		type: "website",
-		locale: "en_KE",
-		url: "https://novatechstore.co.ke",
-		siteName: "NovaTech Store",
-		title: "NovaTech Store - Kenya's Electronics Store",
-		description:
-			"Shop genuine phones, laptops, accessories with warranty. Fast delivery across Kenya.",
+		locale: clientConfig.site.locale,
+		url: clientConfig.site.url,
+		siteName: clientConfig.brand.name,
+		title: clientConfig.brand.name,
+		description: clientConfig.seo.description,
 	},
 }
 
@@ -34,7 +35,7 @@ export default function RootLayout({
 	children: React.ReactNode
 }) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang={clientConfig.site.language} suppressHydrationWarning style={themeToCssVariables(activeTheme) as React.CSSProperties}>
 			<head>
 				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}
 				<script
@@ -52,7 +53,7 @@ export default function RootLayout({
 						})();`,
 					}}
 				/>
-				<link rel="icon" href="/favicon.ico" />
+				<link rel="icon" href={clientConfig.brand.favicon} />
 				<link rel="preconnect" href="https://images.unsplash.com" />
 				<link rel="dns-prefetch" href="https://images.unsplash.com" />
 				<link rel="preconnect" href="https://images.pexels.com" />
@@ -61,12 +62,12 @@ export default function RootLayout({
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"
 				/>
-				<meta name="theme-color" content="#0f172a" />
+				<meta name="theme-color" content={activeTheme.dark.background} />
 			</head>
-			<body className="min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text transition-colors duration-300">
+			<body className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300">
 				<ThemeProvider>
 					<CartProvider>
-						<SplashScreen />
+						{clientConfig.features.showSplashScreen && <SplashScreen />}
 						<Header />
 						<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
 							{children}

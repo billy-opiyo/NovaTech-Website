@@ -5,21 +5,31 @@
 
 @layer base {
   :root {
-    --glass-bg: rgba(255, 255, 255, 0.15);
-    --glass-border: rgba(255, 255, 255, 0.25);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-    --scrollbar-track: rgba(148, 163, 184, 0.15);
-    --scrollbar-thumb: rgba(0, 112, 243, 0.7);
-    --scrollbar-thumb-hover: rgba(0, 91, 181, 0.9);
+    --color-theme-bg: var(--color-bg-light);
+    --color-theme-surface: var(--color-surface-light);
+    --color-theme-text: var(--color-text-light);
+    --color-theme-muted: var(--color-muted-light);
+    --color-theme-border: var(--color-border-light);
+    --glass-bg: var(--theme-glass-bg-light);
+    --glass-border: var(--theme-glass-border-light);
+    --glass-shadow: var(--theme-glass-shadow-light);
+    --scrollbar-track: var(--theme-scrollbar-track-light);
+    --scrollbar-thumb: var(--theme-scrollbar-thumb-light);
+    --scrollbar-thumb-hover: var(--theme-scrollbar-thumb-hover-light);
   }
 
   .dark {
-    --glass-bg: rgba(0, 0, 0, 0.3);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-    --scrollbar-track: rgba(15, 23, 42, 0.8);
-    --scrollbar-thumb: rgba(59, 130, 246, 0.75);
-    --scrollbar-thumb-hover: rgba(96, 165, 250, 0.95);
+    --color-theme-bg: var(--color-bg-dark);
+    --color-theme-surface: var(--color-surface-dark);
+    --color-theme-text: var(--color-text-dark);
+    --color-theme-muted: var(--color-muted-dark);
+    --color-theme-border: var(--color-border-dark);
+    --glass-bg: var(--theme-glass-bg-dark);
+    --glass-border: var(--theme-glass-border-dark);
+    --glass-shadow: var(--theme-glass-shadow-dark);
+    --scrollbar-track: var(--theme-scrollbar-track-dark);
+    --scrollbar-thumb: var(--theme-scrollbar-thumb-dark);
+    --scrollbar-thumb-hover: var(--theme-scrollbar-thumb-hover-dark);
   }
 
   html {
@@ -28,9 +38,21 @@
   }
 
   body {
+    background-color: rgb(var(--color-theme-bg));
+    color: rgb(var(--color-theme-text));
+    font-family: var(--font-body);
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
   }
 
   html,
@@ -122,6 +144,10 @@
   .form-select option {
     padding: 8px 12px;
   }
+
+  .theme-heading {
+    font-family: var(--font-heading);
+  }
 }
 
 @keyframes splash-write {
@@ -147,7 +173,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 20%, #183b72 0%, #081326 48%, #050b16 100%);
+  background: radial-gradient(circle at 50% 20%, rgb(var(--color-primary) / 0.42) 0%, rgb(var(--color-bg-dark) / 0.98) 48%, rgb(var(--color-bg-dark) / 1) 100%);
   color: white;
 }
 
@@ -170,7 +196,7 @@
   line-height: 1.1;
   white-space: nowrap;
   letter-spacing: -0.025em;
-  background: linear-gradient(90deg, #0070f3, #f97316);
+  background: linear-gradient(90deg, rgb(var(--color-primary)), rgb(var(--color-accent)));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -179,7 +205,7 @@
 .splash-wordmark span {
   display: inline-block;
   opacity: 0;
-  background: linear-gradient(90deg, #0070f3, #f97316);
+  background: linear-gradient(90deg, rgb(var(--color-primary)), rgb(var(--color-accent)));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -187,7 +213,7 @@
 }
 
 .splash-progress {
-  background: linear-gradient(90deg, #38bdf8, #0070f3, #f97316);
+  background: linear-gradient(90deg, rgb(var(--color-primary)), rgb(var(--color-primary-dark)), rgb(var(--color-accent)));
   transition: width 80ms linear;
 }
 
@@ -217,5 +243,5 @@
   opacity: 0.35;
 }
 
-.splash-orb-one { top: -12rem; right: -8rem; height: 30rem; width: 30rem; background: #0070f3; }
-.splash-orb-two { bottom: -15rem; left: -10rem; height: 32rem; width: 32rem; background: #f97316; }
+.splash-orb-one { top: -12rem; right: -8rem; height: 30rem; width: 30rem; background: rgb(var(--color-primary)); }
+.splash-orb-two { bottom: -15rem; left: -10rem; height: 32rem; width: 32rem; background: rgb(var(--color-accent)); }

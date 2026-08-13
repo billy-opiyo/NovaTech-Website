@@ -8,6 +8,7 @@ import {
 	useCallback,
 	ReactNode,
 } from "react"
+import { DEFAULT_SHIPPING_COST, FREE_SHIPPING_THRESHOLD } from "../constants"
 
 export interface CartItem {
 	id: string
@@ -157,7 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 		(sum, item) => sum + item.price * item.quantity,
 		0,
 	)
-	const shippingEstimate = subtotal > 50000 ? 0 : 500 // Free shipping over KES 50,000
+	const shippingEstimate = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_COST
 	const total = subtotal + shippingEstimate
 
 	return (

@@ -7,6 +7,7 @@ import Testimonials from "@/components/home/Testimonials"
 import Newsletter from "@/components/home/Newsletter"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
+import { clientConfig } from "@/config/client.config"
 
 export default function HomePage() {
 	return (
@@ -15,7 +16,7 @@ export default function HomePage() {
 			<CategoryGrid />
 			<FeaturedProducts />
 			<Testimonials />
-			<Newsletter />
+			{clientConfig.features.showNewsletter && <Newsletter />}
 			<div className="glass-card p-8 md:p-12 mb-16">
 				<div className="grid md:grid-cols-2 gap-8">
 					<div>
@@ -25,12 +26,12 @@ export default function HomePage() {
 								<Phone className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Call Us</p>
-									<p className="text-gray-600">Mon - Sat, 8AM - 6PM</p>
-									<a
-										href="tel:+254700123456"
+										<p className="text-gray-600">{clientConfig.contact.businessHours}</p>
+										<a
+											href={clientConfig.contact.phoneHref}
 										className="text-primary hover:underline transition-colors"
 									>
-										+254 700 123 456
+											{clientConfig.contact.phoneDisplay}
 									</a>
 								</div>
 							</div>
@@ -38,12 +39,12 @@ export default function HomePage() {
 								<Mail className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Email Us</p>
-									<p className="text-gray-600">We reply within 24 hours</p>
-									<a
-										href="mailto:support@novatechstore.co.ke"
+										<p className="text-gray-600">{clientConfig.contact.responseTime}</p>
+										<a
+											href={clientConfig.contact.emailHref}
 										className="text-primary hover:underline transition-colors"
 									>
-										support@novatechstore.co.ke
+											{clientConfig.contact.email}
 									</a>
 								</div>
 							</div>
@@ -55,8 +56,8 @@ export default function HomePage() {
 								<MapPin className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Visit Our Store</p>
-									<p className="text-gray-600">Kimathi Street, CBD</p>
-									<p className="text-primary">Nairobi, Kenya</p>
+									<p className="text-gray-600">{clientConfig.contact.addressLine}</p>
+									<p className="text-primary">{clientConfig.contact.cityCountry}</p>
 								</div>
 							</div>
 						</div>

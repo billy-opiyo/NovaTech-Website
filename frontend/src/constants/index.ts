@@ -1,11 +1,13 @@
 // Application-wide constants
+// Keep this relative import compatible with the repository's plain Node test loader.
+import { clientConfig } from "../config/client.config"
 
-export const APP_NAME = "NovaTech"
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+export const APP_NAME = clientConfig.brand.shortName
+export const APP_URL = clientConfig.site.url
 
 // Free shipping threshold (KES)
-export const FREE_SHIPPING_THRESHOLD = 50000
-export const DEFAULT_SHIPPING_COST = 500
+export const FREE_SHIPPING_THRESHOLD = clientConfig.ecommerce.freeShippingThreshold
+export const DEFAULT_SHIPPING_COST = clientConfig.ecommerce.defaultShippingCost
 
 // Order statuses
 export const ORDER_STATUSES = [

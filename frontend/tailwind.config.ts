@@ -6,9 +6,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#0070f3', dark: '#005bb5' },
-        accent: '#f97316',
-        dark: { bg: '#0f172a', surface: '#1e293b', text: '#e2e8f0' },
+        primary: {
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-dark) / <alpha-value>)',
+        },
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+        theme: {
+          bg: 'rgb(var(--color-theme-bg) / <alpha-value>)',
+          surface: 'rgb(var(--color-theme-surface) / <alpha-value>)',
+          text: 'rgb(var(--color-theme-text) / <alpha-value>)',
+          muted: 'rgb(var(--color-theme-muted) / <alpha-value>)',
+          border: 'rgb(var(--color-theme-border) / <alpha-value>)',
+        },
+        dark: {
+          bg: 'rgb(var(--color-theme-bg) / <alpha-value>)',
+          surface: 'rgb(var(--color-theme-surface) / <alpha-value>)',
+          text: 'rgb(var(--color-theme-text) / <alpha-value>)',
+        },
       },
       backdropBlur: { xs: '2px' },
       animation: {

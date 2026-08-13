@@ -19,6 +19,7 @@ import {
 	CreditCard,
 } from "lucide-react"
 import clsx from "clsx"
+import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 
 interface FAQ {
 	question: string
@@ -151,15 +152,15 @@ export default function ContactPage() {
 					{
 						icon: Phone,
 						title: "Call Us",
-						description: "Mon - Sat, 8AM - 6PM",
-						details: "+254 700 123 456",
+						description: clientConfig.contact.businessHours,
+						details: clientConfig.contact.phoneDisplay,
 						color: "bg-blue-500",
 					},
 					{
 						icon: Mail,
 						title: "Email Us",
-						description: "We reply within 24 hours",
-details: "support@novatechstore.co.ke",
+						description: clientConfig.contact.responseTime,
+						details: clientConfig.contact.email,
 						color: "bg-green-500",
 					},
 					{
@@ -167,6 +168,7 @@ details: "support@novatechstore.co.ke",
 						title: "WhatsApp",
 						description: "Quick chat support",
 						details: "Chat on WhatsApp",
+						href: getWhatsAppHref(),
 						color: "bg-green-600",
 					},
 				].map((card, index) => (

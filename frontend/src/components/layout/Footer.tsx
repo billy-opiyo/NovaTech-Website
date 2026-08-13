@@ -1,28 +1,29 @@
 import Link from "next/link"
 import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
+import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 
 const socialLinks = [
 	{
 		label: "Facebook",
-		href: "https://facebook.com",
+		href: clientConfig.social.facebook,
 		icon: FaFacebookF,
 		color: "bg-blue-600 hover:bg-blue-700",
 	},
 	{
 		label: "Instagram",
-		href: "https://instagram.com",
+		href: clientConfig.social.instagram,
 		icon: FaInstagram,
 		color: "bg-pink-600 hover:bg-pink-700",
 	},
 	{
 		label: "TikTok",
-		href: "https://tiktok.com",
+		href: clientConfig.social.tiktok,
 		icon: FaTiktok,
 		color: "bg-black hover:bg-neutral-800",
 	},
 	{
 		label: "WhatsApp",
-		href: "https://wa.me/254700000000",
+		href: getWhatsAppHref(),
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	},
@@ -55,10 +56,9 @@ export default function Footer() {
 		<footer className="glass mt-20 border-t border-white/10">
 			<div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-10 pb-28 text-center sm:grid-cols-2 sm:py-12 sm:pb-28 md:gap-8 md:pb-24 lg:grid-cols-4 lg:pb-12 lg:text-left">
 				<div className="mx-auto max-w-xs lg:mx-0">
-					<h3 className="text-lg font-bold mb-4">NovaTech Store</h3>
+					<h3 className="text-lg font-bold mb-4">{clientConfig.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						Your trusted electronics store in Kenya. Genuine products, warranty,
-						fast delivery.
+						{clientConfig.brand.tagline}. Genuine products, warranty, fast delivery.
 					</p>
 				</div>
 
@@ -105,7 +105,7 @@ export default function Footer() {
 						))}
 					</div>
 					<p className="text-xs mt-4 text-gray-500">
-						© {year} NovaTech Store. All rights reserved.
+						© {year} {clientConfig.brand.name}. All rights reserved.
 					</p>
 					<div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-gray-500 lg:justify-start">
 						{legalLinks.map(({ label, href }) => <Link key={href} href={href} className="hover:text-primary">{label}</Link>)}

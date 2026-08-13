@@ -7,15 +7,7 @@ import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import { Moon, Sun, ShoppingCart, Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import clsx from "clsx"
-
-const navLinks = [
-	{ name: "Home", href: "/" },
-	{ name: "Phones", href: "/category/phones" },
-	{ name: "Laptops", href: "/category/laptops" },
-	{ name: "Accessories", href: "/category/accessories" },
-	{ name: "Deals", href: "/deals" },
-]
+import { clientConfig } from "@/config/client.config"
 
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
@@ -29,19 +21,19 @@ export default function Header() {
 					<Link href="/" className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							<Image
-								src="/images/NovaTech icon.png"
-								alt="NovaTech logo"
+								src={clientConfig.brand.logo}
+								alt={clientConfig.brand.logoAlt}
 								fill
 								sizes="(max-width: 640px) 40px, 44px"
 								className="object-contain"
 							/>
 						</div>
 						<span className="whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl">
-							NovaTech Store
+							{clientConfig.brand.name}
 						</span>
 					</Link>
 					<nav className="hidden gap-3 md:flex lg:gap-6">
-						{navLinks.map((link) => (
+						{clientConfig.navigation.map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
@@ -93,7 +85,7 @@ export default function Header() {
 						className="md:hidden glass border-t border-white/10 overflow-hidden"
 					>
 						<div className="px-4 py-4 flex flex-col gap-3">
-							{navLinks.map((link) => (
+							{clientConfig.navigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}

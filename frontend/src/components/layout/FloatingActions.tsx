@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FaWhatsapp, FaArrowUp } from "react-icons/fa"
+import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 
 export default function FloatingActions() {
 	const [showToTop, setShowToTop] = useState(false)
@@ -23,15 +24,15 @@ export default function FloatingActions() {
 
 	return (
 		<>
-			<Link
-				href="https://wa.me/254700000000?text=Hello%20NovaTech%20Store%2C%20I%20need%20help%20with%20my%20order."
+			{clientConfig.features.showWhatsAppButton && <Link
+				href={getWhatsAppHref()}
 				target="_blank"
 				rel="noreferrer"
 				aria-label="Chat on WhatsApp"
 className="fixed bottom-16 left-3 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#1e8e3e] text-white shadow-lg shadow-[#1e8e3e]/20 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#1e8e3e]/30 focus:outline-none focus:ring-4 focus:ring-[#1e8e3e]/30 md:bottom-5 md:left-5"
 			>
 				<FaWhatsapp className="h-6 w-6" />
-			</Link>
+			</Link>}
 
 			{showToTop && (
 				<button
