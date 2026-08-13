@@ -39,6 +39,20 @@ The current implementation also includes the following production hardening work
 - Added Playwright browser tests, Ubuntu CI checks, staging health checks, and database backup/restore verification scripts.
 - Strengthened production environment validation for HTTPS app URLs, `AUTH_SECRET`, payment providers, R2 storage, and transactional email.
 
+### Latest storefront and account updates
+
+The latest UI implementation updates include:
+
+- Added developer-managed client configuration for branding, contact details, navigation, SEO, homepage content, commerce defaults, feature flags, and reusable theme presets.
+- Replaced hardcoded theme values with preset-driven light/dark CSS variables and added a flash-free theme preference initialization path.
+- Improved responsive behavior across the header, mobile navigation, footer, homepage sections, floating actions, product details, and search overlay for small and large screens.
+- Added accessibility refinements including clearer control labels, keyboard-friendly interactions, focus states, live toast notifications, and improved semantic status messaging.
+- Added account loading states and corrected the account middleware guard so authenticated account pages resolve consistently.
+- Added profile image upload support in account settings, including storage-key generation, supported image formats, a 5 MB limit, and saved light/dark theme preferences.
+- Refreshed the branded splash screen with a responsive gradient wordmark, animated progress treatment, and faster loading feedback.
+- Added public email verification and password reset flows, plus searchable public legal pages for privacy, cookies, and terms.
+- Added SEO metadata and image-host preconnect configuration, and improved navbar text truncation and shared notification behavior.
+
 ## Production verification
 
 The following checks are available from the repository root:
@@ -113,6 +127,16 @@ The tables below list every UI page implemented under `frontend/src/app`. `Signe
 | Sign in | Public | [Open](http://localhost:3000/auth/signin) | [Open](https://novatechstore.co.ke/auth/signin) |
 | Sign up | Public | [Open](http://localhost:3000/auth/signup) | [Open](https://novatechstore.co.ke/auth/signup) |
 | Forgot password | Public | [Open](http://localhost:3000/auth/forgot-password) | [Open](https://novatechstore.co.ke/auth/forgot-password) |
+| Reset password | Public; token required | [Open](http://localhost:3000/auth/reset-password) | [Open](https://novatechstore.co.ke/auth/reset-password) |
+| Verify email | Public; verification code required | [Open](http://localhost:3000/auth/verify-email) | [Open](https://novatechstore.co.ke/auth/verify-email) |
+
+### Legal and policy pages
+
+| Page | Access | Development | Production |
+|---|---|---|---|
+| Privacy policy | Public | [Open](http://localhost:3000/privacy-policy) | [Open](https://novatechstore.co.ke/privacy-policy) |
+| Cookie policy | Public | [Open](http://localhost:3000/cookie-policy) | [Open](https://novatechstore.co.ke/cookie-policy) |
+| Terms and conditions | Public | [Open](http://localhost:3000/terms) | [Open](https://novatechstore.co.ke/terms) |
 
 ### Customer account
 
@@ -161,6 +185,7 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 |------|-------------|
 | `README.md` | This overview file |
 | `features.md` | Comprehensive list of all implemented features |
+| `client-customization.md` | Client branding, theme presets, content, and staging customization guide |
 
 ## Tech Stack
 
@@ -179,6 +204,7 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 ## Quick Links
 
 - [Features](features.md) — Complete list of implemented features
+- [Client customization](client-customization.md) — Branding, themes, content, and client setup
 - [Page links](#page-links) — Development and production URLs for every UI page
 - [Database Schema](../README.md#database-schema-overview) — Prisma model overview
 - [API Endpoints](../README.md#-backend-api-app-router-route-handlers) — Backend API reference
