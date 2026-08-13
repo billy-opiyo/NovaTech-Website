@@ -53,7 +53,7 @@ export async function getAdminLogs(req: NextRequest) {
 			total,
 			page,
 			totalPages: Math.ceil(total / limit),
-			actions: distinctActions.map((a) => a.action),
+			actions: distinctActions.map((a: { action: string }) => a.action),
 		})
 	} catch (error: any) {
 		console.error("Admin logs API error:", error)
