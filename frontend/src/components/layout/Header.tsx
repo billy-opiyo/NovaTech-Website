@@ -24,9 +24,9 @@ export default function Header() {
 	return (
 		<header className="sticky top-0 z-50 glass backdrop-blur-lg border-b border-white/10">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
-				<div className="flex justify-between items-center py-3 sm:py-4 gap-2">
+				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
-					<Link href="/" className="flex items-center gap-2 min-w-0">
+					<Link href="/" className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							<Image
 								src="/images/NovaTech icon.png"
@@ -36,11 +36,11 @@ export default function Header() {
 								className="object-contain"
 							/>
 						</div>
-						<span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
+						<span className="whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl">
 							NovaTech Store
 						</span>
 					</Link>
-					<nav className="hidden md:flex gap-4 lg:gap-6">
+					<nav className="hidden gap-3 md:flex lg:gap-6">
 						{navLinks.map((link) => (
 							<Link
 								key={link.href}
@@ -53,7 +53,7 @@ export default function Header() {
 					</nav>
 
 					{/* Right side icons */}
-					<div className="flex items-center gap-2 sm:gap-4">
+					<div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-4">
 						<button
 							onClick={toggleTheme}
 							className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"

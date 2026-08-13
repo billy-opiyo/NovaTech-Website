@@ -53,6 +53,10 @@ export default function RootLayout({
 					}}
 				/>
 				<link rel="icon" href="/favicon.ico" />
+				<link rel="preconnect" href="https://images.unsplash.com" />
+				<link rel="dns-prefetch" href="https://images.unsplash.com" />
+				<link rel="preconnect" href="https://images.pexels.com" />
+				<link rel="dns-prefetch" href="https://images.pexels.com" />
 				<meta
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"

@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Search, X, TrendingUp, Clock, ArrowRight, Zap } from "lucide-react"
+import { Search, X, TrendingUp, Clock, ArrowRight, Zap, FileText } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
 import { getProductImage } from "@/constants/productImages"
+import { publicPages } from "@/constants/publicPages"
 
 interface SearchSuggestion {
-	type: "product" | "category" | "brand" | "recent"
+	type: "product" | "page" | "category" | "brand" | "recent"
 	text: string
 	href: string
+	description?: string
 	image?: string
 	price?: number
 }
@@ -58,10 +60,17 @@ export default function SearchOverlay() {
 	}, [isOpen])
 
 	useEffect(() => {
-		if (query.length < 1) {
+		const normalizedQuery = query.trim().toLowerCase()
+		if (!normalizedQuery) {
 			setSuggestions([])
 			return
 		}
+
+		const pageSuggestions: SearchSuggestion[] = publicPages
+			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
+			.slice(0, 4)
+			.map((page) => ({ type: "page", text: page.text, href: page.href, description: page.description }))
+
 		const controller = new AbortController()
 		const loadSuggestions = async () => {
 			try {
@@ -78,13 +87,16 @@ export default function SearchOverlay() {
 					image: product.images?.[0],
 					price: product.discountedPrice ?? product.price,
 				}))
-				setSuggestions(products)
+				setSuggestions([...pageSuggestions, ...products].slice(0, 8))
 			} catch (error) {
-				if ((error as Error).name !== "AbortError") setSuggestions([])
+				if ((error as Error).name !== "AbortError") setSuggestions(pageSuggestions)
 			}
 		}
-		loadSuggestions()
-		return () => controller.abort()
+		const debounce = window.setTimeout(loadSuggestions, 150)
+		return () => {
+			window.clearTimeout(debounce)
+			controller.abort()
+		}
 	}, [query])
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -109,10 +121,10 @@ export default function SearchOverlay() {
 		<>
 			<button
 				onClick={() => setIsOpen(true)}
-				className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition w-64"
+				className="hidden items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-2 py-2 text-sm text-gray-500 transition hover:text-gray-700 md:flex md:w-36 md:px-3 lg:w-64 lg:px-4 dark:hover:text-gray-300"
 			>
 				<Search size={16} />
-				<span className="flex-1 text-left">Search products...</span>
+				<span className="flex-1 text-left">Search pages &amp; products...</span>
 				<kbd className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">
 					⌘K
 				</kbd>
@@ -184,6 +196,11 @@ export default function SearchOverlay() {
 														/>
 													</div>
 												)}
+												{suggestion.type === "page" && (
+													<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+														<FileText size={18} className="text-primary" />
+													</div>
+												)}
 												{suggestion.type === "category" && (
 													<div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
 														<Search size={18} className="text-blue-500" />
@@ -201,6 +218,9 @@ export default function SearchOverlay() {
 												)}
 												<div className="flex-1">
 													<p className="font-medium">{suggestion.text}</p>
+													{suggestion.type === "page" && (
+														<p className="text-sm text-gray-500">{suggestion.description}</p>
+													)}
 													{suggestion.price && (
 														<p className="text-sm text-primary">
 															KES {suggestion.price.toLocaleString()}

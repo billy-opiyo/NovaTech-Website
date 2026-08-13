@@ -61,3 +61,9 @@ export function generateFileKey(productId: string, fileName: string): string {
 	const timestamp = Date.now()
 	return `products/${productId}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
 }
+
+export function generateProfileFileKey(userId: string, fileName: string): string {
+	const extension = fileName.split(".").pop()?.toLowerCase() || "jpg"
+	const timestamp = Date.now()
+	return `profiles/${userId}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
+}

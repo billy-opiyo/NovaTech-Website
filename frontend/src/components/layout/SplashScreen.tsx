@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 
 const SPLASH_DURATION = 3600
+const POST_LOAD_DELAY = 1500
 
 export default function SplashScreen() {
 	const [progress, setProgress] = useState(1)
@@ -21,7 +22,9 @@ export default function SplashScreen() {
 		}
 
 		frame = window.requestAnimationFrame(update)
-		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION + 250)
+		// Keep the completed state visible for a short moment so the transition
+		// feels intentional instead of disappearing as soon as it reaches 100%.
+		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION + POST_LOAD_DELAY)
 
 		return () => {
 			window.cancelAnimationFrame(frame)
@@ -50,7 +53,9 @@ export default function SplashScreen() {
 				<div className="mt-10 w-full">
 					<div className="mb-3 flex items-center justify-between text-sm text-slate-300">
 						<span>Preparing your store</span>
-						<span className="tabular-nums">{progress}%<span className="splash-ellipsis" aria-hidden="true">…</span></span>
+						<span className="tabular-nums">{progress}%<span className="splash-ellipsis" aria-label="Loading">
+							<span>.</span><span>.</span><span>.</span>
+						</span></span>
 					</div>
 					<div className="h-2 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
 						<div className="splash-progress h-full rounded-full" style={{ width: `${progress}%` }} />
