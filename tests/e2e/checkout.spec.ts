@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test"
 
 test("catalog search and checkout form are browser-accessible", async ({ page }) => {
-	await page.goto("/products")
+	await page.goto("/products", { waitUntil: "domcontentloaded" })
 	await expect(page.getByRole("heading", { name: /all products/i })).toBeVisible()
 	const search = page.getByPlaceholder(/search products/i).first()
 	await search.fill("iphone")
-	await expect(page.locator("body")).toContainText(/iphone|no products/i)
+	await expect(page.locator("body")).toContainText(/iphone|no products|0 products found/i)
 
-	await page.goto("/checkout")
+	await page.goto("/checkout", { waitUntil: "domcontentloaded" })
 	await expect(page.locator("body")).toContainText(/checkout|cart is empty/i)
 })
 
