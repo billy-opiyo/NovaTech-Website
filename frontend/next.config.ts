@@ -1,12 +1,13 @@
 import path from "path"
 import NextConfig from "next"
+import type { Configuration } from "webpack"
 
 const nextConfig = {
 	reactStrictMode: true,
 	devIndicators: false,
 	outputFileTracingRoot: path.join(__dirname, ".."),
 	serverExternalPackages: ["@prisma/client", "prisma"],
-	webpack(config, { isServer }) {
+	webpack(config: Configuration, { isServer }: { isServer: boolean }) {
 		if (isServer) {
 			config.externals = config.externals || []
 			if (Array.isArray(config.externals)) {
