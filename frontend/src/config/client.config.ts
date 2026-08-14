@@ -10,7 +10,7 @@ export const clientConfig = {
 		shortName: "NovaTech",
 		logo: "/images/NovaTech icon.png",
 		logoAlt: "NovaTech Store logo",
-		favicon: "/favicon.ico",
+		favicon: "/images/NovaTech%20icon.png",
 		tagline: "Kenya's trusted electronics store",
 	},
 	site: {
