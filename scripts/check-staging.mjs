@@ -6,7 +6,7 @@ if (!baseUrl) {
 
 const health = await fetch(new URL("/api/health", baseUrl), { headers: { "cache-control": "no-cache" } })
 const body = await health.json().catch(() => ({}))
-if (!health.ok || body.status !== "ok") {
+if (!health.ok || body.ok !== true || body.database !== "up") {
 	console.error("Staging health check failed", health.status, body)
 	process.exit(1)
 }
