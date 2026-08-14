@@ -8,3 +8,5 @@ dist/
 *.log
 *.tsbuildinfo
 frontend-tres.txt
+playwright-report/
+test-results/
