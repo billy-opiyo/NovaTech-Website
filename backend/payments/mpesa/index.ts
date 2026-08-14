@@ -170,8 +170,9 @@ export async function verifyMpesaPayment(
 
 	const resultCode = response.ResultCode ?? 0
 	const completed = resultCode === 0
+	const pending = resultCode === 4999
 
-	const status = completed ? "COMPLETED" : "FAILED"
+	const status = completed ? "COMPLETED" : pending ? "PENDING" : "FAILED"
 
 	if (payment) {
 		await prisma.payment.update({
@@ -225,10 +226,10 @@ export async function verifyMpesaPayment(
 			}
 		}
 	}
-	if (!completed && payment?.orderId) await cancelPendingOrder(payment.orderId)
+	if (!completed && !pending && payment?.orderId) await cancelPendingOrder(payment.orderId)
 
 	return {
-		ok: completed,
+		ok: completed || pending,
 		provider: "mpesa",
 		reference,
 		checkoutRequestId,
@@ -237,6 +238,8 @@ export async function verifyMpesaPayment(
 		resultDescription: response.ResultDesc || response.ResponseDescription,
 		message: completed
 			? "M-Pesa payment completed successfully."
+			: pending
+			? "M-Pesa payment is still being processed."
 			: `M-Pesa payment failed: ${response.ResultDesc || response.ResponseDescription}`,
 	}
 }
