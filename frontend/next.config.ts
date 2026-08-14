@@ -5,6 +5,7 @@ const nextConfig = {
 	reactStrictMode: true,
 	devIndicators: false,
 	outputFileTracingRoot: path.join(__dirname, ".."),
+	serverExternalPackages: ["@prisma/client", "prisma"],
 	images: {
 		remotePatterns: [
 			{
