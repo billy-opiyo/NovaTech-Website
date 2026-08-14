@@ -180,6 +180,15 @@
   .theme-heading {
     font-family: var(--font-heading);
   }
+
+  .home-map-frame {
+    filter: none;
+    transition: filter 200ms ease;
+  }
+
+  .dark .home-map-frame {
+    filter: brightness(0.78) contrast(1.08);
+  }
 }
 
 @keyframes splash-write {
