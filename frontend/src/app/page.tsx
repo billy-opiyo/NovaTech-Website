@@ -124,7 +124,7 @@ export default function HomePage() {
 						title="NovaTech Store location on Google Maps"
 						loading="lazy"
 						referrerPolicy="no-referrer-when-downgrade"
-						className="h-full w-full border-0"
+						className="home-map-frame h-full w-full border-0"
 					/>
 				</div>
 			</div>
