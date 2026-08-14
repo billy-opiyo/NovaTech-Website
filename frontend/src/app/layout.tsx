@@ -54,7 +54,7 @@ export default function RootLayout({
 						})();`,
 					}}
 				/>
-				<link rel="icon" href={clientConfig.brand.favicon} />
+				<link rel="icon" type="image/png" href={clientConfig.brand.favicon} />
 				<link rel="preconnect" href="https://images.unsplash.com" />
 				<link rel="dns-prefetch" href="https://images.unsplash.com" />
 				<link rel="preconnect" href="https://images.pexels.com" />

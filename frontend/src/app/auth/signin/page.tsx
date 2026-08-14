@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
-import Image from "next/image"
+import { FcGoogle } from "react-icons/fc"
 
 function SignInForm() {
 	const router = useRouter()
@@ -76,7 +76,7 @@ function SignInForm() {
 						disabled={isLoading}
 						className="w-full mb-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50"
 					>
-						<Image src="/google-icon.svg" alt="Google" width={20} height={20} />
+						<FcGoogle size={20} aria-hidden="true" />
 						<span className="font-medium">Continue with Google</span>
 					</button>
 

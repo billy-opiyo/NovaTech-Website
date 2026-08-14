@@ -6,7 +6,6 @@ import {
 	Phone,
 	Mail,
 	MapPin,
-	MessageSquare,
 	Clock,
 	Send,
 	ChevronDown,
@@ -18,6 +17,7 @@ import {
 	RotateCcw,
 	CreditCard,
 } from "lucide-react"
+import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 
@@ -154,6 +154,7 @@ export default function ContactPage() {
 						title: "Call Us",
 						description: clientConfig.contact.businessHours,
 						details: clientConfig.contact.phoneDisplay,
+						href: clientConfig.contact.phoneHref,
 						color: "bg-blue-500",
 					},
 					{
@@ -161,10 +162,11 @@ export default function ContactPage() {
 						title: "Email Us",
 						description: clientConfig.contact.responseTime,
 						details: clientConfig.contact.email,
+						href: clientConfig.contact.emailHref,
 						color: "bg-green-500",
 					},
 					{
-						icon: MessageSquare,
+						icon: FaWhatsapp,
 						title: "WhatsApp",
 						description: "Quick chat support",
 						details: "Chat on WhatsApp",
@@ -194,7 +196,14 @@ export default function ContactPage() {
 						</div>
 						<h3 className="font-semibold text-lg mb-1">{card.title}</h3>
 						<p className="text-sm text-gray-500 mb-3">{card.description}</p>
-						<p className="font-medium text-primary">{card.details}</p>
+						<a
+							href={card.href}
+							target={card.title === "WhatsApp" ? "_blank" : undefined}
+							rel={card.title === "WhatsApp" ? "noreferrer" : undefined}
+							className="font-medium text-primary hover:underline"
+						>
+							{card.details}
+						</a>
 					</motion.div>
 				))}
 			</div>

@@ -9,6 +9,11 @@ import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
 import { clientConfig } from "@/config/client.config"
 
+const mapEmbedUrl =
+	"https://www.google.com/maps?q=Kimathi+Street,+CBD,+Nairobi,+Kenya&output=embed"
+const mapLink =
+	"https://www.google.com/maps/search/?api=1&query=Kimathi+Street,+CBD,+Nairobi,+Kenya"
+
 export default function HomePage() {
 	return (
 		<div className="space-y-24">
@@ -17,7 +22,8 @@ export default function HomePage() {
 			<FeaturedProducts />
 			<Testimonials />
 			{clientConfig.features.showNewsletter && <Newsletter />}
-			<div className="glass-card p-8 md:p-12 mb-16">
+			<div className="space-y-8 mb-16">
+			<div className="glass-card p-8 md:p-12">
 				<div className="grid md:grid-cols-2 gap-8">
 					<div>
 						<h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
@@ -64,7 +70,7 @@ export default function HomePage() {
 
 						<div>
 							<h3 className="font-semibold mb-3">Quick Links</h3>
-							<div className="space-y-4">
+							<div className="flex flex-col gap-3">
 								<Link
 									href="/contact"
 									className="text-primary hover:underline transition-colors"
@@ -91,6 +97,37 @@ export default function HomePage() {
 						</Link>
 					</div>
 				</div>
+			</div>
+
+			<div className="glass-card overflow-hidden p-0">
+				<div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
+					<div className="flex items-start gap-3">
+						<MapPin className="mt-1 shrink-0 text-primary" size={22} />
+						<div>
+							<h2 className="text-2xl font-bold">Visit Us</h2>
+							<p className="mt-1 text-gray-600">{clientConfig.contact.addressLine}</p>
+							<p className="text-primary">{clientConfig.contact.cityCountry}</p>
+						</div>
+					</div>
+					<a
+						href={mapLink}
+						target="_blank"
+						rel="noreferrer"
+						className="text-primary hover:underline"
+					>
+						Open in Google Maps
+					</a>
+				</div>
+				<div className="h-72 w-full sm:h-80">
+					<iframe
+						src={mapEmbedUrl}
+						title="NovaTech Store location on Google Maps"
+						loading="lazy"
+						referrerPolicy="no-referrer-when-downgrade"
+						className="h-full w-full border-0"
+					/>
+				</div>
+			</div>
 			</div>
 		</div>
 	)
