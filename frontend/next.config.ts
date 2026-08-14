@@ -6,6 +6,15 @@ const nextConfig = {
 	devIndicators: false,
 	outputFileTracingRoot: path.join(__dirname, ".."),
 	serverExternalPackages: ["@prisma/client", "prisma"],
+	webpack(config, { isServer }) {
+		if (isServer) {
+			config.externals = config.externals || []
+			if (Array.isArray(config.externals)) {
+				config.externals.push("@prisma/client", "prisma")
+			}
+		}
+		return config
+	},
 	images: {
 		remotePatterns: [
 			{
