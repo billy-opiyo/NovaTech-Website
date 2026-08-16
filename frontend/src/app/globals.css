@@ -212,7 +212,7 @@
   background-color: rgb(var(--color-bg-dark));
   background-image:
     linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
-    url("/images/NovaTech cover mobile.png");
+    url("/images/NovaTech%20cover%20mobile.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -224,7 +224,7 @@
   .splash-screen {
     background-image:
       linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
-      url("/images/NovaTech cover mobile.png");
+      url("/images/NovaTech%20cover%20mobile.png");
   }
 }
 
@@ -232,7 +232,7 @@
   .splash-screen {
     background-image:
       linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
-      url("/images/NovaTech Cover tablets-iPad.png");
+      url("/images/NovaTech%20Cover%20tablets-iPad.png");
   }
 }
 
