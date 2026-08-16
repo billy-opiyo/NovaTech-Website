@@ -78,19 +78,6 @@ export default function SplashScreen() {
 
 	return (
 		<div className="splash-screen" role="status" aria-live="polite" aria-label={`Loading ${clientConfig.brand.name}`}>
-			<picture className="splash-background" aria-hidden="true">
-				<source
-					media="(min-width: 1200px)"
-					srcSet="/images/NovaTech%20Cover%20tablets-iPad.png"
-				/>
-				<img
-					src="/images/NovaTech%20cover%20mobile.png"
-					alt=""
-					fetchPriority="high"
-					loading="eager"
-				/>
-			</picture>
-			<div className="splash-backdrop" aria-hidden="true" />
 			<div className="relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
 				<p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200">Welcome to</p>
 				<h1 className="splash-wordmark" aria-label={clientConfig.brand.name}>
