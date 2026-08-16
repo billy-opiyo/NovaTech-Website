@@ -36,7 +36,12 @@ export default function RootLayout({
 	children: React.ReactNode
 }) {
 	return (
-		<html lang={clientConfig.site.language} suppressHydrationWarning style={themeToCssVariables(activeTheme) as React.CSSProperties}>
+		<html
+			lang={clientConfig.site.language}
+			className={clientConfig.features.showSplashScreen ? "splash-pending" : undefined}
+			suppressHydrationWarning
+			style={themeToCssVariables(activeTheme) as React.CSSProperties}
+		>
 			<head>
 				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}
 				<script
@@ -72,7 +77,7 @@ export default function RootLayout({
 				/>
 				<meta name="theme-color" content={activeTheme.dark.background} />
 			</head>
-			<body className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300">
+			<body className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${clientConfig.features.showSplashScreen ? "splash-pending" : ""}`}>
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
