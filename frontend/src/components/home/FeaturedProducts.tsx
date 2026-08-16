@@ -64,7 +64,7 @@ export default function FeaturedProducts() {
 						viewport={{ once: true }}
 						transition={{ delay: i * 0.1 }}
 					>
-						<Link href={`/products/${product.id}`} className="glass-card block group">
+						<Link href={`/products/${product.id}`} className="glass-card navy-glass block group">
 							<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden">
 								<Image
 									src={getProductImage(product.image, product.name)}

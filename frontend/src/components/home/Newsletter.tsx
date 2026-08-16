@@ -40,7 +40,7 @@ export default function Newsletter() {
 	}
 
 	return (
-		<section className="glass-card p-6 sm:p-8 text-center">
+		<section className="glass-card navy-glass p-6 sm:p-8 text-center">
 			<h2 className="text-2xl font-bold mb-4">Stay Updated</h2>
 			<p className="text-gray-600 dark:text-gray-300 mb-6">
 				Get exclusive deals and new arrivals straight to your inbox.
