@@ -1,16 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 
-const SPLASH_DURATION = 3600
-const POST_LOAD_DELAY = 1500
+const SPLASH_DURATION = 5000
 
 export default function SplashScreen() {
+	const pathname = usePathname()
+	const routeScope = pathname.startsWith("/admin") ? "admin" : "public"
+	const shownScopes = useRef(new Set<string>())
 	const [progress, setProgress] = useState(1)
-	const [visible, setVisible] = useState(true)
+	const [visible, setVisible] = useState(false)
 
 	useEffect(() => {
+		if (shownScopes.current.has(routeScope)) {
+			setVisible(false)
+			return
+		}
+
+		shownScopes.current.add(routeScope)
+		setProgress(1)
+		setVisible(true)
+	}, [routeScope])
+
+	useEffect(() => {
+		if (!visible) return
+
 		const startedAt = Date.now()
 		let frame = 0
 
@@ -22,15 +38,13 @@ export default function SplashScreen() {
 		}
 
 		frame = window.requestAnimationFrame(update)
-		// Keep the completed state visible for a short moment so the transition
-		// feels intentional instead of disappearing as soon as it reaches 100%.
-		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION + POST_LOAD_DELAY)
+		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION)
 
 		return () => {
 			window.cancelAnimationFrame(frame)
 			window.clearTimeout(finish)
 		}
-	}, [])
+	}, [routeScope, visible])
 
 	useEffect(() => {
 		if (!visible) return
