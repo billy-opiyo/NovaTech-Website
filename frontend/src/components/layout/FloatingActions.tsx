@@ -2,11 +2,14 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { FaWhatsapp, FaArrowUp } from "react-icons/fa"
 import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 
 export default function FloatingActions() {
+	const pathname = usePathname()
 	const [showToTop, setShowToTop] = useState(false)
+	const isAdminPage = pathname.startsWith("/admin")
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -24,7 +27,7 @@ export default function FloatingActions() {
 
 	return (
 		<>
-			{clientConfig.features.showWhatsAppButton && <Link
+			{!isAdminPage && clientConfig.features.showWhatsAppButton && <Link
 				href={getWhatsAppHref()}
 				target="_blank"
 				rel="noreferrer"
