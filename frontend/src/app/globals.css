@@ -224,7 +224,7 @@
   .splash-screen {
     background-image:
       linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
-      url("/images/NovaTech Cover tablets-iPad.png");
+      url("/images/NovaTech cover mobile.png");
   }
 }
 
@@ -232,7 +232,7 @@
   .splash-screen {
     background-image:
       linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
-      url("/images/NovaTech cover desktop.png");
+      url("/images/NovaTech Cover tablets-iPad.png");
   }
 }
 
