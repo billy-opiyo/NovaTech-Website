@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 
 const SPLASH_DURATION = 5000
+const POST_LOAD_DELAY = 2000
 
 export default function SplashScreen() {
 	const pathname = usePathname()
 	const routeScope = pathname.startsWith("/admin") ? "admin" : "public"
 	const shownScopes = useRef(new Set<string>())
 	const [progress, setProgress] = useState(1)
-	const [visible, setVisible] = useState(false)
+	const [visible, setVisible] = useState(true)
 
 	useEffect(() => {
 		if (shownScopes.current.has(routeScope)) {
@@ -38,7 +39,7 @@ export default function SplashScreen() {
 		}
 
 		frame = window.requestAnimationFrame(update)
-		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION)
+		const finish = window.setTimeout(() => setVisible(false), SPLASH_DURATION + POST_LOAD_DELAY)
 
 		return () => {
 			window.cancelAnimationFrame(frame)

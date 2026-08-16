@@ -57,9 +57,9 @@ export default function RootLayout({
 				<link rel="icon" type="image/png" href={clientConfig.brand.favicon} />
 				{clientConfig.features.showSplashScreen && (
 					<>
-						<link rel="preload" as="image" href="/images/NovaTech cover mobile.png" media="(max-width: 767px)" />
-						<link rel="preload" as="image" href="/images/NovaTech cover mobile.png" media="(min-width: 768px) and (max-width: 1199px)" />
-						<link rel="preload" as="image" href="/images/NovaTech Cover tablets-iPad.png" media="(min-width: 1200px)" />
+						<link rel="preload" as="image" href="/images/NovaTech%20cover%20mobile.png" media="(max-width: 767px)" />
+						<link rel="preload" as="image" href="/images/NovaTech%20cover%20mobile.png" media="(min-width: 768px) and (max-width: 1199px)" />
+						<link rel="preload" as="image" href="/images/NovaTech%20Cover%20tablets-iPad.png" media="(min-width: 1200px)" />
 					</>
 				)}
 				<link rel="preconnect" href="https://images.unsplash.com" />
