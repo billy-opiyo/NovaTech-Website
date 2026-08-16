@@ -16,7 +16,7 @@ export default function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
-		<header className="sticky top-0 z-50 glass backdrop-blur-lg border-b border-white/10">
+		<header className="sticky top-0 z-50 glass navy-glass backdrop-blur-lg border-b border-white/10">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}

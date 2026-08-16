@@ -62,7 +62,7 @@ export default function StatsGrid() {
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: index * 0.1 }}
-					className="glass-card p-6 hover:scale-105 transition-transform cursor-pointer"
+					className="glass-card navy-glass p-6 hover:scale-105 transition-transform cursor-pointer"
 				>
 					<div className="flex items-start justify-between mb-4">
 						<div className={clsx("p-3 rounded-xl", stat.bgColor)}>

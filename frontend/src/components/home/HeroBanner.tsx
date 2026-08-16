@@ -7,7 +7,7 @@ import { clientConfig } from "@/config/client.config"
 
 export default function HeroBanner() {
 	return (
-		<section className="relative rounded-3xl overflow-hidden glass-card p-6 sm:p-8 md:p-16 text-center">
+		<section className="relative rounded-3xl overflow-hidden glass-card navy-glass p-6 sm:p-8 md:p-16 text-center">
 			<motion.div
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}

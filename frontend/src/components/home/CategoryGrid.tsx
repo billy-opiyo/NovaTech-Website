@@ -48,7 +48,7 @@ export default function CategoryGrid() {
 					>
 						<Link
 							href={`/category/${cat.slug}`}
-							className="glass-card block overflow-hidden group"
+							className="glass-card navy-glass block overflow-hidden group"
 						>
 							<div className="relative h-40 w-full">
 								<Image

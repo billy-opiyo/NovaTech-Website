@@ -160,7 +160,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 							exit={{ opacity: 0, y: -20, scale: 0.95 }}
 							className="search-overlay-panel fixed z-[60]"
 						>
-							<div className="glass-card p-4">
+							<div className="glass-card navy-glass p-4">
 								<div className="relative">
 									<Search
 										className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
