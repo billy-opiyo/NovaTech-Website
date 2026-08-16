@@ -196,11 +196,6 @@
   100% { opacity: 1; transform: translateY(0) rotate(0); }
 }
 
-@keyframes splash-pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 112, 243, 0.18); }
-  50% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(0, 112, 243, 0); }
-}
-
 @keyframes splash-dots {
   0%, 20%, 100% { opacity: 0.25; }
   10% { opacity: 1; }
@@ -215,21 +210,30 @@
   justify-content: center;
   overflow: hidden;
   background-color: rgb(var(--color-bg-dark));
-  background: radial-gradient(circle at 50% 20%, rgb(var(--color-primary) / 0.42) 0%, rgb(var(--color-bg-dark) / 0.98) 48%, rgb(var(--color-bg-dark) / 1) 100%), rgb(var(--color-bg-dark));
+  background-image:
+    linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
+    url("/images/NovaTech cover mobile.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: white;
   isolation: isolate;
 }
 
-.splash-logo {
-  display: flex;
-  height: 112px;
-  width: 112px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  animation: splash-pulse 2.2s ease-in-out infinite;
+@media (min-width: 768px) {
+  .splash-screen {
+    background-image:
+      linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
+      url("/images/NovaTech Cover tablets-iPad.png");
+  }
+}
+
+@media (min-width: 1200px) {
+  .splash-screen {
+    background-image:
+      linear-gradient(180deg, rgb(4 11 24 / 0.2), rgb(4 11 24 / 0.56)),
+      url("/images/NovaTech cover desktop.png");
+  }
 }
 
 .splash-wordmark {
@@ -278,13 +282,3 @@
 .splash-ellipsis span:nth-child(3) {
   animation-delay: 320ms;
 }
-
-.splash-orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(2px);
-  opacity: 0.35;
-}
-
-.splash-orb-one { top: -12rem; right: -8rem; height: 30rem; width: 30rem; background: rgb(var(--color-primary)); }
-.splash-orb-two { bottom: -15rem; left: -10rem; height: 32rem; width: 32rem; background: rgb(var(--color-accent)); }

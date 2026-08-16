@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { useEffect, useState } from "react"
 import { clientConfig } from "@/config/client.config"
 
@@ -60,12 +59,7 @@ export default function SplashScreen() {
 
 	return (
 		<div className="splash-screen" role="status" aria-live="polite" aria-label={`Loading ${clientConfig.brand.name}`}>
-			<div className="splash-orb splash-orb-one" />
-			<div className="splash-orb splash-orb-two" />
 			<div className="relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-				<div className="splash-logo mb-7">
-					<Image src={clientConfig.brand.logo} alt={clientConfig.brand.logoAlt} width={96} height={96} priority />
-				</div>
 				<p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200">Welcome to</p>
 				<h1 className="splash-wordmark" aria-label={clientConfig.brand.name}>
 					{Array.from(clientConfig.brand.name).map((character, index) => (
