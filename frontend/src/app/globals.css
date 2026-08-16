@@ -238,6 +238,7 @@ body.splash-pending {
     background-image:
       linear-gradient(180deg, rgb(4 11 24 / 0.28), rgb(4 11 24 / 0.62)),
       url("/images/NovaTech cover desktop.png");
+    background-size: cover, contain;
   }
 }
 
