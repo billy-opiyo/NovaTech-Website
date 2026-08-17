@@ -221,9 +221,28 @@
     font-family: var(--font-heading);
   }
 
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
   .home-map-frame {
     filter: none;
     transition: filter 200ms ease;
+  }
+
+  .home-map-viewport {
+    isolation: isolate;
+    overscroll-behavior: contain;
+  }
+
+  /* Keep a one-finger gesture over the map inside the map on touch devices. */
+  @media (max-width: 1024px) {
+    .home-map-viewport,
+    .home-map-frame {
+      touch-action: none;
+    }
   }
 
   .dark .home-map-frame {

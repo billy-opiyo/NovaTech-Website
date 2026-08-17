@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
+import SessionResume from "@/components/layout/SessionResume"
 import SplashScreen from "@/components/layout/SplashScreen"
 import { ToastProvider } from "@/components/ui/Toast"
 import { clientConfig } from "@/config/client.config"
@@ -81,6 +82,7 @@ export default function RootLayout({
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
+							<SessionResume />
 							{clientConfig.features.showSplashScreen && <SplashScreen />}
 							<Header />
 							<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
