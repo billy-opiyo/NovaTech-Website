@@ -58,6 +58,11 @@ export async function getFilteredProducts(params: URLSearchParams) {
 		case "price-desc":
 			orderBy = { price: "desc" }
 			break
+		case "rating":
+			// Fetch the most-reviewed products first; the client then sorts by
+			// calculated average rating for the visible result set.
+			orderBy = { reviews: { _count: "desc" } }
+			break
 		case "name":
 			orderBy = { name: "asc" }
 			break

@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Link from "next/link"
 import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react"
 
 const actions = [
@@ -21,14 +22,14 @@ export default function QuickActions() {
 			<h2 className="text-xl font-bold mb-4">Quick Actions</h2>
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 				{actions.map((action) => (
-					<a
+					<Link
 						key={action.label}
 						href={action.href}
 						className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary hover:bg-primary/5 transition"
 					>
 						<action.icon size={28} className="text-primary" />
 						<span className="text-sm font-medium">{action.label}</span>
-					</a>
+					</Link>
 				))}
 			</div>
 		</motion.div>

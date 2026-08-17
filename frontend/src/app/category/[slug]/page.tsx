@@ -399,7 +399,7 @@ export default function CategoryPage() {
 				<div className="flex justify-between items-center mb-8">
 					<h2 className="text-2xl font-bold">Trending in {category.title}</h2>
 					<Link
-						href={`/products?category=${slug}&sort=popular`}
+						href={`/products?category=${slug}&sortBy=rating`}
 						className="text-primary hover:underline flex items-center gap-1"
 					>
 						View All <ArrowRight size={16} />

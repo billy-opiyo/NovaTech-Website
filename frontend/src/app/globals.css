@@ -36,7 +36,9 @@
     scroll-behavior: smooth;
     scroll-padding-top: 80px;
     max-width: 100%;
-    overflow-x: hidden;
+    /* Clip horizontal overflow without creating an alternate scroll container.
+       This keeps document-level sticky headers working on mobile Safari. */
+    overflow-x: clip;
   }
 
   body {
@@ -45,7 +47,7 @@
     font-family: var(--font-body);
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     transition: background-color 200ms ease, color 200ms ease;
@@ -222,9 +224,11 @@
   }
 
   .site-header {
+    position: -webkit-sticky;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 60;
+    align-self: flex-start;
   }
 
   .home-map-frame {

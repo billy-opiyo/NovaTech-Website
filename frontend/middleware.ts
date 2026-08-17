@@ -2,19 +2,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { auth } from "./src/lib/auth.js"
 
-const publicRoutes = [
-	"/",
-	"/products",
-	"/categories",
-	"/deals",
-	"/compare",
-	"/contact",
-	"/auth/signin",
-	"/auth/signup",
-	"/auth/error",
-	"/api/auth",
-]
-
 const adminRoutes = ["/admin"]
 
 export async function middleware(request: NextRequest) {
@@ -49,9 +36,7 @@ export async function middleware(request: NextRequest) {
 	const isProtectedRoute =
 		pathname.startsWith("/account/") ||
 		pathname === "/cart" ||
-		pathname === "/checkout" ||
-		pathname === "/wishlist" ||
-		pathname.startsWith("/orders")
+		pathname === "/checkout"
 
 	if (isProtectedRoute && !isAuthenticated) {
 		const signInUrl = new URL("/auth/signin", request.url)

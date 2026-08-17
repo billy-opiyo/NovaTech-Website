@@ -9,6 +9,7 @@ import { getProductImage } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import NotFoundState from "@/components/content/NotFoundState"
 import { useToast } from "@/components/ui/Toast"
+import Recommendations from "@/components/product/Recommendations"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -135,6 +136,8 @@ export default function ProductDetailPage() {
 				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Specifications</h2><dl className="divide-y divide-gray-200 dark:divide-gray-700">{Object.entries(product.specs || {}).map(([key, value]) => <div key={key} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{key}</dt><dd className="text-right text-gray-500">{String(value)}</dd></div>)}</dl><p className="mt-5 text-sm text-gray-500">Warranty: {product.warranty || "Contact us for warranty details"}</p></div>
 				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Customer reviews</h2>{product.reviews.length === 0 ? <p className="text-gray-500">No reviews yet.</p> : <div className="space-y-5">{product.reviews.map((review) => <article key={review.id} className="border-b border-gray-200 pb-5 last:border-0 dark:border-gray-700"><div className="flex items-center justify-between"><span className="font-medium">{review.user?.name || "Customer"}</span><span className="flex items-center gap-1 text-sm"><Star size={14} className="fill-yellow-500 text-yellow-500" />{review.rating}</span></div><h3 className="mt-2 font-semibold">{review.title}</h3><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{review.comment}</p>{review.verified && <span className="mt-2 inline-block text-xs text-green-600">Verified purchase</span>}</article>)}</div>}</div>
 			</section>
+
+			<Recommendations productId={product.id} />
 		</div>
 	)
 }

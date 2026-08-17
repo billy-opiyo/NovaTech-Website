@@ -160,6 +160,27 @@ export default function AdminActivityPage() {
 		success: stats?.mostCommonActions?.length ?? 0,
 	}
 
+	function exportLogs() {
+		const escape = (value: string) => `"${value.replaceAll('"', '""')}"`
+		const rows = [
+			["Action", "Admin", "Email", "Created at", "Details"],
+			...filteredLogs.map((log) => [
+				log.action,
+				log.admin?.name || "",
+				log.admin?.email || "",
+				formatDate(log.createdAt),
+				log.details ? JSON.stringify(log.details) : "",
+			]),
+		]
+		const csv = rows.map((row) => row.map(escape).join(",")).join("\n")
+		const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
+		const link = document.createElement("a")
+		link.href = url
+		link.download = `admin-activity-${new Date().toISOString().slice(0, 10)}.csv`
+		link.click()
+		URL.revokeObjectURL(url)
+	}
+
 	return (
 		<div>
 			{/* Header */}
@@ -175,7 +196,7 @@ export default function AdminActivityPage() {
 					>
 						<RefreshCw size={18} /> Refresh
 					</button>
-					<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+					<button onClick={exportLogs} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
 						<Download size={18} /> Export Logs
 					</button>
 				</div>

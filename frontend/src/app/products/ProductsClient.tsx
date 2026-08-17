@@ -75,17 +75,27 @@ export default function ProductsClient() {
 	const searchParams = useSearchParams()
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+	const initialSort = searchParams.get("sortBy") || searchParams.get("sort")
 	const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
 	const [filters, setFilters] = useState<FilterState>({
 		brands: [],
 		priceRange: [0, 200000],
 		category: searchParams.get("category") || "",
-		sortBy: "newest",
+		sortBy: initialSort === "rating" ? "rating" : initialSort === "price-asc" || initialSort === "price-desc" ? initialSort : "newest",
 		inStock: false,
 		onSale: false,
 	})
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 	const [isLoading, setIsLoading] = useState(false)
+	const searchParamsKey = searchParams.toString()
+
+	useEffect(() => {
+		const nextSearch = searchParams.get("q") || ""
+		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
+		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
+		setSearchQuery(nextSearch)
+		setFilters((current) => ({ ...current, category: searchParams.get("category") || "", sortBy: nextSortBy }))
+	}, [searchParamsKey])
 
 	const applyFilters = useCallback(() => {
 		setIsLoading(true)
@@ -101,11 +111,13 @@ export default function ProductsClient() {
 			limit: 100,
 		})
 			.then((response) => {
-				setFilteredProducts(response.products.map((product: any) => ({
+				const products = response.products.map((product: any) => ({
 					...product,
 					rating: product.averageRating,
 					reviewCount: product.reviewCount,
-				})))
+				}))
+				if (filters.sortBy === "rating") products.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+				setFilteredProducts(products)
 			})
 			.catch(() => setFilteredProducts([]))
 			.finally(() => setIsLoading(false))
