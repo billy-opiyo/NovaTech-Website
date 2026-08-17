@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
+import NotificationCenter from "@/components/notifications/NotificationCenter"
 import { Moon, Sun, ShoppingCart, Menu, X, User } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { clientConfig } from "@/config/client.config"
@@ -16,7 +17,7 @@ export default function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
-		<header className="site-header sticky top-0 z-50 glass navy-glass backdrop-blur-lg border-b border-white/10">
+		<header className="site-header sticky top-0 z-[60] glass navy-glass backdrop-blur-lg border-b border-white/10">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
@@ -56,6 +57,7 @@ export default function Header() {
 							{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
 						</button>
 						<SearchOverlay />
+						<NotificationCenter />
 						<Link
 							href="/cart"
 							aria-label="Open shopping cart"

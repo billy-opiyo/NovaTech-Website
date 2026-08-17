@@ -1,41 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
-	Settings,
-	Search,
-	Eye,
-	Edit,
-	Trash2,
-	CheckCircle2,
-	XCircle,
-	Download,
 	Store,
 	Mail,
-	Phone,
-	MapPin,
-	Globe,
 	CreditCard,
 	Bell,
 	Shield,
 	Palette,
-	Save,
 } from "lucide-react"
 import clsx from "clsx"
 
-interface Setting {
-	id: string
-	name: string
-	description: string
-	category: string
-	lastUpdated: string
-	status: "configured" | "not_configured"
-}
-
 export default function AdminSettingsPage() {
 	const [activeTab, setActiveTab] = useState("general")
-	const [hasChanges, setHasChanges] = useState(false)
 
 	const settingsTabs = [
 		{ id: "general", label: "General", icon: Store },
@@ -46,60 +24,13 @@ export default function AdminSettingsPage() {
 		{ id: "appearance", label: "Appearance", icon: Palette },
 	]
 
-	const generalSettings = [
-		{
-			id: "set-1",
-			name: "Store Name",
-			description: "NovaTech Store",
-			category: "General",
-			lastUpdated: "2024-08-20",
-			status: "configured",
-		},
-		{
-			id: "set-2",
-			name: "Store Email",
-			description: "support@novatech.co.ke",
-			category: "General",
-			lastUpdated: "2024-08-20",
-			status: "configured",
-		},
-		{
-			id: "set-3",
-			name: "Store Phone",
-			description: "+254 700 000 000",
-			category: "General",
-			lastUpdated: "2024-08-20",
-			status: "configured",
-		},
-		{
-			id: "set-4",
-			name: "Store Address",
-			description: "Nairobi, Kenya",
-			category: "General",
-			lastUpdated: "2024-08-20",
-			status: "configured",
-		},
-	]
-
 	return (
 		<div>
 			{/* Header */}
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
 				<div>
 					<h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
-					<p className="text-gray-500 mt-1">Manage your store configuration</p>
-				</div>
-				<div className="flex gap-3">
-					{hasChanges && (
-						<>
-							<button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-								<XCircle size={18} /> Discard
-							</button>
-							<button className="btn-primary flex items-center gap-2">
-								<Save size={18} /> Save Changes
-							</button>
-						</>
-					)}
+					<p className="text-gray-500 mt-1">Review deployment-managed store configuration</p>
 				</div>
 			</div>
 
@@ -145,7 +76,7 @@ export default function AdminSettingsPage() {
 											type="text"
 											defaultValue="NovaTech Store"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											readOnly
 										/>
 									</div>
 									<div>
@@ -154,7 +85,7 @@ export default function AdminSettingsPage() {
 											type="email"
 											defaultValue="support@novatech.co.ke"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											readOnly
 										/>
 									</div>
 									<div>
@@ -163,7 +94,7 @@ export default function AdminSettingsPage() {
 											type="tel"
 											defaultValue="+254 700 000 000"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											readOnly
 										/>
 									</div>
 									<div>
@@ -172,7 +103,7 @@ export default function AdminSettingsPage() {
 											defaultValue="Nairobi, Kenya"
 											rows={3}
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											readOnly
 										/>
 									</div>
 								</div>
@@ -183,14 +114,14 @@ export default function AdminSettingsPage() {
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<div>
 										<label className="block text-sm font-medium mb-2">Currency</label>
-										<select className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary">
+										<select disabled className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary">
 											<option>KES - Kenyan Shilling</option>
 											<option>USD - US Dollar</option>
 										</select>
 									</div>
 									<div>
 										<label className="block text-sm font-medium mb-2">Timezone</label>
-										<select className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary">
+										<select disabled className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary">
 											<option>Africa/Nairobi (EAT)</option>
 											<option>UTC</option>
 										</select>
@@ -207,7 +138,8 @@ export default function AdminSettingsPage() {
 							className="space-y-6"
 						>
 							<div className="glass-card p-6">
-								<h2 className="text-xl font-bold mb-6">Email Configuration</h2>
+									<h2 className="text-xl font-bold mb-2">Email Configuration</h2>
+									<p className="mb-6 text-sm text-gray-500">Email credentials are supplied through the deployment environment.</p>
 								<div className="space-y-6">
 									<div>
 										<label className="block text-sm font-medium mb-2">SMTP Host</label>
@@ -215,7 +147,7 @@ export default function AdminSettingsPage() {
 											type="text"
 											placeholder="smtp.resend.com"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											disabled
 										/>
 									</div>
 									<div>
@@ -224,7 +156,7 @@ export default function AdminSettingsPage() {
 											type="text"
 											placeholder="587"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											disabled
 										/>
 									</div>
 									<div>
@@ -233,7 +165,7 @@ export default function AdminSettingsPage() {
 											type="password"
 											placeholder="re_xxxxxxxxxxxx"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-											onChange={() => setHasChanges(true)}
+											disabled
 										/>
 									</div>
 								</div>
@@ -248,22 +180,23 @@ export default function AdminSettingsPage() {
 							className="space-y-6"
 						>
 							<div className="glass-card p-6">
-								<h2 className="text-xl font-bold mb-6">Payment Methods</h2>
+										<h2 className="text-xl font-bold mb-6">Payment Methods</h2>
+										<p className="mb-6 text-sm text-gray-500">Payment providers are configured by server environment variables.</p>
 								<div className="space-y-6">
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
 										<h3 className="font-semibold mb-2">M-Pesa Daraja</h3>
 										<p className="text-sm text-gray-500 mb-4">Integrate M-Pesa STK Push payments</p>
-										<button className="btn-primary">Configure</button>
+										<span className="text-sm text-gray-500">Server configuration required</span>
 									</div>
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
 										<h3 className="font-semibold mb-2">Stripe</h3>
 										<p className="text-sm text-gray-500 mb-4">Accept card payments via Stripe</p>
-										<button className="btn-primary">Configure</button>
+										<span className="text-sm text-gray-500">Server configuration required</span>
 									</div>
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
 										<h3 className="font-semibold mb-2">Cash on Delivery</h3>
 										<p className="text-sm text-gray-500 mb-4">Enable cash on delivery option</p>
-										<button className="btn-primary">Configure</button>
+										<span className="text-sm text-gray-500">Server configuration required</span>
 									</div>
 								</div>
 							</div>
@@ -292,7 +225,7 @@ export default function AdminSettingsPage() {
 												<p className="text-xs text-gray-500">{notification.description}</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
-												<input type="checkbox" defaultChecked={notification.enabled} className="sr-only peer" onChange={() => setHasChanges(true)} />
+																<input type="checkbox" defaultChecked={notification.enabled} disabled className="sr-only peer" />
 												<div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
 											</label>
 										</div>
@@ -316,7 +249,7 @@ export default function AdminSettingsPage() {
 											<p className="font-medium text-sm">Two-Factor Authentication</p>
 											<p className="text-xs text-gray-500">Add extra security to admin accounts</p>
 										</div>
-										<button className="px-4 py-2 rounded-lg bg-primary text-white text-sm">Enable</button>
+										<span className="text-sm text-gray-500">Not available in the admin UI</span>
 									</div>
 									<div className="flex items-center justify-between p-4 rounded-xl bg-white/50 dark:bg-black/20">
 										<div>
@@ -324,7 +257,7 @@ export default function AdminSettingsPage() {
 											<p className="text-xs text-gray-500">Get notified of new admin logins</p>
 										</div>
 										<label className="relative inline-flex items-center cursor-pointer">
-											<input type="checkbox" defaultChecked className="sr-only peer" onChange={() => setHasChanges(true)} />
+																<input type="checkbox" defaultChecked disabled className="sr-only peer" />
 											<div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
 										</label>
 									</div>
@@ -333,7 +266,7 @@ export default function AdminSettingsPage() {
 											<p className="font-medium text-sm">Session Timeout</p>
 											<p className="text-xs text-gray-500">Auto-logout after inactivity</p>
 										</div>
-										<select className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+										<select disabled className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
 											<option>30 minutes</option>
 											<option>1 hour</option>
 											<option>2 hours</option>
@@ -358,7 +291,7 @@ export default function AdminSettingsPage() {
 										<label className="block text-sm font-medium mb-4">Theme</label>
 										<div className="grid grid-cols-3 gap-4">
 											{["Light", "Dark", "System"].map((theme) => (
-												<div key={theme} className="p-4 rounded-xl border-2 border-primary cursor-pointer">
+														<div key={theme} className="p-4 rounded-xl border-2 border-primary">
 													<p className="text-sm font-medium text-center">{theme}</p>
 												</div>
 											))}
@@ -366,9 +299,10 @@ export default function AdminSettingsPage() {
 									</div>
 									<div>
 										<label className="block text-sm font-medium mb-2">Primary Color</label>
+										<p className="mb-3 text-xs text-gray-500">Color presets are shown for reference only.</p>
 										<div className="flex gap-3">
 											{["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444"].map((color) => (
-												<button key={color} className="w-10 h-10 rounded-lg border-2 border-white shadow-md" style={{ backgroundColor: color }} />
+												<div key={color} role="img" aria-label={`Color preset ${color}`} className="w-10 h-10 rounded-lg border-2 border-white shadow-md" style={{ backgroundColor: color }} />
 											))}
 										</div>
 									</div>

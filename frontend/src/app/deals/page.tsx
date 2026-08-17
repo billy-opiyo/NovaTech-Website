@@ -6,14 +6,14 @@ const dealCards = [
 		title: "Weekend Smartphone Drop",
 		description:
 			"Get up to 18% off selected iPhone and Samsung models with free delivery nationwide.",
-		href: "/products?category=phones&sort=price-desc",
+		href: "/products?category=phones&sortBy=price-desc",
 		badge: "Hot deal",
 	},
 	{
 		title: "Work-from-Home Essentials",
 		description:
 			"Save on monitors, docking stations, and premium keyboards for your home office setup.",
-		href: "/products?category=laptops&sort=rating",
+		href: "/products?category=laptops&sortBy=rating",
 		badge: "Top picks",
 	},
 	{

@@ -6,7 +6,7 @@
 |---------|-------------|
 | **Home Page** | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
-| **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, recommendations (Recommended for You, Recently Viewed, Trending Now). |
+| **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
 | **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
 | **Deals Page** | Promotional deal cards linking into filtered product listings. |
 | **Compare Page** | Side-by-side product comparison with spec tables and highlight win/loss indicators. |
@@ -202,7 +202,7 @@ Core models:
 | **Checkout Payment Flow** | Full checkout-to-payment flow:<br>- Order creation via `/api/orders` with transactional stock validation<br>- M-Pesa STK Push flow with real-time status polling<br>- Stripe PaymentIntent creation and verification<br>- Cash on Delivery support<br>- Real-time payment status indicators<br>- Error handling with user-friendly messages<br>- Post-payment order confirmation with email notifications |
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |
-| **Recommendation Engine** | Complete product recommendation system with:<br>- Personalized recommendations based on user behavior (recent views, purchase history, wishlist)<br>- Trending products based on sales velocity (30-day window)<br>- Similar products by category, price range, and ratings<br>- Featured products and new arrivals<br>- Deals and on-sale products<br>- RESTful API at `/api/recommendations` with multiple recommendation types |
+| **Recommendation Engine** | API-backed similar-product recommendations render on product-detail pages; the API also supports personalized, trending, featured, new-arrival, and deal queries. |
 
 ## 🧪 Testing, CI, and Release Readiness
 
