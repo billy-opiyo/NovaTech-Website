@@ -118,7 +118,7 @@ export default function HomePage() {
 						Open in Google Maps
 					</a>
 				</div>
-				<div className="h-72 w-full sm:h-80">
+				<div className="home-map-viewport h-72 w-full sm:h-80">
 					<iframe
 						src={mapEmbedUrl}
 						title="NovaTech Store location on Google Maps"
