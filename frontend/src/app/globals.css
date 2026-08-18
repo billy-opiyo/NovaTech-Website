@@ -71,6 +71,21 @@
     scroll-behavior: smooth;
   }
 
+  /* Keep form controls visibly branded in light mode as well as dark mode. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  textarea,
+  select {
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(var(--color-primary) / 0.34) !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+  textarea:focus,
+  select:focus {
+    border-color: rgb(var(--color-primary) / 0.9) !important;
+  }
+
   select {
     color-scheme: light;
   }

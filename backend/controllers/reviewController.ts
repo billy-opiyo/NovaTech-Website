@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/auth"
 import prisma from "../lib/db"
 import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../validators/reviewValidator"
 import { z } from "zod"
+import { findBlockedReviewTerms } from "../constants/reviewModeration"
 
 export async function getReviews(req: NextRequest) {
 	try {
@@ -18,9 +19,10 @@ export async function getReviews(req: NextRequest) {
 			)
 		}
 
+		const approvedWhere = { productId, moderationStatus: "APPROVED" as const }
 		const [reviews, total] = await Promise.all([
 			prisma.review.findMany({
-				where: { productId, moderationStatus: "APPROVED" },
+				where: approvedWhere,
 				include: {
 					user: {
 						select: {
@@ -33,11 +35,11 @@ export async function getReviews(req: NextRequest) {
 				skip: (page - 1) * limit,
 				take: limit,
 			}),
-			prisma.review.count({ where: { productId } }),
+			prisma.review.count({ where: approvedWhere }),
 		])
 
 		const avg = await prisma.review.aggregate({
-			where: { productId },
+			where: approvedWhere,
 			_avg: { rating: true },
 		})
 
@@ -77,6 +79,7 @@ export async function createReview(req: NextRequest) {
 				},
 			},
 		})
+		const blockedTerms = findBlockedReviewTerms(validated.title, validated.comment)
 
 		const review = await prisma.review.create({
 			data: {
@@ -87,6 +90,7 @@ export async function createReview(req: NextRequest) {
 				comment: validated.comment,
 				photos: validated.photos || [],
 				isVerifiedPurchase: !!hasPurchased,
+				moderationStatus: "PENDING",
 			},
 			include: {
 				user: {
@@ -98,7 +102,12 @@ export async function createReview(req: NextRequest) {
 			},
 		})
 
-		return NextResponse.json(review, { status: 201 })
+		return NextResponse.json({
+			...review,
+			message: blockedTerms.length
+				? "Your review was submitted for admin moderation before publication."
+				: "Your review was submitted and is awaiting admin approval.",
+		}, { status: 201 })
 	} catch (error: any) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
@@ -128,6 +137,7 @@ export async function updateReview(req: NextRequest) {
 				{ status: 404 },
 			)
 		}
+		const blockedTerms = findBlockedReviewTerms(validated.title, validated.comment)
 
 		const updated = await prisma.review.update({
 			where: { id: validated.reviewId },
@@ -135,10 +145,16 @@ export async function updateReview(req: NextRequest) {
 				rating: validated.rating,
 				title: validated.title,
 				comment: validated.comment,
+				moderationStatus: "PENDING",
 			},
 		})
 
-		return NextResponse.json(updated)
+		return NextResponse.json({
+			...updated,
+			message: blockedTerms.length
+				? "Your edited review was returned to admin moderation before publication."
+				: "Your edited review is awaiting admin approval.",
+		})
 	} catch (error: any) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(

@@ -5,8 +5,9 @@ import { motion } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Mail, Lock, AlertCircle, Eye, EyeOff, X } from "lucide-react"
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
+import AuthCloseButton from "@/components/auth/AuthCloseButton"
 
 function SignInForm() {
 	const router = useRouter()
@@ -54,14 +55,6 @@ function SignInForm() {
 		await signIn("google", { callbackUrl })
 	}
 
-	const closeSignIn = () => {
-		if (document.referrer.startsWith(window.location.origin)) {
-			router.back()
-			return
-		}
-		router.push(callbackUrl)
-	}
-
 	return (
 		<div className="min-h-[70vh] flex items-center justify-center">
 			<motion.div
@@ -70,15 +63,7 @@ function SignInForm() {
 				className="w-full max-w-md"
 			>
 				<div className="glass-card relative p-8">
-					<button
-						type="button"
-						onClick={closeSignIn}
-						aria-label="Close sign in"
-						title="Close"
-						className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition hover:bg-black/10 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
-					>
-						<X size={20} aria-hidden="true" />
-					</button>
+					<AuthCloseButton fallback={callbackUrl} />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
 						<p className="text-gray-500">Sign in to your account to continue</p>

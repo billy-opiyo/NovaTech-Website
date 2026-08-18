@@ -88,7 +88,9 @@ export async function getFilteredProducts(params: URLSearchParams) {
 					},
 				},
 				_count: {
-					select: { reviews: true },
+					select: {
+						reviews: { where: { moderationStatus: "APPROVED" } },
+					},
 				},
 			},
 			orderBy,
@@ -134,7 +136,9 @@ export async function getProductBySlug(slug: string) {
 				take: 10,
 			},
 			_count: {
-				select: { reviews: true },
+				select: {
+					reviews: { where: { moderationStatus: "APPROVED" } },
+				},
 			},
 		},
 	})

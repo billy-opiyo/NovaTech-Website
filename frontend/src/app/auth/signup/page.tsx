@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check } from "lucide-react"
 import { clientConfig } from "@/config/client.config"
 import { FREE_SHIPPING_THRESHOLD } from "@/constants"
+import AuthCloseButton from "@/components/auth/AuthCloseButton"
 
 export default function SignUpPage() {
 	const router = useRouter()
@@ -68,7 +69,8 @@ export default function SignUpPage() {
 				animate={{ opacity: 1, y: 0 }}
 				className="w-full max-w-md"
 			>
-				<div className="glass-card p-8">
+				<div className="glass-card relative p-8">
+					<AuthCloseButton />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
 						<p className="text-gray-500">Join {clientConfig.brand.name} for exclusive deals</p>
