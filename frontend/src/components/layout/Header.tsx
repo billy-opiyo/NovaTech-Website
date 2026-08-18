@@ -24,7 +24,7 @@ export default function Header() {
 					<Link href="/" className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							<Image
-								src={clientConfig.brand.logo}
+								src={theme === "light" ? "/images/NovaTech icon 2 light.png" : clientConfig.brand.logo}
 								alt={clientConfig.brand.logoAlt}
 								fill
 								sizes="(max-width: 640px) 40px, 44px"

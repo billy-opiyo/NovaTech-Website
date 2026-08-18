@@ -133,7 +133,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			{showTrigger && (
 				<button
 					onClick={() => setOpen(true)}
-					className="hidden items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-2 py-2 text-sm text-gray-500 transition hover:text-gray-700 md:flex md:w-36 md:px-3 lg:w-64 lg:px-4 dark:hover:text-gray-300"
+					className="hidden items-center gap-2 rounded-lg border border-primary/30 bg-white/10 px-2 py-2 text-sm text-gray-500 transition hover:text-gray-700 md:flex md:w-36 md:px-3 lg:w-64 lg:px-4 dark:hover:text-gray-300"
 					aria-label="Open search"
 				>
 					<Search size={16} />
