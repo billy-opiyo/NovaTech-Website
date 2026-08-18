@@ -79,7 +79,7 @@ export default function SplashScreen() {
 	return (
 		<div className="splash-screen" role="status" aria-live="polite" aria-label={`Loading ${clientConfig.brand.name}`}>
 			<div className="relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-				<p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-blue-200">Welcome to</p>
+				<p className="mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-blue-700 dark:text-blue-200">Welcome to</p>
 				<h1 className="splash-wordmark" aria-label={clientConfig.brand.name}>
 					{Array.from(clientConfig.brand.name).map((character, index) => (
 						<span key={`${character}-${index}`} style={{ animationDelay: `${index * 240}ms` }}>
@@ -88,13 +88,13 @@ export default function SplashScreen() {
 					))}
 				</h1>
 				<div className="mt-10 w-full">
-					<div className="mb-3 flex items-center justify-between text-sm text-slate-300">
+					<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-blue-700 dark:text-blue-200">
 						<span>Preparing your store</span>
 						<span className="tabular-nums">{progress}%<span className="splash-ellipsis" aria-label="Loading">
 							<span>.</span><span>.</span><span>.</span>
 						</span></span>
 					</div>
-					<div className="h-2 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+					<div className="h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/15" aria-hidden="true">
 						<div className="splash-progress h-full rounded-full" style={{ width: `${progress}%` }} />
 					</div>
 				</div>
