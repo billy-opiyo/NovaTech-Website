@@ -39,7 +39,9 @@ export default function RootLayout({
 	return (
 		<html
 			lang={clientConfig.site.language}
-			className={clientConfig.features.showSplashScreen ? "splash-pending" : undefined}
+			className={
+				clientConfig.features.showSplashScreen ? "splash-pending" : undefined
+			}
 			suppressHydrationWarning
 			style={themeToCssVariables(activeTheme) as React.CSSProperties}
 		>
@@ -63,9 +65,27 @@ export default function RootLayout({
 				<link rel="icon" type="image/png" href={clientConfig.brand.favicon} />
 				{clientConfig.features.showSplashScreen && (
 					<>
-						<link rel="preload" as="image" href="/images/NovaTech%20cover%20mobile.png" media="(max-width: 767px)" fetchPriority="high" />
-						<link rel="preload" as="image" href="/images/NovaTech%20cover%20mobile.png" media="(min-width: 768px) and (max-width: 1199px)" fetchPriority="high" />
-						<link rel="preload" as="image" href="/images/NovaTech%20cover%20desktop.png" media="(min-width: 1200px)" fetchPriority="high" />
+						<link
+							rel="preload"
+							as="image"
+							href="/images/NovaTech%20cover%20mobile.png"
+							media="(max-width: 767px)"
+							fetchPriority="high"
+						/>
+						<link
+							rel="preload"
+							as="image"
+							href="/images/NovaTech%20cover%20mobile.png"
+							media="(min-width: 768px) and (max-width: 1199px)"
+							fetchPriority="high"
+						/>
+						<link
+							rel="preload"
+							as="image"
+							href="/images/NovaTech%20cover%20desktop.png"
+							media="(min-width: 1200px)"
+							fetchPriority="high"
+						/>
 					</>
 				)}
 				<link rel="preconnect" href="https://images.unsplash.com" />
@@ -78,19 +98,36 @@ export default function RootLayout({
 				/>
 				<meta name="theme-color" content={activeTheme.dark.background} />
 			</head>
-			<body className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${clientConfig.features.showSplashScreen ? "splash-pending" : ""}`}>
+			<body
+				className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${clientConfig.features.showSplashScreen ? "splash-pending" : ""}`}
+			>
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
 							<SessionResume />
-							{clientConfig.features.showSplashScreen && <SplashScreen />}
-							<Header />
-							<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
-								{children}
-							</main>
-							<Footer />
-							<MobileNav />
-							<FloatingActions />
+							{clientConfig.features.showSplashScreen ? (
+								<SplashScreen>
+									<>
+										<Header />
+										<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+											{children}
+										</main>
+										<Footer />
+										<MobileNav />
+										<FloatingActions />
+									</>
+								</SplashScreen>
+							) : (
+								<>
+									<Header />
+									<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+										{children}
+									</main>
+									<Footer />
+									<MobileNav />
+									<FloatingActions />
+								</>
+							)}
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>
