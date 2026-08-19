@@ -1,11 +1,20 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
+function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }
+
 export default function PlatformBillingPage() {
-	return (
-		<div className="space-y-6">
-			<h2 className="text-3xl font-bold">Plans and billing</h2>
-			<div className="glass-card p-6">
-				<p className="font-semibold">Billing provider not configured</p>
-				<p className="mt-2 text-sm text-gray-500">Subscription monitoring and plan changes remain unavailable until SaaS billing credentials and webhook verification are configured.</p>
-			</div>
-		</div>
-	)
+	const [data, setData] = useState<any>(null)
+	const [message, setMessage] = useState("Loading platform billing…")
+	const [name, setName] = useState("")
+	const [key, setKey] = useState("")
+	const [price, setPrice] = useState("")
+
+	async function load() { const response = await fetch("/api/platform/billing", { cache: "no-store" }); const result = await response.json(); if (!response.ok) throw new Error(result.message); setData(result); setMessage("") }
+	useEffect(() => { load().catch((error) => setMessage(error.message || "Platform billing unavailable")) }, [])
+	async function savePlan(event: React.FormEvent) { event.preventDefault(); const response = await fetch("/api/platform/billing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "plan", key: key.toUpperCase(), name, price: Number(price), currency: "KES", billingInterval: "MONTH", setupFeeAmount: 0, transactionFeePercent: 0, active: true }) }); const result = await response.json(); setMessage(response.ok ? "Plan saved" : result.message); if (response.ok) { setName(""); setKey(""); setPrice(""); await load() } }
+
+	if (!data) return <div className="glass-card p-6">{message}</div>
+	return <div className="space-y-6"><div><h2 className="text-3xl font-bold">Plans and billing</h2><p className="mt-2 text-gray-600 dark:text-gray-300">Platform-only billing operations and revenue visibility.</p></div>{message && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}<div className="grid gap-4 md:grid-cols-4"><div className="glass-card p-5"><p className="text-sm text-gray-500">Subscriptions</p><p className="mt-2 text-2xl font-bold">{data.stats.subscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Active / trialing</p><p className="mt-2 text-2xl font-bold">{data.stats.activeSubscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Paid invoice revenue</p><p className="mt-2 text-2xl font-bold">KES {data.stats.paidRevenue.toLocaleString()}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Generated commission</p><p className="mt-2 text-2xl font-bold">KES {data.stats.generatedCommission.toLocaleString()}</p></div></div><div className="grid gap-6 lg:grid-cols-2"><div className="glass-card p-5"><h3 className="text-xl font-semibold">Configured plans</h3><div className="mt-3 divide-y divide-gray-100">{data.plans.map((plan: any) => <div key={plan.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span><b>{plan.name}</b> <span className="text-gray-500">({plan.key})</span></span><span>{plan.price == null ? "Trial" : `KES ${plan.price.toLocaleString()} / ${plan.billingInterval?.toLowerCase()}`} · {plan.active ? "Active" : "Inactive"}</span></div>)}</div><form onSubmit={savePlan} className="mt-5 grid gap-2 sm:grid-cols-3"><input required value={key} onChange={(event) => setKey(event.target.value)} placeholder="PLAN_KEY" className="rounded border p-2 dark:bg-dark-surface"/><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Plan name" className="rounded border p-2 dark:bg-dark-surface"/><input required type="number" min="0" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Monthly KES" className="rounded border p-2 dark:bg-dark-surface"/><button className="btn-primary sm:col-span-3">Create or update plan</button></form></div><div className="glass-card p-5"><h3 className="text-xl font-semibold">Add-ons</h3><div className="mt-3 divide-y divide-gray-100">{data.addons.map((addon: any) => <div key={addon.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span><b>{addon.name}</b> <span className="text-gray-500">({addon.key})</span></span><span>KES {addon.price.toLocaleString()} / {addon.billingInterval.toLowerCase()} · {addon.active ? "Active" : "Inactive"}</span></div>)}</div><p className="mt-4 text-sm text-gray-500">Add-ons are database-managed through the platform billing API and can optionally be linked to Stripe recurring price IDs.</p></div></div><div className="glass-card p-5"><h3 className="text-xl font-semibold">Failed payments</h3>{data.failedPayments.length ? <div className="mt-3 divide-y divide-gray-100">{data.failedPayments.map((payment: any) => <div key={payment.id} className="flex justify-between gap-3 py-3 text-sm"><span>{payment.provider} · tenant {payment.tenantId}</span><span>{payment.currency} {payment.amount.toLocaleString()} · {payment.failureReason || "Failed"}</span></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No failed SaaS payments recorded.</p>}</div></div>
 }

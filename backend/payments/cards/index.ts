@@ -3,6 +3,7 @@ import { sendOrderConfirmationEmail } from "../../lib/email"
 import { getStripeClient, isStripeConfigured } from "../../lib/stripeClient"
 import type { CardIntentResult, CardVerifyResult } from "../../types/payments"
 import { cancelPendingOrder } from "../../services/order.service"
+import { recordOrderCommission } from "../../billing/service"
 
 export type CardPaymentPayload = {
 	amount: number
@@ -183,6 +184,7 @@ export async function verifyCardPayment(
 		})
 
 		if (ok && payment.orderId) {
+			await recordOrderCommission(payment.id)
 			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
 			if (!order) return { ok: false, provider: "stripe", reference, status: "FAILED", paymentIntentId, message: "Payment order is not available in this store." }
 			const updatedOrder = await prisma.order.update({

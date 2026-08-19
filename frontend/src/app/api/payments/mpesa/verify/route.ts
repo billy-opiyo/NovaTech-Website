@@ -3,6 +3,8 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
 import { verifyMpesaPayment } from "backend/payments/mpesa"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import prisma from "backend/lib/db"
+import { markBillingPaymentFromMpesa, recordOrderCommission } from "backend/billing/service"
 
 const mpesaVerifySchema = z.object({
 	reference: z.string().min(3),
@@ -17,6 +19,11 @@ export async function POST(req: NextRequest) {
 		const validated = mpesaVerifySchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
 		const result = await verifyMpesaPayment(validated.reference, context.tenantId)
+		const payment = await prisma.payment.findFirst({ where: { tenantId: context.tenantId, OR: [{ providerReference: validated.reference }, { metadata: { path: ["reference"], equals: validated.reference } }] } })
+		if (payment && result.status !== "PENDING") {
+			await markBillingPaymentFromMpesa({ id: payment.id, status: result.status, invoiceId: payment.invoiceId, subscriptionId: payment.subscriptionId, billingRecordId: payment.billingRecordId, failureReason: result.message })
+			await recordOrderCommission(payment.id)
+		}
 
 		return NextResponse.json(result)
 	} catch (error: any) {

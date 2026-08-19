@@ -1,4 +1,5 @@
 import prisma from "../../lib/db"
+import type { BillingPaymentKind } from "@prisma/client"
 import { sendOrderConfirmationEmail } from "../../lib/email"
 import {
 	isMpesaConfigured,
@@ -20,6 +21,10 @@ export type MpesaPayload = {
 	tenantId?: string
 	orderId?: string
 	metadata?: Record<string, unknown>
+	invoiceId?: string
+	subscriptionId?: string
+	billingRecordId?: string
+	kind?: BillingPaymentKind
 }
 
 export interface MpesaInitiateInput extends MpesaPayload {
@@ -33,6 +38,10 @@ export async function initiateMpesaPayment({
 	tenantId,
 	orderId,
 	metadata,
+	invoiceId,
+	subscriptionId,
+	billingRecordId,
+	kind = "ORDER",
 	callbackUrl,
 }: MpesaInitiateInput): Promise<MpesaInitiateResult> {
 	if (!isMpesaConfigured()) {
@@ -108,6 +117,10 @@ export async function initiateMpesaPayment({
 			amount,
 			currency: "KES",
 			status: "PENDING",
+			invoiceId,
+			subscriptionId,
+			billingRecordId,
+			kind,
 			providerReference: response.CheckoutRequestID,
 			phoneNumber: normalizedPhone,
 			metadata: {

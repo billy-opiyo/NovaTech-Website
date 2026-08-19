@@ -1,6 +1,6 @@
 # NovaTech Store — Electronics E-Commerce Platform (Kenya)
 
-A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover published stores at `/stores`, then browse, search, compare, and purchase genuine phones, laptops, tablets, and accessories inside the selected store with warranty and fast delivery across all Kenyan counties.
+A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through Stripe or invoice-driven M-Pesa flows.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -28,10 +28,11 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | ----------------- | ------------------------------------------------------------------------------ |
 | **Frontend**      | Next.js 15 (App Router), React 19, TypeScript                                  |
 | **Styling**       | Tailwind CSS 3, Framer Motion (animations), lucide-react / react-icons (icons) |
-| **Backend**       | Prisma ORM 5, PostgreSQL (Neon), Zod (validation), bcrypt                      |
+| **Backend**       | Prisma ORM 6.19.3, PostgreSQL (Neon), Zod (validation), bcrypt                 |
 | **Auth**          | NextAuth v5 (beta) — Google OAuth + Credentials, JWT sessions                  |
 | **Email**         | Resend                                                                         |
 | **Storage**       | Cloudflare R2 (AWS SDK v3)                                                     |
+| **SaaS Billing**  | Database-backed plans, Stripe Billing, M-Pesa invoice collection, add-ons     |
 | **Rate Limiting** | PostgreSQL-backed distributed buckets (60 req/min per IP)                     |
 | **Monorepo**      | npm workspaces (`frontend` + `backend`)                                        |
 
@@ -103,6 +104,14 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - Delete confirmation modal
 - **Admin Orders page** — order management table.
 
+### 💼 SaaS Billing
+
+- Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, setup fees, and transaction commission rates.
+- Merchant billing at `/manage/billing`: subscription status, setup-fee state, Stripe Checkout, Stripe payment portal, M-Pesa renewal/setup collection, add-ons, invoices, and SaaS payment history.
+- Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, generated commissions, customer billing records, and failed SaaS payments.
+- Stripe subscription, invoice, payment-failure, cancellation, and renewal events are processed through the signature-verified webhook route. M-Pesa renewals are invoice-driven because Daraja collection is initiated per payment request.
+- Historical shopper order payments remain separate from merchant SaaS billing; completed order payments create commission transactions using the active plan rate snapshot.
+
 ### 📦 Backend API (App Router Route Handlers)
 
 | Endpoint                  | Methods                | Description                                                                                                                                                         |
@@ -117,6 +126,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
 | `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2 (images only, 5MB max).                                                                                                 |
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
+| `/api/billing/plans`      | GET                    | Lists active database-backed SaaS plans and add-ons for onboarding/catalog UI.                                                                                       |
+| `/api/manage/billing`     | GET, POST              | Tenant-scoped billing dashboard data and owner/admin subscription, add-on, setup-fee, renewal, cancellation, portal, and payment actions.                           |
+| `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, customer billing records, revenue, commissions, invoices, and failed-payment reporting.                       |
 
 ### 🔐 Backend Services & Utilities
 
@@ -137,14 +149,15 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
   - `simulateMpesaPayment` — Sandbox C2B simulate helper.
   - Graceful "not configured" behavior when `MPESA_*` env vars are absent.
-- **Cards** (`backend/payments/cards/`) — Real Stripe Payment Intents:
+- **Cards** (`backend/payments/cards/`) — Real Stripe Payment Intents for shopper checkout; SaaS subscriptions use `backend/billing/service.ts` and Stripe Checkout:
   - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
   - `verifyCardPayment` — Retrieves PaymentIntent, maps status, confirms order.
   - Graceful "not configured" behavior when `STRIPE_SECRET_KEY` is absent.
 - **Webhooks** (`backend/payments/webhooks/`) — Provider-verified handlers:
   - Stripe signature verification (`stripe.webhooks.constructEvent`).
   - M-Pesa STK Push callback + C2B validation/confirmation processing.
-  - Updates `Payment` + `Order` status on success/failure/refund.
+  - Updates `Payment` + `Order` status on success/failure/refund and synchronizes SaaS subscription/invoice lifecycle events.
+- **SaaS billing** (`backend/billing/service.ts`) — Server-side plan catalog, Stripe Checkout/portal, subscription changes/cancellation, M-Pesa invoice collection, setup-fee tracking, add-ons, and commission snapshots.
 - **API Routes** (`frontend/src/app/api/payments/`):
   - `POST /api/payments/mpesa/initiate` — Initiate STK Push.
   - `POST /api/payments/mpesa/verify` — Verify STK Push status.
@@ -159,7 +172,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 🗄 Database (Prisma Schema)
 
-Core models: `User`, `Account`, `Session`, `VerificationToken`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
+Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
 
 Roles: `CUSTOMER`, `ADMIN`, `SUPERADMIN`. Order statuses: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`.
 
@@ -291,6 +304,11 @@ NovaTech Website/
 | `Notification`                              | Per-user notifications (ORDER_STATUS, PROMO, …)                                                          |
 | `SupportTicket`                             | Customer support tickets                                                                                 |
 | `AdminLog`                                  | Audit trail of admin actions                                                                             |
+| `Plan` / `Subscription`                     | Configurable SaaS pricing and tenant subscription lifecycle                                              |
+| `BillingCustomer` / `BillingRecord`         | Provider customer references and separately tracked onboarding/setup-fee status                         |
+| `Addon` / `AddonSubscription`               | Database-managed optional merchant capabilities and tenant subscriptions                                |
+| `Invoice` / `Payment`                       | SaaS invoices and provider payments; shopper order payments remain supported by nullable billing links  |
+| `Transaction`                               | Completed shopper payment commission with a plan-rate snapshot                                           |
 
 ---
 
@@ -466,6 +484,7 @@ npm run dev:open
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
 - ✔️ **Payments** — M-Pesa (Daraja STK Push), Cards (Stripe Payment Intents), and Webhooks (signature-verified) fully implemented with graceful "not configured" fallback
+- ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and plan commission transactions
 - ✔️ **Checkout payment integration** — Full checkout-to-payment flow implemented:
   - Order creation via `/api/orders` with transactional stock validation
   - M-Pesa STK Push flow with real-time status polling

@@ -7,7 +7,7 @@ This directory contains documentation for the NovaTech Store hosted storefront p
 NovaTech Store is a **monorepo** managed with **npm workspaces**, containing:
 
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Backend**: Prisma ORM 5, PostgreSQL (Neon), Node.js
+- **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
 
 The platform enables customers to discover published stores at `/stores`, then browse, search, compare, and purchase genuine electronics (phones, laptops, tablets, and accessories) inside the selected store with warranty and fast delivery across all Kenyan counties. Stores keep separate catalogs, carts, accounts, and orders.
 
@@ -33,6 +33,9 @@ The current implementation also includes the following production hardening work
 - Added indexes and constraints for payment references, order idempotency keys, review moderation, login events, and distributed rate-limit buckets.
 - Replaced process-local rate limiting with PostgreSQL-backed rate-limit buckets for multi-instance deployments.
 - Added checkout order idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa flows.
+- Added database-backed SaaS billing with Starter/Business/Enterprise plans, setup-fee records, subscriptions, invoices, add-ons, provider payments, and commission transactions.
+- Added merchant `/manage/billing` actions for Stripe Checkout/portal, M-Pesa invoice collection, plan changes, cancellation, renewal, setup-fee payment, add-ons, and billing history.
+- Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments.
 - Added admin audit logging for order status, product, coupon, and review changes.
 - Added login event recording for successful and failed credential authentication attempts.
 - Separated development seed data from production setup. Development seeding requires `SEED_ADMIN_PASSWORD`; production admin initialization uses `npm --workspace backend run db:init-admin` with explicit `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` values.
@@ -179,6 +182,17 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Security | Admin | [Open](http://localhost:3000/admin/security) | [Open](https://novatechstore.co.ke/admin/security) |
 | Activity log | Admin | [Open](http://localhost:3000/admin/activity) | [Open](https://novatechstore.co.ke/admin/activity) |
 
+### Merchant workspace and platform control plane
+
+| Page | Access | Development | Production |
+|---|---|---|---|
+| Store onboarding | Signed in | [Open](http://localhost:3000/onboarding) | [Open](https://novatechstore.co.ke/onboarding) |
+| Merchant dashboard | Store membership | [Open](http://localhost:3000/manage) | [Open](https://novatechstore.co.ke/manage) |
+| Merchant billing | Store owner/admin for mutations | [Open](http://localhost:3000/manage/billing) | [Open](https://novatechstore.co.ke/manage/billing) |
+| Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://novatechstore.co.ke/platform) |
+| Platform tenants | Platform role | [Open](http://localhost:3000/platform/tenants) | [Open](https://novatechstore.co.ke/platform/tenants) |
+| Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://novatechstore.co.ke/platform/billing) |
+
 ### Dynamic URL values
 
 - `{product-slug}` is the product's `slug` value, for example `iphone-15-pro-max`.
@@ -201,11 +215,11 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 |-------|------------|
 | **Frontend** | Next.js 15 (App Router), React 19, TypeScript |
 | **Styling** | Tailwind CSS 3, Framer Motion, lucide-react |
-| **Backend** | Prisma ORM 5, PostgreSQL, Zod, bcrypt |
+| **Backend** | Prisma ORM 6.19.3, PostgreSQL, Zod, bcrypt |
 | **Auth** | NextAuth v5 (beta) — Google OAuth + Credentials |
 | **Email** | Resend |
 | **Storage** | Cloudflare R2 (AWS SDK v3) |
-| **Payments** | M-Pesa (Daraja STK Push), Stripe Payment Intents |
+| **Payments** | Shopper M-Pesa/Stripe PaymentIntents plus Stripe Billing and invoice-driven M-Pesa SaaS billing |
 | **Notifications** | Twilio SMS, WhatsApp Cloud API |
 | **Monorepo** | npm workspaces (`frontend` + `backend`) |
 

@@ -1,6 +1,6 @@
 # NovaTech SaaS architecture decisions
 
-**Status:** Phase 3/4 implementation with a pre-Phase 5 shopper-discovery slice
+**Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
 **Date:** 2026-08-19
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
@@ -9,7 +9,7 @@ This document records implementation defaults for the first controlled beta. It 
 
 - Initial customers are independent Kenyan electronics shops, phone and laptop dealers, repair/accessory businesses, and small distributors.
 - The first release hosts separate merchant stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
-- The beta includes a hosted storefront, catalog and order operations, staff memberships, theme/content controls, basic analytics, platform subdomains, test-mode shopper payments, and platform support.
+- The beta includes a hosted storefront, catalog and order operations, staff memberships, theme/content controls, basic analytics, platform subdomains, test-mode shopper payments, merchant SaaS billing, and platform support.
 - Advanced warehouse management, marketplace carts, custom application work, and enterprise database isolation remain later-stage work.
 
 ## Platform and tenant defaults
@@ -34,15 +34,25 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 
 ## Commercial and payment gates
 
-- The initial plan catalog is entitlement-based: `TRIAL`, `STARTER`, `GROWTH`, and `BUSINESS`.
-- Prices, billing currency, tax treatment, trial length, grace period, overages, annual discount, refunds, and support SLAs remain commercial decisions and must be entered before self-service billing is enabled.
+- The initial plan catalog is entitlement-based and database-backed: `TRIAL`, `STARTER`, `BUSINESS`, and `ENTERPRISE`. The implementation defaults for Starter, Business, and Enterprise are seed data and remain configurable.
+- Billing currency, tax treatment, trial length, grace period, overages, annual discount, refunds, and support SLAs remain commercial, legal, or operational decisions that must be finalized before production self-service billing is enabled.
 - SaaS billing (merchant to NovaTech) and shopper checkout (customer to merchant) are separate ledgers, webhooks, credentials, and audit events.
 - Shopper payments remain test-mode only until a written merchant-of-record decision and provider connection strategy are approved. The application must not reuse a platform shopper credential for every merchant.
-- The implementation models tenant-owned provider connections so the approved future strategy can support merchant-connected Stripe accounts or an approved M-Pesa collection flow without changing order ownership.
+- SaaS billing stores tenant billing-customer references and supports Stripe Billing plus invoice-driven M-Pesa setup-fee and renewal collection. Shopper payments remain a separate merchant-connected provider decision and must not reuse SaaS billing credentials.
+
+### Source-level SaaS billing behavior
+
+- Merchant owners and admins use `/manage/billing` to view the current plan, setup-fee state, subscription status, invoices, payment history, payment methods, and add-ons. Plan changes, cancellation, renewal collection, and add-on changes are server-authorized.
+- Platform owners and admins use `/platform/billing` to manage plan and add-on configuration, inspect billing customers and subscriptions, and review payment, invoice, and commission activity.
+- Stripe subscription, invoice, payment-failure, and cancellation state is webhook-authoritative and idempotent. Browser return URLs do not activate subscriptions.
+- M-Pesa setup fees and renewals are invoice-driven. A successful verification updates the invoice/payment state and then synchronizes the related billing record or subscription.
+- Completed shopper order payments can create a separate commission transaction using the effective plan rate snapshot; this does not mix shopper payment records with SaaS subscription charges.
+- Migration `0006_billing_system` and the regenerated Prisma Client must be deployed before the new billing routes can run against a target database. Live provider credentials, webhook registration, and sandbox/provider verification remain rollout gates.
 
 ## Lifecycle and data policy defaults
 
 - Tenant subscription states are `TRIALING`, `ACTIVE`, `PAST_DUE`, `GRACE_PERIOD`, `SUSPENDED`, `CANCELLED`, `INCOMPLETE`, and `UNPAID`.
+- Setup-fee state is tracked separately as `PENDING`, `PAID`, `FAILED`, or `WAIVED`; add-on subscriptions have independent `ACTIVE`, `PAST_DUE`, `CANCELLED`, and `INCOMPLETE` states.
 - Webhook receipts are idempotent and authoritative; browser success pages never activate a subscription.
 - Suspension protects merchant data and stops public selling before any deletion action.
 - Tenant deletion is soft deletion followed by an export/retention workflow. The retention duration and deletion schedule require legal/privacy approval before launch.

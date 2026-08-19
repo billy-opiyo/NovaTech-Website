@@ -26,11 +26,14 @@ export async function POST(request: Request) {
 
 	try {
 		const result = await prisma.$transaction(async (transaction) => {
-			const plan = await transaction.plan.upsert({ where: { key: "TRIAL" }, update: {}, create: { key: "TRIAL", name: "Trial", currency: data.currency, active: true } })
+			const plan = await transaction.plan.findFirst({ where: { key: data.planKey, active: true } }) || await transaction.plan.upsert({ where: { key: "TRIAL" }, update: {}, create: { key: "TRIAL", name: "Trial", currency: data.currency, active: true } })
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt: new Date() } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
 			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: "TRIALING", trialStartsAt: new Date() } })
+			await transaction.billingCustomer.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id } })
+			await transaction.billingRecord.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id, setupFeeAmount: plan.setupFeeAmount, currency: plan.currency, setupFeeStatus: plan.setupFeeAmount > 0 ? "PENDING" : "PAID", setupFeePaidAt: plan.setupFeeAmount > 0 ? undefined : new Date() } })
+			if (plan.setupFeeAmount > 0) await transaction.invoice.create({ data: { tenantId: tenant.id, kind: "SETUP_FEE", status: "OPEN", subtotal: plan.setupFeeAmount, setupFeeAmount: plan.setupFeeAmount, total: plan.setupFeeAmount, currency: plan.currency, dueDate: new Date(Date.now() + 3 * 86400000) } })
 			await transaction.domain.create({ data: { tenantId: tenant.id, storeId: store.id, hostname: `${slug}.${platformDomain}`, type: "PLATFORM_SUBDOMAIN", verificationToken: `${tenant.id}-platform`, verificationStatus: "PENDING" } })
 			return { tenantId: tenant.id, storeId: store.id, slug: store.slug }
 		})

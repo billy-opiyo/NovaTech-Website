@@ -68,6 +68,18 @@
 | **Admin Settings Page** | Platform configuration options.|
 | **Activity Log** | Audit trail of admin actions.|
 
+## 💼 SaaS Billing
+
+| Feature | Description |
+|---------|-------------|
+| **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, Stripe price IDs, and per-plan transaction commission rates. |
+| **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
+| **Stripe Billing** | Server-created Checkout subscription sessions, native subscription changes where Stripe price IDs are configured, customer portal sessions, and webhook-driven subscription/invoice/payment-failure synchronization. |
+| **M-Pesa SaaS collection** | Setup fees and renewals create local invoices and Daraja STK requests; callbacks confirm or fail the invoice/payment and update subscription state. This is invoice-driven rather than an automatic recurring charge. |
+| **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins; Stripe recurring items are supported when an add-on Stripe price ID is configured, otherwise M-Pesa charges are included in the next invoice. |
+| **Transaction commissions** | Completed shopper order payments create idempotent commission transactions using the active plan's rate snapshot. |
+| **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, generated commission totals, invoices, and failed SaaS payments. |
+
 ## 📦 Backend API (App Router Route Handlers)
 
 | Endpoint | Methods | Description |
@@ -82,6 +94,9 @@
 | `/api/newsletter` | POST | Validates email and acknowledges subscription. |
 | `/api/products/upload` | POST | Admin product image upload to Cloudflare R2 (images only, 5MB max). |
 | `/api/auth/[...nextauth]` | GET, POST | NextAuth handlers. |
+| `/api/billing/plans` | GET | Lists active database-backed SaaS plans and add-ons. |
+| `/api/manage/billing` | GET, POST | Tenant-scoped merchant billing reads and owner/admin billing actions. |
+| `/api/platform/billing` | GET, POST | Platform-role-protected plan/add-on management and billing reporting. |
 
 ## 🔐 Backend Services & Utilities
 
@@ -96,6 +111,7 @@
 | `backend/services/productService.ts` | Prisma queries for filtered listing, slug lookup, search, and creation. |
 | `backend/security/index.ts` | Email sanitization, password strength check, secret masking, object sanitization. |
 | `backend/actions/index.ts` | Action-record logging to `AdminLog` and background-task queue. |
+| `backend/billing/service.ts` | SaaS plan catalog, Stripe Checkout/portal, subscription lifecycle, M-Pesa billing invoices, setup fees, add-ons, and transaction commissions. |
 
 ## 💳 Payments (Real Provider Integration)
 
@@ -170,6 +186,11 @@ Core models:
 | `Notification` | Per-user notifications (ORDER_STATUS, PROMO, …) |
 | `SupportTicket` | Customer support tickets |
 | `AdminLog` | Audit trail of admin actions |
+| `Plan` / `Subscription` | Configurable SaaS pricing and tenant subscription lifecycle |
+| `BillingCustomer` / `BillingRecord` | Provider references and separately tracked setup-fee state |
+| `Addon` / `AddonSubscription` | Optional database-managed merchant capabilities |
+| `Invoice` / `Payment` | SaaS invoices and provider payments, while retaining shopper order payments |
+| `Transaction` | Commission ledger for completed shopper payments |
 
 **Order statuses:** PENDING, CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
 
@@ -204,7 +225,7 @@ Core models:
 | **Resend Email** | Branded order-confirmation email templates. |
 | **Prisma Schema** | Complete relational data model with proper relationships. |
 | **Seed Data** | Admin user, categories, sample products, coupons. |
-| **Payments** | M-Pesa (Daraja STK Push), Cards (Stripe Payment Intents), and Webhooks (signature-verified) fully implemented with graceful "not configured" fallback. |
+| **Payments** | Shopper M-Pesa/Card checkout plus SaaS Stripe Billing, invoice-driven M-Pesa collection, setup fees, add-ons, invoices, and signature-verified webhook lifecycle handling. |
 | **Checkout Payment Flow** | Full checkout-to-payment flow:<br>- Order creation via `/api/orders` with transactional stock validation<br>- M-Pesa STK Push flow with real-time status polling<br>- Stripe PaymentIntent creation and verification<br>- Cash on Delivery support<br>- Real-time payment status indicators<br>- Error handling with user-friendly messages<br>- Post-payment order confirmation with email notifications |
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |

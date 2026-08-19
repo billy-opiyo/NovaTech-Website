@@ -10,6 +10,7 @@ import type {
 	WebhookResult,
 } from "../../types/payments"
 import { cancelPendingOrder } from "../../services/order.service"
+import { applyStripeCheckoutCompleted, applyStripeInvoiceEvent, applyStripeSubscriptionEvent, markBillingPaymentFromMpesa, recordOrderCommission } from "../../billing/service"
 
 export type WebhookEvent = {
 	provider: string
@@ -73,6 +74,20 @@ export async function handleStripeEvent(
 		null
 
 	switch (type) {
+		case "checkout.session.completed":
+			await applyStripeCheckoutCompleted(data?.object || {})
+			break
+		case "customer.subscription.created":
+		case "customer.subscription.updated":
+		case "customer.subscription.deleted":
+			await applyStripeSubscriptionEvent(data?.object || {})
+			break
+		case "invoice.paid":
+			await applyStripeInvoiceEvent(data?.object || {}, true)
+			break
+		case "invoice.payment_failed":
+			await applyStripeInvoiceEvent(data?.object || {}, false, true)
+			break
 		case "payment_intent.succeeded":
 			paymentStatus = "COMPLETED"
 			break
@@ -253,7 +268,7 @@ async function updatePaymentByProviderReference(
 			...(extra.metadata || {}),
 		}
 
-		await prisma.payment.update({
+		const updatedPayment = await prisma.payment.update({
 			where: { id: payment.id },
 			data: {
 				status,
@@ -262,8 +277,10 @@ async function updatePaymentByProviderReference(
 				metadata: newMetadata,
 			},
 		})
+		if (payment.kind !== "ORDER") await markBillingPaymentFromMpesa({ id: updatedPayment.id, status, invoiceId: updatedPayment.invoiceId, subscriptionId: updatedPayment.subscriptionId, billingRecordId: updatedPayment.billingRecordId, failureReason: extra.metadata?.resultDesc as string | undefined })
 
 		if (payment.orderId && status === "COMPLETED") {
+			await recordOrderCommission(payment.id)
 			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
 				data: { status: "CONFIRMED" },
@@ -302,7 +319,7 @@ async function updatePaymentByProviderReference(
 		}
 		if (payment.orderId && status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
-		return payment
+		return updatedPayment
 	} catch (error) {
 		// Webhook handlers must always acknowledge the provider even if the
 		// local DB lookup/update fails (otherwise providers retry endlessly).

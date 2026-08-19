@@ -1,5 +1,23 @@
 # NovaTech SaaS Switch Plan
 
+## Current implementation status (2026-08-19)
+
+The tenant foundation and source-level merchant SaaS billing slice are
+implemented. Current billing code includes database-backed
+`TRIAL`/`STARTER`/`BUSINESS`/`ENTERPRISE` plans, setup-fee records,
+subscriptions, invoices, add-ons, Stripe Checkout/portal/webhooks,
+invoice-driven M-Pesa renewals, and plan commission transactions.
+
+Merchant billing is available under `/manage/billing`; platform billing
+configuration and reporting is under `/platform/billing`. The
+`0006_billing_system` migration and regenerated Prisma Client still need to be
+deployed to a reachable target database. Live Stripe/M-Pesa credentials,
+provider dashboard webhook registration, payment sandbox tests, legal/tax/
+commercial decisions, and production rollout remain external gates.
+
+The execution notes below are historical checkpoints and may describe the
+pre-billing state.
+
 ## Autonomous execution log
 
 ### 2026-08-19 — Non-external SaaS implementation checkpoint complete
@@ -51,7 +69,7 @@
 
 - Extended `/api/manage/billing` with the resolved tenant's configured plan entitlements and current-period usage counters, all scoped by tenant membership.
 - Expanded `/manage/billing` to show configured plan metadata, subscription lifecycle state, entitlement limits, usage bars, and current counter periods without inventing prices or provider actions.
-- Preserved truthful unavailable states: plan changes, invoices, payment portals, and live webhook behavior remain disabled until billing credentials and provider configuration exist.
+- At this checkpoint, truthful unavailable states were preserved: plan changes, invoices, payment portals, and live webhook behavior were disabled until billing credentials and provider configuration existed. The later source-level billing implementation is summarized at the top of this document.
 - Verification passed: frontend TypeScript and `git diff --check`.
 - Runtime boundary: entitlement and usage reads require the migrated tenant database; live billing remains intentionally unconfigured.
 
@@ -230,7 +248,7 @@ Use entitlements rather than hard-coding plan names in UI or route guards.
 |---|---|
 | Trial | Time-limited evaluation, one store, limited products/orders, platform subdomain, test payments only. |
 | Starter | One store, a practical product limit, core checkout, basic theme controls, basic analytics, platform support. |
-| Growth | More products and staff, custom domain, advanced promotions, exports, richer analytics, priority support. |
+| Enterprise | More products and staff, custom domain, advanced promotions, exports, richer analytics, priority support. |
 | Business | Higher limits, multiple locations or catalogs, advanced roles, onboarding assistance, SLA/support options. |
 
 The final prices, currency, tax treatment, trial length, overage rules, grace period, and annual discount should be commercial decisions documented separately. Product limits must be enforced on the server, not only displayed in the dashboard.

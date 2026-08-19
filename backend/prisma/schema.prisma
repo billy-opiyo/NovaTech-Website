@@ -34,8 +34,10 @@ model User {
   supportTickets SupportTicket[]
   notifications  Notification[]
   adminLogs      AdminLog[]
-  loginEvents    LoginEvent[]
+	loginEvents    LoginEvent[]
 	memberships    Membership[]
+	billingCustomers BillingCustomer[]
+	billingRecords BillingRecord[]
 	preferredStore Store?         @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
@@ -175,6 +177,11 @@ model Tenant {
   supportTickets      SupportTicket[]
   ticketReplies       TicketReply[]
   adminLogs           AdminLog[]
+  billingCustomer     BillingCustomer?
+  billingRecord       BillingRecord?
+  invoices            Invoice[]
+  addonSubscriptions  AddonSubscription[]
+  transactions        Transaction[]
 
   @@index([status, createdAt])
 }
@@ -271,6 +278,9 @@ model Plan {
   price            Int?
   currency         String           @default("KES")
   billingInterval  BillingInterval?
+  setupFeeAmount   Int              @default(0)
+  transactionFeePercent Float       @default(0)
+  stripePriceId    String?          @unique
   active           Boolean          @default(true)
   entitlementsJson Json?
   createdAt        DateTime         @default(now())
@@ -289,6 +299,7 @@ model Subscription {
   provider               String?
   providerCustomerId     String?
   providerSubscriptionId String?
+  providerCheckoutSessionId String?
   trialStartsAt          DateTime?
   trialEndsAt            DateTime?
   currentPeriodStart     DateTime?
@@ -300,6 +311,9 @@ model Subscription {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan   Plan   @relation(fields: [planId], references: [id])
+	invoices Invoice[]
+	addonSubscriptions AddonSubscription[]
+	payments Payment[]
 
   @@index([tenantId, status])
   @@index([provider, providerSubscriptionId])
@@ -317,6 +331,165 @@ model UsageCounter {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, metric, periodStart])
+}
+
+enum BillingRecordStatus {
+  PENDING
+  PAID
+  FAILED
+  WAIVED
+}
+
+enum InvoiceKind {
+  SETUP_FEE
+  SUBSCRIPTION
+  ADDON
+  RENEWAL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+  FAILED
+  CANCELLED
+}
+
+enum BillingPaymentKind {
+  ORDER
+  SETUP_FEE
+  SUBSCRIPTION
+  ADDON
+  RENEWAL
+}
+
+enum AddonSubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+
+model BillingCustomer {
+  id                     String   @id @default(cuid())
+  tenantId               String   @unique
+  ownerUserId            String?
+  stripeCustomerId       String?  @unique
+  defaultPaymentMethodId String?
+  mpesaPhone             String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User?  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+}
+
+model BillingRecord {
+  id             String              @id @default(cuid())
+  tenantId       String              @unique
+  ownerUserId    String?
+  setupFeeAmount Int                 @default(0)
+  currency       String              @default("KES")
+  setupFeeStatus BillingRecordStatus @default(PENDING)
+  setupFeePaidAt DateTime?
+  failureReason  String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner    User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  payments Payment[]
+}
+
+model Addon {
+  id              String          @id @default(cuid())
+  key             String          @unique
+  name            String
+  description     String?
+  price           Int
+  currency        String          @default("KES")
+  billingInterval BillingInterval @default(MONTH)
+  stripePriceId   String?         @unique
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  subscriptions AddonSubscription[]
+}
+
+model AddonSubscription {
+  id                          String                  @id @default(cuid())
+  tenantId                    String
+  addonId                     String
+  subscriptionId              String?
+  status                      AddonSubscriptionStatus @default(INCOMPLETE)
+  provider                    String?
+  providerSubscriptionItemId String?
+  currentPeriodStart         DateTime?
+  currentPeriodEnd           DateTime?
+  cancelAtPeriodEnd           Boolean                 @default(false)
+  createdAt                   DateTime                @default(now())
+  updatedAt                   DateTime                @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  addon        Addon         @relation(fields: [addonId], references: [id], onDelete: Restrict)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, addonId])
+  @@index([tenantId, status])
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  tenantId          String
+  subscriptionId    String?
+  kind              InvoiceKind   @default(SUBSCRIPTION)
+  status            InvoiceStatus @default(DRAFT)
+  provider          String?
+  providerInvoiceId String?       @unique
+  number            String?       @unique
+  subtotal          Int
+  addonTotal        Int           @default(0)
+  setupFeeAmount    Int           @default(0)
+  total             Int
+  currency          String        @default("KES")
+  dueDate           DateTime?
+  paidAt            DateTime?
+  hostedInvoiceUrl  String?
+  invoicePdfUrl     String?
+  metadata          Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  payments     Payment[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, kind])
+}
+
+model Transaction {
+  id               String   @id @default(cuid())
+  tenantId         String
+  orderId          String?
+  paymentId        String?  @unique
+  currency         String   @default("KES")
+  grossAmount      Float
+  commissionRate   Float    @default(0)
+  commissionAmount Float    @default(0)
+  status           String   @default("COMPLETED")
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
 }
 
 model FeatureEntitlement {
@@ -483,6 +656,7 @@ model Order {
 
   items    OrderItem[]
   payments Payment[]
+  transactions Transaction[]
   tenant   Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
@@ -499,16 +673,28 @@ model Payment {
   currency          String        @default("KES")
   status            PaymentStatus @default(PENDING)
   providerReference String?       @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
+  invoiceId         String?
+  subscriptionId    String?
+  billingRecordId   String?
+  kind              BillingPaymentKind @default(ORDER)
   phoneNumber       String?
   customerEmail     String?
+  failureCode       String?
+  failureReason     String?
+  providerCustomerId String?
   metadata          Json?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   tenant            Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice           Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  billingRecord     BillingRecord? @relation(fields: [billingRecordId], references: [id], onDelete: SetNull)
+  transaction       Transaction?
 
   @@index([orderId])
   @@index([providerReference])
   @@index([tenantId, status])
+  @@index([tenantId, kind, createdAt])
 }
 
 enum PaymentStatus {

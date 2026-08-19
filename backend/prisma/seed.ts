@@ -33,6 +33,29 @@ where: { email: "admin@novatechstore.co.ke" },
 		update: {},
 		create: { key: "TRIAL", name: "Trial", currency: "KES", active: true },
 	})
+	await prisma.plan.upsert({
+		where: { key: "STARTER" },
+		update: {},
+		create: { key: "STARTER", name: "Starter", price: 2500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 2500, transactionFeePercent: 2.5, active: true, entitlementsJson: { staffAccounts: 3, analytics: false, whatsappNotifications: true } },
+	})
+	await prisma.plan.upsert({
+		where: { key: "BUSINESS" },
+		update: {},
+		create: { key: "BUSINESS", name: "Business", price: 7500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 2500, transactionFeePercent: 1.5, active: true, entitlementsJson: { staffAccounts: 15, analytics: true, whatsappNotifications: true } },
+	})
+	await prisma.plan.upsert({
+		where: { key: "ENTERPRISE" },
+		update: {},
+		create: { key: "ENTERPRISE", name: "Enterprise", price: 25000, currency: "KES", billingInterval: "YEAR", setupFeeAmount: 0, transactionFeePercent: 0.5, active: true, entitlementsJson: { staffAccounts: 100, analytics: true, whatsappNotifications: true } },
+	})
+	await prisma.addon.createMany({
+		data: [
+			{ key: "whatsapp-notifications", name: "WhatsApp notifications", description: "Automated order and customer notifications.", price: 1000, currency: "KES", billingInterval: "MONTH", active: true },
+			{ key: "advanced-analytics", name: "Advanced analytics", description: "Extended reports and operational insights.", price: 2500, currency: "KES", billingInterval: "MONTH", active: true },
+			{ key: "extra-staff", name: "Extra staff accounts", description: "Additional team seats beyond the plan allowance.", price: 1500, currency: "KES", billingInterval: "MONTH", active: true },
+		],
+		skipDuplicates: true,
+	})
 	const tenant = await prisma.tenant.upsert({
 		where: { id: "novatech-tenant" },
 		update: { planId: trialPlan.id, status: "ACTIVE" },
