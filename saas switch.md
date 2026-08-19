@@ -1,5 +1,14 @@
 # NovaTech SaaS Switch Plan
 
+## Autonomous execution log
+
+### 2026-08-19 — Phase 0 in progress
+
+- Confirmed the repository is clean on `main` and the current data model is single-store.
+- Added `docs/saas-architecture-decisions.md` with beta defaults, tenant URL rules, role boundaries, lifecycle states, payment separation, and explicit commercial/legal gates.
+- No live prices, tax assumptions, merchant-of-record claim, or provider credentials were invented.
+- Next task: implement the tenant/store/membership foundation and a migration/backfill path.
+
 **Date:** 18 August 2026
 **Current product:** NovaTech Store, a single-store electronics e-commerce application
 **Target product:** A multi-tenant SaaS platform that lets independent digital-electronics merchants create, brand, manage, and publish their own online stores
