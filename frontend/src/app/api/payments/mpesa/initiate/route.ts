@@ -4,6 +4,7 @@ import { z } from "zod"
 import { initiateMpesaPayment } from "backend/payments/mpesa"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 const mpesaInitiateSchema = z.object({
 	amount: z.number().positive(),
@@ -20,8 +21,9 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
 		const validated = mpesaInitiateSchema.parse(body)
+		const context = await resolveTenantFromRequest(req)
 		if (validated.orderId) {
-			const order = await prisma.order.findUnique({ where: { id: validated.orderId }, select: { userId: true, shippingAddress: true } })
+			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, shippingAddress: true } })
 			const session = await getServerSession()
 			const shippingPhone = (order?.shippingAddress as { phone?: string } | null)?.phone
 			const normalized = validated.phone.replace(/^254/, "0")
@@ -35,6 +37,7 @@ export async function POST(req: NextRequest) {
 			phone: validated.phone,
 			reference: validated.reference,
 			orderId: validated.orderId,
+			tenantId: context.tenantId,
 			metadata: validated.metadata,
 		})
 

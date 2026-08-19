@@ -27,6 +27,8 @@
 - Remaining commerce boundary work includes payment callback tenant/order matching, account/address/notification/support scoping, admin API conversion, custom-domain verification, and preview routing.
 - Phase 4 billing core checkpoint completed: added subscription lifecycle transition validation, plan entitlement lookup, server-side usage-limit assertions, and tenant-scoped `/api/manage/billing` plus merchant subscription status UI.
 - Live SaaS checkout, provider webhooks, invoices, and payment-connection setup remain disabled until the documented merchant-of-record/provider decision and credentials are supplied.
+- Security checkpoint completed: account addresses, notifications, shopper payment order lookups, and payment-created orders now carry/request-check tenant scope; cross-tenant payment IDs are rejected before provider calls.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
 - Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
 
 ### Next phase

@@ -17,6 +17,7 @@ export type MpesaPayload = {
 	amount: number
 	phone: string
 	reference: string
+	tenantId?: string
 	orderId?: string
 	metadata?: Record<string, unknown>
 }
@@ -29,6 +30,7 @@ export async function initiateMpesaPayment({
 	amount,
 	phone,
 	reference,
+	tenantId,
 	orderId,
 	metadata,
 	callbackUrl,
@@ -53,7 +55,7 @@ export async function initiateMpesaPayment({
 	}
 
 	if (orderId) {
-		const order = await prisma.order.findUnique({ where: { id: orderId }, select: { total: true, status: true } })
+		const order = await prisma.order.findFirst({ where: { id: orderId, ...(tenantId ? { tenantId } : {}) }, select: { total: true, status: true } })
 		if (!order) throw new Error("Order not found")
 		if (order.status !== "PENDING") throw new Error("Order is no longer payable")
 		if (Math.abs(order.total - amount) > 0.01) throw new Error("Payment amount does not match the order")
@@ -100,6 +102,7 @@ export async function initiateMpesaPayment({
 
 	const payment = await prisma.payment.create({
 		data: {
+			tenantId,
 			orderId,
 			provider: "mpesa",
 			amount,

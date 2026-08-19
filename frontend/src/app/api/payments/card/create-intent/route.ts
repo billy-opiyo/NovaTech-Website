@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createCardPaymentIntent } from "backend/payments/cards"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 const cardIntentSchema = z.object({
 	amount: z.number().positive(),
@@ -21,8 +22,9 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
 		const validated = cardIntentSchema.parse(body)
+		const context = await resolveTenantFromRequest(req)
 		if (validated.orderId) {
-			const order = await prisma.order.findUnique({ where: { id: validated.orderId }, select: { userId: true, guestEmail: true } })
+			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, guestEmail: true } })
 			const session = await getServerSession()
 			if (!order || (order.userId && order.userId !== session?.user?.id) || (!order.userId && order.guestEmail !== validated.customerEmail.trim().toLowerCase())) {
 				return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
@@ -35,6 +37,7 @@ export async function POST(req: NextRequest) {
 			customerEmail: validated.customerEmail,
 			reference: validated.reference,
 			orderId: validated.orderId,
+			tenantId: context.tenantId,
 			metadata: validated.metadata,
 		})
 
