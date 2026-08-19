@@ -6,9 +6,20 @@ import type { StoreContext } from "./store-context.types"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
+function isLocalPreviewHost(value: string | null): boolean {
+	if (!value) return false
+	const hostname = value.trim().toLowerCase().split(":")[0]
+	return hostname === "localhost" || hostname === "127.0.0.1"
+}
+
 export async function getStoreContext(): Promise<StoreContext> {
+	const requestHeaders = await headers()
+	if (process.env.NODE_ENV !== "production" && isLocalPreviewHost(requestHeaders.get("host"))) {
+		return fallbackStoreContext()
+	}
+
 	try {
-		const requestContext = await resolveTenantFromRequest({ headers: await headers() })
+		const requestContext = await resolveTenantFromRequest({ headers: requestHeaders })
 		const store = await prisma.store.findUnique({
 			where: { id: requestContext.storeId },
 			select: {

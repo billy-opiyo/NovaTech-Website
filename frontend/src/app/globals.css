@@ -360,41 +360,6 @@ html:not(.dark) .splash-screen {
   color: #0f172a;
 }
 
-html:not(.dark) .splash-screen>div {
-  position: relative;
-  top: -18px;
-}
-
-html:not(.dark) .splash-screen>div>p {
-  transform: translateY(6px);
-}
-
-@media (max-width: 767px) {
-  html:not(.dark) .splash-screen>div>p {
-    transform: translateY(10px);
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1024px) {
-  html:not(.dark) .splash-screen>div {
-    top: -30px;
-  }
-
-  html:not(.dark) .splash-screen>div>p {
-    transform: translateY(-12px);
-  }
-}
-
-@media (min-width: 1025px) and (max-width: 1199px) {
-  html:not(.dark) .splash-screen>div {
-    top: -26px;
-  }
-
-  html:not(.dark) .splash-screen>div>p {
-    transform: translateY(-10px);
-  }
-}
-
 @media (min-width: 768px) {
   html:not(.dark) .splash-screen {
     background-image:
@@ -409,6 +374,86 @@ html:not(.dark) .splash-screen>div>p {
       linear-gradient(180deg, rgb(255 255 255 / 0.15), rgb(255 255 255 / 0.35)),
       url("/images/NovaTech cover desktop light.png");
     background-size: cover, 100% 100%;
+  }
+}
+
+/* Keep the desktop composition intact. On smaller screens, anchor each
+   content group to the corresponding artwork area instead of centering the
+   whole loading stack over the devices. */
+@media (max-width: 1199px) {
+  .splash-screen > .splash-content {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    padding: 0 2rem;
+  }
+
+  .splash-welcome,
+  .splash-wordmark,
+  .splash-loading {
+    position: absolute;
+    left: 2rem;
+    right: 2rem;
+    width: auto;
+  }
+
+  .splash-welcome {
+    top: 22%;
+    margin: 0;
+  }
+
+  .splash-wordmark {
+    top: 25%;
+    margin: 0;
+  }
+
+  .splash-loading {
+    top: 84%;
+    margin-top: 0;
+  }
+
+}
+
+/* The light mobile artwork places the glass frame slightly higher than the
+   dark artwork, so keep the welcome block just above that frame as well. */
+@media (max-width: 767px) {
+  html:not(.dark) .splash-welcome {
+    top: 19%;
+  }
+
+  html:not(.dark) .splash-wordmark {
+    top: 22%;
+  }
+}
+
+/* Tablet/iPad: keep the welcome copy inside the glass frame and above the
+   laptop, then move the progress state below the curved display table. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .splash-welcome {
+    top: 24%;
+  }
+
+  .splash-wordmark {
+    top: 28%;
+  }
+
+  .splash-loading {
+    top: 90%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
+  .splash-welcome {
+    top: 10%;
+  }
+
+  .splash-wordmark {
+    top: 14%;
+  }
+
+  .splash-loading {
+    top: 84%;
   }
 }
 

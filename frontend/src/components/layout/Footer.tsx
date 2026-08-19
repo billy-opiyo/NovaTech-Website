@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"

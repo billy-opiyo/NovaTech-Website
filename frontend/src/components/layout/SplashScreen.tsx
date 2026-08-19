@@ -133,8 +133,8 @@ export default function SplashScreen({ children }: { children: ReactNode }) {
 				aria-live="polite"
 				aria-label={`Loading ${clientConfig.brand.name}`}
 			>
-				<div className="relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-					<p className="mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-blue-700 dark:text-blue-200">
+				<div className="splash-content relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
+					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-blue-700 dark:text-blue-200">
 						Welcome to
 					</p>
 					<h1 className="splash-wordmark" aria-label={clientConfig.brand.name}>
@@ -147,7 +147,7 @@ export default function SplashScreen({ children }: { children: ReactNode }) {
 							</span>
 						))}
 					</h1>
-					<div className="mt-10 w-full">
+					<div className="splash-loading mt-10 w-full">
 						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-blue-700 dark:text-blue-200">
 							<span>Preparing your store</span>
 							<span className="tabular-nums">
