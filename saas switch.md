@@ -21,6 +21,9 @@
 - Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/tenants` and `/platform/billing` are truthful unavailable states until database/provider-backed operations are connected.
 - The legacy `/admin` controllers still contain global role checks and unscoped API queries; they remain a Phase 3/5 migration item before any merchant-facing beta.
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Final checkpoint: full test suite passed 40/40; frontend and backend TypeScript checks passed; repository status is clean.
+- Current commits on `main`: `a8b1d77`, `34c4707`, `b41ae83`, `029249c`, `94cee18`, `8c1746f`, and `bf4ae48`.
+- Execution is blocked from claiming a complete SaaS launch by external dependencies: a real `DATABASE_URL` for migration/restore verification, approved merchant-of-record/payment strategy, SaaS billing and shopper-payment provider credentials, DNS/SSL control for subdomains/custom domains, and professional legal/tax/privacy review.
 - Phase 3 slice completed: root metadata/theme/branding now consume a server-resolved `StoreContext`; authenticated onboarding creates a trial tenant/store/membership/subscription/domain; store design saves validated drafts and publishes versioned settings through `/api/manage/store/*`.
 - The remaining Phase 3 work is converting every catalog, cart, checkout, account, upload, notification, and admin API query to use the resolved context, plus custom-domain and preview routing.
 - Phase 3 isolation checkpoint completed: catalog, product mutations, carts, orders, coupon validation, reviews, wishlists, and product uploads now use host-resolved tenant scope; upload keys use `tenants/{tenantId}/stores/{storeId}/...`.
