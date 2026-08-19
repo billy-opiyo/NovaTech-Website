@@ -7,7 +7,7 @@ import Testimonials from "@/components/home/Testimonials"
 import Newsletter from "@/components/home/Newsletter"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
-import { clientConfig } from "@/config/client.config"
+import { useStoreContext } from "@/lib/store-context"
 
 const mapEmbedUrl =
 	"https://www.google.com/maps?q=Kimathi+Street,+CBD,+Nairobi,+Kenya&output=embed"
@@ -15,13 +15,14 @@ const mapLink =
 	"https://www.google.com/maps/search/?api=1&query=Kimathi+Street,+CBD,+Nairobi,+Kenya"
 
 export default function HomePage() {
+	const store = useStoreContext()
 	return (
 		<div className="space-y-24">
 			<HeroBanner />
 			<CategoryGrid />
 			<FeaturedProducts />
 			<Testimonials />
-			{clientConfig.features.showNewsletter && <Newsletter />}
+			{store.features.showNewsletter && <Newsletter />}
 			<div className="space-y-8 mb-16">
 			<div className="glass-card p-8 md:p-12">
 				<div className="grid md:grid-cols-2 gap-8">
@@ -32,12 +33,12 @@ export default function HomePage() {
 								<Phone className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Call Us</p>
-										<p className="text-gray-600">{clientConfig.contact.businessHours}</p>
+										<p className="text-gray-600">{store.contact.businessHours}</p>
 										<a
-											href={clientConfig.contact.phoneHref}
+										href={store.contact.phoneHref}
 										className="text-primary hover:underline transition-colors"
 									>
-											{clientConfig.contact.phoneDisplay}
+										{store.contact.phoneDisplay}
 									</a>
 								</div>
 							</div>
@@ -45,12 +46,12 @@ export default function HomePage() {
 								<Mail className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Email Us</p>
-										<p className="text-gray-600">{clientConfig.contact.responseTime}</p>
+										<p className="text-gray-600">{store.contact.responseTime}</p>
 										<a
-											href={clientConfig.contact.emailHref}
+										href={store.contact.emailHref}
 										className="text-primary hover:underline transition-colors"
 									>
-											{clientConfig.contact.email}
+										{store.contact.email}
 									</a>
 								</div>
 							</div>
@@ -62,8 +63,8 @@ export default function HomePage() {
 								<MapPin className="mt-1 text-primary" size={20} />
 								<div>
 									<p className="font-medium">Visit Our Store</p>
-									<p className="text-gray-600">{clientConfig.contact.addressLine}</p>
-									<p className="text-primary">{clientConfig.contact.cityCountry}</p>
+									<p className="text-gray-600">{store.contact.addressLine}</p>
+									<p className="text-primary">{store.contact.cityCountry}</p>
 								</div>
 							</div>
 						</div>
@@ -105,8 +106,8 @@ export default function HomePage() {
 						<MapPin className="mt-1 shrink-0 text-primary" size={22} />
 						<div>
 							<h2 className="text-2xl font-bold">Visit Us</h2>
-							<p className="mt-1 text-gray-600">{clientConfig.contact.addressLine}</p>
-							<p className="text-primary">{clientConfig.contact.cityCountry}</p>
+					<p className="mt-1 text-gray-600">{store.contact.addressLine}</p>
+					<p className="text-primary">{store.contact.cityCountry}</p>
 						</div>
 					</div>
 					<a

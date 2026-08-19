@@ -21,6 +21,7 @@ import {
 	MessageSquare,
 	Shield,
 	Activity,
+	Palette,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -52,7 +53,8 @@ const sidebarLinks = (basePath: string) => [
 	{
 		section: "System",
 		items: [
-			{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
+		{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
+			{ icon: Palette, label: "Store design", href: `${basePath}/design` },
 			{ icon: Shield, label: "Security", href: `${basePath}/security` },
 			{ icon: Activity, label: "Activity Log", href: `${basePath}/activity` },
 		],

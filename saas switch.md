@@ -21,10 +21,13 @@
 - Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/tenants` and `/platform/billing` are truthful unavailable states until database/provider-backed operations are connected.
 - The legacy `/admin` controllers still contain global role checks and unscoped API queries; they remain a Phase 3/5 migration item before any merchant-facing beta.
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Phase 3 slice completed: root metadata/theme/branding now consume a server-resolved `StoreContext`; authenticated onboarding creates a trial tenant/store/membership/subscription/domain; store design saves validated drafts and publishes versioned settings through `/api/manage/store/*`.
+- The remaining Phase 3 work is converting every catalog, cart, checkout, account, upload, notification, and admin API query to use the resolved context, plus custom-domain and preview routing.
+- Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
 
 ### Next phase
 
-- Phase 3: replace global `clientConfig` reads with database-backed `StoreContext`, then add onboarding, draft/preview/publish settings, and tenant-aware storefront/catalog runtime.
+- Continue Phase 3: tenant-scope the existing catalog and commerce API paths, then add preview and custom-domain verification behavior before billing work.
 
 **Date:** 18 August 2026
 **Current product:** NovaTech Store, a single-store electronics e-commerce application

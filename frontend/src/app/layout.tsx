@@ -9,38 +9,32 @@ import FloatingActions from "@/components/layout/FloatingActions"
 import SessionResume from "@/components/layout/SessionResume"
 import SplashScreen from "@/components/layout/SplashScreen"
 import { ToastProvider } from "@/components/ui/Toast"
-import { clientConfig } from "@/config/client.config"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
+import { getStoreContext } from "@/lib/store-context.server"
+import { StoreContextProvider } from "@/lib/store-context"
 
-const activeTheme = getThemePreset(clientConfig.themePreset)
-
-export const metadata: Metadata = {
-	title: {
-		default: clientConfig.brand.name,
-		template: `%s | ${clientConfig.brand.name}`,
-	},
-	description: clientConfig.seo.description,
-	keywords: clientConfig.seo.keywords,
-	openGraph: {
-		type: "website",
-		locale: clientConfig.site.locale,
-		url: clientConfig.site.url,
-		siteName: clientConfig.brand.name,
-		title: clientConfig.brand.name,
-		description: clientConfig.seo.description,
-	},
+export async function generateMetadata(): Promise<Metadata> {
+	const store = await getStoreContext()
+	return {
+		title: { default: store.brand.name, template: `%s | ${store.brand.name}` },
+		description: store.seo.description,
+		keywords: store.seo.keywords,
+		openGraph: { type: "website", locale: store.site.locale, url: store.site.url, siteName: store.brand.name, title: store.brand.name, description: store.seo.description },
+	}
 }
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: {
 	children: React.ReactNode
 }) {
+	const store = await getStoreContext()
+	const activeTheme = getThemePreset(store.themePreset)
 	return (
 		<html
-			lang={clientConfig.site.language}
+			lang={store.site.language}
 			className={
-				clientConfig.features.showSplashScreen ? "splash-pending" : undefined
+				store.features.showSplashScreen ? "splash-pending" : undefined
 			}
 			suppressHydrationWarning
 			style={themeToCssVariables(activeTheme) as React.CSSProperties}
@@ -62,8 +56,8 @@ export default function RootLayout({
 						})();`,
 					}}
 				/>
-				<link rel="icon" type="image/png" href={clientConfig.brand.favicon} />
-				{clientConfig.features.showSplashScreen && (
+				<link rel="icon" type="image/png" href={store.brand.favicon} />
+				{store.features.showSplashScreen && (
 					<>
 						<link
 							rel="preload"
@@ -99,13 +93,14 @@ export default function RootLayout({
 				<meta name="theme-color" content={activeTheme.dark.background} />
 			</head>
 			<body
-				className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${clientConfig.features.showSplashScreen ? "splash-pending" : ""}`}
+			className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${store.features.showSplashScreen ? "splash-pending" : ""}`}
 			>
+				<StoreContextProvider value={store}>
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
 							<SessionResume />
-							{clientConfig.features.showSplashScreen ? (
+							{store.features.showSplashScreen ? (
 								<SplashScreen>
 									<>
 										<Header />
@@ -131,6 +126,7 @@ export default function RootLayout({
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>
+				</StoreContextProvider>
 			</body>
 		</html>
 	)

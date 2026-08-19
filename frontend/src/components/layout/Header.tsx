@@ -8,12 +8,13 @@ import SearchOverlay from "@/components/search/SearchOverlay"
 import NotificationCenter from "@/components/notifications/NotificationCenter"
 import { Moon, Sun, ShoppingCart, Menu, X, User } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { clientConfig } from "@/config/client.config"
 import { useCart } from "@/lib/cartContext"
+import { useStoreContext } from "@/lib/store-context"
 
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
 	const { itemCount } = useCart()
+	const store = useStoreContext()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
@@ -24,19 +25,19 @@ export default function Header() {
 					<Link href="/" className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							<Image
-								src={theme === "light" ? "/images/NovaTech icon 2 light.png" : clientConfig.brand.logo}
-								alt={clientConfig.brand.logoAlt}
+										src={theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo}
+										alt={store.brand.logoAlt}
 								fill
 								sizes="(max-width: 640px) 40px, 44px"
 								className="object-contain"
 							/>
 						</div>
 						<span className="whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl">
-							{clientConfig.brand.name}
+							{store.brand.name}
 						</span>
 					</Link>
 					<nav className="hidden gap-3 md:flex lg:gap-6">
-						{clientConfig.navigation.map((link) => (
+						{store.navigation.map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
@@ -99,7 +100,7 @@ export default function Header() {
 						className="md:hidden glass border-t border-white/10 overflow-hidden"
 					>
 						<div className="px-4 py-4 flex flex-col gap-3">
-							{clientConfig.navigation.map((link) => (
+						{store.navigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}

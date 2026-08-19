@@ -1,29 +1,29 @@
 import Link from "next/link"
 import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
-import { clientConfig, getWhatsAppHref } from "@/config/client.config"
+import { useStoreContext } from "@/lib/store-context"
 
-const socialLinks = [
+const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 	{
 		label: "Facebook",
-		href: clientConfig.social.facebook,
+		href: store.social.facebook,
 		icon: FaFacebookF,
 		color: "bg-blue-600 hover:bg-blue-700",
 	},
 	{
 		label: "Instagram",
-		href: clientConfig.social.instagram,
+		href: store.social.instagram,
 		icon: FaInstagram,
 		color: "bg-pink-600 hover:bg-pink-700",
 	},
 	{
 		label: "TikTok",
-		href: clientConfig.social.tiktok,
+		href: store.social.tiktok,
 		icon: FaTiktok,
 		color: "bg-black hover:bg-neutral-800",
 	},
 	{
 		label: "WhatsApp",
-		href: getWhatsAppHref(),
+		href: `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`,
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	},
@@ -51,14 +51,15 @@ const legalLinks = [
 
 export default function Footer() {
 	const year = new Date().getFullYear()
+	const store = useStoreContext()
 
 	return (
 		<footer className="glass mt-20 border-t border-white/10">
 			<div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-10 pb-28 text-center sm:grid-cols-2 sm:py-12 sm:pb-28 md:gap-8 md:pb-24 lg:grid-cols-4 lg:pb-12 lg:text-left">
 				<div className="mx-auto max-w-xs lg:mx-0">
-					<h3 className="text-lg font-bold mb-4">{clientConfig.brand.name}</h3>
+					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						{clientConfig.brand.tagline}. Genuine products, warranty, fast delivery.
+						{store.brand.tagline}. Genuine products, warranty, fast delivery.
 					</p>
 				</div>
 
@@ -91,7 +92,7 @@ export default function Footer() {
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">Stay Connected</h4>
 					<div className="flex justify-center gap-3 lg:justify-start">
-						{socialLinks.map(({ label, href, icon: Icon, color }) => (
+						{socialLinks(store).map(({ label, href, icon: Icon, color }) => (
 							<Link
 								key={label}
 								href={href}
@@ -105,7 +106,7 @@ export default function Footer() {
 						))}
 					</div>
 					<p className="text-xs mt-4 text-gray-500">
-						© {year} {clientConfig.brand.name}. All rights reserved.
+						© {year} {store.brand.name}. All rights reserved.
 					</p>
 					<div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-gray-500 lg:justify-start">
 						{legalLinks.map(({ label, href }) => <Link key={href} href={href} className="hover:text-primary">{label}</Link>)}
