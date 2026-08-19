@@ -22,6 +22,7 @@ import {
 	Shield,
 	Activity,
 	Palette,
+	CreditCard,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -55,6 +56,7 @@ const sidebarLinks = (basePath: string) => [
 		items: [
 		{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
 			{ icon: Palette, label: "Store design", href: `${basePath}/design` },
+			{ icon: CreditCard, label: "Subscription", href: `${basePath}/billing` },
 			{ icon: Shield, label: "Security", href: `${basePath}/security` },
 			{ icon: Activity, label: "Activity Log", href: `${basePath}/activity` },
 		],

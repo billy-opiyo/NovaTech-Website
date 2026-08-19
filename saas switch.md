@@ -25,6 +25,8 @@
 - The remaining Phase 3 work is converting every catalog, cart, checkout, account, upload, notification, and admin API query to use the resolved context, plus custom-domain and preview routing.
 - Phase 3 isolation checkpoint completed: catalog, product mutations, carts, orders, coupon validation, reviews, wishlists, and product uploads now use host-resolved tenant scope; upload keys use `tenants/{tenantId}/stores/{storeId}/...`.
 - Remaining commerce boundary work includes payment callback tenant/order matching, account/address/notification/support scoping, admin API conversion, custom-domain verification, and preview routing.
+- Phase 4 billing core checkpoint completed: added subscription lifecycle transition validation, plan entitlement lookup, server-side usage-limit assertions, and tenant-scoped `/api/manage/billing` plus merchant subscription status UI.
+- Live SaaS checkout, provider webhooks, invoices, and payment-connection setup remain disabled until the documented merchant-of-record/provider decision and credentials are supplied.
 - Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
 
 ### Next phase
