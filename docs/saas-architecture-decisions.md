@@ -1,6 +1,6 @@
 # NovaTech SaaS architecture decisions
 
-**Status:** Phase 0 baseline for implementation
+**Status:** Phase 3/4 implementation with a pre-Phase 5 shopper-discovery slice
 **Date:** 2026-08-19
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
@@ -16,10 +16,20 @@ This document records implementation defaults for the first controlled beta. It 
 
 - The initial deployment uses one Next.js application and one PostgreSQL database with server-enforced logical tenant isolation.
 - The canonical platform domain is `novatechstore.co.ke`; merchant platform hosts use `{store-slug}.novatechstore.co.ke` once DNS and deployment routing are configured.
-- Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`; arbitrary hosts do not silently select a tenant.
+- Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`, and supports published store previews at `{store-slug}.localhost`; unknown hosts do not silently select a tenant.
 - Verified custom domains take precedence over verified platform subdomains.
 - A store must be published and its host verified before public storefront resolution. Suspended, unpublished, unknown, and unverified hosts produce explicit unavailable states.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
+
+## Shopper discovery and storefront behavior
+
+- `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.
+- The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing, cart, account, checkout, and orders remain inside the selected store.
+- The shared homepage component order and responsive layout are preserved across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`.
+- A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The `novatech-preferred-store` cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
+- `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
+
+These behaviors are implemented in source. Public DNS/SSL, a live database migration, regenerated Prisma Client, and live multi-store browser verification remain deployment and Phase 5 tasks.
 
 ## Commercial and payment gates
 

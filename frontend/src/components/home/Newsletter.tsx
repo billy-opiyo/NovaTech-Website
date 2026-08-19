@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { CheckCircle2 } from "lucide-react"
 import { useToast } from "@/components/ui/Toast"
+import { useStoreContext } from "@/lib/store-context"
 
 export default function Newsletter() {
 	const [email, setEmail] = useState("")
 	const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 	const [message, setMessage] = useState("")
 	const { addToast } = useToast()
+	const store = useStoreContext()
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -41,9 +43,9 @@ export default function Newsletter() {
 
 	return (
 		<section className="glass-card navy-glass p-6 sm:p-8 text-center">
-			<h2 className="text-2xl font-bold mb-4">Stay Updated</h2>
+			<h2 className="text-2xl font-bold mb-4">{store.homepage.newsletterTitle}</h2>
 			<p className="text-gray-600 dark:text-gray-300 mb-6">
-				Get exclusive deals and new arrivals straight to your inbox.
+				{store.homepage.newsletterDescription}
 			</p>
 
 			{status === "success" ? (

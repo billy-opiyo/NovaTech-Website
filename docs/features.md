@@ -5,6 +5,9 @@
 | Feature | Description |
 |---------|-------------|
 | **Home Page** | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup. |
+| **Shared Multi-Store Homepage** | Every store keeps the same homepage component order and responsive layout; active-store branding, copy, categories, featured products, testimonials, newsletter content, contact details, and map links are resolved through `StoreContext`. |
+| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. |
+| **Store Host Routing** | Local previews support `{store-slug}.localhost`; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
 | **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
@@ -39,7 +42,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Client Configuration** | Developer-managed `frontend/src/config/client.config.ts` for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags. |
+| **Client Configuration and Store Context** | `frontend/src/config/client.config.ts` remains the safe code fallback for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags. Published store settings are resolved through the active `StoreContext`. |
 | **Theme Presets** | Reusable visual systems in `frontend/src/config/theme-presets.ts`, selected through `themePreset` without recoding individual pages. |
 | **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
 | **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, route loading skeletons, and accessible loading status messaging. |
@@ -147,6 +150,9 @@ Core models:
 
 | Model | Purpose |
 |-------|---------|
+| `Tenant` / `Store` / `Domain` | Tenant ownership, published store identity, and verified host mapping for separate storefronts |
+| `Membership` / `Invitation` | Merchant workspace membership and staff onboarding |
+| `User.preferredStoreId` | Authenticated shopper's preferred store for returning-store discovery; not an authorization boundary |
 | `User` | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN) |
 | `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support |
 | `Category` | Hierarchical product categories (parent/children) |

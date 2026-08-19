@@ -1,6 +1,6 @@
 # NovaTech Store — Electronics E-Commerce Platform (Kenya)
 
-A full-stack electronics e-commerce platform built for the Kenyan market. NovaTech Store lets customers browse, search, compare, and purchase genuine phones, laptops, tablets, and accessories with warranty and fast delivery across all Kenyan counties.
+A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover published stores at `/stores`, then browse, search, compare, and purchase genuine phones, laptops, tablets, and accessories inside the selected store with warranty and fast delivery across all Kenyan counties.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -53,6 +53,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | **Theme System**     | Client-configured light/dark presets backed by CSS variables, with localStorage persistence and flash-free initialization.                                                                   |
 | **Responsive UI**    | Responsive header, mobile navigation, footer, homepage sections, product details, and search overlay with accessibility refinements.                                                        |
 | **Public Pages**     | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions.                                                                               |
+| **Store Directory**  | Public `/stores` discovery page linking shoppers to separate store hosts; each store keeps its own catalog, cart, account, checkout, and orders.                                        |
 
 ### 🛒 Shopping Cart & Checkout
 
@@ -83,7 +84,8 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 🎨 Client Customization and Shared UX
 
-- Developer-managed client configuration in `frontend/src/config/client.config.ts` for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags.
+- Shared homepage layout with active-store branding and homepage content resolved through `StoreContext`; `client.config.ts` remains the safe developer fallback.
+- Authenticated preferred-store persistence through `User.preferredStoreId`, with a `novatech-preferred-store` cookie fallback for returning browsers.
 - Reusable theme presets in `frontend/src/config/theme-presets.ts`.
 - Account profile image uploads for JPG, PNG, WEBP, and GIF files up to 5 MB, with generated storage keys and R2-backed storage.
 - Branded responsive splash screen, route loading UI, shared toast notifications, responsive footer grid, actionable contact links, and shared theme/search/cart/account controls.
@@ -269,7 +271,10 @@ NovaTech Website/
 
 | Model                                       | Purpose                                                                                                  |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `Tenant` / `Store` / `Domain`               | Tenant ownership, store identity, publication status, and host mapping                                  |
+| `Membership` / `Invitation`                 | Merchant workspace membership and staff onboarding                                                       |
 | `User`                                      | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN)                                                  |
+| `User.preferredStoreId`                     | Preferred shopper store; discovery convenience only, not an authorization boundary                    |
 | `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support                                                                         |
 | `Category`                                  | Hierarchical product categories (parent/children)                                                        |
 | `Product`                                   | Products with price, discounted price, stock, specs (JSON), images, warranty, featured/new-arrival flags |
@@ -431,6 +436,9 @@ npm run dev:open
 - ✔️ **Authentication flows** — Email verification with resend support and token-based password reset
 - ✔️ **Public information pages** — About, Blog, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions
 - ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
+- ✔️ **Shopper store discovery** — `/stores` lists eligible published stores, provides featured product context, and links to host-resolved individual storefronts
+- ✔️ **Shared store homepage content** — Store-specific content is resolved through `StoreContext` without changing the shared homepage order or responsive layout
+- ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the `novatech-preferred-store` browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
 - ✔️ **Order API** — List, create (transactional stock decrement, validation, notifications), admin status update
 - ✔️ **Review API** — Full CRUD with verified-purchase detection and role-aware deletion

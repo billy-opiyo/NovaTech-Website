@@ -9,11 +9,6 @@ import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
 import { useStoreContext } from "@/lib/store-context"
 
-const mapEmbedUrl =
-	"https://www.google.com/maps?q=Kimathi+Street,+CBD,+Nairobi,+Kenya&output=embed"
-const mapLink =
-	"https://www.google.com/maps/search/?api=1&query=Kimathi+Street,+CBD,+Nairobi,+Kenya"
-
 export default function HomePage() {
 	const store = useStoreContext()
 	return (
@@ -111,7 +106,7 @@ export default function HomePage() {
 						</div>
 					</div>
 					<a
-						href={mapLink}
+						href={store.contact.mapLink}
 						target="_blank"
 						rel="noreferrer"
 						className="text-primary hover:underline"
@@ -121,8 +116,8 @@ export default function HomePage() {
 				</div>
 				<div className="home-map-viewport h-72 w-full sm:h-80">
 					<iframe
-						src={mapEmbedUrl}
-						title="NovaTech Store location on Google Maps"
+						src={store.contact.mapEmbedUrl}
+						title={`${store.brand.name} location on Google Maps`}
 						loading="lazy"
 						referrerPolicy="no-referrer-when-downgrade"
 						className="home-map-frame h-full w-full border-0"

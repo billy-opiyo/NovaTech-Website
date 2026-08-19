@@ -33,13 +33,19 @@
 - Security checkpoint completed: account addresses, notifications, shopper payment order lookups, and payment-created orders now carry/request-check tenant scope; cross-tenant payment IDs are rejected before provider calls.
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
 - Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
+- Shopper discovery slice completed before Phase 5: `/stores` lists published stores and featured product context, links to each store's host-resolved storefront, and provides a browse-all escape hatch for returning shoppers.
+- The shared homepage order is preserved for every store while hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links are read from the active `StoreContext`.
+- Added authenticated `User.preferredStoreId` persistence plus the `novatech-preferred-store` browser fallback. Store visits update the preference only after host-based tenant resolution; the preference never authorizes access or replaces tenant scoping.
+- Local store previews support `{slug}.localhost`; production directory links use `{slug}.{PLATFORM_DOMAIN}`. The existing mobile artwork remains the storefront background for tablet/iPad widths.
 
-### Next phase
+### Pre-Phase 5 handoff
 
-- Continue Phase 3: tenant-scope the existing catalog and commerce API paths, then add preview and custom-domain verification behavior before billing work.
+- The shopper discovery and shared-storefront slice is ready for Phase 5 hardening: `/stores` is the shopper entry point, while each store's catalog, cart, account, and checkout remain on that store's resolved host.
+- Phase 5 must deploy and verify migration `0005_shopper_store_preference`, regenerate Prisma Client, test real `{slug}.localhost` and platform-subdomain resolution with a database, and run cross-store browser/isolation checks.
+- Remaining pre-launch work still includes payment-provider setup, custom-domain verification, preview routing, unscoped legacy admin/API paths, DNS/SSL, and legal/tax/privacy review.
 
 **Date:** 18 August 2026
-**Current product:** NovaTech Store, a single-store electronics e-commerce application
+**Current implementation:** NovaTech Store's original electronics storefront plus the tenant/store foundation and pre-Phase 5 shopper discovery slice
 **Target product:** A multi-tenant SaaS platform that lets independent digital-electronics merchants create, brand, manage, and publish their own online stores
 
 ## 1. Recommended product direction

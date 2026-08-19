@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
 import SessionResume from "@/components/layout/SessionResume"
+import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
 import SplashScreen from "@/components/layout/SplashScreen"
 import { ToastProvider } from "@/components/ui/Toast"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
@@ -100,6 +101,7 @@ export default async function RootLayout({
 					<ToastProvider>
 						<CartProvider>
 							<SessionResume />
+							<StorePreferenceTracker storeSlug={store.storeSlug} />
 							{store.features.showSplashScreen ? (
 								<SplashScreen>
 									<>

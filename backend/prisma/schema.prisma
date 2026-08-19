@@ -19,7 +19,8 @@ model User {
   platformRole    PlatformRole?
   marketingEmails Boolean       @default(true)
   orderUpdates    Boolean       @default(true)
-  preferredTheme  String        @default("dark")
+	preferredTheme  String        @default("dark")
+	preferredStoreId String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -34,7 +35,8 @@ model User {
   notifications  Notification[]
   adminLogs      AdminLog[]
   loginEvents    LoginEvent[]
-  memberships    Membership[]
+	memberships    Membership[]
+	preferredStore Store?         @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
 model Account {
@@ -201,7 +203,8 @@ model Store {
 
   tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   domains          Domain[]
-  settingsVersions StoreSettingsVersion[]
+	settingsVersions StoreSettingsVersion[]
+	preferredUsers   User[]                 @relation("UserPreferredStore")
 
   @@index([publicationStatus])
 }

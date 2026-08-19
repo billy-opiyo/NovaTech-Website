@@ -1,28 +1,17 @@
 "use client"
 
 import { motion } from "framer-motion"
-
-const testimonials = [
-	{
-		name: "Jane M.",
-		text: "Great service, genuine products. My laptop arrived in 2 days!",
-		role: "Customer",
-	},
-	{
-		name: "Brian K.",
-		text: "Best electronics shop in Nairobi. Highly recommended.",
-		role: "Customer",
-	},
-]
+import { useStoreContext } from "@/lib/store-context"
 
 export default function Testimonials() {
+	const store = useStoreContext()
 	return (
 		<section>
 			<h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center">
 				What Our Customers Say
 			</h2>
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				{testimonials.map((t, i) => (
+				{store.homepage.testimonials.map((t, i) => (
 					<motion.div
 						key={i}
 						initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}

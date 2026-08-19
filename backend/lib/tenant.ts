@@ -75,8 +75,15 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 
 	const platformDomain = normalizeHostname(process.env.PLATFORM_DOMAIN || "novatechstore.co.ke")
 	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
+	const isLocalSubdomain = hostname.endsWith(".localhost")
 	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`)
-	const slug = isLocalHost || hostname === platformDomain ? "novatech" : isPlatformHost ? hostname.slice(0, -(`.${platformDomain}`).length) : ""
+	const slug = isLocalHost || hostname === platformDomain
+		? "novatech"
+		: isLocalSubdomain
+			? hostname.slice(0, -".localhost".length)
+			: isPlatformHost
+				? hostname.slice(0, -(`.${platformDomain}`).length)
+				: ""
 	if (!slug) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 
 	const store = await prisma.store.findUnique({

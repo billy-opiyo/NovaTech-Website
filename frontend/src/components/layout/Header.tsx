@@ -36,8 +36,14 @@ export default function Header() {
 							{store.brand.name}
 						</span>
 					</Link>
-					<nav className="hidden gap-3 md:flex lg:gap-6">
-						{store.navigation.map((link) => (
+				<nav className="hidden gap-3 md:flex lg:gap-6">
+					<Link
+						href="/stores"
+						className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+					>
+						Browse Stores
+					</Link>
+					{store.navigation.map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
@@ -100,6 +106,13 @@ export default function Header() {
 						className="md:hidden glass border-t border-white/10 overflow-hidden"
 					>
 						<div className="px-4 py-4 flex flex-col gap-3">
+							<Link
+								href="/stores"
+								className="block text-gray-700 dark:text-gray-300 hover:text-primary"
+								onClick={() => setMobileMenuOpen(false)}
+							>
+								Browse Stores
+							</Link>
 						{store.navigation.map((link) => (
 								<Link
 									key={link.href}

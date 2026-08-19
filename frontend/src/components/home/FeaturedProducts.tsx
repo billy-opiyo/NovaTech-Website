@@ -5,45 +5,10 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
-
-const featuredProducts = [
-	{
-		id: "iphone-15-pro-max",
-		name: "iPhone 15 Pro Max",
-		price: 159999,
-		discountedPrice: 149999,
-		image:
-			"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=80",
-		rating: 4.8,
-	},
-	{
-		id: "samsung-galaxy-s24-ultra",
-		name: "Samsung Galaxy S24 Ultra",
-		price: 134999,
-		image:
-			"https://images.unsplash.com/photo-1527430253228-e93688616381?auto=format&fit=crop&w=700&q=80",
-		rating: 4.7,
-	},
-	{
-		id: "macbook-air-m3",
-		name: "MacBook Air M3",
-		price: 189999,
-		discountedPrice: 174999,
-		image:
-			"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=700&q=80",
-		rating: 4.9,
-	},
-	{
-		id: "sony-wh-1000xm5",
-		name: "Sony WH-1000XM5",
-		price: 34999,
-		image:
-			"https://images.unsplash.com/photo-1512499617640-c2f9993581af?auto=format&fit=crop&w=700&q=80",
-		rating: 4.6,
-	},
-]
+import { useStoreContext } from "@/lib/store-context"
 
 export default function FeaturedProducts() {
+	const store = useStoreContext()
 	return (
 		<section>
 			<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8">
@@ -56,7 +21,7 @@ export default function FeaturedProducts() {
 				</Link>
 			</div>
 			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-				{featuredProducts.map((product, i) => (
+				{store.homepage.featuredProducts.map((product, i) => (
 					<motion.div
 						key={product.id}
 						initial={{ opacity: 0, scale: 0.9 }}
@@ -79,7 +44,7 @@ export default function FeaturedProducts() {
 								<span className="text-sm">{product.rating}</span>
 							</div>
 							<div className="mt-2 flex items-baseline gap-2">
-								{product.discountedPrice ? (
+								{"discountedPrice" in product && product.discountedPrice ? (
 									<>
 										<span className="text-lg font-bold">
 											KES {product.discountedPrice.toLocaleString()}

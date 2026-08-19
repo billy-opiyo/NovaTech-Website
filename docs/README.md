@@ -1,6 +1,6 @@
 # NovaTech Store — Documentation
 
-This directory contains documentation for the NovaTech Store e-commerce platform, a full-stack electronics marketplace built for the Kenyan market.
+This directory contains documentation for the NovaTech Store hosted storefront platform, whose first release supports separate electronics stores for the Kenyan market.
 
 ## Project Overview
 
@@ -9,7 +9,7 @@ NovaTech Store is a **monorepo** managed with **npm workspaces**, containing:
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 5, PostgreSQL (Neon), Node.js
 
-The platform enables customers to browse, search, compare, and purchase genuine electronics (phones, laptops, tablets, and accessories) with warranty and fast delivery across all Kenyan counties.
+The platform enables customers to discover published stores at `/stores`, then browse, search, compare, and purchase genuine electronics (phones, laptops, tablets, and accessories) inside the selected store with warranty and fast delivery across all Kenyan counties. Stores keep separate catalogs, carts, accounts, and orders.
 
 ## Recent Changes
 
@@ -52,6 +52,10 @@ The latest UI implementation updates include:
 - Refreshed the branded splash screen with a responsive gradient wordmark, animated progress treatment, and faster loading feedback.
 - Added public email verification and password reset flows, plus searchable public legal pages for privacy, cookies, and terms.
 - Added SEO metadata and image-host preconnect configuration, and improved navbar text truncation and shared notification behavior.
+- Added the shopper `/stores` directory, published-store filtering, featured-product context, per-store host links, and a browse-all escape hatch.
+- Preserved the shared homepage structure for every store while resolving branding, homepage content, contact details, and map links from the active `StoreContext`.
+- Added authenticated preferred-store persistence through `User.preferredStoreId`, with the `novatech-preferred-store` cookie as a returning-browser fallback. This preference is not an authorization mechanism.
+- Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
 
 ## Production verification
 
@@ -95,12 +99,15 @@ Credentials are intentionally not documented here and must be configured only af
 
 Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://novatechstore.co.ke`.
 
-The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. `Admin` pages require an `ADMIN` or `SUPERADMIN` account.
+The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. Legacy `/admin` pages use `ADMIN` or `SUPERADMIN`; merchant workspace pages under `/manage` use the resolved store membership boundary.
+
+Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host handles that store's catalog, cart, account, checkout, and orders.
 
 ### Storefront
 
 | Page | Access | Development | Production |
 |---|---|---|---|
+| Store directory | Public | [Open](http://localhost:3000/stores) | [Open](https://novatechstore.co.ke/stores) |
 | Home | Public | [Open](http://localhost:3000/) | [Open](https://novatechstore.co.ke/) |
 | Products | Public | [Open](http://localhost:3000/products) | [Open](https://novatechstore.co.ke/products) |
 | Product detail | Public; dynamic | `http://localhost:3000/products/{product-slug}` | `https://novatechstore.co.ke/products/{product-slug}` |
