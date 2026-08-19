@@ -206,6 +206,10 @@ type UpdatePaymentData = {
 	metadata?: Record<string, unknown>
 }
 
+export function paymentOrderBelongsToTenant(paymentTenantId: string | null | undefined, orderTenantId: string | null | undefined) {
+	return Boolean(paymentTenantId && orderTenantId && paymentTenantId === orderTenantId)
+}
+
 async function updatePaymentByProviderReference(
 	providerReference: string,
 	status: "COMPLETED" | "FAILED" | "CANCELLED" | "REFUNDED",
@@ -228,6 +232,14 @@ async function updatePaymentByProviderReference(
 		if (extra.amount !== undefined && Math.abs(payment.amount - extra.amount) > 0.01) {
 			console.error(`Webhook amount mismatch for ${providerReference}`)
 			return null
+		}
+
+		if (payment.orderId) {
+			const order = await prisma.order.findFirst({ where: { id: payment.orderId }, select: { tenantId: true } })
+			if (!paymentOrderBelongsToTenant(payment.tenantId, order?.tenantId)) {
+				console.error(`Webhook tenant mismatch or missing tenant for ${providerReference}`)
+				return null
+			}
 		}
 
 		const existingMetadata =

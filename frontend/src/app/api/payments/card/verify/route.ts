@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
 import { verifyCardPayment } from "backend/payments/cards"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 const cardVerifySchema = z.object({
 	reference: z.string().min(3),
@@ -14,8 +15,8 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
 		const validated = cardVerifySchema.parse(body)
-
-		const result = await verifyCardPayment(validated.reference)
+		const context = await resolveTenantFromRequest(req)
+		const result = await verifyCardPayment(validated.reference, context.tenantId)
 
 		return NextResponse.json(result)
 	} catch (error: any) {

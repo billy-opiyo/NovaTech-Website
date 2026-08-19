@@ -21,7 +21,8 @@ export async function GET() {
 		if ("response" in access) return access.response
 		const store = await prisma.store.findFirst({ where: { id: access.context.storeId, tenantId: access.context.tenantId }, select: { id: true, tenantId: true, name: true, slug: true, publicationStatus: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, draftSettings: true } })
 		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
-		return NextResponse.json({ store })
+		const versions = await prisma.storeSettingsVersion.findMany({ where: { tenantId: access.context.tenantId, storeId: access.context.storeId }, select: { version: true, publishedAt: true, publishedBy: true, createdAt: true }, orderBy: { version: "desc" }, take: 20 })
+		return NextResponse.json({ store, versions })
 	} catch (error) {
 		console.error("Store settings read failed", error)
 		return NextResponse.json({ message: "Store settings unavailable" }, { status: 503 })

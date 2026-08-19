@@ -1,3 +1,4 @@
 import { NextRequest } from "next/server"
 import { getSecurity } from "backend/controllers/adminDataController"
-export async function GET(req: NextRequest) { return getSecurity(req) }
+import { withApiError } from "backend/lib/api-handler"
+export async function GET(req: NextRequest) { return withApiError(getSecurity, req) }

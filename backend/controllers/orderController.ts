@@ -82,11 +82,16 @@ export async function getOrderById(
 
 		const { id } = await params
 		const context = await resolveTenantFromRequest(req)
-		const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN" || !!session.user.platformRole
-		const order = await orderService.getOrderById(id, context.tenantId, isAdmin ? undefined : session.user.id!)
+		let canManageOrders = false
+		try {
+			await requireMembership(session.user.id!, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+			canManageOrders = true
+		} catch {
+			// Shoppers may still read their own order in this store.
+		}
+		const order = await orderService.getOrderById(id, context.tenantId, canManageOrders ? undefined : session.user.id!)
 
-		// Allow admins to view any order
-		if (!isAdmin && order.userId !== session.user.id) {
+		if (!canManageOrders && order.userId !== session.user.id) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 
@@ -105,10 +110,7 @@ export async function updateOrderStatus(
 ) {
 	try {
 		const session = await getServerSession()
-		if (
-			!session?.user ||
-			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")
-		) {
+		if (!session?.user?.id) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 
@@ -124,7 +126,7 @@ export async function updateOrderStatus(
 			context.tenantId,
 			validated.trackingNumber,
 		)
-		await createActionRecord("UPDATED_ORDER_STATUS", { adminId: session.user.id, orderId: id, status: validated.status })
+		await createActionRecord("UPDATED_ORDER_STATUS", { adminId: session.user.id, tenantId: context.tenantId, orderId: id, status: validated.status })
 
 		return NextResponse.json(order)
 	} catch (error: any) {
@@ -141,10 +143,7 @@ export async function updateOrderStatus(
 export async function getAllOrders(req: NextRequest) {
 	try {
 		const session = await getServerSession()
-		if (
-			!session?.user ||
-			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")
-		) {
+		if (!session?.user?.id) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 
@@ -165,14 +164,12 @@ export async function getAllOrders(req: NextRequest) {
 export async function getOrderStats(req?: NextRequest) {
 	try {
 		const session = await getServerSession()
-		if (
-			!session?.user ||
-			(session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")
-		) {
+		if (!session?.user?.id || !req) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 
-		const context = await resolveTenantFromRequest(req || new NextRequest("http://localhost"))
+		const context = await resolveTenantFromRequest(req)
+		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
 		const stats = await orderService.getOrderStats(context.tenantId)
 		return NextResponse.json(stats)
 	} catch (error: any) {

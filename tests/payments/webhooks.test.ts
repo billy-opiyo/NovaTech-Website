@@ -3,7 +3,14 @@ import assert from "node:assert/strict"
 import {
 	handleMpesaStkCallback,
 	handleStripeEvent,
+	paymentOrderBelongsToTenant,
 } from "../../backend/payments/webhooks"
+
+test("payment callbacks require matching tenant ownership", () => {
+	assert.equal(paymentOrderBelongsToTenant("tenant-a", "tenant-a"), true)
+	assert.equal(paymentOrderBelongsToTenant("tenant-a", "tenant-b"), false)
+	assert.equal(paymentOrderBelongsToTenant(null, "tenant-a"), false)
+})
 
 test("handleMpesaStkCallback processes successful STK callback", async () => {
 	const result = await handleMpesaStkCallback({

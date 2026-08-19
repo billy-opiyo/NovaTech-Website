@@ -51,7 +51,7 @@ export async function createCardPaymentIntent({
 	}
 
 	const existing = await prisma.payment.findFirst({
-		where: { provider: "stripe", metadata: { path: ["reference"], equals: reference } },
+		where: { provider: "stripe", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
 	})
 	if (existing) {
 		const metadata = (existing.metadata || {}) as Record<string, unknown>
@@ -119,6 +119,7 @@ export async function createCardPaymentIntent({
 
 export async function verifyCardPayment(
 	reference: string,
+	tenantId?: string,
 ): Promise<CardVerifyResult> {
 	if (!isStripeConfigured()) {
 		return {
@@ -136,6 +137,7 @@ export async function verifyCardPayment(
 
 	const payment = await prisma.payment.findFirst({
 		where: {
+			...(tenantId ? { tenantId } : {}),
 			OR: [
 				{ providerReference: reference },
 				{ metadata: { path: ["reference"], equals: reference } },
@@ -181,6 +183,8 @@ export async function verifyCardPayment(
 		})
 
 		if (ok && payment.orderId) {
+			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
+			if (!order) return { ok: false, provider: "stripe", reference, status: "FAILED", paymentIntentId, message: "Payment order is not available in this store." }
 			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
 				data: { status: "CONFIRMED" },

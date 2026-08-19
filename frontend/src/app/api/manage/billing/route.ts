@@ -13,7 +13,12 @@ export async function GET() {
 		await requireMembership(session.user.id, context.tenantId)
 		const tenant = await prisma.tenant.findFirst({ where: { id: context.tenantId }, select: { id: true, status: true, plan: { select: { key: true, name: true, price: true, currency: true, billingInterval: true, entitlementsJson: true } }, subscriptions: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, trialEndsAt: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Tenant not found" }, { status: 404 })
-		return NextResponse.json({ tenant })
+		const now = new Date()
+		const usage = await prisma.usageCounter.findMany({ where: { tenantId: tenant.id, periodStart: { lte: now }, periodEnd: { gt: now } }, orderBy: { metric: "asc" }, select: { metric: true, value: true, periodStart: true, periodEnd: true } })
+		const entitlements = tenant.plan?.entitlementsJson && typeof tenant.plan.entitlementsJson === "object" && !Array.isArray(tenant.plan.entitlementsJson)
+			? tenant.plan.entitlementsJson
+			: {}
+		return NextResponse.json({ tenant, entitlements, usage })
 	} catch (error) {
 		console.error("Billing status unavailable", error)
 		return NextResponse.json({ message: "Billing status unavailable until the database and billing provider are configured" }, { status: 503 })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 import {
 	getRecommendedForUser,
 	getTrendingProducts,
@@ -11,6 +12,7 @@ import {
 
 export async function GET(req: NextRequest) {
 	try {
+		const context = await resolveTenantFromRequest(req)
 		const searchParams = req.nextUrl.searchParams
 		const type = searchParams.get("type") || "trending"
 		const limit = parseInt(searchParams.get("limit") || "12")
@@ -30,13 +32,14 @@ export async function GET(req: NextRequest) {
 
 				const recommendations = await getRecommendedForUser(
 					session.user.id,
+					context.tenantId,
 					validatedLimit,
 				)
 				return NextResponse.json({ recommendations, type: "personalized" })
 			}
 
 			case "trending": {
-				const trending = await getTrendingProducts(validatedLimit)
+				const trending = await getTrendingProducts(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: trending, type: "trending" })
 			}
 
@@ -48,22 +51,22 @@ export async function GET(req: NextRequest) {
 					)
 				}
 
-				const similar = await getSimilarProducts(productId, validatedLimit)
+				const similar = await getSimilarProducts(productId, context.tenantId, validatedLimit)
 				return NextResponse.json({ products: similar, type: "similar" })
 			}
 
 			case "featured": {
-				const featured = await getFeaturedProducts(validatedLimit)
+				const featured = await getFeaturedProducts(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: featured, type: "featured" })
 			}
 
 			case "new-arrivals": {
-				const newArrivals = await getNewArrivals(validatedLimit)
+				const newArrivals = await getNewArrivals(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: newArrivals, type: "new-arrivals" })
 			}
 
 			case "deals": {
-				const deals = await getDeals(validatedLimit)
+				const deals = await getDeals(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: deals, type: "deals" })
 			}
 
@@ -81,7 +84,7 @@ export async function GET(req: NextRequest) {
 		console.error("Recommendations API error:", error)
 		return NextResponse.json(
 			{ message: "Failed to fetch recommendations", error: error.message },
-			{ status: 500 },
+			{ status: error?.status || 500 },
 		)
 	}
 }

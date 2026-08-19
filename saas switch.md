@@ -2,6 +2,110 @@
 
 ## Autonomous execution log
 
+### 2026-08-19 — Non-external SaaS implementation checkpoint complete
+
+- Completed every remaining source-level SaaS feature identified in this execution that does not require live billing, payment-provider credentials, DNS/SSL control, or legal/commercial decisions: tenant isolation hardening, membership authorization, local design preview, staff invitations, domain onboarding state, entitlement/usage visibility, protected API error handling, tenant data export, payment tenant matching, and store settings rollback.
+- Final verification passed: full test suite 44/44, frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Local preview is running on `http://localhost:3000`; homepage probe returned HTTP 200 with NovaTech content. Database-backed routes correctly remain unavailable against the unreachable configured Neon database.
+- Remaining launch gates are intentionally untouched: database migration/restore verification, live SaaS billing and shopper payment providers, DNS/SSL automation, provider webhooks in production, and legal/tax/privacy/commercial decisions.
+
+### 2026-08-19 — Store settings rollback
+
+- Added owner/admin-protected store settings rollback from the latest 20 published versions.
+- Rollback restores the selected settings as a new published version, preserving the previous version for recovery and keeping all version queries tenant/store scoped.
+- Added version history and restore controls to `/manage/design`; local-preview mode keeps rollback disabled because browser-only drafts are not published records.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: rollback needs the migrated/reachable database and does not alter external DNS, billing, payment, or legal configuration.
+
+### 2026-08-19 — Tenant-scoped payment verification and review moderation
+
+- Payment initiation reuse and payment verification now resolve the request tenant before reading existing payment records; successful verification confirms only an order belonging to the same tenant.
+- Customer review deletion now uses store membership roles for staff moderation instead of global `ADMIN`/`SUPERADMIN` role checks, while customers retain ownership-based deletion.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: payment providers remain disabled/unverified without credentials; real cross-store behavior still requires migrated tenant data.
+
+### 2026-08-19 — Tenant data export
+
+- Added owner-only `GET /api/manage/data-export` and `/manage/data-export` with tenant-scoped export of store settings, catalog, orders, payment status, reviews, coupons, memberships, domains, and support records.
+- Export queries use the resolved tenant and store IDs and intentionally omit passwords, invitation tokens, provider references, payment metadata, and other secrets.
+- Added a workspace navigation entry and documented that deletion/retention behavior remains a separate policy decision.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: export data requires the migrated/reachable tenant database; no destructive operation or legal retention assumption was introduced.
+
+### 2026-08-19 — Payment callback tenant matching
+
+- Added a fail-closed tenant ownership check before payment webhooks confirm an order or cancel a pending order.
+- Payment-linked orders now require non-null, matching payment and order tenant IDs; mismatches are acknowledged without mutating the order.
+- Added a regression test for matching, mismatching, and missing tenant ownership.
+- Verification passed: backend TypeScript, focused webhook tests (7/7), and `git diff --check`; expected tests continued to report the unavailable local database without failing.
+- Runtime boundary: provider signature verification, live callback delivery, payment credentials, and tenant migration remain external/runtime gates.
+
+### 2026-08-19 — Protected API error handling
+
+- Added a shared controller error boundary that preserves explicit authentication, authorization, not-found, and conflict statuses while returning a truthful unavailable response for infrastructure failures.
+- Applied the boundary to the tenant-scoped admin, order, inventory, coupon, review, security, delivery, and audit routes so membership/context failures no longer escape as generic framework errors.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: the error boundary does not bypass authorization or create database data; live tenant behavior still requires the migrated database.
+
+### 2026-08-19 — Entitlement and usage visibility
+
+- Extended `/api/manage/billing` with the resolved tenant's configured plan entitlements and current-period usage counters, all scoped by tenant membership.
+- Expanded `/manage/billing` to show configured plan metadata, subscription lifecycle state, entitlement limits, usage bars, and current counter periods without inventing prices or provider actions.
+- Preserved truthful unavailable states: plan changes, invoices, payment portals, and live webhook behavior remain disabled until billing credentials and provider configuration exist.
+- Verification passed: frontend TypeScript and `git diff --check`.
+- Runtime boundary: entitlement and usage reads require the migrated tenant database; live billing remains intentionally unconfigured.
+
+### 2026-08-19 — Inventory isolation and stock authorization
+
+- Converted inventory overview, low-stock, out-of-stock, alerts, reorder, movement-history, and stock-mutation services to require the resolved `tenantId`.
+- Replaced legacy global admin-role checks on inventory routes with active store membership checks for store owners, admins, and managers.
+- Cross-tenant product and variant stock mutations now fail as not found before any update is attempted.
+- Added an isolation regression test covering product and variant stock writes.
+- Verification passed: frontend TypeScript, backend TypeScript, inventory syntax check, and the focused inventory isolation test.
+- Runtime boundary: real inventory data still requires the tenant migration and reachable database; no live provider or billing work was enabled.
+
+### 2026-08-19 — Recommendation isolation
+
+- Converted personalized, trending, similar, featured, new-arrival, and deal recommendations to receive the resolved `tenantId`.
+- Scoped recently viewed items, orders, wishlists, category lookups, product reads, and cross-product recommendations by tenant.
+- Recommendation routes now resolve the request host before reading catalog or shopper history and preserve truthful database-unavailable responses.
+- Added an isolation regression test covering featured and similar-product reads.
+- Verification passed: frontend TypeScript, backend TypeScript, and the focused recommendation isolation test.
+- Runtime boundary: recommendation data still requires the tenant migration and reachable database; no provider or billing work was enabled.
+
+### 2026-08-19 — Store membership authorization for products and orders
+
+- Removed remaining global `ADMIN`/`SUPERADMIN` authorization decisions from product mutations and merchant order operations.
+- Order reads now distinguish a shopper's own order from store-staff access using the active store membership, while every lookup remains tenant-scoped.
+- Order, product, and inventory audit records now retain the resolved tenant boundary.
+- Order statistics now require the request tenant and an authorized store-management membership.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: real authorization results still require migrated tenant/membership data; no provider or billing behavior was enabled.
+
+### 2026-08-19 — Local store design preview
+
+- Expanded `/manage/design` with a live approved-theme preview for store name, hero copy, SEO description, typography, colors, and storefront cards.
+- Added browser-local draft persistence for development when the database is unavailable.
+- Local preview mode clearly disables publication and labels browser-only changes; it never claims that settings were published or database-persisted.
+- Verification passed: frontend TypeScript and `git diff --check`.
+- Runtime boundary: database-backed draft persistence and publication remain unchanged and unavailable without the migrated database.
+
+### 2026-08-19 — Staff invitations and workspace identity
+
+- Added server-authoritative store invitations with hashed one-time tokens, seven-day expiry, role validation, duplicate checks, invited-email matching, and membership creation on acceptance.
+- Added `/manage/team` with least-privilege role selection, pending-invitation visibility, and explicit manual-link delivery state when email is not configured.
+- Added the invitation acceptance API and removed fabricated “Admin User / Super Admin” identity text from the shared workspace shell.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: invitation persistence and acceptance require the tenant database; outbound invitation email remains intentionally disabled without an email delivery decision/configuration.
+
+### 2026-08-19 — Custom-domain onboarding state
+
+- Added tenant-scoped custom-domain registration, duplicate protection, removal, verification-token generation, and DNS TXT-record instructions.
+- Added `/manage/domains` with truthful pending DNS and unreported SSL states; the UI never claims DNS verification or certificate issuance.
+- Added domain validation that rejects platform subdomains, localhost hostnames, paths, and malformed hostnames.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+- Runtime boundary: DNS checks, SSL issuance, and public custom-domain routing remain external infrastructure work.
+
 ### 2026-08-19 — Phase 5 tenant-boundary hardening slice
 
 - Added a regression test for `{store-slug}.localhost` request resolution.
@@ -28,15 +132,15 @@
 
 - Phase 2 completed: added session propagation for `platformRole`, server-side `requireStoreSession()` and `requirePlatformSession()` guards, authenticated workspace middleware, and route-backed `/manage` and `/platform` surfaces.
 - Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/tenants` and `/platform/billing` are truthful unavailable states until database/provider-backed operations are connected.
-- The legacy `/admin` controllers still contain global role checks and unscoped API queries; they remain a Phase 3/5 migration item before any merchant-facing beta.
+- Legacy `/admin` controllers and their `/manage` route aliases now use store membership authorization and tenant-scoped reads/writes; the remaining runtime proof requires migrated multi-store data.
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
 - Final checkpoint: full test suite passed 40/40; frontend and backend TypeScript checks passed; repository status is clean.
 - Current commits on `main`: `a8b1d77`, `34c4707`, `b41ae83`, `029249c`, `94cee18`, `8c1746f`, and `bf4ae48`.
 - Execution is blocked from claiming a complete SaaS launch by external dependencies: a real `DATABASE_URL` for migration/restore verification, approved merchant-of-record/payment strategy, SaaS billing and shopper-payment provider credentials, DNS/SSL control for subdomains/custom domains, and professional legal/tax/privacy review.
 - Phase 3 slice completed: root metadata/theme/branding now consume a server-resolved `StoreContext`; authenticated onboarding creates a trial tenant/store/membership/subscription/domain; store design saves validated drafts and publishes versioned settings through `/api/manage/store/*`.
-- The remaining Phase 3 work is converting every catalog, cart, checkout, account, upload, notification, and admin API query to use the resolved context, plus custom-domain and preview routing.
+- The source-level Phase 3 context conversion is complete for catalog, cart, checkout, account, upload, notification, admin, and host-based storefront paths; local design preview and custom-domain onboarding are implemented with truthful external-state boundaries.
 - Phase 3 isolation checkpoint completed: catalog, product mutations, carts, orders, coupon validation, reviews, wishlists, and product uploads now use host-resolved tenant scope; upload keys use `tenants/{tenantId}/stores/{storeId}/...`.
-- Remaining commerce boundary work includes payment callback tenant/order matching, account/address/notification/support scoping, admin API conversion, custom-domain verification, and preview routing.
+- Payment callback tenant/order matching, account/address/notification/support scoping, and admin API conversion are complete; custom-domain verification/SSL and production preview routing remain infrastructure work.
 - Phase 4 billing core checkpoint completed: added subscription lifecycle transition validation, plan entitlement lookup, server-side usage-limit assertions, and tenant-scoped `/api/manage/billing` plus merchant subscription status UI.
 - Live SaaS checkout, provider webhooks, invoices, and payment-connection setup remain disabled until the documented merchant-of-record/provider decision and credentials are supplied.
 - Security checkpoint completed: account addresses, notifications, shopper payment order lookups, and payment-created orders now carry/request-check tenant scope; cross-tenant payment IDs are rejected before provider calls.

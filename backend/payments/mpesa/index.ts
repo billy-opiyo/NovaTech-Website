@@ -63,7 +63,7 @@ export async function initiateMpesaPayment({
 	}
 
 	const existing = await prisma.payment.findFirst({
-		where: { provider: "mpesa", metadata: { path: ["reference"], equals: reference } },
+		where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
 	})
 	if (existing) {
 		const metadata = (existing.metadata || {}) as Record<string, unknown>
@@ -138,6 +138,7 @@ export async function initiateMpesaPayment({
 
 export async function verifyMpesaPayment(
 	reference: string,
+	tenantId?: string,
 ): Promise<MpesaVerifyResult> {
 	if (!isMpesaConfigured()) {
 		return {
@@ -153,6 +154,7 @@ export async function verifyMpesaPayment(
 
 	const payment = await prisma.payment.findFirst({
 		where: {
+			...(tenantId ? { tenantId } : {}),
 			OR: [
 				{ providerReference: reference },
 				{ metadata: { path: ["reference"], equals: reference } },
@@ -192,6 +194,8 @@ export async function verifyMpesaPayment(
 		})
 
 		if (completed && payment.orderId) {
+			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
+			if (!order) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment order is not available in this store." }
 			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
 				data: { status: "CONFIRMED" },

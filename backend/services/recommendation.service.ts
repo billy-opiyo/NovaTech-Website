@@ -33,6 +33,7 @@ export interface SimilarProduct extends ProductRecommendation {
  */
 export async function getRecommendedForUser(
 	userId: string,
+	tenantId: string,
 	limit: number = 12
 ): Promise<ProductRecommendation[]> {
 	const recommendations: Map<string, ProductRecommendation & { score: number; reason?: string }> =
@@ -40,7 +41,7 @@ export async function getRecommendedForUser(
 
 	// 1. Get user's recently viewed products
 	const recentlyViewed = await prisma.recentlyViewed.findMany({
-		where: { userId },
+		where: { userId, tenantId },
 		include: {
 			product: {
 				include: {
@@ -78,6 +79,7 @@ export async function getRecommendedForUser(
 	const orders = await prisma.order.findMany({
 		where: {
 			userId,
+			tenantId,
 			status: {
 				not: "CANCELLED",
 			},
@@ -128,7 +130,7 @@ export async function getRecommendedForUser(
 
 	// 3. Get user's wishlist
 	const wishlistItems = await prisma.wishlistItem.findMany({
-		where: { userId },
+		where: { userId, tenantId },
 		include: {
 			product: {
 				include: {
@@ -166,9 +168,10 @@ export async function getRecommendedForUser(
 
 		const categoryProducts = await prisma.product.findMany({
 			where: {
+				tenantId,
 				categoryId: {
 					in: (await prisma.category.findMany({
-						where: { name: { in: topCategories } },
+						where: { tenantId, name: { in: topCategories } },
 						select: { id: true },
 					})).map((c) => c.id),
 				},
@@ -214,13 +217,14 @@ export async function getRecommendedForUser(
 /**
  * Get trending products based on recent sales velocity
  */
-export async function getTrendingProducts(limit: number = 12): Promise<TrendingProduct[]> {
+export async function getTrendingProducts(tenantId: string, limit: number = 12): Promise<TrendingProduct[]> {
 	const thirtyDaysAgo = new Date()
 	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
 	// Get recent orders with items
 	const recentOrders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: thirtyDaysAgo,
 			},
@@ -268,6 +272,7 @@ export async function getTrendingProducts(limit: number = 12): Promise<TrendingP
 		// Fallback to newest products if no recent sales
 		const products = await prisma.product.findMany({
 			where: {
+				tenantId,
 				stock: {
 					gt: 0,
 				},
@@ -292,6 +297,7 @@ export async function getTrendingProducts(limit: number = 12): Promise<TrendingP
 	// Fetch full product details
 	const trendingProducts = await prisma.product.findMany({
 		where: {
+			tenantId,
 			id: {
 				in: topProductIds,
 			},
@@ -323,11 +329,12 @@ export async function getTrendingProducts(limit: number = 12): Promise<TrendingP
  */
 export async function getSimilarProducts(
 	productId: string,
+	tenantId: string,
 	limit: number = 8
 ): Promise<SimilarProduct[]> {
 	// Get the reference product
-	const referenceProduct = await prisma.product.findUnique({
-		where: { id: productId },
+	const referenceProduct = await prisma.product.findFirst({
+		where: { id: productId, tenantId },
 		include: {
 			category: true,
 			reviews: {
@@ -345,6 +352,7 @@ export async function getSimilarProducts(
 	// Find similar products in the same category
 	const similarProducts = await prisma.product.findMany({
 		where: {
+			tenantId,
 			id: {
 				not: productId,
 			},
@@ -403,9 +411,10 @@ export async function getSimilarProducts(
 /**
  * Get featured products
  */
-export async function getFeaturedProducts(limit: number = 12): Promise<ProductRecommendation[]> {
+export async function getFeaturedProducts(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			isFeatured: true,
 			stock: {
 				gt: 0,
@@ -434,9 +443,10 @@ export async function getFeaturedProducts(limit: number = 12): Promise<ProductRe
 /**
  * Get new arrivals
  */
-export async function getNewArrivals(limit: number = 12): Promise<ProductRecommendation[]> {
+export async function getNewArrivals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			isNewArrival: true,
 			stock: {
 				gt: 0,
@@ -465,9 +475,10 @@ export async function getNewArrivals(limit: number = 12): Promise<ProductRecomme
 /**
  * Get deals and on-sale products
  */
-export async function getDeals(limit: number = 12): Promise<ProductRecommendation[]> {
+export async function getDeals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			discountedPrice: {
 				not: null,
 			},

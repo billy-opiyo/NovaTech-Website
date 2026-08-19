@@ -10,6 +10,7 @@ import {
 	Package,
 	ShoppingCart,
 	Users,
+	UsersRound,
 	Star,
 	Ticket,
 	BarChart3,
@@ -23,6 +24,8 @@ import {
 	Activity,
 	Palette,
 	CreditCard,
+	Globe2,
+	Download,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -39,7 +42,8 @@ const sidebarLinks = (basePath: string) => [
 		items: [
 			{ icon: Package, label: "Products", href: `${basePath}/products` },
 			{ icon: ShoppingCart, label: "Orders", href: `${basePath}/orders` },
-			{ icon: Users, label: "Customers", href: `${basePath}/customers` },
+		{ icon: Users, label: "Customers", href: `${basePath}/customers` },
+			{ icon: UsersRound, label: "Team access", href: `${basePath}/team` },
 			{ icon: Star, label: "Reviews", href: `${basePath}/reviews` },
 			{ icon: Truck, label: "Deliveries", href: `${basePath}/deliveries` },
 		],
@@ -56,7 +60,9 @@ const sidebarLinks = (basePath: string) => [
 		items: [
 		{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
 			{ icon: Palette, label: "Store design", href: `${basePath}/design` },
+			{ icon: Globe2, label: "Domains", href: `${basePath}/domains` },
 			{ icon: CreditCard, label: "Subscription", href: `${basePath}/billing` },
+			{ icon: Download, label: "Data export", href: `${basePath}/data-export` },
 			{ icon: Shield, label: "Security", href: `${basePath}/security` },
 			{ icon: Activity, label: "Activity Log", href: `${basePath}/activity` },
 		],
@@ -140,8 +146,8 @@ export default function AdminLayout({
 									<Users size={16} className="text-primary" />
 								</div>
 								<div className="hidden md:block">
-									<p className="text-sm font-medium">Admin User</p>
-									<p className="text-xs text-gray-500">Super Admin</p>
+								<p className="text-sm font-medium">Store workspace</p>
+								<p className="text-xs text-gray-500">Membership-controlled access</p>
 								</div>
 							</div>
 						</div>

@@ -73,7 +73,7 @@ export async function updateProduct(req: NextRequest, slug: string) {
 		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_EDITOR])
 		const body = await req.json()
 		const product = await productService.updateProduct(slug, body, context.tenantId)
-		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, productId: product.id })
+		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json(product)
 	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }
 }
@@ -85,7 +85,7 @@ export async function deleteProduct(req: NextRequest, slug: string) {
 		const context = await resolveTenantFromRequest(req)
 		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 		const product = await productService.deleteProduct(slug, context.tenantId)
-		await createActionRecord("DELETED_PRODUCT", { adminId: session.user.id, productId: product.id })
+		await createActionRecord("DELETED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json({ ok: true })
 	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }
 }

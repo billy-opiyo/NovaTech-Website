@@ -45,9 +45,10 @@ export interface ReorderSuggestion {
 /**
  * Get products with low stock (below threshold but not zero)
  */
-export async function getLowStockProducts(threshold: number = 10): Promise<LowStockProduct[]> {
+export async function getLowStockProducts(tenantId: string, threshold: number = 10): Promise<LowStockProduct[]> {
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			stock: {
 				gt: 0,
 				lte: threshold,
@@ -57,6 +58,7 @@ export async function getLowStockProducts(threshold: number = 10): Promise<LowSt
 			category: true,
 			variants: {
 				where: {
+					tenantId,
 					stock: {
 						gt: 0,
 						lte: threshold,
@@ -96,9 +98,10 @@ export async function getLowStockProducts(threshold: number = 10): Promise<LowSt
 /**
  * Get products that are completely out of stock
  */
-export async function getOutOfStockProducts(): Promise<LowStockProduct[]> {
+export async function getOutOfStockProducts(tenantId: string): Promise<LowStockProduct[]> {
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			OR: [
 				{ stock: 0, variants: { none: {} } },
 				{
@@ -111,6 +114,7 @@ export async function getOutOfStockProducts(): Promise<LowStockProduct[]> {
 			category: true,
 			variants: {
 				where: {
+					tenantId,
 					stock: 0,
 				},
 			},
@@ -147,7 +151,7 @@ export async function getOutOfStockProducts(): Promise<LowStockProduct[]> {
 /**
  * Get inventory overview statistics
  */
-export async function getInventoryOverview(): Promise<InventoryOverview> {
+export async function getInventoryOverview(tenantId: string): Promise<InventoryOverview> {
 	const [
 		totalProducts,
 		inStockProducts,
@@ -155,9 +159,10 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 		outOfStockProducts,
 		inventoryValue,
 	] = await Promise.all([
-		prisma.product.count(),
+		prisma.product.count({ where: { tenantId } }),
 		prisma.product.count({
 			where: {
+				tenantId,
 				stock: {
 					gt: 10,
 				},
@@ -165,6 +170,7 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 		}),
 		prisma.product.count({
 			where: {
+				tenantId,
 				stock: {
 					gt: 0,
 					lte: 10,
@@ -173,10 +179,12 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 		}),
 		prisma.product.count({
 			where: {
+				tenantId,
 				stock: 0,
 			},
 		}),
 		prisma.product.aggregate({
+			where: { tenantId },
 			_sum: {
 				stock: true,
 			},
@@ -184,6 +192,7 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 	])
 
 	const productsWithValue = await prisma.product.findMany({
+		where: { tenantId },
 		select: {
 			stock: true,
 			price: true,
@@ -218,12 +227,13 @@ export async function getInventoryOverview(): Promise<InventoryOverview> {
 /**
  * Get stock alerts for admin dashboard
  */
-export async function getStockAlerts(): Promise<StockAlert[]> {
+export async function getStockAlerts(tenantId: string): Promise<StockAlert[]> {
 	const alerts: StockAlert[] = []
 
 	// Get out of stock products
 	const outOfStock = await prisma.product.findMany({
 		where: {
+			tenantId,
 			stock: 0,
 		},
 		include: {
@@ -246,6 +256,7 @@ export async function getStockAlerts(): Promise<StockAlert[]> {
 	// Get low stock products
 	const lowStock = await prisma.product.findMany({
 		where: {
+			tenantId,
 			stock: {
 				gt: 0,
 				lte: 10,
@@ -271,6 +282,7 @@ export async function getStockAlerts(): Promise<StockAlert[]> {
 	// Check for variants with low/out of stock
 	const productsWithVariants = await prisma.product.findMany({
 		where: {
+			tenantId,
 			variants: {
 				some: {
 					stock: 0,
@@ -280,6 +292,7 @@ export async function getStockAlerts(): Promise<StockAlert[]> {
 		include: {
 			variants: {
 				where: {
+					tenantId,
 					stock: 0,
 				},
 				take: 1,
@@ -312,13 +325,14 @@ export async function getStockAlerts(): Promise<StockAlert[]> {
 /**
  * Get reorder suggestions based on sales velocity and current stock
  */
-export async function getReorderSuggestions(daysToConsider: number = 30): Promise<ReorderSuggestion[]> {
+export async function getReorderSuggestions(tenantId: string, daysToConsider: number = 30): Promise<ReorderSuggestion[]> {
 	const cutoffDate = new Date()
 	cutoffDate.setDate(cutoffDate.getDate() - daysToConsider)
 
 	// Get sales data for the period
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: cutoffDate,
 			},
@@ -347,6 +361,7 @@ export async function getReorderSuggestions(daysToConsider: number = 30): Promis
 
 	// Get all products with stock info
 	const products = await prisma.product.findMany({
+		where: { tenantId },
 		include: {
 			variants: {
 				select: {
@@ -428,13 +443,16 @@ export async function getReorderSuggestions(daysToConsider: number = 30): Promis
 /**
  * Update product stock (used by admin)
  */
-export async function updateProductStock(productId: string, newStock: number) {
+export async function updateProductStock(productId: string, tenantId: string, newStock: number) {
 	if (newStock < 0) {
 		throw new Error("Stock cannot be negative")
 	}
 
+	const existing = await prisma.product.findFirst({ where: { id: productId, tenantId }, select: { id: true } })
+	if (!existing) throw new Error("Product not found")
+
 	return prisma.product.update({
-		where: { id: productId },
+		where: { id: existing.id },
 		data: { stock: newStock },
 	})
 }
@@ -442,13 +460,16 @@ export async function updateProductStock(productId: string, newStock: number) {
 /**
  * Update variant stock (used by admin)
  */
-export async function updateVariantStock(variantId: string, newStock: number) {
+export async function updateVariantStock(variantId: string, tenantId: string, newStock: number) {
 	if (newStock < 0) {
 		throw new Error("Stock cannot be negative")
 	}
 
+	const existing = await prisma.variant.findFirst({ where: { id: variantId, tenantId }, select: { id: true } })
+	if (!existing) throw new Error("Variant not found")
+
 	return prisma.variant.update({
-		where: { id: variantId },
+		where: { id: existing.id },
 		data: { stock: newStock },
 	})
 }
@@ -456,9 +477,10 @@ export async function updateVariantStock(variantId: string, newStock: number) {
 /**
  * Get stock movement history (simplified - based on order items)
  */
-export async function getStockMovementHistory(productId: string, limit: number = 20) {
+export async function getStockMovementHistory(productId: string, tenantId: string, limit: number = 20) {
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			items: {
 				some: {
 					productId,
