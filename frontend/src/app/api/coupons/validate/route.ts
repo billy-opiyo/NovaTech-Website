@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 export async function POST(req: NextRequest) {
 	const rateLimitResponse = await rateLimiter(req, "coupon-validate")
 	if (rateLimitResponse) return rateLimitResponse
 
 	try {
+		const context = await resolveTenantFromRequest(req)
 		const { code, subtotal } = await req.json()
 
 		if (!code) {
@@ -16,9 +18,7 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
-		const coupon = await prisma.coupon.findUnique({
-			where: { code: code.toUpperCase() },
-		})
+		const coupon = await prisma.coupon.findFirst({ where: { code: code.toUpperCase(), tenantId: context.tenantId } })
 
 		if (!coupon) {
 			return NextResponse.json(

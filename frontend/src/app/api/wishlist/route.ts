@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 export async function GET(req: NextRequest) {
 	try {
@@ -8,9 +9,10 @@ export async function GET(req: NextRequest) {
 		if (!session?.user) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
+		const context = await resolveTenantFromRequest(req)
 
 		const wishlist = await prisma.wishlistItem.findMany({
-			where: { userId: session.user.id },
+			where: { userId: session.user.id, tenantId: context.tenantId },
 			include: {
 				product: {
 					select: {
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		const userId = session.user.id
+		const context = await resolveTenantFromRequest(req)
 		if (!userId) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
 		const existing = await prisma.wishlistItem.findFirst({
 			where: {
 				userId,
+				tenantId: context.tenantId,
 				productId,
 			},
 		})
@@ -63,9 +67,12 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
+		const product = await prisma.product.findFirst({ where: { id: productId, tenantId: context.tenantId }, select: { id: true } })
+		if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 })
 		const wishlistItem = await prisma.wishlistItem.create({
 			data: {
 				userId,
+				tenantId: context.tenantId,
 				productId,
 			},
 			include: {
@@ -87,8 +94,9 @@ export async function DELETE(req: NextRequest) {
 		}
 
 		const { productId } = await req.json()
+		const context = await resolveTenantFromRequest(req)
 
-		await prisma.wishlistItem.deleteMany({ where: { userId: session.user.id, ...(productId ? { productId } : {}) } })
+		await prisma.wishlistItem.deleteMany({ where: { userId: session.user.id, tenantId: context.tenantId, ...(productId ? { productId } : {}) } })
 
 		return NextResponse.json({ message: "Removed from wishlist" })
 	} catch (error: any) {

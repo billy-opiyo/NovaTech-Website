@@ -4,6 +4,7 @@ import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
 
 export interface CreateOrderData {
+	tenantId: string
 	userId?: string
 	guestEmail?: string
 	items: {
@@ -34,14 +35,14 @@ export async function createOrder(data: CreateOrderData) {
 	return prisma.$transaction(async (tx) => {
 		if (!data.items.length) throw new Error("At least one item is required")
 		if (data.idempotencyKey) {
-			const existing = await tx.order.findUnique({ where: { idempotencyKey: data.idempotencyKey }, include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } } })
+			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			if (existing) return existing
 		}
 
 		// Prices, discounts, shipping, and stock are authoritative on the server.
 		const products = await Promise.all(
-			data.items.map((item) => tx.product.findUnique({
-				where: { id: item.productId },
+			data.items.map((item) => tx.product.findFirst({
+				where: { id: item.productId, tenantId: data.tenantId },
 				select: { id: true, stock: true, name: true, price: true, discountedPrice: true },
 			})),
 		)
@@ -66,7 +67,7 @@ export async function createOrder(data: CreateOrderData) {
 
 		let discount = 0
 		if (data.couponCode) {
-			const coupon = await tx.coupon.findUnique({ where: { code: data.couponCode.trim().toUpperCase() } })
+			const coupon = await tx.coupon.findFirst({ where: { code: data.couponCode.trim().toUpperCase(), tenantId: data.tenantId } })
 			if (!coupon || !coupon.isActive || coupon.expiresAt < new Date() || (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit)) {
 				throw new Error("Invalid or expired coupon")
 			}
@@ -81,6 +82,7 @@ export async function createOrder(data: CreateOrderData) {
 		const orderItems = data.items.map((item) => {
 				const product = productById.get(item.productId)!
 				return {
+					tenantId: data.tenantId,
 					productId: item.productId,
 					quantity: item.quantity,
 					price: product.discountedPrice ?? product.price,
@@ -91,6 +93,7 @@ export async function createOrder(data: CreateOrderData) {
 		// Create order
 		const order = await tx.order.create({
 			data: {
+				tenantId: data.tenantId,
 				userId: data.userId,
 				guestEmail: data.guestEmail,
 				status: "PENDING",
@@ -121,7 +124,7 @@ export async function createOrder(data: CreateOrderData) {
 
 		if (data.couponCode) {
 			await tx.coupon.update({
-				where: { code: data.couponCode.trim().toUpperCase() },
+				where: { code: data.couponCode.trim().toUpperCase(), tenantId: data.tenantId },
 				data: { usedCount: { increment: 1 } },
 			})
 		}
@@ -131,6 +134,7 @@ export async function createOrder(data: CreateOrderData) {
 			await tx.product.update({
 				where: { id: item.productId },
 				data: {
+					tenantId: data.tenantId,
 					stock: { decrement: item.quantity },
 				},
 			})
@@ -151,12 +155,12 @@ export async function createOrder(data: CreateOrderData) {
 	})
 }
 
-export async function getOrdersByUserId(userId: string, page = 1, limit = 20) {
+export async function getOrdersByUserId(userId: string, tenantId: string, page = 1, limit = 20) {
 	const skip = (page - 1) * limit
 
 	const [orders, total] = await Promise.all([
 		prisma.order.findMany({
-			where: { userId },
+			where: { userId, tenantId },
 			include: {
 				items: {
 					include: {
@@ -174,7 +178,7 @@ export async function getOrdersByUserId(userId: string, page = 1, limit = 20) {
 			skip,
 			take: limit,
 		}),
-		prisma.order.count({ where: { userId } }),
+		prisma.order.count({ where: { userId, tenantId } }),
 	])
 
 	return {
@@ -185,9 +189,9 @@ export async function getOrdersByUserId(userId: string, page = 1, limit = 20) {
 	}
 }
 
-export async function getOrderById(orderId: string, userId?: string) {
-	const order = await prisma.order.findUnique({
-		where: { id: orderId },
+export async function getOrderById(orderId: string, tenantId: string, userId?: string) {
+	const order = await prisma.order.findFirst({
+		where: { id: orderId, tenantId },
 		include: {
 			items: {
 				include: {
@@ -225,10 +229,13 @@ export async function getOrderById(orderId: string, userId?: string) {
 export async function updateOrderStatus(
 	orderId: string,
 	status: string,
+	tenantId: string,
 	trackingNumber?: string,
 ) {
+	const existing = await prisma.order.findFirst({ where: { id: orderId, tenantId }, select: { id: true } })
+	if (!existing) throw new Error("Order not found")
 	const order = await prisma.order.update({
-		where: { id: orderId },
+		where: { id: existing.id },
 		data: {
 			status: status as Prisma.OrderUpdateInput["status"],
 			...(trackingNumber && { trackingNumber }),
@@ -257,6 +264,7 @@ export async function updateOrderStatus(
 	if (order.userId) {
 		await prisma.notification.create({
 			data: {
+				tenantId,
 				userId: order.userId,
 				type: "ORDER_STATUS",
 				message: `Order #${order.id.slice(-8).toUpperCase()} status updated to ${status}.`,
@@ -307,9 +315,9 @@ text: `NovaTech Store Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()
 	return order
 }
 
-export async function getAllOrders(page = 1, limit = 20, status?: string) {
+export async function getAllOrders(tenantId: string, page = 1, limit = 20, status?: string) {
 	const skip = (page - 1) * limit
-	const where: Prisma.OrderWhereInput = {}
+	const where: Prisma.OrderWhereInput = { tenantId }
 	if (status) {
 		where.status = status as Prisma.OrderWhereInput["status"]
 	}
@@ -351,7 +359,7 @@ export async function getAllOrders(page = 1, limit = 20, status?: string) {
 	}
 }
 
-export async function getOrderStats() {
+export async function getOrderStats(tenantId: string) {
 	const [
 		totalOrders,
 		pendingOrders,
@@ -362,16 +370,16 @@ export async function getOrderStats() {
 		cancelledOrders,
 		totalRevenue,
 	] = await Promise.all([
-		prisma.order.count(),
-		prisma.order.count({ where: { status: "PENDING" } }),
-		prisma.order.count({ where: { status: "CONFIRMED" } }),
-		prisma.order.count({ where: { status: "PROCESSING" } }),
-		prisma.order.count({ where: { status: "SHIPPED" } }),
-		prisma.order.count({ where: { status: "DELIVERED" } }),
-		prisma.order.count({ where: { status: "CANCELLED" } }),
+		prisma.order.count({ where: { tenantId } }),
+		prisma.order.count({ where: { tenantId, status: "PENDING" } }),
+		prisma.order.count({ where: { tenantId, status: "CONFIRMED" } }),
+		prisma.order.count({ where: { tenantId, status: "PROCESSING" } }),
+		prisma.order.count({ where: { tenantId, status: "SHIPPED" } }),
+		prisma.order.count({ where: { tenantId, status: "DELIVERED" } }),
+		prisma.order.count({ where: { tenantId, status: "CANCELLED" } }),
 		prisma.order.aggregate({
 			_sum: { total: true },
-			where: { status: { not: "CANCELLED" } },
+			where: { tenantId, status: { not: "CANCELLED" } },
 		}),
 	])
 
@@ -387,10 +395,10 @@ export async function getOrderStats() {
 	}
 }
 
-export async function cancelPendingOrder(orderId: string) {
+export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 	return prisma.$transaction(async (tx) => {
 		const order = await tx.order.findUnique({
-			where: { id: orderId },
+			where: { id: orderId, ...(tenantId ? { tenantId } : {}) },
 			include: { items: true },
 		})
 		if (!order || order.status !== "PENDING") return order

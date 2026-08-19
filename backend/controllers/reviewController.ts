@@ -4,6 +4,7 @@ import prisma from "../lib/db"
 import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../validators/reviewValidator"
 import { z } from "zod"
 import { findBlockedReviewTerms } from "../constants/reviewModeration"
+import { resolveTenantFromRequest } from "../lib/tenant"
 
 export async function getReviews(req: NextRequest) {
 	try {
@@ -11,6 +12,7 @@ export async function getReviews(req: NextRequest) {
 		const productId = url.searchParams.get("productId")
 		const page = parseInt(url.searchParams.get("page") || "1", 10)
 		const limit = parseInt(url.searchParams.get("limit") || "10", 10)
+		const context = await resolveTenantFromRequest(req)
 
 		if (!productId) {
 			return NextResponse.json(
@@ -19,7 +21,7 @@ export async function getReviews(req: NextRequest) {
 			)
 		}
 
-		const approvedWhere = { productId, moderationStatus: "APPROVED" as const }
+		const approvedWhere = { productId, tenantId: context.tenantId, moderationStatus: "APPROVED" as const }
 		const [reviews, total] = await Promise.all([
 			prisma.review.findMany({
 				where: approvedWhere,
@@ -65,6 +67,9 @@ export async function createReview(req: NextRequest) {
 		const body = await req.json()
 		const validated = reviewSchema.parse(body)
 		const userId = session.user.id
+		const context = await resolveTenantFromRequest(req)
+		const product = await prisma.product.findFirst({ where: { id: validated.productId, tenantId: context.tenantId }, select: { id: true } })
+		if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 })
 
 		if (!userId) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
@@ -72,6 +77,7 @@ export async function createReview(req: NextRequest) {
 
 		const hasPurchased = await prisma.orderItem.findFirst({
 			where: {
+				tenantId: context.tenantId,
 				productId: validated.productId,
 				order: {
 					userId,
@@ -83,6 +89,7 @@ export async function createReview(req: NextRequest) {
 
 		const review = await prisma.review.create({
 			data: {
+				tenantId: context.tenantId,
 				userId,
 				productId: validated.productId,
 				rating: validated.rating,
@@ -128,8 +135,9 @@ export async function updateReview(req: NextRequest) {
 
 		const body = await req.json()
 		const validated = updateReviewSchema.parse(body)
+		const context = await resolveTenantFromRequest(req)
 
-		const review = await prisma.review.findUnique({ where: { id: validated.reviewId } })
+		const review = await prisma.review.findFirst({ where: { id: validated.reviewId, tenantId: context.tenantId } })
 
 		if (!review || review.userId !== session.user.id) {
 			return NextResponse.json(
@@ -175,8 +183,9 @@ export async function deleteReview(req: NextRequest) {
 
 		const body = await req.json()
 		const validated = deleteReviewSchema.parse(body)
+		const context = await resolveTenantFromRequest(req)
 
-		const review = await prisma.review.findUnique({ where: { id: validated.reviewId } })
+		const review = await prisma.review.findFirst({ where: { id: validated.reviewId, tenantId: context.tenantId } })
 
 		if (!review) {
 			return NextResponse.json({ message: "Review not found" }, { status: 404 })

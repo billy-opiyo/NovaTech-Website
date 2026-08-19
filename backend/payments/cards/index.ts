@@ -215,7 +215,7 @@ export async function verifyCardPayment(
 			}
 		}
 	}
-	if (!ok && payment?.orderId) await cancelPendingOrder(payment.orderId)
+	if (!ok && payment?.orderId) await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 	return {
 		ok,

@@ -288,7 +288,7 @@ async function updatePaymentByProviderReference(
 				console.error("Failed to send order confirmation email:", emailError)
 			}
 		}
-		if (payment.orderId && status !== "COMPLETED") await cancelPendingOrder(payment.orderId)
+		if (payment.orderId && status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 		return payment
 	} catch (error) {

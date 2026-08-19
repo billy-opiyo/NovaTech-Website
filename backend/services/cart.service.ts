@@ -31,30 +31,31 @@ function toCartResponse(items: any[]) {
 	}
 }
 
-async function findCartItems(userId: string) {
+async function findCartItems(userId: string, tenantId: string) {
 	return prisma.cartItem.findMany({
-		where: { userId },
+		where: { userId, tenantId },
 		include: { product: true },
 		orderBy: { createdAt: "asc" },
 	})
 }
 
-export async function getCart(userId: string) {
-	return toCartResponse(await findCartItems(userId))
+export async function getCart(userId: string, tenantId: string) {
+	return toCartResponse(await findCartItems(userId, tenantId))
 }
 
 export async function addCartItem(
 	userId: string,
 	productId: string,
 	quantity: number,
+	tenantId: string,
 	variant?: string,
 ) {
-	const product = await prisma.product.findUnique({ where: { id: productId } })
+	const product = await prisma.product.findFirst({ where: { id: productId, tenantId } })
 	if (!product) throw new Error("Product not found")
 	if (quantity < 1 || quantity > product.stock) throw new Error("Requested quantity is unavailable")
 
 	const existing = await prisma.cartItem.findFirst({
-		where: { userId, productId, variant: variant || null },
+		where: { userId, tenantId, productId, variant: variant || null },
 	})
 	const nextQuantity = (existing?.quantity || 0) + quantity
 	if (nextQuantity > product.stock) throw new Error("Requested quantity exceeds available stock")
@@ -62,27 +63,27 @@ export async function addCartItem(
 	if (existing) {
 		await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQuantity } })
 	} else {
-		await prisma.cartItem.create({ data: { userId, productId, quantity, variant } })
+		await prisma.cartItem.create({ data: { userId, tenantId, productId, quantity, variant } })
 	}
 
-	return getCart(userId)
+	return getCart(userId, tenantId)
 }
 
-export async function updateCartItem(userId: string, itemId: string, quantity: number) {
+export async function updateCartItem(userId: string, itemId: string, quantity: number, tenantId: string) {
 	if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be at least one")
-	const item = await prisma.cartItem.findFirst({ where: { id: itemId, userId }, include: { product: true } })
+	const item = await prisma.cartItem.findFirst({ where: { id: itemId, userId, tenantId }, include: { product: true } })
 	if (!item) throw new Error("Cart item not found")
 	if (quantity > item.product.stock) throw new Error("Requested quantity exceeds available stock")
 	await prisma.cartItem.update({ where: { id: itemId }, data: { quantity } })
-	return getCart(userId)
+	return getCart(userId, tenantId)
 }
 
-export async function removeCartItem(userId: string, itemId: string) {
-	await prisma.cartItem.deleteMany({ where: { id: itemId, userId } })
-	return getCart(userId)
+export async function removeCartItem(userId: string, itemId: string, tenantId: string) {
+	await prisma.cartItem.deleteMany({ where: { id: itemId, userId, tenantId } })
+	return getCart(userId, tenantId)
 }
 
-export async function clearCart(userId: string) {
-	await prisma.cartItem.deleteMany({ where: { userId } })
-	return getCart(userId)
+export async function clearCart(userId: string, tenantId: string) {
+	await prisma.cartItem.deleteMany({ where: { userId, tenantId } })
+	return getCart(userId, tenantId)
 }

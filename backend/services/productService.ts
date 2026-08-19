@@ -1,8 +1,8 @@
 import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
 
-export async function getFilteredProducts(params: URLSearchParams) {
-	const where: Prisma.ProductWhereInput = {}
+export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
+	const where: Prisma.ProductWhereInput = { tenantId }
 
 	const categorySlug = params.get("category")
 	if (categorySlug) {
@@ -116,9 +116,9 @@ export async function getFilteredProducts(params: URLSearchParams) {
 	}
 }
 
-export async function getProductBySlug(slug: string) {
-	const product = await prisma.product.findUnique({
-		where: { slug },
+export async function getProductBySlug(slug: string, tenantId: string) {
+	const product = await prisma.product.findFirst({
+		where: { slug, tenantId },
 		include: {
 			category: true,
 			variants: true,
@@ -158,11 +158,12 @@ export async function getProductBySlug(slug: string) {
 	}
 }
 
-export async function searchProducts(query: string) {
+export async function searchProducts(query: string, tenantId: string) {
 	if (!query || query.length < 2) return []
 
 	const products = await prisma.product.findMany({
 		where: {
+			tenantId,
 			OR: [
 				{ name: { contains: query, mode: "insensitive" } },
 				{ brand: { contains: query, mode: "insensitive" } },
@@ -186,9 +187,12 @@ export async function searchProducts(query: string) {
 	return products
 }
 
-export async function createProduct(data: any) {
+export async function createProduct(data: any, tenantId: string) {
+	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId }, select: { id: true } })
+	if (!category) throw new Error("Category not found")
 	return prisma.product.create({
 		data: {
+			tenantId,
 			name: data.name,
 			slug: data.slug,
 			description: data.description,
@@ -206,6 +210,7 @@ export async function createProduct(data: any) {
 			variants: data.variants
 				? {
 						create: data.variants.map((v: any) => ({
+							tenantId,
 							name: v.name,
 							value: v.value,
 							priceModifier: v.priceModifier,
@@ -222,18 +227,20 @@ export async function createProduct(data: any) {
 	})
 }
 
-export async function updateProduct(slug: string, data: any) {
+export async function updateProduct(slug: string, data: any, tenantId: string) {
 	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
 	if (update.stock !== undefined) update.stock = Number(update.stock)
-	return prisma.product.update({ where: { slug }, data: update, include: { category: true, variants: true } })
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true } })
+	if (!product) throw new Error("Product not found")
+	return prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: true } })
 }
 
-export async function deleteProduct(slug: string) {
-	const product = await prisma.product.findUnique({ where: { slug }, select: { id: true, orderItems: { select: { id: true }, take: 1 } } })
+export async function deleteProduct(slug: string, tenantId: string) {
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, orderItems: { select: { id: true }, take: 1 } } })
 	if (!product) throw new Error("Product not found")
 	if (product.orderItems.length) throw new Error("Products with order history cannot be deleted; set stock to zero instead")
-	return prisma.product.delete({ where: { slug } })
+	return prisma.product.delete({ where: { id: product.id } })
 }

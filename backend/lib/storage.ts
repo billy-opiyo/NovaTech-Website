@@ -62,6 +62,13 @@ export function generateFileKey(productId: string, fileName: string): string {
 	return `products/${productId}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
 }
 
+export function generateTenantFileKey(tenantId: string, storeId: string, productId: string, fileName: string): string {
+	const extension = fileName.split(".").pop()?.toLowerCase() || "bin"
+	const timestamp = Date.now()
+	const scope = productId === "general" ? "assets" : `products/${productId}`
+	return `tenants/${tenantId}/stores/${storeId}/${scope}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
+}
+
 export function generateProfileFileKey(userId: string, fileName: string): string {
 	const extension = fileName.split(".").pop()?.toLowerCase() || "jpg"
 	const timestamp = Date.now()

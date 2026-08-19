@@ -23,6 +23,8 @@
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
 - Phase 3 slice completed: root metadata/theme/branding now consume a server-resolved `StoreContext`; authenticated onboarding creates a trial tenant/store/membership/subscription/domain; store design saves validated drafts and publishes versioned settings through `/api/manage/store/*`.
 - The remaining Phase 3 work is converting every catalog, cart, checkout, account, upload, notification, and admin API query to use the resolved context, plus custom-domain and preview routing.
+- Phase 3 isolation checkpoint completed: catalog, product mutations, carts, orders, coupon validation, reviews, wishlists, and product uploads now use host-resolved tenant scope; upload keys use `tenants/{tenantId}/stores/{storeId}/...`.
+- Remaining commerce boundary work includes payment callback tenant/order matching, account/address/notification/support scoping, admin API conversion, custom-domain verification, and preview routing.
 - Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
 
 ### Next phase

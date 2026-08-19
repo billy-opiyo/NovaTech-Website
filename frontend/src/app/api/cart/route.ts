@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import * as cartService from "backend/services/cart.service"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 
 async function getUserId() {
 	const session = await getServerSession()
 	return session?.user?.id
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
 	const userId = await getUserId()
 	if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-	return NextResponse.json(await cartService.getCart(userId))
+	const context = await resolveTenantFromRequest(req)
+	return NextResponse.json(await cartService.getCart(userId, context.tenantId))
 }
 
 export async function POST(req: NextRequest) {
@@ -22,14 +24,16 @@ export async function POST(req: NextRequest) {
 		if (!body.productId || !Number.isInteger(quantity)) {
 			return NextResponse.json({ message: "productId and integer quantity are required" }, { status: 400 })
 		}
-		return NextResponse.json(await cartService.addCartItem(userId, body.productId, quantity, body.variant), { status: 201 })
+		const context = await resolveTenantFromRequest(req)
+		return NextResponse.json(await cartService.addCartItem(userId, body.productId, quantity, context.tenantId, body.variant), { status: 201 })
 	} catch (error: any) {
 		return NextResponse.json({ message: error.message || "Unable to update cart" }, { status: 400 })
 	}
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
 	const userId = await getUserId()
 	if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-	return NextResponse.json(await cartService.clearCart(userId))
+	const context = await resolveTenantFromRequest(req)
+	return NextResponse.json(await cartService.clearCart(userId, context.tenantId))
 }
