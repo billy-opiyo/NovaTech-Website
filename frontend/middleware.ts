@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
 	const isAdminRoute = adminRoutes.some((route) =>
 		pathname.startsWith(route),
 	)
+	const isWorkspaceRoute = pathname.startsWith("/manage") || pathname.startsWith("/platform")
 
 	// Handle admin routes
 	if (isAdminRoute) {
@@ -29,6 +30,15 @@ export async function middleware(request: NextRequest) {
 			return NextResponse.redirect(new URL("/", request.url))
 		}
 
+		return NextResponse.next()
+	}
+
+	if (isWorkspaceRoute) {
+		if (!isAuthenticated) {
+			const signInUrl = new URL("/auth/signin", request.url)
+			signInUrl.searchParams.set("callbackUrl", pathname)
+			return NextResponse.redirect(signInUrl)
+		}
 		return NextResponse.next()
 	}
 

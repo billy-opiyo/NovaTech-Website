@@ -24,49 +24,52 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 
-const sidebarLinks = [
+const sidebarLinks = (basePath: string) => [
 	{
 		section: "Main",
 		items: [
-			{ icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
-			{ icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
+			{ icon: LayoutDashboard, label: "Dashboard", href: `${basePath}/dashboard` },
+			{ icon: BarChart3, label: "Analytics", href: `${basePath}/analytics` },
 		],
 	},
 	{
 		section: "Management",
 		items: [
-			{ icon: Package, label: "Products", href: "/admin/products" },
-			{ icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-			{ icon: Users, label: "Customers", href: "/admin/customers" },
-			{ icon: Star, label: "Reviews", href: "/admin/reviews" },
-			{ icon: Truck, label: "Deliveries", href: "/admin/deliveries" },
+			{ icon: Package, label: "Products", href: `${basePath}/products` },
+			{ icon: ShoppingCart, label: "Orders", href: `${basePath}/orders` },
+			{ icon: Users, label: "Customers", href: `${basePath}/customers` },
+			{ icon: Star, label: "Reviews", href: `${basePath}/reviews` },
+			{ icon: Truck, label: "Deliveries", href: `${basePath}/deliveries` },
 		],
 	},
 	{
 		section: "Support",
 		items: [
-			{ icon: Ticket, label: "Support Tickets", href: "/admin/support" },
-			{ icon: MessageSquare, label: "Messages", href: "/admin/messages" },
+			{ icon: Ticket, label: "Support Tickets", href: `${basePath}/support` },
+			{ icon: MessageSquare, label: "Messages", href: `${basePath}/messages` },
 		],
 	},
 	{
 		section: "System",
 		items: [
-			{ icon: Settings, label: "Settings", href: "/admin/settings" },
-			{ icon: Shield, label: "Security", href: "/admin/security" },
-			{ icon: Activity, label: "Activity Log", href: "/admin/activity" },
+			{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
+			{ icon: Shield, label: "Security", href: `${basePath}/security` },
+			{ icon: Activity, label: "Activity Log", href: `${basePath}/activity` },
 		],
 	},
 ]
 
 export default function AdminLayout({
 	children,
+	basePath = "/admin",
 }: {
 	children: React.ReactNode
+	basePath?: string
 }) {
 	const pathname = usePathname()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+	const sidebarLinksForPath = sidebarLinks(basePath)
 
 	return (
 		<div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
@@ -88,6 +91,7 @@ export default function AdminLayout({
 						>
 							<SidebarContent
 								pathname={pathname}
+								basePath={basePath}
 								onClose={() => setMobileSidebarOpen(false)}
 							/>
 						</motion.aside>
@@ -101,7 +105,7 @@ export default function AdminLayout({
 					sidebarOpen ? "w-72" : "w-20",
 				)}
 			>
-				<SidebarContent pathname={pathname} collapsed={!sidebarOpen} />
+				<SidebarContent pathname={pathname} basePath={basePath} collapsed={!sidebarOpen} />
 			</aside>
 
 			<div
@@ -148,17 +152,19 @@ export default function AdminLayout({
 
 function SidebarContent({
 	pathname,
+	basePath = "/admin",
 	collapsed,
 	onClose,
 }: {
 	pathname: string
+	basePath?: string
 	collapsed?: boolean
 	onClose?: () => void
 }) {
 	return (
 		<div className="flex flex-col h-full">
 			<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-				<Link href="/admin/dashboard" className="flex items-center gap-3">
+				<Link href={`${basePath}/dashboard`} className="flex items-center gap-3">
 					<Zap className="text-primary flex-shrink-0" size={28} />
 					{!collapsed && (
 						<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -169,7 +175,7 @@ function SidebarContent({
 			</div>
 
 			<nav className="flex-1 overflow-y-auto p-4">
-				{sidebarLinks.map((section) => (
+					{sidebarLinks(basePath).map((section) => (
 					<div key={section.section} className="mb-6">
 						{!collapsed && (
 							<p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">

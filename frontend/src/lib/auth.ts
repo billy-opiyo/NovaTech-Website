@@ -52,6 +52,7 @@ export const authOptions = {
 					name: user.name,
 					image: user.image,
 					role: user.role,
+					platformRole: user.platformRole || undefined,
 				}
 			},
 		}),
@@ -60,6 +61,7 @@ export const authOptions = {
 		async jwt({ token, user }: any) {
 			if (user) {
 				token.role = user.role
+				token.platformRole = user.platformRole
 				token.id = user.id
 			}
 			return token
@@ -67,6 +69,7 @@ export const authOptions = {
 		async session({ session, token }: any) {
 			if (session.user) {
 				session.user.role = token.role as string
+				session.user.platformRole = token.platformRole as string | undefined
 				session.user.id = token.id as string
 			}
 			return session

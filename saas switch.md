@@ -17,7 +17,14 @@
 
 ### Next phase
 
-- Phase 2: split merchant memberships from platform authorization, add `/manage` and `/platform` route boundaries, and move protected admin operations to server-verified store access.
+- Phase 2 completed: added session propagation for `platformRole`, server-side `requireStoreSession()` and `requirePlatformSession()` guards, authenticated workspace middleware, and route-backed `/manage` and `/platform` surfaces.
+- Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/tenants` and `/platform/billing` are truthful unavailable states until database/provider-backed operations are connected.
+- The legacy `/admin` controllers still contain global role checks and unscoped API queries; they remain a Phase 3/5 migration item before any merchant-facing beta.
+- Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
+
+### Next phase
+
+- Phase 3: replace global `clientConfig` reads with database-backed `StoreContext`, then add onboarding, draft/preview/publish settings, and tenant-aware storefront/catalog runtime.
 
 **Date:** 18 August 2026
 **Current product:** NovaTech Store, a single-store electronics e-commerce application
