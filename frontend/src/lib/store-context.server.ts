@@ -12,10 +12,18 @@ function isLocalPreviewHost(value: string | null): boolean {
 	return hostname === "localhost" || hostname === "127.0.0.1"
 }
 
+function isPlatformHost(value: string | null): boolean {
+	if (!value) return false
+	const hostname = value.trim().toLowerCase().split(":")[0]
+	const platformDomain = (process.env.PLATFORM_DOMAIN || "novatechstore.co.ke").replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+	return isLocalPreviewHost(value) || hostname === platformDomain
+}
+
 export async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
+	const platformHome = isPlatformHost(requestHeaders.get("host"))
 	if (process.env.NODE_ENV !== "production" && isLocalPreviewHost(requestHeaders.get("host"))) {
-		return fallbackStoreContext()
+		return fallbackStoreContext(true)
 	}
 
 	try {
@@ -40,7 +48,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 				commerceSettings: true,
 			},
 		})
-		if (!store) return fallbackStoreContext()
+		if (!store) return fallbackStoreContext(platformHome)
 
 		const theme = record(store.themeSettings)
 		const seo = record(store.seoSettings)
@@ -61,21 +69,23 @@ export async function getStoreContext(): Promise<StoreContext> {
 			homepage: { ...clientConfig.homepage, ...homepage },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
+			isPlatformHome: platformHome,
 		} as unknown as StoreContext
 	} catch (error) {
 		if (process.env.NODE_ENV === "production" && error instanceof TenantResolutionError) throw error
-		if (process.env.NODE_ENV !== "production") return fallbackStoreContext()
+		if (process.env.NODE_ENV !== "production") return fallbackStoreContext(platformHome)
 		console.error("Store context unavailable", error)
-		return fallbackStoreContext()
+		return fallbackStoreContext(platformHome)
 	}
 }
 
-export function fallbackStoreContext(): StoreContext {
+export function fallbackStoreContext(isPlatformHome = false): StoreContext {
 	return {
 		...clientConfig,
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "novatech",
 		publicationStatus: "PUBLISHED",
+		isPlatformHome,
 	} as unknown as StoreContext
 }

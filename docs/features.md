@@ -6,7 +6,7 @@
 |---------|-------------|
 | **Home Page** | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup. |
 | **Shared Multi-Store Homepage** | Every store keeps the same homepage component order and responsive layout; active-store branding, copy, categories, featured products, testimonials, newsletter content, contact details, and map links are resolved through `StoreContext`. |
-| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. |
+| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. The `Browse Stores` action is shown on the platform homepage only, not inside individual store navigation. |
 | **Store Host Routing** | Local previews support `{store-slug}.localhost`; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
@@ -47,7 +47,7 @@
 | **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
 | **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, route loading skeletons, and accessible loading status messaging. |
 | **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, and `aria-live` announcements. |
-| **Responsive Navigation** | Desktop header, mobile navigation, responsive footer grid, actionable contact links, theme toggle, cart/account actions, and shared search access. |
+| **Responsive Navigation** | Desktop header, mobile navigation, responsive footer grid, actionable contact links, theme toggle, cart/account actions, and shared search access. Store discovery navigation is platform-only; merchant storefronts keep shoppers inside the active store. |
 
 ## 👑 Admin Panel
 

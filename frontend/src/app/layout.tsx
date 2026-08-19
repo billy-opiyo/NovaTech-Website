@@ -101,7 +101,7 @@ export default async function RootLayout({
 					<ToastProvider>
 						<CartProvider>
 							<SessionResume />
-							<StorePreferenceTracker storeSlug={store.storeSlug} />
+							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							{store.features.showSplashScreen ? (
 								<SplashScreen>
 									<>

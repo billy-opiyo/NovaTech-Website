@@ -95,7 +95,7 @@ export default function HomePage() {
 				</div>
 			</div>
 
-			<div className="glass-card overflow-hidden p-0">
+			{!store.isPlatformHome && <div className="glass-card overflow-hidden p-0">
 				<div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between md:p-8">
 					<div className="flex items-start gap-3">
 						<MapPin className="mt-1 shrink-0 text-primary" size={22} />
@@ -123,7 +123,7 @@ export default function HomePage() {
 						className="home-map-frame h-full w-full border-0"
 					/>
 				</div>
-			</div>
+			</div>}
 			</div>
 		</div>
 	)

@@ -5,4 +5,5 @@ export type StoreContext = ClientConfig & {
 	storeId: string
 	storeSlug: string
 	publicationStatus: "DRAFT" | "PUBLISHED" | "SUSPENDED"
+	isPlatformHome: boolean
 }

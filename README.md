@@ -436,7 +436,7 @@ npm run dev:open
 - ✔️ **Authentication flows** — Email verification with resend support and token-based password reset
 - ✔️ **Public information pages** — About, Blog, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions
 - ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
-- ✔️ **Shopper store discovery** — `/stores` lists eligible published stores, provides featured product context, and links to host-resolved individual storefronts
+- ✔️ **Shopper store discovery** — `/stores` lists eligible published stores, provides featured product context, and links to host-resolved individual storefronts; `Browse Stores` remains platform-home navigation only
 - ✔️ **Shared store homepage content** — Store-specific content is resolved through `StoreContext` without changing the shared homepage order or responsive layout
 - ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the `novatech-preferred-store` browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)

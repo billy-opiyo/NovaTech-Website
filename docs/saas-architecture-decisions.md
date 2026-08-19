@@ -24,6 +24,7 @@ This document records implementation defaults for the first controlled beta. It 
 ## Shopper discovery and storefront behavior
 
 - `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.
+- Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
 - The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing, cart, account, checkout, and orders remain inside the selected store.
 - The shared homepage component order and responsive layout are preserved across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`.
 - A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The `novatech-preferred-store` cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.

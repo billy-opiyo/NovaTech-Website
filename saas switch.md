@@ -154,6 +154,7 @@
 ### Pre-Phase 5 handoff
 
 - The shopper discovery and shared-storefront slice is ready for Phase 5 hardening: `/stores` is the shopper entry point, while each store's catalog, cart, account, and checkout remain on that store's resolved host.
+- `Browse Stores` is exposed from the SaaS platform homepage/directory only; individual store desktop and mobile navigation keep shoppers inside the active store.
 - Phase 5 must deploy and verify migration `0005_shopper_store_preference`, regenerate Prisma Client, test real `{slug}.localhost` and platform-subdomain resolution with a database, and run cross-store browser/isolation checks.
 - Remaining pre-launch work still includes payment-provider setup, custom-domain verification, preview routing, unscoped legacy admin/API paths, DNS/SSL, and legal/tax/privacy review.
 

@@ -71,12 +71,11 @@ const sidebarLinks = (basePath: string) => [
 
 export default function AdminLayout({
 	children,
-	basePath = "/admin",
 }: {
 	children: React.ReactNode
-	basePath?: string
 }) {
 	const pathname = usePathname()
+	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 	const sidebarLinksForPath = sidebarLinks(basePath)

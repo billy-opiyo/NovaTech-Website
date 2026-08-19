@@ -56,6 +56,7 @@ The latest UI implementation updates include:
 - Preserved the shared homepage structure for every store while resolving branding, homepage content, contact details, and map links from the active `StoreContext`.
 - Added authenticated preferred-store persistence through `User.preferredStoreId`, with the `novatech-preferred-store` cookie as a returning-browser fallback. This preference is not an authorization mechanism.
 - Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
+- Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
 
 ## Production verification
 
