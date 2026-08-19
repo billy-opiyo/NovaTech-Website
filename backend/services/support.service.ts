@@ -5,6 +5,7 @@ import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
 const SUPPORT_EMAIL = "support@novatechstore.co.ke"
 
 export interface SupportTicketData {
+	tenantId: string
 	customerName: string
 	customerEmail: string
 	customerPhone: string
@@ -24,6 +25,7 @@ export interface UpdateTicketData {
 }
 
 export async function getAllTickets(filters?: {
+	tenantId: string
 	status?: string
 	priority?: string
 	category?: string
@@ -35,7 +37,7 @@ export async function getAllTickets(filters?: {
 	const limit = filters?.limit || 20
 	const skip = (page - 1) * limit
 
-	const where: any = {}
+	const where: any = { tenantId: filters?.tenantId }
 
 	if (filters?.status && filters.status !== "All") {
 		where.status = filters.status.toLowerCase().replace(" ", "_")
@@ -72,9 +74,9 @@ export async function getAllTickets(filters?: {
 	}
 }
 
-export async function getTicketById(id: string) {
+export async function getTicketById(id: string, tenantId: string) {
 	const ticket = await prisma.supportTicket.findUnique({
-		where: { id },
+		where: { id, tenantId },
 		include: {
 			replies: {
 				orderBy: { createdAt: "asc" },
@@ -92,6 +94,7 @@ export async function getTicketById(id: string) {
 export async function createTicket(data: SupportTicketData) {
 	const ticket = await prisma.supportTicket.create({
 		data: {
+			tenantId: data.tenantId,
 			customerName: data.customerName,
 			customerEmail: data.customerEmail,
 			customerPhone: data.customerPhone,
@@ -151,9 +154,11 @@ export async function createTicket(data: SupportTicketData) {
 	return ticket
 }
 
-export async function updateTicket(id: string, data: UpdateTicketData) {
+export async function updateTicket(id: string, tenantId: string, data: UpdateTicketData) {
+	const existing = await prisma.supportTicket.findFirst({ where: { id, tenantId }, select: { id: true } })
+	if (!existing) throw new Error("Ticket not found")
 	const ticket = await prisma.supportTicket.update({
-		where: { id },
+		where: { id: existing.id },
 		data: {
 			...(data.status && {
 				status: data.status.toUpperCase() as TicketStatus,
@@ -200,9 +205,12 @@ export async function updateTicket(id: string, data: UpdateTicketData) {
 	return ticket
 }
 
-export async function addTicketReply(ticketId: string, reply: string, isAdmin: boolean = false) {
+export async function addTicketReply(ticketId: string, tenantId: string, reply: string, isAdmin: boolean = false) {
+	const ticket = await prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId }, select: { id: true, customerName: true, customerEmail: true, subject: true } })
+	if (!ticket) throw new Error("Ticket not found")
 	const ticketReply = await prisma.ticketReply.create({
 		data: {
+			tenantId,
 			ticketId,
 			reply,
 			isAdmin,
@@ -212,10 +220,6 @@ export async function addTicketReply(ticketId: string, reply: string, isAdmin: b
 	// Send email notification to customer about new reply (admin replies only)
 	if (isAdmin) {
 		try {
-			const ticket = await prisma.supportTicket.findUnique({
-				where: { id: ticketId },
-			})
-
 			if (ticket) {
 				await sendEmail({
 					to: ticket.customerEmail,
@@ -239,14 +243,14 @@ export async function addTicketReply(ticketId: string, reply: string, isAdmin: b
 	return ticketReply
 }
 
-export async function getTicketStats() {
+export async function getTicketStats(tenantId: string) {
 	const [total, open, inProgress, waiting, resolved, closed] = await Promise.all([
-		prisma.supportTicket.count(),
-		prisma.supportTicket.count({ where: { status: TicketStatus.OPEN } }),
-		prisma.supportTicket.count({ where: { status: TicketStatus.IN_PROGRESS } }),
-		prisma.supportTicket.count({ where: { status: TicketStatus.WAITING_CUSTOMER } }),
-		prisma.supportTicket.count({ where: { status: TicketStatus.RESOLVED } }),
-		prisma.supportTicket.count({ where: { status: TicketStatus.CLOSED } }),
+		prisma.supportTicket.count({ where: { tenantId } }),
+		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.OPEN } }),
+		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.IN_PROGRESS } }),
+		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.WAITING_CUSTOMER } }),
+		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.RESOLVED } }),
+		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.CLOSED } }),
 	])
 
 	return {

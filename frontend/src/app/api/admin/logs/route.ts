@@ -4,7 +4,7 @@ import { getAdminLogs, getAdminLogStats, recordAdminAction } from "backend/contr
 export async function GET(req: NextRequest) {
 	const searchParams = req.nextUrl.searchParams
 	if (searchParams.get("stats") === "true") {
-		return getAdminLogStats()
+		return getAdminLogStats(req)
 	}
 	return getAdminLogs(req)
 }

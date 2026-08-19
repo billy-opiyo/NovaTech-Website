@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "@/lib/auth"
 import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
-
-function isAdmin(role?: string) {
-	return role === "ADMIN" || role === "SUPERADMIN"
-}
+import { MembershipRole } from "@prisma/client"
+import { requireStoreAccess } from "../lib/store-access"
 
 export async function getAdminLogs(req: NextRequest) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user || !isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
-		}
+		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 
 		const searchParams = req.nextUrl.searchParams
 		const page = parseInt(searchParams.get("page") || "1", 10)
@@ -20,7 +14,7 @@ export async function getAdminLogs(req: NextRequest) {
 		const action = searchParams.get("action") || undefined
 		const adminId = searchParams.get("adminId") || undefined
 
-		const where: any = {}
+		const where: any = { tenantId: context.tenantId }
 		if (action) where.action = action
 		if (adminId) where.adminId = adminId
 
@@ -64,17 +58,15 @@ export async function getAdminLogs(req: NextRequest) {
 	}
 }
 
-export async function getAdminLogStats() {
+export async function getAdminLogStats(req: NextRequest) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user || !isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
-		}
+		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 
 		const [totalLogs, todayLogs, recentActions] = await Promise.all([
-			prisma.adminLog.count(),
+			prisma.adminLog.count({ where: { tenantId: context.tenantId } }),
 			prisma.adminLog.count({
 				where: {
+					tenantId: context.tenantId,
 					createdAt: {
 						gte: new Date(new Date().setHours(0, 0, 0, 0)),
 					},
@@ -82,6 +74,7 @@ export async function getAdminLogStats() {
 			}),
 			prisma.adminLog.groupBy({
 				by: ["action"],
+				where: { tenantId: context.tenantId },
 				_count: { _all: true },
 				orderBy: { _count: { action: "desc" } },
 				take: 10,
@@ -100,10 +93,7 @@ export async function getAdminLogStats() {
 
 export async function recordAdminAction(req: NextRequest) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user || !isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
-		}
+		const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 
 		const body = await req.json()
 		const { action, metadata } = body
@@ -118,6 +108,7 @@ export async function recordAdminAction(req: NextRequest) {
 		const result = await createActionRecord(action, {
 			...metadata,
 			adminId: session.user.id,
+			tenantId: context.tenantId,
 		})
 
 		return NextResponse.json(result, { status: 201 })

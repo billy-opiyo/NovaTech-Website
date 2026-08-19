@@ -4,8 +4,31 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
 
+function localPreviewSlug(host: string | null): string | null {
+	if (!host) return null
+	const hostname = host.trim().toLowerCase().split(":")[0]
+	if (hostname === "localhost" || hostname === "127.0.0.1") return "novatech"
+	if (hostname.endsWith(".localhost")) return hostname.slice(0, -".localhost".length) || null
+	return null
+}
+
 export async function POST(request: Request) {
 	try {
+		if (process.env.NODE_ENV !== "production") {
+			const slug = localPreviewSlug(request.headers.get("host"))
+			if (slug) {
+				const response = NextResponse.json({ storeSlug: slug, persisted: false })
+				response.cookies.set(PREFERRED_STORE_COOKIE, slug, {
+					path: "/",
+					maxAge: 60 * 60 * 24 * 180,
+					httpOnly: false,
+					sameSite: "lax",
+					secure: false,
+				})
+				return response
+			}
+		}
+
 		const context = await resolveTenantFromRequest({ headers: request.headers })
 		const session = await auth()
 		if (session?.user?.id) {

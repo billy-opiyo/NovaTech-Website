@@ -30,6 +30,32 @@ test("request tenant resolution refuses unknown hosts", async () => {
 	}
 })
 
+test("local store subdomains resolve by store slug", async () => {
+	const domainFindUnique = prisma.domain.findUnique
+	const storeFindUnique = prisma.store.findUnique
+	;(prisma.domain.findUnique as any) = async () => null
+	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "demo" ? {
+		id: "store-demo",
+		tenantId: "tenant-demo",
+		slug: "demo",
+		publicationStatus: "PUBLISHED",
+		tenant: { status: "TRIALING" },
+	} : null
+	try {
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) })
+		assert.deepEqual(context, {
+			tenantId: "tenant-demo",
+			storeId: "store-demo",
+			storeSlug: "demo",
+			hostname: "demo.localhost",
+			publicationStatus: "PUBLISHED",
+		})
+	} finally {
+		;(prisma.domain.findUnique as any) = domainFindUnique
+		;(prisma.store.findUnique as any) = storeFindUnique
+	}
+})
+
 test("membership authorization cannot be widened by another tenant id", async () => {
 	const findFirst = prisma.membership.findFirst
 	;(prisma.membership.findFirst as any) = async ({ where }: any) =>

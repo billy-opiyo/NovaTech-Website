@@ -16,6 +16,7 @@ export async function createActionRecord(
 	try {
 		await prisma.adminLog.create({
 			data: {
+				tenantId: (metadata?.tenantId as string) || undefined,
 				adminId: (metadata?.adminId as string) || "unknown",
 				action,
 				details: metadata as any,

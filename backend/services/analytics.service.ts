@@ -94,11 +94,12 @@ function getPreviousDateRange(timeRange: string): { startDate: Date; endDate: Da
 	return { startDate: previousStartDate, endDate: previousEndDate }
 }
 
-export async function getAnalyticsOverview(timeRange: string = "7d"): Promise<AnalyticsOverview> {
+export async function getAnalyticsOverview(tenantId: string, timeRange: string = "7d"): Promise<AnalyticsOverview> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -124,6 +125,7 @@ export async function getAnalyticsOverview(timeRange: string = "7d"): Promise<An
 
 	const completedOrders = await prisma.order.count({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -146,13 +148,14 @@ export async function getAnalyticsOverview(timeRange: string = "7d"): Promise<An
 	}
 }
 
-export async function getGrowthComparison(timeRange: string = "7d"): Promise<GrowthComparison> {
+export async function getGrowthComparison(tenantId: string, timeRange: string = "7d"): Promise<GrowthComparison> {
 	const { startDate: currentStart, endDate: currentEnd } = getDateRange(timeRange)
 	const { startDate: previousStart, endDate: previousEnd } = getPreviousDateRange(timeRange)
 
 	const [currentOrders, previousOrders] = await Promise.all([
 		prisma.order.findMany({
 			where: {
+				tenantId,
 				createdAt: { gte: currentStart, lte: currentEnd },
 				status: { not: "CANCELLED" },
 			},
@@ -160,6 +163,7 @@ export async function getGrowthComparison(timeRange: string = "7d"): Promise<Gro
 		}),
 		prisma.order.findMany({
 			where: {
+				tenantId,
 				createdAt: { gte: previousStart, lte: previousEnd },
 				status: { not: "CANCELLED" },
 			},
@@ -204,11 +208,12 @@ export async function getGrowthComparison(timeRange: string = "7d"): Promise<Gro
 	}
 }
 
-export async function getSalesData(timeRange: string = "7d"): Promise<SalesData[]> {
+export async function getSalesData(tenantId: string, timeRange: string = "7d"): Promise<SalesData[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -256,11 +261,12 @@ export async function getSalesData(timeRange: string = "7d"): Promise<SalesData[
 		})
 }
 
-export async function getCategorySales(timeRange: string = "7d"): Promise<CategorySales[]> {
+export async function getCategorySales(tenantId: string, timeRange: string = "7d"): Promise<CategorySales[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -303,11 +309,12 @@ export async function getCategorySales(timeRange: string = "7d"): Promise<Catego
 		.sort((a, b) => b.sales - a.sales)
 }
 
-export async function getTopProducts(timeRange: string = "7d", limit: number = 5): Promise<TopProduct[]> {
+export async function getTopProducts(tenantId: string, timeRange: string = "7d", limit: number = 5): Promise<TopProduct[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -346,6 +353,7 @@ export async function getTopProducts(timeRange: string = "7d", limit: number = 5
 	const { startDate: previousStart, endDate: previousEnd } = getPreviousDateRange(timeRange)
 	const previousOrders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: { gte: previousStart, lte: previousEnd },
 			status: { not: "CANCELLED" },
 		},
@@ -388,11 +396,12 @@ export async function getTopProducts(timeRange: string = "7d", limit: number = 5
 		.slice(0, limit)
 }
 
-export async function getRegionSales(timeRange: string = "7d"): Promise<RegionSales[]> {
+export async function getRegionSales(tenantId: string, timeRange: string = "7d"): Promise<RegionSales[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -428,11 +437,12 @@ export async function getRegionSales(timeRange: string = "7d"): Promise<RegionSa
 		.sort((a, b) => b.sales - a.sales)
 }
 
-export async function getPaymentMethodStats(timeRange: string = "7d"): Promise<PaymentMethodStats[]> {
+export async function getPaymentMethodStats(tenantId: string, timeRange: string = "7d"): Promise<PaymentMethodStats[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
 
 	const orders = await prisma.order.findMany({
 		where: {
+			tenantId,
 			createdAt: {
 				gte: startDate,
 				lte: endDate,
@@ -474,16 +484,16 @@ export async function getPaymentMethodStats(timeRange: string = "7d"): Promise<P
 		.sort((a, b) => b.amount - a.amount)
 }
 
-export async function getAnalyticsExport(timeRange: string = "7d", format: "csv" | "json" = "csv") {
+export async function getAnalyticsExport(tenantId: string, timeRange: string = "7d", format: "csv" | "json" = "csv") {
 	const [overview, salesData, categorySales, topProducts, regionSales, paymentMethods, growth] =
 		await Promise.all([
-			getAnalyticsOverview(timeRange),
-			getSalesData(timeRange),
-			getCategorySales(timeRange),
-			getTopProducts(timeRange, 10),
-			getRegionSales(timeRange),
-			getPaymentMethodStats(timeRange),
-			getGrowthComparison(timeRange),
+			getAnalyticsOverview(tenantId, timeRange),
+			getSalesData(tenantId, timeRange),
+			getCategorySales(tenantId, timeRange),
+			getTopProducts(tenantId, timeRange, 10),
+			getRegionSales(tenantId, timeRange),
+			getPaymentMethodStats(tenantId, timeRange),
+			getGrowthComparison(tenantId, timeRange),
 		])
 
 	if (format === "json") {

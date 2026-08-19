@@ -2,6 +2,15 @@
 
 ## Autonomous execution log
 
+### 2026-08-19 — Phase 5 tenant-boundary hardening slice
+
+- Added a regression test for `{store-slug}.localhost` request resolution.
+- Converted legacy support and analytics controllers/services to resolve the active store from the request host, require an active store membership, and include `tenantId` in all ticket, reply, order-reporting, and export queries.
+- Converted legacy customer, coupon, review, delivery, security, and activity-log admin endpoints to use store membership authorization and tenant-scoped reads/writes.
+- Admin action records now retain the tenant boundary when emitted by store-workspace operations.
+- Verification passed: frontend TypeScript, backend TypeScript, `git diff --check`, and full test suite (41/41).
+- Runtime boundary remains unchanged: applying the tenant migration and verifying real multi-store routing still require a reachable database; live SaaS billing, shopper-payment connections, DNS/SSL, and legal/provider decisions remain external gates.
+
 ### 2026-08-19 — Phase 0 complete; Phase 1 complete
 
 - Confirmed the repository is clean on `main` and the current data model is single-store.

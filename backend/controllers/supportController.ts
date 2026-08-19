@@ -4,21 +4,26 @@ import * as supportService from "../services/support.service"
 import { contactSchema, updateTicketSchema, ticketReplySchema } from "../validators/supportValidator"
 import { sendEmail } from "../lib/email"
 import { z } from "zod"
+import { MembershipRole } from "@prisma/client"
+import { resolveTenantFromRequest } from "../lib/tenant"
+import { requireMembership } from "../lib/tenant-access"
 
-function isAdmin(role?: string) {
-	return role === "ADMIN" || role === "SUPERADMIN"
+async function storeSupportAccess(req: NextRequest) {
+	const session = await getServerSession()
+	if (!session?.user?.id) throw Object.assign(new Error("Unauthorized"), { status: 401 })
+	const context = await resolveTenantFromRequest(req)
+	const membership = await requireMembership(session.user.id, context.tenantId, [
+		MembershipRole.STORE_OWNER,
+		MembershipRole.STORE_ADMIN,
+		MembershipRole.STORE_MANAGER,
+		MembershipRole.STORE_SUPPORT,
+	])
+	return { session, context, membership }
 }
 
 export async function getTickets(req: NextRequest) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user) {
-			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-		}
-
-		if (!isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
-		}
+		const { context } = await storeSupportAccess(req)
 
 		const searchParams = req.nextUrl.searchParams
 		const status = searchParams.get("status") || "All"
@@ -29,7 +34,7 @@ export async function getTickets(req: NextRequest) {
 		const limit = parseInt(searchParams.get("limit") || "20", 10)
 
 		if (searchParams.get("stats") === "true") {
-			const stats = await supportService.getTicketStats()
+			const stats = await supportService.getTicketStats(context.tenantId)
 			return NextResponse.json(stats)
 		}
 
@@ -40,6 +45,7 @@ export async function getTickets(req: NextRequest) {
 			search,
 			page,
 			limit,
+			tenantId: context.tenantId,
 		})
 
 		return NextResponse.json(result)
@@ -47,7 +53,7 @@ export async function getTickets(req: NextRequest) {
 		console.error("Support tickets API error:", error)
 		return NextResponse.json(
 			{ message: "Failed to fetch tickets", error: error.message },
-			{ status: 500 },
+			{ status: error?.status || 500 },
 		)
 	}
 }
@@ -57,24 +63,17 @@ export async function getTicketById(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user) {
-			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-		}
-
-		if (!isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
-		}
+		const { context } = await storeSupportAccess(req)
 
 		const { id } = await params
-		const ticket = await supportService.getTicketById(id)
+		const ticket = await supportService.getTicketById(id, context.tenantId)
 
 		return NextResponse.json(ticket)
 	} catch (error: any) {
 		console.error("Get ticket API error:", error)
 		return NextResponse.json(
 			{ message: error.message || "Failed to fetch ticket", error: error.message },
-			{ status: error.message === "Ticket not found" ? 404 : 500 },
+			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
 		)
 	}
 }
@@ -84,20 +83,13 @@ export async function updateTicket(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user) {
-			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-		}
-
-		if (!isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
-		}
+		const { context } = await storeSupportAccess(req)
 
 		const { id } = await params
 		const body = await req.json()
 		const validated = updateTicketSchema.parse(body)
 
-		const ticket = await supportService.updateTicket(id, {
+		const ticket = await supportService.updateTicket(id, context.tenantId, {
 			status: validated.status,
 			priority: validated.priority,
 			assignedTo: validated.assignedTo,
@@ -105,7 +97,7 @@ export async function updateTicket(
 
 		// If a reply was included, add it
 		if (validated.reply) {
-			await supportService.addTicketReply(id, validated.reply, true)
+			await supportService.addTicketReply(id, context.tenantId, validated.reply, true)
 		}
 
 		return NextResponse.json(ticket)
@@ -113,7 +105,7 @@ export async function updateTicket(
 		console.error("Update ticket API error:", error)
 		return NextResponse.json(
 			{ message: error.message || "Failed to update ticket", error: error.message },
-			{ status: error.message === "Ticket not found" ? 404 : 500 },
+			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
 		)
 	}
 }
@@ -123,37 +115,32 @@ export async function replyToTicket(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const session = await getServerSession()
-		if (!session?.user) {
-			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-		}
-
-		if (!isAdmin(session.user.role)) {
-			return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
-		}
+		const { context } = await storeSupportAccess(req)
 
 		const { id } = await params
 		const body = await req.json()
 		const validated = ticketReplySchema.parse(body)
 
-		const reply = await supportService.addTicketReply(id, validated.reply, true)
+		const reply = await supportService.addTicketReply(id, context.tenantId, validated.reply, true)
 
 		return NextResponse.json(reply)
 	} catch (error: any) {
 		console.error("Reply to ticket API error:", error)
 		return NextResponse.json(
 			{ message: error.message || "Failed to add reply", error: error.message },
-			{ status: error.message === "Ticket not found" ? 404 : 500 },
+			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
 		)
 	}
 }
 
 export async function submitContact(req: NextRequest) {
 	try {
+		const context = await resolveTenantFromRequest(req)
 		const body = await req.json()
 		const validated = contactSchema.parse(body)
 
 		const ticket = await supportService.createTicket({
+			tenantId: context.tenantId,
 			customerName: validated.name,
 			customerEmail: validated.email,
 			customerPhone: validated.phone || "",
@@ -192,6 +179,6 @@ to: "support@novatechstore.co.ke",
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return NextResponse.json({ message: error.message }, { status: error?.status || 500 })
 	}
 }
