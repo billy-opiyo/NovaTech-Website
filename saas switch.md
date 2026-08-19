@@ -2,12 +2,22 @@
 
 ## Autonomous execution log
 
-### 2026-08-19 — Phase 0 in progress
+### 2026-08-19 — Phase 0 complete; Phase 1 complete
 
 - Confirmed the repository is clean on `main` and the current data model is single-store.
 - Added `docs/saas-architecture-decisions.md` with beta defaults, tenant URL rules, role boundaries, lifecycle states, payment separation, and explicit commercial/legal gates.
 - No live prices, tax assumptions, merchant-of-record claim, or provider credentials were invented.
-- Next task: implement the tenant/store/membership foundation and a migration/backfill path.
+- Added additive Prisma tenant infrastructure: `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `Plan`, `Subscription`, `UsageCounter`, `FeatureEntitlement`, and `StoreSettingsVersion`.
+- Added nullable ownership columns and tenant indexes to merchant-owned catalog, cart, order, payment, address, review, coupon, notification, support, and audit records.
+- Added migration `backend/prisma/migrations/0004_saas_tenant_foundation` to create the schema, seed the NovaTech tenant/store/verified platform host, and backfill existing rows to `novatech-tenant`.
+- Added `resolveTenantFromRequest()`, hostname normalization, deny-by-default `tenantScope()`, active membership checks, and tenant isolation tests.
+- Updated development seed data so the admin is a platform owner and store owner, and new catalog data belongs to the NovaTech tenant.
+- Verification passed: Prisma validate, frontend TypeScript, backend TypeScript, full test suite (39/39), focused tenant tests (4/4), and `git diff --check`.
+- Runtime boundary: no `DATABASE_URL` was available for a real migration/restore or live tenant-resolution probe; full tests use their existing no-database fallback and emitted expected missing-provider warnings.
+
+### Next phase
+
+- Phase 2: split merchant memberships from platform authorization, add `/manage` and `/platform` route boundaries, and move protected admin operations to server-verified store access.
 
 **Date:** 18 August 2026
 **Current product:** NovaTech Store, a single-store electronics e-commerce application

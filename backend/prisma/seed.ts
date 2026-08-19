@@ -23,13 +23,37 @@ where: { email: "admin@novatechstore.co.ke" },
 			passwordHash: adminHash,
 			emailVerified: new Date(),
 			role: "SUPERADMIN",
+			platformRole: "PLATFORM_OWNER",
 		},
 	})
 	console.log("✅ Admin user created:", admin.email)
 
+	const trialPlan = await prisma.plan.upsert({
+		where: { key: "TRIAL" },
+		update: {},
+		create: { key: "TRIAL", name: "Trial", currency: "KES", active: true },
+	})
+	const tenant = await prisma.tenant.upsert({
+		where: { id: "novatech-tenant" },
+		update: { planId: trialPlan.id, status: "ACTIVE" },
+		create: { id: "novatech-tenant", legalName: "NovaTech Store", status: "ACTIVE", planId: trialPlan.id },
+	})
+	await prisma.store.upsert({
+		where: { id: "novatech-store" },
+		update: { tenantId: tenant.id, publicationStatus: "PUBLISHED" },
+		create: { id: "novatech-store", tenantId: tenant.id, name: "NovaTech Store", slug: "novatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
+	})
+	await prisma.membership.upsert({
+		where: { tenantId_userId: { tenantId: tenant.id, userId: admin.id } },
+		update: { role: "STORE_OWNER", active: true, acceptedAt: new Date() },
+		create: { tenantId: tenant.id, userId: admin.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
+	})
+	console.log("✅ NovaTech tenant and store ready")
+
 	const categories = await Promise.all([
 		prisma.category.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Phones",
 				slug: "phones",
 				description: "Smartphones from top brands",
@@ -38,6 +62,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.category.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Laptops",
 				slug: "laptops",
 				description: "Laptops for work, gaming, and creativity",
@@ -46,6 +71,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.category.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Tablets",
 				slug: "tablets",
 				description: "Versatile tablets for everyone",
@@ -54,6 +80,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.category.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Accessories",
 				slug: "accessories",
 				description: "Essential accessories for your devices",
@@ -62,6 +89,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.category.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Gaming",
 				slug: "gaming",
 				description: "Gaming consoles, PCs, and accessories",
@@ -74,6 +102,7 @@ where: { email: "admin@novatechstore.co.ke" },
 	const products = await Promise.all([
 		prisma.product.create({
 			data: {
+				tenantId: tenant.id,
 				name: "iPhone 15 Pro Max",
 				slug: "iphone-15-pro-max",
 				description:
@@ -103,6 +132,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.product.create({
 			data: {
+				tenantId: tenant.id,
 				name: "MacBook Air M3",
 				slug: "macbook-air-m3",
 				description:
@@ -131,6 +161,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.product.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Samsung Galaxy S24 Ultra",
 				slug: "samsung-galaxy-s24-ultra",
 				description: "Galaxy AI is here. The ultimate Galaxy experience.",
@@ -158,6 +189,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.product.create({
 			data: {
+				tenantId: tenant.id,
 				name: "Sony WH-1000XM5",
 				slug: "sony-wh-1000xm5",
 				description:
@@ -183,6 +215,7 @@ where: { email: "admin@novatechstore.co.ke" },
 		}),
 		prisma.product.create({
 			data: {
+				tenantId: tenant.id,
 				name: "PlayStation 5",
 				slug: "playstation-5",
 				description:
@@ -211,12 +244,12 @@ where: { email: "admin@novatechstore.co.ke" },
 
 	await prisma.deliveryRegion.createMany({
 		data: [
-			{ name: "Nairobi", cost: 200, minDays: 1, maxDays: 2 },
-			{ name: "Mombasa", cost: 500, minDays: 2, maxDays: 4 },
-			{ name: "Kisumu", cost: 500, minDays: 2, maxDays: 5 },
-			{ name: "Nakuru", cost: 400, minDays: 2, maxDays: 3 },
-			{ name: "Eldoret", cost: 500, minDays: 2, maxDays: 4 },
-			{ name: "Other", cost: 500, minDays: 3, maxDays: 7 },
+			{ tenantId: tenant.id, name: "Nairobi", cost: 200, minDays: 1, maxDays: 2 },
+			{ tenantId: tenant.id, name: "Mombasa", cost: 500, minDays: 2, maxDays: 4 },
+			{ tenantId: tenant.id, name: "Kisumu", cost: 500, minDays: 2, maxDays: 5 },
+			{ tenantId: tenant.id, name: "Nakuru", cost: 400, minDays: 2, maxDays: 3 },
+			{ tenantId: tenant.id, name: "Eldoret", cost: 500, minDays: 2, maxDays: 4 },
+			{ tenantId: tenant.id, name: "Other", cost: 500, minDays: 3, maxDays: 7 },
 		],
 	})
 	console.log("✅ Delivery regions created")
@@ -224,6 +257,7 @@ where: { email: "admin@novatechstore.co.ke" },
 	await prisma.coupon.createMany({
 		data: [
 			{
+				tenantId: tenant.id,
 				code: "TECH10",
 				discountPercent: 10,
 				minOrderValue: 5000,
@@ -231,6 +265,7 @@ where: { email: "admin@novatechstore.co.ke" },
 				usageLimit: 100,
 			},
 			{
+				tenantId: tenant.id,
 				code: "WELCOME20",
 				discountPercent: 20,
 				minOrderValue: 10000,
@@ -238,6 +273,7 @@ where: { email: "admin@novatechstore.co.ke" },
 				usageLimit: 50,
 			},
 			{
+				tenantId: tenant.id,
 				code: "FREESHIP",
 				discountAmount: 500,
 				expiresAt: new Date("2025-12-31"),
