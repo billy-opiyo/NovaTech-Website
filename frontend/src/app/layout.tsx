@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cartContext"
 import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
+import PlatformMobileNav from "@/components/layout/PlatformMobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
 import SessionResume from "@/components/layout/SessionResume"
 import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
@@ -77,10 +78,11 @@ export default async function RootLayout({
 							<SplashScreen platformHome={store.isPlatformHome}>
 								<>
 									<Header />
-									<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+									<main className={`max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 ${store.isPlatformHome ? "pb-24 lg:pb-8" : "pb-24 md:pb-8"}`}>
 										{children}
 									</main>
 									<Footer />
+									{store.isPlatformHome && <PlatformMobileNav />}
 									{!store.isPlatformHome && <MobileNav />}
 									{!store.isPlatformHome && <FloatingActions />}
 								</>

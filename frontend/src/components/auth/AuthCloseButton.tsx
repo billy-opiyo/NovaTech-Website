@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation"
 import { X } from "lucide-react"
 
-export default function AuthCloseButton({ fallback = "/" }: { fallback?: string }) {
+export default function AuthCloseButton({ fallback = "/", skipHistory = false }: { fallback?: string; skipHistory?: boolean }) {
 	const router = useRouter()
 
 	function close() {
-		if (document.referrer) {
+		if (!skipHistory && document.referrer) {
 			try {
 				if (new URL(document.referrer).origin === window.location.origin) {
 					router.back()

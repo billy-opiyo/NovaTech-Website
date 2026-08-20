@@ -73,6 +73,8 @@ export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
 	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
+	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
+	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
 
 	useEffect(() => {
 		const hostname = window.location.hostname
@@ -109,7 +111,10 @@ export default function Footer() {
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">Quick Links</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{!store.isPlatformHome && <li><a href={platformHomeHref} className="font-semibold text-primary hover:underline">Nurava Tech Homepage</a></li>}
+						{!store.isPlatformHome && <>
+							<li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Nurava Tech Homepage</a></li>
+							<li><a href={platformBrowseStoresLink} className="hover:text-primary transition-colors">Browse Stores</a></li>
+						</>}
 						{(store.isPlatformHome ? platformQuickLinks : quickLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={href} className="hover:text-primary transition-colors">

@@ -30,6 +30,14 @@ function currentLocation() {
 	return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function isExplicitPlatformHome(path: string) {
+	try {
+		return new URL(path, window.location.origin).searchParams.get("platformHome") === "1"
+	} catch {
+		return false
+	}
+}
+
 function readSavedLocation(): SavedLocation | null {
 	try {
 		const value = localStorage.getItem(STORAGE_KEY)
@@ -88,6 +96,11 @@ export default function SessionResume() {
 			}
 
 			const location = currentLocation()
+			if (isExplicitPlatformHome(location)) {
+				window.history.replaceState(window.history.state, "", "/")
+				storageReady.current = true
+				return
+			}
 			const saved = readSavedLocation()
 
 			if (pathname === "/" && saved && saved.path !== location) {
