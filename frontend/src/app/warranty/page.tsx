@@ -9,17 +9,17 @@ export default function WarrantyPage() {
 				{
 					title: "Official product coverage",
 					content:
-						"Our products come with official manufacturer warranty. Most electronics include 12 months of coverage; exact details are listed on each product page.",
+						"Warranty coverage is set by the independent merchant and/or manufacturer. Review the exact coverage on the product page and confirm it with the store before purchasing.",
 				},
 				{
 					title: "Making a claim",
 					content:
-						"Contact us with your order number, product details, and a description of the issue. Our team will help coordinate the warranty claim with the manufacturer.",
+						"Contact the merchant that sold the product with your order details and a description of the issue. The merchant handles the warranty claim and manufacturer coordination.",
 				},
 				{
 					title: "Keep your proof of purchase",
 					content:
-						"Please keep your receipt and order information available, as they may be needed to verify warranty eligibility.",
+						"Keep the receipt or order confirmation provided by the merchant, as it may be needed to verify warranty eligibility.",
 				},
 			]}
 		/>

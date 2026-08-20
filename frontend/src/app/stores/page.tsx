@@ -22,7 +22,7 @@ export default async function StoreDirectoryPage({ searchParams }: { searchParam
 				</div>
 				<h1 className="text-3xl font-extrabold sm:text-5xl">Browse trusted stores</h1>
 				<p className="mx-auto mt-4 max-w-2xl text-gray-600 dark:text-gray-300">
-					Choose a store brand to enter its full storefront, product catalogue, cart, and checkout.
+					Choose an independent store to browse its catalogue and send a product enquiry directly to the merchant.
 				</p>
 			</section>
 

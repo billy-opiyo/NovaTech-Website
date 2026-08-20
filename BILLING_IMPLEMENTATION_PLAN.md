@@ -18,8 +18,8 @@ The repository already contains:
 
 - database-backed `Plan` and `Subscription` models, tenant status/lifecycle
   enums, usage entitlements, and webhook receipt idempotency;
-- Stripe PaymentIntent support for shopper checkout and signature-verified
-  Stripe webhooks;
+- legacy Stripe PaymentIntent support for historical shopper checkout records
+  and signature-verified Stripe webhooks;
 - Daraja STK Push/query and M-Pesa callback support;
 - merchant `/manage/billing` and platform `/platform/billing` surfaces, now
   implemented by the billing API and dashboard changes described below.
@@ -30,9 +30,11 @@ second payment architecture.
 
 ## Billing model
 
-1. Keep plans in PostgreSQL. Add Stripe price IDs, setup-fee amount, and the
-   plan transaction commission rate to `Plan`. Seed Starter, Business, and
-   Enterprise as editable defaults; prices remain database data.
+1. Keep plans in PostgreSQL. Add Stripe price IDs and setup-fee amount to
+   `Plan`. Retain the plan transaction commission rate for historical
+   compatibility, but do not create new shopper commissions in merchant-direct
+   mode. Seed Starter, Business, and Enterprise as editable defaults; prices
+   remain database data.
 2. Add a tenant billing customer record with Stripe customer/payment-method
    references and the preferred M-Pesa phone. Add a separate billing record
    for setup-fee status so onboarding payment is never confused with recurring
@@ -75,9 +77,14 @@ second payment architecture.
   checkout buttons. Provider credentials remain an explicit unavailable state
   when absent.
 - Implement the platform billing surface with plan/add-on management,
-  subscription/customer/revenue summaries, and failed-payment visibility.
-- Keep the existing admin shell, tenant resolver, visual language, and
-  shopper checkout unchanged.
+  recurring-price and one-time setup-fee editing, subscription/customer/revenue
+  summaries, and failed-payment visibility.
+- Implement the platform operations surface with aggregate tenant/store
+  metrics, cross-store activity and invoice feeds, preview links, billing
+  status, and audited suspension/reactivation controls.
+- Keep the existing admin shell, tenant resolver, and visual language. The
+  shopper surface uses product selection and direct merchant WhatsApp/email
+  handoff; Nurava Tech does not collect shopper payments.
 
 ## Configuration and rollout
 

@@ -8,9 +8,9 @@ export default function PlatformPage() {
 				<p className="mt-2 text-gray-600 dark:text-gray-300">Platform-only operational surfaces are separated from merchant workspaces.</p>
 			</div>
 			<div className="grid gap-4 md:grid-cols-2">
-				<Link href="/platform/tenants" className="glass-card block p-6">
-					<h3 className="font-semibold">Tenant operations</h3>
-					<p className="mt-2 text-sm text-gray-500">Search, onboarding, status, and suspension controls.</p>
+				<Link href="/platform/operations" className="glass-card block p-6">
+					<h3 className="font-semibold">Platform operations</h3>
+					<p className="mt-2 text-sm text-gray-500">Cross-store metrics, tenant activity, previews, billing status, and suspension controls.</p>
 				</Link>
 				<Link href="/platform/billing" className="glass-card block p-6">
 					<h3 className="font-semibold">Plans and billing</h3>

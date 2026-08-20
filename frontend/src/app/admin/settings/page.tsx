@@ -185,12 +185,12 @@ export default function AdminSettingsPage() {
 								<div className="space-y-6">
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
 										<h3 className="font-semibold mb-2">M-Pesa Daraja</h3>
-										<p className="text-sm text-gray-500 mb-4">Integrate M-Pesa STK Push payments</p>
+										<p className="text-sm text-gray-500 mb-4">Merchant SaaS billing only; shopper payments are handled directly by each store.</p>
 										<span className="text-sm text-gray-500">Server configuration required</span>
 									</div>
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
 										<h3 className="font-semibold mb-2">Stripe</h3>
-										<p className="text-sm text-gray-500 mb-4">Accept card payments via Stripe</p>
+										<p className="text-sm text-gray-500 mb-4">Merchant SaaS billing only; shopper payments are handled directly by each store.</p>
 										<span className="text-sm text-gray-500">Server configuration required</span>
 									</div>
 									<div className="p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">

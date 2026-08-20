@@ -46,7 +46,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Home Page**        | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup.                                                                      |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
-| **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
+| **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, merchant warranty information, reviews section, and direct merchant enquiry handoff. |
 | **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
 | **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
 | **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
@@ -54,9 +54,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | **Theme System**     | Client-configured light/dark presets backed by CSS variables, with localStorage persistence and flash-free initialization.                                                                   |
 | **Responsive UI**    | Responsive header, mobile navigation, footer, homepage sections, product details, and search overlay with accessibility refinements.                                                        |
 | **Public Pages**     | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions.                                                                               |
-| **Store Directory**  | Public `/stores` discovery page linking shoppers to separate store hosts; each store keeps its own catalog, cart, account, checkout, and orders.                                        |
+| **Store Directory**  | Public `/stores` discovery page linking shoppers to separate independent store hosts; each store keeps its own catalog and merchant contact flow. |
 
-### 🛒 Shopping Cart & Checkout
+### 🛒 Product Selection & Merchant Handoff
 
 - **Cart Context (`CartProvider`)** — client-side cart state persisted to `localStorage`:
   - Add / remove / update quantity items
@@ -64,12 +64,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - Max-stock clamping
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
-- **Cart Page** — item list with quantity controls, database-backed coupon validation, order summary, save-for-later section.
-- **Checkout Page** — multi-step wizard:
-  - Shipping address form (all Kenyan counties list)
-  - Delivery method selection (Standard / Express / Pickup)
-  - Payment method selection (M-Pesa, Card, Cash on Delivery)
-  - Order summary and final confirmation
+- **Cart Page** — optional product selection list with quantity controls and save-for-later support.
+- **Merchant Handoff Page** — sends selected products to the independent store through WhatsApp or email. The merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
+- **Platform boundary** — Nurava Tech does not create new shopper orders or collect shopper payments in `MERCHANT_DIRECT` mode.
 
 ### 👤 Authentication
 
@@ -106,11 +103,12 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 💼 SaaS Billing
 
-- Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, setup fees, and transaction commission rates.
+- Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, and setup fees for merchant platform services.
 - Merchant billing at `/manage/billing`: subscription status, setup-fee state, Stripe Checkout, Stripe payment portal, M-Pesa renewal/setup collection, add-ons, invoices, and SaaS payment history.
-- Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, generated commissions, customer billing records, and failed SaaS payments.
+- Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
+- Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - Stripe subscription, invoice, payment-failure, cancellation, and renewal events are processed through the signature-verified webhook route. M-Pesa renewals are invoice-driven because Daraja collection is initiated per payment request.
-- Historical shopper order payments remain separate from merchant SaaS billing; completed order payments create commission transactions using the active plan rate snapshot.
+- Historical shopper order/payment records remain separate from merchant SaaS billing; new shopper payments and transaction commission creation are disabled by the merchant-direct model.
 
 ### 📦 Backend API (App Router Route Handlers)
 
@@ -119,7 +117,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/products`           | GET, POST              | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
 | `/api/reviews`            | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews.                                 |
 | `/api/wishlist`           | GET, POST, DELETE      | Read / add / remove wishlist items for authenticated users.                                                                                                         |
-| `/api/orders`             | GET, POST              | List authenticated user's orders and place new orders (stock validation + transactional stock decrement + notification creation).                                   |
+| `/api/orders`             | GET, POST              | List historical authenticated-user orders; new shopper order creation is disabled in merchant-direct mode.                                                          |
 | `/api/orders/[id]`        | GET, PATCH             | Fetch single order (owner or admin), admin updates order status / tracking number with user notification.                                                           |
 | `/api/coupons/validate`   | POST                   | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation.                                                     |
 | `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend (support team + customer confirmation).                                                                         |
@@ -129,6 +127,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/billing/plans`      | GET                    | Lists active database-backed SaaS plans and add-ons for onboarding/catalog UI.                                                                                       |
 | `/api/manage/billing`     | GET, POST              | Tenant-scoped billing dashboard data and owner/admin subscription, add-on, setup-fee, renewal, cancellation, portal, and payment actions.                           |
 | `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, customer billing records, revenue, commissions, invoices, and failed-payment reporting.                       |
+| `/api/platform/operations` | GET, PATCH             | Platform-role-protected cross-store metrics, tenant activity, store previews, billing summaries, and authorized store suspension/reactivation.                    |
 
 ### 🔐 Backend Services & Utilities
 
@@ -144,12 +143,12 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 💳 Payments (Real Provider Integration)
 
-- **M-Pesa** (`backend/payments/mpesa/`) — Real Daraja STK Push integration via native `fetch`:
+- **M-Pesa** (`backend/payments/mpesa/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed in merchant-direct mode:
   - `initiateMpesaPayment` — STK Push request, stores `Payment` row (PENDING).
   - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
   - `simulateMpesaPayment` — Sandbox C2B simulate helper.
   - Graceful "not configured" behavior when `MPESA_*` env vars are absent.
-- **Cards** (`backend/payments/cards/`) — Real Stripe Payment Intents for shopper checkout; SaaS subscriptions use `backend/billing/service.ts` and Stripe Checkout:
+- **Cards** (`backend/payments/cards/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed; SaaS subscriptions use `backend/billing/service.ts` and Stripe Checkout:
   - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
   - `verifyCardPayment` — Retrieves PaymentIntent, maps status, confirms order.
   - Graceful "not configured" behavior when `STRIPE_SECRET_KEY` is absent.
@@ -444,7 +443,7 @@ npm run dev:open
 
 ### Fully Implemented
 
-- ✔️ **Frontend storefront** — Home, Products (filtering/sorting/search/pagination UI), Product Detail, Cart, Checkout (full payment integration), Deals, Compare, Category, Contact, Wishlist
+- ✔️ **Frontend storefront** — Home, Products (filtering/sorting/search/pagination UI), Product Detail, product selection, merchant handoff, Deals, Compare, Category, Contact, Wishlist
 - ✔️ **Shopping cart** — Client-side state with `localStorage` persistence, save-for-later, quantity & stock management, shipping/total calculation
 - ✔️ **Authentication** — NextAuth v5 with Google OAuth + Credentials (bcrypt), JWT sessions, role-based access
 - ✔️ **Admin panel UI** — Layout, sidebar navigation, Dashboard, Analytics, Products management, Orders management, Customers, Reviews, Coupons, Inventory, Deliveries, Support Tickets, Messages, Settings, Security, Activity Log
@@ -459,7 +458,7 @@ npm run dev:open
 - ✔️ **Shared store homepage content** — Store-specific content is resolved through `StoreContext` without changing the shared homepage order or responsive layout
 - ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the legacy preferred-store browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
-- ✔️ **Order API** — List, create (transactional stock decrement, validation, notifications), admin status update
+- ✔️ **Order API** — Historical order listing/status support; new shopper order creation is disabled in merchant-direct mode
 - ✔️ **Review API** — Full CRUD with verified-purchase detection and role-aware deletion
 - ✔️ **Wishlist API** — Full CRUD for authenticated users
 - ✔️ **Coupon API** — Real DB-backed validation (expiry, usage limit, min order, discount)
@@ -484,16 +483,9 @@ npm run dev:open
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
-- ✔️ **Payments** — M-Pesa (Daraja STK Push), Cards (Stripe Payment Intents), and Webhooks (signature-verified) fully implemented with graceful "not configured" fallback
-- ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and plan commission transactions
-- ✔️ **Checkout payment integration** — Full checkout-to-payment flow implemented:
-  - Order creation via `/api/orders` with transactional stock validation
-  - M-Pesa STK Push flow with real-time status polling
-  - Stripe PaymentIntent creation and verification
-  - Cash on Delivery support
-  - Real-time payment status indicators
-  - Error handling with user-friendly messages
-  - Post-payment order confirmation with email notifications
+- ✔️ **Payments** — Merchant-direct shopper mode disables new platform shopper payments; SaaS billing provider flows and historical signature-verified webhook support remain separate
+- ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility
+- ✔️ **Merchant handoff** — Product selections are sent to independent stores for direct confirmation and transaction handling; Nurava Tech does not collect shopper payments or present itself as merchant of record
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 - ✔️ **Inventory service** — Complete inventory management backend with:
   - Low stock and out-of-stock product detection

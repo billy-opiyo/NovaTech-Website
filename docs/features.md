@@ -18,13 +18,13 @@
 | **Responsive and Accessible UI** | Shared responsive layouts across desktop and mobile breakpoints, with clearer labels, focus states, semantic status messaging, and accessible live notifications. |
 | **Public Information Pages** | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions pages. |
 
-## 🛒 Shopping Cart & Checkout
+## 🛒 Product Selection & Merchant Handoff
 
 | Feature | Description |
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
-| **Cart Page** | Item list with quantity controls, database-backed coupon validation, order summary, save-for-later section. |
-| **Checkout Page** | Multi-step wizard:<br>- Shipping address form (all Kenyan counties list)<br>- Delivery method selection (Standard / Express / Pickup)<br>- Payment method selection (M-Pesa, Card, Cash on Delivery)<br>- Order summary and final confirmation |
+| **Cart Page** | Item list with quantity controls, selection summary, save-for-later section, and direct merchant handoff. |
+| **Merchant Handoff Page** | Shows selected products and creates WhatsApp/email enquiry links to the independent store. The merchant confirms price, delivery, payment, refunds, and warranty directly. |
 
 ## 👤 Authentication
 
@@ -72,13 +72,14 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, Stripe price IDs, and per-plan transaction commission rates. |
+| **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, and Stripe price IDs. Legacy commission-rate fields remain for historical compatibility. |
 | **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
 | **Stripe Billing** | Server-created Checkout subscription sessions, native subscription changes where Stripe price IDs are configured, customer portal sessions, and webhook-driven subscription/invoice/payment-failure synchronization. |
 | **M-Pesa SaaS collection** | Setup fees and renewals create local invoices and Daraja STK requests; callbacks confirm or fail the invoice/payment and update subscription state. This is invoice-driven rather than an automatic recurring charge. |
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins; Stripe recurring items are supported when an add-on Stripe price ID is configured, otherwise M-Pesa charges are included in the next invoice. |
-| **Transaction commissions** | Completed shopper order payments create idempotent commission transactions using the active plan's rate snapshot. |
-| **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, generated commission totals, invoices, and failed SaaS payments. |
+| **Transaction commissions** | New shopper transaction commissions are disabled because each independent merchant completes its own sale. Existing historical records remain visible for reconciliation. |
+| **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
+| **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
 
 ## 📦 Backend API (App Router Route Handlers)
 
@@ -87,7 +88,7 @@
 | `/api/products` | GET, POST | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
 | `/api/reviews` | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews. |
 | `/api/wishlist` | GET, POST, DELETE | Read / add / remove wishlist items for authenticated users. |
-| `/api/orders` | GET, POST | List authenticated user's orders and place new orders (stock validation + transactional stock decrement + notification creation). |
+| `/api/orders` | GET, POST | List historical authenticated-user orders; new shopper order creation returns a merchant-direct response. |
 | `/api/orders/[id]` | GET, PATCH | Fetch single order (owner or admin), admin updates order status / tracking number with user notification. |
 | `/api/coupons/validate` | POST | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation. |
 | `/api/contact` | POST | Creates a support ticket and sends email via Resend (support team + customer confirmation). |
@@ -97,6 +98,7 @@
 | `/api/billing/plans` | GET | Lists active database-backed SaaS plans and add-ons. |
 | `/api/manage/billing` | GET, POST | Tenant-scoped merchant billing reads and owner/admin billing actions. |
 | `/api/platform/billing` | GET, POST | Platform-role-protected plan/add-on management and billing reporting. |
+| `/api/platform/operations` | GET, PATCH | Cross-store platform metrics, tenant activity, store previews, billing summaries, and authorized store status controls. |
 
 ## 🔐 Backend Services & Utilities
 
@@ -111,16 +113,21 @@
 | `backend/services/productService.ts` | Prisma queries for filtered listing, slug lookup, search, and creation. |
 | `backend/security/index.ts` | Email sanitization, password strength check, secret masking, object sanitization. |
 | `backend/actions/index.ts` | Action-record logging to `AdminLog` and background-task queue. |
-| `backend/billing/service.ts` | SaaS plan catalog, Stripe Checkout/portal, subscription lifecycle, M-Pesa billing invoices, setup fees, add-ons, and transaction commissions. |
+| `backend/billing/service.ts` | SaaS plan catalog, Stripe Checkout/portal, subscription lifecycle, M-Pesa billing invoices, setup fees, add-ons, and historical commission visibility. |
 
-## 💳 Payments (Real Provider Integration)
+## 💳 Payment Boundaries
+
+Nurava Tech does not collect shopper payments in merchant-direct mode. The
+provider helpers and webhook records remain available for historical
+compatibility and separate merchant SaaS billing; new shopper payment
+initiation and verification routes fail closed.
 
 ### M-Pesa (`backend/payments/mpesa/`)
 
 | Feature | Description |
 |---------|-------------|
-| `initiateMpesaPayment` | STK Push request, stores `Payment` row (PENDING). |
-| `verifyMpesaPayment` | STK Push query, maps `ResultCode` → status, confirms order. |
+| `initiateMpesaPayment` | Legacy provider helper; new shopper initiation is disabled at the route boundary. |
+| `verifyMpesaPayment` | Legacy provider helper; new shopper verification is disabled at the route boundary. |
 | `simulateMpesaPayment` | Sandbox C2B simulate helper. |
 | Graceful fallback | "not configured" behavior when `MPESA_*` env vars are absent. |
 
@@ -128,8 +135,8 @@
 
 | Feature | Description |
 |---------|-------------|
-| `createCardPaymentIntent` | Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row. |
-| `verifyCardPayment` | Retrieves PaymentIntent, maps status, confirms order. |
+| `createCardPaymentIntent` | Legacy provider helper; new shopper PaymentIntent creation is disabled at the route boundary. |
+| `verifyCardPayment` | Legacy provider helper; new shopper verification is disabled at the route boundary. |
 | Graceful fallback | "not configured" behavior when `STRIPE_SECRET_KEY` is absent. |
 
 ### Webhooks (`backend/payments/webhooks/`)
@@ -144,10 +151,10 @@
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/payments/mpesa/initiate` | Initiate STK Push. |
-| `POST /api/payments/mpesa/verify` | Verify STK Push status. |
-| `POST /api/payments/card/create-intent` | Create Stripe PaymentIntent. |
-| `POST /api/payments/card/verify` | Verify PaymentIntent status. |
+| `POST /api/payments/mpesa/initiate` | Returns a merchant-direct response; no shopper STK Push is initiated. |
+| `POST /api/payments/mpesa/verify` | Returns a merchant-direct response; no shopper payment is verified. |
+| `POST /api/payments/card/create-intent` | Returns a merchant-direct response; no shopper PaymentIntent is created. |
+| `POST /api/payments/card/verify` | Returns a merchant-direct response; no shopper payment is verified. |
 | `POST /api/payments/webhooks/stripe` | Stripe webhook (signature verified). |
 | `POST /api/payments/webhooks/mpesa/stk-callback` | M-Pesa STK callback. |
 | `POST /api/payments/webhooks/mpesa/c2b` | M-Pesa C2B callback. |
@@ -213,7 +220,7 @@ Core models:
 | Feature | Description |
 |---------|-------------|
 | **Rate Limiting** | 60 req/min per IP on sensitive endpoints. |
-| **Checkout Idempotency** | Reuses safe checkout/payment requests and prevents duplicate order creation across retries. |
+| **Merchant handoff boundary** | Prevents new platform shopper orders and payments; selected products are handed to the independent merchant for direct completion. |
 | **Webhook Deduplication** | Persists webhook receipts so repeated Stripe and M-Pesa callbacks are processed safely. |
 | **Audit and Login Events** | Records administrative changes and successful or failed credential-authentication attempts. |
 | **Email Sanitization** | Prevents email injection attacks. |
@@ -225,8 +232,8 @@ Core models:
 | **Resend Email** | Branded order-confirmation email templates. |
 | **Prisma Schema** | Complete relational data model with proper relationships. |
 | **Seed Data** | Admin user, categories, sample products, coupons. |
-| **Payments** | Shopper M-Pesa/Card checkout plus SaaS Stripe Billing, invoice-driven M-Pesa collection, setup fees, add-ons, invoices, and signature-verified webhook lifecycle handling. |
-| **Checkout Payment Flow** | Full checkout-to-payment flow:<br>- Order creation via `/api/orders` with transactional stock validation<br>- M-Pesa STK Push flow with real-time status polling<br>- Stripe PaymentIntent creation and verification<br>- Cash on Delivery support<br>- Real-time payment status indicators<br>- Error handling with user-friendly messages<br>- Post-payment order confirmation with email notifications |
+| **Payments** | Merchant-direct shopper handoff plus SaaS Stripe Billing, invoice-driven M-Pesa collection, setup fees, add-ons, invoices, and signature-verified webhook lifecycle handling. |
+| **Merchant Handoff Flow** | Product selection displays the store's direct WhatsApp/email contact. The merchant confirms availability, price, delivery, payment, refunds, and warranty outside the Nurava Tech shopper payment flow. |
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |
 | **Recommendation Engine** | API-backed similar-product recommendations render on product-detail pages; the API also supports personalized, trending, featured, new-arrival, and deal queries. |

@@ -5,6 +5,7 @@ import { createCardPaymentIntent } from "backend/payments/cards"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 
 const cardIntentSchema = z.object({
 	amount: z.number().positive(),
@@ -16,6 +17,7 @@ const cardIntentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	const rateLimitResponse = await rateLimiter(req, "card-create-intent")
 	if (rateLimitResponse) return rateLimitResponse
 

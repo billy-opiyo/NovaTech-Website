@@ -32,55 +32,55 @@ const faqs: FAQ[] = [
 		category: "Orders & Shipping",
 		question: "How long does delivery take?",
 		answer:
-			"Nairobi deliveries typically take 1-2 business days. Outside Nairobi takes 2-5 business days depending on location. Express delivery options are available at checkout.",
+			"Delivery times and options are set by each independent store. Contact the merchant directly for the current delivery timeline and cost.",
 	},
 	{
 		category: "Orders & Shipping",
 		question: "How can I track my order?",
 		answer:
-			'Once your order is shipped, you will receive a tracking number via email and WhatsApp. You can also track your order in your account dashboard under "My Orders".',
+			"The merchant provides order and delivery updates directly. Nurava Tech does not create or manage the merchant's customer order unless the store tells you otherwise.",
 	},
 	{
 		category: "Orders & Shipping",
 		question: "Do you deliver outside Nairobi?",
 		answer:
-			"Yes! We deliver to all major towns across Kenya including Mombasa, Kisumu, Nakuru, Eldoret, and more. Delivery costs vary by location.",
+			"Many merchants serve customers across Kenya, but delivery coverage and costs vary by store. Confirm the details with the merchant before purchasing.",
 	},
 	{
 		category: "Returns & Warranty",
 		question: "What is your return policy?",
 		answer:
-			"We offer a 7-day replacement guarantee for defective products. Items must be returned in original packaging with all accessories. Contact our support team to initiate a return.",
+			"Returns and replacements are handled by the merchant that sold the product. Ask that store for its return window, conditions, and process before purchasing.",
 	},
 	{
 		category: "Returns & Warranty",
 		question: "Do products come with warranty?",
 		answer:
-			"Yes! All our products come with official manufacturer warranty. Most electronics have a 12-month warranty. Specific warranty details are listed on each product page.",
+			"Warranty coverage is set by the merchant and/or manufacturer. Review the product page and confirm the exact terms with the store.",
 	},
 	{
 		category: "Returns & Warranty",
 		question: "How do I claim warranty?",
 		answer:
-			"Contact our support team with your order number and product details. We will guide you through the warranty claim process and coordinate with the manufacturer.",
+			"Contact the merchant that sold the product with your order details. The merchant handles the warranty claim and manufacturer coordination.",
 	},
 	{
 		category: "Payments",
 		question: "What payment methods do you accept?",
 		answer:
-			"We accept M-Pesa (Lipa na M-Pesa) and Cash on Delivery. For M-Pesa payments, you will receive a prompt on your phone to complete the payment.",
+			"Each merchant chooses its own payment options. Nurava Tech does not collect shopper payments; the store will provide payment instructions directly.",
 	},
 	{
 		category: "Payments",
 		question: "Is it safe to pay online?",
 		answer:
-			"Absolutely! Our website uses SSL encryption to protect your data. M-Pesa transactions are processed through Safaricom's secure Daraja API.",
+			"Nurava Tech protects the platform with HTTPS and security controls. Payment questions and payment security for a purchase should be confirmed with the merchant because the transaction is handled directly by that store.",
 	},
 	{
 		category: "Products",
 		question: "Are your products genuine?",
 		answer:
-			"Yes! All our products are 100% genuine and sourced from authorized distributors. We provide official manufacturer warranty on all products.",
+			"Product authenticity and warranty coverage are responsibilities of the individual merchant. Ask the store for sourcing and warranty details before purchasing.",
 	},
 ]
 
@@ -143,7 +143,7 @@ export default function ContactPage() {
 				<h1 className="text-4xl font-bold mb-4">How Can We Help?</h1>
 				<p className="text-lg text-gray-500 max-w-2xl mx-auto">
 					Get in touch with our support team. We are here to help with any
-					questions about your orders, products, or warranty.
+						questions about the platform, listed products, or how to contact an independent merchant.
 				</p>
 			</motion.div>
 
@@ -475,7 +475,7 @@ export default function ContactPage() {
 						<p className="text-sm text-gray-500">
 							SSL Encrypted • Genuine Products
 							<br />
-							Official Warranty • Secure Payments
+										Merchant-set warranty • Direct payment with store
 						</p>
 					</div>
 				</div>

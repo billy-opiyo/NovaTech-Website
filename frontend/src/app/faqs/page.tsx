@@ -4,22 +4,22 @@ export default function FaqsPage() {
 	return (
 		<InfoPage
 			title="Frequently Asked Questions"
-			description="Quick answers about orders, delivery, payments, returns, and product support."
+			description="Quick answers about finding independent stores, product enquiries, delivery, payments, returns, and warranty support."
 			sections={[
 				{
 					title: "How long does delivery take?",
 					content:
-						"Nairobi deliveries typically take 1–2 business days. Deliveries outside Nairobi usually take 2–5 business days, depending on the destination.",
+						"Delivery times are set and confirmed by each independent store. Ask the merchant for the current delivery options and timeline.",
 				},
 				{
 					title: "What payment methods do you accept?",
 					content:
-						"We accept M-Pesa and Cash on Delivery where available. Payment instructions are shown during checkout.",
+						"Each store sets its own payment options. Nurava Tech does not collect shopper payments; contact the merchant directly for payment instructions.",
 				},
 				{
 					title: "Are your products genuine?",
 					content:
-						"Yes. Our products are sourced from trusted distributors, and the warranty details for each item are shown on its product page.",
+						"Product authenticity and warranty coverage are responsibilities of the individual merchant. Review the product details and confirm with the store before purchasing.",
 				},
 			]}
 		/>

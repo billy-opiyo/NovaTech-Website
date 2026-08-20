@@ -12,7 +12,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 				</div>
 				<nav className="flex flex-wrap gap-4 text-sm font-semibold">
 					<Link href="/platform">Overview</Link>
-					<Link href="/platform/tenants">Tenants</Link>
+					<Link href="/platform/operations">Operations</Link>
 					<Link href="/platform/billing">Billing</Link>
 				</nav>
 			</header>

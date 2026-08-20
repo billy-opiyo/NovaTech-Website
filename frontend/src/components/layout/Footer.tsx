@@ -61,7 +61,7 @@ export default function Footer() {
 				<div className="mx-auto max-w-xs lg:mx-0">
 					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						{store.brand.tagline}. Genuine products, warranty, fast delivery.
+						{store.brand.tagline}. Discover independent stores and contact merchants directly.
 					</p>
 				</div>
 

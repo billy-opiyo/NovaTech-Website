@@ -9,7 +9,7 @@ This document records implementation defaults for the first controlled beta. It 
 
 - Initial customers are independent Kenyan electronics shops, phone and laptop dealers, repair/accessory businesses, and small distributors.
 - The first release hosts separate merchant stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
-- The beta includes a hosted storefront, catalog and order operations, staff memberships, theme/content controls, basic analytics, platform subdomains, test-mode shopper payments, merchant SaaS billing, and platform support.
+- The beta includes a hosted storefront, catalog discovery, staff memberships, theme/content controls, basic analytics, platform subdomains, merchant-direct shopper enquiries, merchant SaaS billing, and platform support.
 - Advanced warehouse management, marketplace carts, custom application work, and enterprise database isolation remain later-stage work.
 
 ## Platform and tenant defaults
@@ -25,7 +25,7 @@ This document records implementation defaults for the first controlled beta. It 
 
 - `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.
 - Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
-- The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing, cart, account, checkout, and orders remain inside the selected store.
+- The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing and selection remain inside the selected store, then the shopper contacts that merchant directly to complete the transaction.
 - The shared homepage component order and responsive layout are preserved across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`.
 - A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The legacy preferred-store cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
 - `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
@@ -36,17 +36,18 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 
 - The initial plan catalog is entitlement-based and database-backed: `TRIAL`, `STARTER`, `BUSINESS`, and `ENTERPRISE`. The implementation defaults for Starter, Business, and Enterprise are seed data and remain configurable.
 - Billing currency, tax treatment, trial length, grace period, overages, annual discount, refunds, and support SLAs remain commercial, legal, or operational decisions that must be finalized before production self-service billing is enabled.
-- SaaS billing (merchant to Nurava Tech) and shopper checkout (customer to merchant) are separate ledgers, webhooks, credentials, and audit events.
-- Shopper payments remain test-mode only until a written merchant-of-record decision and provider connection strategy are approved. The application must not reuse a platform shopper credential for every merchant.
-- SaaS billing stores tenant billing-customer references and supports Stripe Billing plus invoice-driven M-Pesa setup-fee and renewal collection. Shopper payments remain a separate merchant-connected provider decision and must not reuse SaaS billing credentials.
+- SaaS billing (merchant to Nurava Tech) remains separate from shopper commerce (customer to merchant), with separate ledgers, webhooks, credentials, and audit events.
+- The approved shopper model is merchant-direct: Nurava Tech provides discovery, storefront hosting, and enquiry handoff, while each independent merchant handles its own payment, delivery, refunds, warranty, taxes, and customer support. Nurava Tech does not collect shopper payments or present itself as merchant of record.
+- SaaS billing stores tenant billing-customer references and supports Stripe Billing plus invoice-driven M-Pesa setup-fee and renewal collection. Shopper payment initiation and verification routes are disabled in this model.
 
 ### Source-level SaaS billing behavior
 
 - Merchant owners and admins use `/manage/billing` to view the current plan, setup-fee state, subscription status, invoices, payment history, payment methods, and add-ons. Plan changes, cancellation, renewal collection, and add-on changes are server-authorized.
-- Platform owners and admins use `/platform/billing` to manage plan and add-on configuration, inspect billing customers and subscriptions, and review payment, invoice, and commission activity.
+- Platform owners and admins use `/platform/billing` to manage plan and add-on configuration, including recurring prices and one-time setup fees, and inspect billing customers and subscriptions.
+- Super Admins and authorized platform operators use `/platform/operations` to inspect aggregate tenant/store metrics, recent cross-store activity, SaaS invoices, store previews, billing/setup-fee state, and store publication status. Suspension and reactivation actions are platform-authorized and audited.
 - Stripe subscription, invoice, payment-failure, and cancellation state is webhook-authoritative and idempotent. Browser return URLs do not activate subscriptions.
 - M-Pesa setup fees and renewals are invoice-driven. A successful verification updates the invoice/payment state and then synchronizes the related billing record or subscription.
-- Completed shopper order payments can create a separate commission transaction using the effective plan rate snapshot; this does not mix shopper payment records with SaaS subscription charges.
+- Historical shopper order payments may have separate commission transactions using an effective plan rate snapshot; new shopper payment and commission creation is disabled in merchant-direct mode.
 - Migration `0006_billing_system` and the regenerated Prisma Client must be deployed before the new billing routes can run against a target database. Live provider credentials, webhook registration, and sandbox/provider verification remain rollout gates.
 
 ## Lifecycle and data policy defaults

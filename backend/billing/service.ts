@@ -3,6 +3,7 @@ import { BillingPaymentKind, BillingRecordStatus, InvoiceKind, InvoiceStatus, Su
 import prisma from "../lib/db"
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient"
 import { initiateMpesaPayment } from "../payments/mpesa"
+import { isShopperCheckoutEnabled } from "../lib/commerce-model"
 
 export class BillingError extends Error {
 	status: number
@@ -296,6 +297,7 @@ export async function markBillingPaymentFromMpesa(payment: { id: string; status:
 }
 
 export async function recordOrderCommission(paymentId: string) {
+	if (!isShopperCheckoutEnabled()) return null
 	const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { tenant: { include: { plan: true } } } })
 	if (!payment?.tenantId || !payment.orderId || payment.status !== "COMPLETED") return null
 	const rate = payment.tenant?.plan?.transactionFeePercent || 0

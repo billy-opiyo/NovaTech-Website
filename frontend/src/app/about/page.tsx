@@ -4,17 +4,17 @@ export default function AboutPage() {
 	return (
 		<InfoPage
 			title="About Us"
-			description="Nurava Tech makes it easier to buy genuine electronics with confidence anywhere in Kenya."
+			description="Nurava Tech helps shoppers discover independent electronics stores across Kenya."
 			sections={[
 				{
 					title: "Who we are",
 					content:
-						"We are a Kenya-focused electronics store offering phones, laptops, tablets, and accessories from trusted sources.",
+						"Nurava Tech is a Kenya-focused multi-store platform where independent electronics businesses can present their phones, laptops, tablets, and accessories to shoppers.",
 				},
 				{
 					title: "What we value",
 					content:
-						"Clear product information, genuine products, official warranty coverage, secure payments, and dependable delivery are at the centre of our service.",
+						"We provide discovery, storefront technology, and merchant tools. Each store remains responsible for product information, authenticity, pricing, payments, delivery, refunds, and warranty commitments.",
 				},
 			]}
 		/>

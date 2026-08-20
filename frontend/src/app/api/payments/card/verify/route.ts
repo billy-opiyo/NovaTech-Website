@@ -3,12 +3,14 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
 import { verifyCardPayment } from "backend/payments/cards"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 
 const cardVerifySchema = z.object({
 	reference: z.string().min(3),
 })
 
 export async function POST(req: NextRequest) {
+	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	const rateLimitResponse = await rateLimiter(req, "card-verify")
 	if (rateLimitResponse) return rateLimitResponse
 

@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { getProducts } from "@/services/products"
+import { useStoreContext } from "@/lib/store-context"
+import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 
 // Types
 interface Product {
@@ -610,6 +612,8 @@ export default function ProductsClient() {
 }
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
+	const store = useStoreContext()
+	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
@@ -688,7 +692,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 				</div>
 				<div className="absolute bottom-3 left-3 right-3 flex items-center justify-center">
 					<a
-						href={`https://wa.me/254700000000?text=Hello%20Nurava%20Tech%2C%20I%20would%20like%20to%20order%20the%20${product.name}%20-%20KES%20${product.price.toLocaleString()}.%20Please%20send%20me%20order%20details.`}
+						href={merchantHref}
 						target="_blank"
 						rel="noreferrer"
 						className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"
@@ -709,6 +713,8 @@ function ProductListItem({
 	product: Product
 	index: number
 }) {
+	const store = useStoreContext()
+	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
 	return (
 		<motion.div
 			initial={{ opacity: 0, x: -20 }}
@@ -777,7 +783,7 @@ function ProductListItem({
 					</div>
 					<div className="absolute bottom-2 left-2 right-2 flex items-center justify-center">
 						<a
-							href={`https://wa.me/254700000000?text=Hello%20Nurava%20Tech%2C%20I%20would%20like%20to%20order%20the%20${product.name}%20-%20KES%20${product.price.toLocaleString()}.%20Please%20send%20me%20order%20details.`}
+							href={merchantHref}
 							target="_blank"
 							rel="noreferrer"
 							className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"

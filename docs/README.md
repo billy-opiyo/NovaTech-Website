@@ -9,7 +9,7 @@ Nurava Tech is a **monorepo** managed with **npm workspaces**, containing:
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
 
-The platform enables customers to discover published stores at `/stores`, then browse, search, compare, and purchase genuine electronics (phones, laptops, tablets, and accessories) inside the selected store with warranty and fast delivery across all Kenyan counties. Stores keep separate catalogs, carts, accounts, and orders.
+The platform enables customers to discover published stores at `/stores`, then browse, search, and compare electronics (phones, laptops, tablets, and accessories) before contacting the selected independent store directly. Each merchant confirms its own sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context.
 
 ## Recent Changes
 
@@ -32,10 +32,11 @@ The current implementation also includes the following production hardening work
 - Added Prisma migration history under `backend/prisma/migrations/`, including the initial schema and webhook receipt support.
 - Added indexes and constraints for payment references, order idempotency keys, review moderation, login events, and distributed rate-limit buckets.
 - Replaced process-local rate limiting with PostgreSQL-backed rate-limit buckets for multi-instance deployments.
-- Added checkout order idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa flows.
+- Added historical checkout idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa compatibility flows; new shopper order/payment creation is disabled in merchant-direct mode.
 - Added database-backed SaaS billing with Starter/Business/Enterprise plans, setup-fee records, subscriptions, invoices, add-ons, provider payments, and commission transactions.
 - Added merchant `/manage/billing` actions for Stripe Checkout/portal, M-Pesa invoice collection, plan changes, cancellation, renewal, setup-fee payment, add-ons, and billing history.
 - Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments.
+- Added the platform operations control plane at `/platform/operations` with cross-store metrics, tenant/store search, activity and invoice feeds, storefront preview links, billing/setup-fee visibility, and authorized suspension/reactivation controls.
 - Added admin audit logging for order status, product, coupon, and review changes.
 - Added login event recording for successful and failed credential authentication attempts.
 - Separated development seed data from production setup. Development seeding requires `SEED_ADMIN_PASSWORD`; production admin initialization uses `npm --workspace backend run db:init-admin` with explicit `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` values.
@@ -90,7 +91,7 @@ The Playwright tests are configured in [`playwright.config.ts`](../playwright.co
 The application should not be marked production-ready until the external staging gates pass. Code-level checks currently pass, but launch configuration remains intentionally incomplete until the following are verified:
 
 - Staging database migration deployment and health checks.
-- Browser checkout and payment sandbox workflows.
+- Browser merchant-handoff workflow and separate SaaS payment sandbox workflows.
 - Stripe/M-Pesa webhook verification against provider sandboxes.
 - PostgreSQL backup and restore verification.
 - Linux production build and deployment smoke test.
@@ -105,7 +106,7 @@ Start the local server with `npm run dev`. The development server uses `http://l
 
 The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. Legacy `/admin` pages use `ADMIN` or `SUPERADMIN`; merchant workspace pages under `/manage` use the resolved store membership boundary.
 
-Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host handles that store's catalog, cart, account, checkout, and orders.
+Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and direct merchant contact options. The merchant completes the shopper transaction outside Nurava Tech's payment flow.
 
 ### Storefront
 
@@ -129,7 +130,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Return policy | Public | [Open](http://localhost:3000/return-policy) | [Open](https://nuravatech.com/return-policy) |
 | Warranty | Public | [Open](http://localhost:3000/warranty) | [Open](https://nuravatech.com/warranty) |
 | Cart | Signed in | [Open](http://localhost:3000/cart) | [Open](https://nuravatech.com/cart) |
-| Checkout | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://nuravatech.com/checkout) |
+| Merchant handoff | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://nuravatech.com/checkout) |
 
 ### Authentication
 
@@ -190,7 +191,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Merchant dashboard | Store membership | [Open](http://localhost:3000/manage) | [Open](https://nuravatech.com/manage) |
 | Merchant billing | Store owner/admin for mutations | [Open](http://localhost:3000/manage/billing) | [Open](https://nuravatech.com/manage/billing) |
 | Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
-| Platform tenants | Platform role | [Open](http://localhost:3000/platform/tenants) | [Open](https://nuravatech.com/platform/tenants) |
+| Platform operations | Platform role | [Open](http://localhost:3000/platform/operations) | [Open](https://nuravatech.com/platform/operations) |
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
 
 ### Dynamic URL values
@@ -219,7 +220,7 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 | **Auth** | NextAuth v5 (beta) — Google OAuth + Credentials |
 | **Email** | Resend |
 | **Storage** | Cloudflare R2 (AWS SDK v3) |
-| **Payments** | Shopper M-Pesa/Stripe PaymentIntents plus Stripe Billing and invoice-driven M-Pesa SaaS billing |
+| **Payments** | Merchant-direct shopper handoff plus Stripe Billing and invoice-driven M-Pesa SaaS billing |
 | **Notifications** | Twilio SMS, WhatsApp Cloud API |
 | **Monorepo** | npm workspaces (`frontend` + `backend`) |
 

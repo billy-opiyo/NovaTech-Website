@@ -157,7 +157,7 @@ pre-billing state.
 ### Next phase
 
 - Phase 2 completed: added session propagation for `platformRole`, server-side `requireStoreSession()` and `requirePlatformSession()` guards, authenticated workspace middleware, and route-backed `/manage` and `/platform` surfaces.
-- Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/tenants` and `/platform/billing` are truthful unavailable states until database/provider-backed operations are connected.
+- Existing admin screens are available under `/manage` with store-workspace navigation; `/platform/operations` and `/platform/billing` are platform-role-protected control-plane surfaces that show truthful unavailable states until database/provider-backed operations are connected.
 - Legacy `/admin` controllers and their `/manage` route aliases now use store membership authorization and tenant-scoped reads/writes; the remaining runtime proof requires migrated multi-store data.
 - Verification passed: frontend TypeScript, backend TypeScript, and `git diff --check`.
 - Final checkpoint: full test suite passed 40/40; frontend and backend TypeScript checks passed; repository status is clean.
@@ -197,7 +197,29 @@ pre-billing state.
 - It changes the seeded tenant/store display names to Nurava Tech and changes the seeded platform hostname to `novatech.nuravatech.com`.
 - It intentionally preserves `novatech-tenant`, `novatech-store`, `novatech-domain`, and the `novatech` store slug so existing foreign keys and host resolution remain valid until a separately planned slug migration.
 - The migration has not been applied because database rollout remains scheduled as the second-last production-readiness step.
+
+### 2026-08-20 — Merchant-direct shopper commerce model
+
+- Revised the shopper experience so Nurava Tech provides store discovery, storefront hosting, product marketing, and merchant SaaS tools, while each independent merchant remains responsible for its own customer transaction.
+- Replaced platform shopper checkout with a merchant handoff page that sends the selected products to the store through WhatsApp or email; the merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
+- Disabled new platform shopper order creation, shopper Stripe/M-Pesa initiation and verification, and new transaction commission creation with a fail-closed `MERCHANT_DIRECT` boundary. Existing historical order/payment records and webhook code remain available for data continuity.
+- Kept merchant SaaS billing separate and active: platform subscriptions, setup fees, add-ons, Stripe billing, and invoice-driven M-Pesa billing are unaffected.
+- External boundary: merchant agreements, final privacy/consumer wording, tax treatment, and any payment-provider responsibilities still require professional review before production launch.
+
+### 2026-08-20 — Merchant-direct implementation verification
+
+- Updated README and feature/architecture/billing documentation to describe merchant handoff rather than platform shopper checkout.
+- Updated merchant and platform billing/admin wording so commission data is identified as historical and SaaS billing remains the active Nurava Tech billing flow.
+- Verified frontend and backend TypeScript checks, `git diff --check`, and all 46 repository tests.
+- Verified the local preview at `http://localhost:3002`: the home page returns 200, the merchant handoff page returns 200, and shopper order/card/M-Pesa endpoints return 410 `MERCHANT_DIRECT_SALES`.
 - Local store previews support `{slug}.localhost`; production directory links use `{slug}.{PLATFORM_DOMAIN}`. The existing mobile artwork remains the storefront background for tablet/iPad widths.
+
+### 2026-08-20 — Super Admin operations control plane
+
+- Added `/platform/operations` and `/api/platform/operations` for cross-store metrics, tenant/store search and status filtering, product/order/support counts, subscription and setup-fee status, recent platform activity, SaaS invoice visibility, and local/production storefront preview links.
+- Added platform-authorized suspend/reactivate controls that update tenant/store availability together and record an auditable platform action. Read access is available to platform roles; mutations are limited to Super Admin, Platform Owner, and Platform Admin.
+- Added setup-fee and recurring-price inputs to `/platform/billing`; plan edits are persisted through the existing platform billing API and apply to future billing configuration.
+- Verification remains gated on the configured database for real tenant metrics; unavailable database states remain explicit and do not use fabricated data.
 
 ### Pre-Phase 5 handoff
 

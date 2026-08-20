@@ -350,7 +350,7 @@ export default function CartPage() {
 						<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Shield size={14} className="text-green-500" />
-								Secure checkout with SSL encryption
+								Secure browsing on Nurava Tech
 							</div>
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Truck size={14} className="text-primary" />
@@ -358,25 +358,21 @@ export default function CartPage() {
 							</div>
 						</div>
 
-						{/* Checkout Button */}
+						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-gray-600 dark:text-gray-300">
+							This selection is sent to the independent store for confirmation. The merchant handles payment, delivery, refunds, and warranty directly.
+						</div>
+
+						{/* Merchant handoff */}
 						<Link
 							href="/checkout"
 							className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-lg"
 						>
-							Proceed to Checkout <ChevronRight size={20} />
+							Contact Merchant <ChevronRight size={20} />
 						</Link>
 
-						{/* Payment Methods */}
+						{/* Merchant terms */}
 						<div className="text-center">
-							<p className="text-xs text-gray-500 mb-2">We accept:</p>
-							<div className="flex justify-center gap-2">
-								<span className="px-3 py-1 text-xs font-semibold bg-green-500/20 text-green-600 rounded-full">
-									M-Pesa
-								</span>
-								<span className="px-3 py-1 text-xs font-semibold bg-blue-500/20 text-blue-600 rounded-full">
-									Cash
-								</span>
-							</div>
+							<p className="text-xs text-gray-500">Payment options and final terms are provided by the store.</p>
 						</div>
 					</div>
 				</div>

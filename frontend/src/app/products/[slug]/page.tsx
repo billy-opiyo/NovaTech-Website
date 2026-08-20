@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { AlertCircle, ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Star } from "lucide-react"
+import { AlertCircle, ChevronLeft, ChevronRight, MessageCircle, Minus, Plus, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
-import { useCart } from "@/lib/cartContext"
 import NotFoundState from "@/components/content/NotFoundState"
-import { useToast } from "@/components/ui/Toast"
 import Recommendations from "@/components/product/Recommendations"
 import ProductReviewForm from "@/components/product/ProductReviewForm"
+import { useStoreContext } from "@/lib/store-context"
+import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -44,8 +44,7 @@ type Product = {
 
 export default function ProductDetailPage() {
 	const { slug } = useParams<{ slug: string }>()
-	const { addItem } = useCart()
-	const { addToast } = useToast()
+	const store = useStoreContext()
 	const [product, setProduct] = useState<Product | null>(null)
 	const [error, setError] = useState("")
 	const [selectedImage, setSelectedImage] = useState(0)
@@ -81,20 +80,7 @@ export default function ProductDetailPage() {
 		.filter((variant) => selectedVariants[variant.name] === variant.value)
 		.reduce((stock, variant) => Math.min(stock, variant.stock), product.stock)
 
-	function handleAddToCart() {
-		addItem({
-			productId: loadedProduct.id,
-			name: loadedProduct.name,
-			brand: loadedProduct.brand,
-			image: loadedProduct.images[0] || "/placeholder-product.jpg",
-			price: currentPrice,
-			quantity,
-			variant: Object.values(selectedVariants).join(" / ") || undefined,
-			maxStock: selectedStock,
-			slug: loadedProduct.slug,
-		})
-		addToast(`${loadedProduct.name} was added to your cart.`, "success")
-	}
+	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: loadedProduct.name, quantity, variant: Object.values(selectedVariants).join(" / ") || undefined, price: currentPrice }] })
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-10 py-6">
@@ -128,7 +114,8 @@ export default function ProductDetailPage() {
 
 					{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} disabled={variant.stock < 1} onClick={() => setSelectedVariants({ ...selectedVariants, [name]: variant.value })} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}
 
-					<div className="flex items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button onClick={handleAddToCart} disabled={selectedStock < 1} className="btn-primary flex flex-1 items-center justify-center gap-2 disabled:opacity-50"><ShoppingCart size={18} />Add to cart</button></div>
+					<div className="flex items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><a href={merchantOrderHref} target="_blank" rel="noreferrer" aria-disabled={selectedStock < 1} className={`btn-primary flex flex-1 items-center justify-center gap-2 ${selectedStock < 1 ? "pointer-events-none opacity-50" : ""}`}><MessageCircle size={18} />Contact seller</a></div>
+					<p className="text-xs text-gray-500">Nurava Tech connects you with this independent store. The merchant confirms availability, delivery, payment, refunds, and warranty directly.</p>
 					<p className="text-gray-600 dark:text-gray-300">{product.description}</p>
 				</div>
 			</section>

@@ -7,6 +7,7 @@ import { createActionRecord } from "../actions"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireMembership } from "../lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
+import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../lib/commerce-model"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -29,6 +30,9 @@ export async function getOrders(req: NextRequest) {
 
 export async function createOrder(req: NextRequest) {
 	try {
+		if (!isShopperCheckoutEnabled()) {
+			return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
+		}
 		const session = await getServerSession()
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
