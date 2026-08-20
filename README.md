@@ -44,7 +44,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 | Feature              | Description                                                                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Home Page**        | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup.                                                                      |
+| **Home Pages**       | The platform root is a social-proof store discovery homepage; each merchant host keeps its own hero, shop-by-category grid, featured products, customer testimonials, newsletter, and contact sections. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
 | **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, merchant warranty information, reviews section, and direct merchant enquiry handoff. |
 | **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
@@ -454,8 +454,8 @@ npm run dev:open
 - ✔️ **Authentication flows** — Email verification with resend support and token-based password reset
 - ✔️ **Public information pages** — About, Blog, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions
 - ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
-- ✔️ **Shopper store discovery** — `/stores` lists eligible published stores, provides featured product context, and links to host-resolved individual storefronts; `Browse Stores` remains platform-home navigation only
-- ✔️ **Shared store homepage content** — Store-specific content is resolved through `StoreContext` without changing the shared homepage order or responsive layout
+- ✔️ **Shopper store discovery** — The platform homepage and `/stores` list eligible published stores with approved review ratings, review volume, product counts, catalogue image previews, and direct links to host-resolved individual storefronts
+- ✔️ **Shared merchant homepage content** — Merchant-specific hero, categories, featured products, testimonials, newsletter, contact, and map sections are rendered only on the resolved store host; platform-home action controls remain separate
 - ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the legacy preferred-store browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
 - ✔️ **Order API** — Historical order listing/status support; new shopper order creation is disabled in merchant-direct mode

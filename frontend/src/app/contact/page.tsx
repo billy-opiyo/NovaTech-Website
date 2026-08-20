@@ -20,6 +20,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { clientConfig, getWhatsAppHref } from "@/config/client.config"
+import { useStoreContext } from "@/lib/store-context"
 
 interface FAQ {
 	question: string
@@ -27,7 +28,7 @@ interface FAQ {
 	category: string
 }
 
-const faqs: FAQ[] = [
+const shopperFaqs: FAQ[] = [
 	{
 		category: "Orders & Shipping",
 		question: "How long does delivery take?",
@@ -84,7 +85,38 @@ const faqs: FAQ[] = [
 	},
 ]
 
+const merchantFaqs: FAQ[] = [
+	{
+		category: "Platform & onboarding",
+		question: "What does Nurava Tech provide to merchants?",
+		answer: "Nurava Tech provides store discovery, storefront technology, hosting, merchant tools, and platform support. Each merchant remains responsible for its own products and customer relationships.",
+	},
+	{
+		category: "Platform & onboarding",
+		question: "How do I create a merchant store?",
+		answer: "Use Start a Store to create your merchant workspace, choose an available plan, and continue setup from the merchant dashboard.",
+	},
+	{
+		category: "Plans & billing",
+		question: "What do the platform fees cover?",
+		answer: "Your selected plan can include a one-time setup fee, recurring subscription charges, usage limits, and optional add-ons. Review the plan details in the merchant workspace before confirming.",
+	},
+	{
+		category: "Plans & billing",
+		question: "Who handles shopper payments, refunds, and warranties?",
+		answer: "The individual merchant handles product sales, shopper payments, delivery, refunds, replacements, warranties, and related customer support. Nurava Tech provides the platform connection and merchant technology.",
+	},
+	{
+		category: "Platform support",
+		question: "What can merchant support help with?",
+		answer: "Nurava Tech support can help with platform access, store setup, hosting, domains, subscription billing, and technical issues. Product and shopper issues should be handled by the merchant that made the sale.",
+	},
+]
+
 export default function ContactPage() {
+	const store = useStoreContext()
+	const isPlatformHome = store.isPlatformHome
+	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -140,10 +172,11 @@ export default function ContactPage() {
 				animate={{ opacity: 1, y: 0 }}
 				className="text-center mb-16"
 			>
-				<h1 className="text-4xl font-bold mb-4">How Can We Help?</h1>
+				<h1 className="text-4xl font-bold mb-4">{isPlatformHome ? "Merchant Support" : "How Can We Help?"}</h1>
 				<p className="text-lg text-gray-500 max-w-2xl mx-auto">
-					Get in touch with our support team. We are here to help with any
-						questions about the platform, listed products, or how to contact an independent merchant.
+					{isPlatformHome
+						? "Contact Nurava Tech about store setup, platform access, subscriptions, domains, hosting, or technical support."
+						: "Get in touch with the store's support team about products, orders, delivery, returns, warranties, or other shopper questions."}
 				</p>
 			</motion.div>
 
@@ -291,7 +324,7 @@ export default function ContactPage() {
 									</div>
 									<div>
 										<label className="block text-sm font-medium mb-1">
-											Order Number (if applicable)
+													{isPlatformHome ? "Store or account reference (if applicable)" : "Order Number (if applicable)"}
 										</label>
 										<input
 											type="text"
@@ -303,7 +336,7 @@ export default function ContactPage() {
 												})
 											}
 											className="w-full px-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary"
-											placeholder="EB-XXXXXXXX"
+													placeholder={isPlatformHome ? "Store slug or account reference" : "EB-XXXXXXXX"}
 										/>
 									</div>
 								</div>
@@ -321,11 +354,18 @@ export default function ContactPage() {
 										required
 									>
 										<option value="">Select a topic</option>
-										<option value="order">Order Inquiry</option>
-										<option value="product">Product Question</option>
-										<option value="warranty">Warranty Claim</option>
-										<option value="return">Return Request</option>
-										<option value="payment">Payment Issue</option>
+						{isPlatformHome ? <>
+							<option value="onboarding">Store onboarding</option>
+							<option value="platform">Platform access or technical issue</option>
+							<option value="billing">Subscription or billing</option>
+							<option value="domain">Domain or hosting</option>
+						</> : <>
+							<option value="order">Order Inquiry</option>
+							<option value="product">Product Question</option>
+							<option value="warranty">Warranty Claim</option>
+							<option value="return">Return Request</option>
+							<option value="payment">Payment Issue</option>
+						</>}
 										<option value="other">Other</option>
 									</select>
 								</div>
@@ -453,9 +493,9 @@ export default function ContactPage() {
 				<div className="grid md:grid-cols-3 gap-8">
 					<div className="text-center">
 						<MapPin className="mx-auto mb-3 text-primary" size={32} />
-						<h3 className="font-semibold mb-2">Visit Our Store</h3>
+						<h3 className="font-semibold mb-2">{isPlatformHome ? "Platform Support" : "Visit Our Store"}</h3>
 						<p className="text-sm text-gray-500">
-							Kimathi Street, CBD
+							{isPlatformHome ? "Merchant support and platform operations" : "Kimathi Street, CBD"}
 							<br />
 							Nairobi, Kenya
 						</p>
@@ -464,18 +504,18 @@ export default function ContactPage() {
 						<Clock className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">Business Hours</h3>
 						<p className="text-sm text-gray-500">
-							Monday - Saturday: 8AM - 6PM
+							{isPlatformHome ? "Merchant support: Monday - Saturday" : "Monday - Saturday: 8AM - 6PM"}
 							<br />
-							Sunday: 10AM - 4PM
+							{isPlatformHome ? "Response within 24 hours" : "Sunday: 10AM - 4PM"}
 						</p>
 					</div>
 					<div className="text-center">
 						<Shield className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">Trust & Security</h3>
 						<p className="text-sm text-gray-500">
-							SSL Encrypted • Genuine Products
+							{isPlatformHome ? "Secure platform • Merchant-first support" : "SSL Encrypted • Genuine Products"}
 							<br />
-										Merchant-set warranty • Direct payment with store
+							{isPlatformHome ? "Store sales remain the merchant's responsibility" : "Merchant-set warranty • Direct payment with store"}
 						</p>
 					</div>
 				</div>

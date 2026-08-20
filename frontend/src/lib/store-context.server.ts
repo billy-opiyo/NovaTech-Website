@@ -17,13 +17,16 @@ function isPlatformHost(value: string | null): boolean {
 	if (!value) return false
 	const hostname = value.trim().toLowerCase().split(":")[0]
 	const platformDomain = getPlatformDomain()
-	return isLocalPreviewHost(value) || hostname === platformDomain
+	return isLocalPreviewHost(value) || hostname === platformDomain || hostname === `www.${platformDomain}`
 }
 
 export async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
 	const platformHome = isPlatformHost(requestHeaders.get("host"))
-	if (process.env.NODE_ENV !== "production" && isLocalPreviewHost(requestHeaders.get("host"))) {
+	if (platformHome) {
+		// Platform discovery is independent of any merchant domain mapping. Keep
+		// the root host on platform defaults; the homepage loads its store
+		// directory separately and never inherits a merchant storefront context.
 		return fallbackStoreContext(true)
 	}
 

@@ -30,6 +30,40 @@ test("request tenant resolution refuses unknown hosts", async () => {
 	}
 })
 
+test("canonical platform hosts bypass merchant domain mappings", async () => {
+	const domainFindUnique = prisma.domain.findUnique
+	const storeFindUnique = prisma.store.findUnique
+	let domainLookups = 0
+	;(prisma.domain.findUnique as any) = async () => {
+		domainLookups += 1
+		return {
+			hostname: "nuravatech.com",
+			verificationStatus: "VERIFIED",
+			tenantId: "merchant-tenant",
+			storeId: "merchant-store",
+			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE" } },
+		}
+	}
+	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "novatech" ? {
+		id: "platform-store",
+		tenantId: "platform-tenant",
+		slug: "novatech",
+		publicationStatus: "PUBLISHED",
+		tenant: { status: "ACTIVE" },
+	} : null
+	try {
+		for (const hostname of ["nuravatech.com:3000", "www.nuravatech.com:3000"]) {
+			const context = await resolveTenantFromRequest({ headers: new Headers({ host: hostname }) })
+			assert.equal(context.storeSlug, "novatech")
+			assert.equal(context.tenantId, "platform-tenant")
+		}
+		assert.equal(domainLookups, 0)
+	} finally {
+		;(prisma.domain.findUnique as any) = domainFindUnique
+		;(prisma.store.findUnique as any) = storeFindUnique
+	}
+})
+
 test("local store subdomains resolve by store slug", async () => {
 	const domainFindUnique = prisma.domain.findUnique
 	const storeFindUnique = prisma.store.findUnique

@@ -61,6 +61,12 @@ The latest UI implementation updates include:
 - Added authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie as a returning-browser fallback. This preference is not an authorization mechanism.
 - Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
 - Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
+- Restructured the platform root homepage around social-proof store discovery, with approved ratings, review volume, product counts, catalogue image previews, and top-rated/most-reviewed/new-and-growing store groups.
+- Kept merchant homepage shopping sections and action controls on individual store hosts, and added a `Nurava Tech Homepage` footer link for returning to platform discovery.
+- The merchant footer return link uses the canonical `https://nuravatech.com` platform host in deployed environments and the active local root during local subdomain previews. The server reserves both `nuravatech.com` and `www.nuravatech.com` for platform discovery before merchant domain lookup.
+- Restricted the branded splash to the platform homepage and protected `/platform` control plane; individual store routes and legacy `/admin` routes do not show it.
+- Platform footer support, FAQ, privacy, and terms surfaces target merchants. Individual store hosts retain shopper support links and shopper-facing policy variants.
+- Added platform-only `Home`, `Browse Stores`, and `Start a Store` links to the desktop and mobile top navigation; merchant storefront navigation remains store-specific.
 
 ## Production verification
 

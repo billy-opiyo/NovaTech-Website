@@ -14,9 +14,12 @@ const SPLASH_IMAGES = [
 	"/images/NovaTech cover desktop light.png",
 ]
 
-export default function SplashScreen({ children }: { children: ReactNode }) {
+export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
-	const routeScope = pathname.startsWith("/admin") ? "admin" : "public"
+	const isPlatformHomepage = platformHome && pathname === "/"
+	const isSuperAdminPage = pathname === "/platform" || pathname.startsWith("/platform/")
+	const shouldShowSplash = clientConfig.features.showSplashScreen && (isPlatformHomepage || isSuperAdminPage)
+	const routeScope = isSuperAdminPage ? "platform-admin" : "platform-home"
 	const shownScopes = useRef(new Set<string>())
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
@@ -24,7 +27,7 @@ export default function SplashScreen({ children }: { children: ReactNode }) {
 	const [readyToReveal, setReadyToReveal] = useState(false)
 
 	useEffect(() => {
-		if (!clientConfig.features.showSplashScreen) return
+		if (!shouldShowSplash) return
 
 		if (shownScopes.current.has(routeScope)) {
 			setReadyToReveal(true)
@@ -94,7 +97,7 @@ export default function SplashScreen({ children }: { children: ReactNode }) {
 			window.cancelAnimationFrame(frame)
 			if (finishTimer) window.clearTimeout(finishTimer)
 		}
-	}, [routeScope])
+	}, [routeScope, shouldShowSplash])
 
 	useEffect(() => {
 		if (!visible) return
@@ -123,7 +126,7 @@ export default function SplashScreen({ children }: { children: ReactNode }) {
 		}
 	}, [visible])
 
-	if (!clientConfig.features.showSplashScreen) return <>{children}</>
+	if (!shouldShowSplash) return <>{children}</>
 	if (!readyToReveal) {
 		if (!visible) return null
 		return (

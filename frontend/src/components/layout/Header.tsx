@@ -11,6 +11,12 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 
+const platformNavigation = [
+	{ name: "Home", href: "/" },
+	{ name: "Browse Stores", href: "/stores" },
+	{ name: "Start a Store", href: "/onboarding" },
+]
+
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
 	const { itemCount } = useCart()
@@ -37,13 +43,7 @@ export default function Header() {
 						</span>
 					</Link>
 				<nav className="hidden gap-3 md:flex lg:gap-6">
-					{store.isPlatformHome && <Link
-						href="/stores"
-						className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
-					>
-						Browse Stores
-					</Link>}
-					{store.navigation.map((link) => (
+					{(store.isPlatformHome ? platformNavigation : store.navigation).map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
@@ -63,27 +63,12 @@ export default function Header() {
 						>
 							{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
 						</button>
-						<SearchOverlay />
-						<NotificationCenter />
-						<Link
-							href="/cart"
-							aria-label="Open shopping cart"
-							className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"
-						>
-							<ShoppingCart size={20} />
-							{itemCount > 0 && (
-								<span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-									{itemCount}
-								</span>
-							)}
-						</Link>
-						<Link
-							href="/account"
-							aria-label="Open account"
-							className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700"
-						>
-							<User size={20} />
-						</Link>
+						{!store.isPlatformHome && <>
+							<SearchOverlay />
+							<NotificationCenter />
+							<Link href="/cart" aria-label="Open shopping cart" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{itemCount}</span>}</Link>
+							<Link href="/account" aria-label="Open account" className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700"><User size={20} /></Link>
+						</>}
 
 						{/* Mobile menu toggle */}
 						<button
@@ -106,14 +91,7 @@ export default function Header() {
 						className="md:hidden glass border-t border-white/10 overflow-hidden"
 					>
 						<div className="px-4 py-4 flex flex-col gap-3">
-							{store.isPlatformHome && <Link
-								href="/stores"
-								className="block text-gray-700 dark:text-gray-300 hover:text-primary"
-								onClick={() => setMobileMenuOpen(false)}
-							>
-								Browse Stores
-							</Link>}
-						{store.navigation.map((link) => (
+						{(store.isPlatformHome ? platformNavigation : store.navigation).map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}

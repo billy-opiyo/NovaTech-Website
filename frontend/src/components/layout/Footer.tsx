@@ -1,8 +1,12 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
+import { clientConfig } from "@/config/client.config"
+
+const PLATFORM_HOME_URL = clientConfig.site.url
 
 const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 	{
@@ -31,17 +35,31 @@ const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 	},
 ]
 
-const customerServiceLinks = [
+const shopperServiceLinks = [
 	{ label: "Contact Us", href: "/contact" },
 	{ label: "FAQs", href: "/faqs" },
 	{ label: "Return Policy", href: "/return-policy" },
 	{ label: "Warranty", href: "/warranty" },
 ]
 
+const merchantServiceLinks = [
+	{ label: "Merchant Support", href: "/contact" },
+	{ label: "Merchant FAQs", href: "/faqs" },
+	{ label: "Start a Store", href: "/onboarding" },
+	{ label: "Subscription & Billing", href: "/manage/billing" },
+]
+
 const quickLinks = [
 	{ label: "About Us", href: "/about" },
 	{ label: "Shop", href: "/products" },
 	{ label: "Track Order", href: "/account/orders" },
+	{ label: "Blog", href: "/blog" },
+]
+
+const platformQuickLinks = [
+	{ label: "Browse Stores", href: "/stores?all=1" },
+	{ label: "About Nurava Tech", href: "/about" },
+	{ label: "Contact Platform", href: "/contact" },
 	{ label: "Blog", href: "/blog" },
 ]
 
@@ -54,6 +72,16 @@ const legalLinks = [
 export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
+	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
+
+	useEffect(() => {
+		const hostname = window.location.hostname
+		if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
+			setPlatformHomeHref(`${window.location.protocol}//localhost${window.location.port ? `:${window.location.port}` : ""}`)
+		} else {
+			setPlatformHomeHref(PLATFORM_HOME_URL)
+		}
+	}, [])
 
 	return (
 		<footer className="glass mt-20 border-t border-white/10">
@@ -66,9 +94,9 @@ export default function Footer() {
 				</div>
 
 				<div className="mx-auto lg:mx-0">
-					<h4 className="font-semibold mb-3">Customer Service</h4>
+					<h4 className="font-semibold mb-3">{store.isPlatformHome ? "Merchant Support" : "Customer Service"}</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{customerServiceLinks.map(({ label, href }) => (
+						{(store.isPlatformHome ? merchantServiceLinks : shopperServiceLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={href} className="hover:text-primary transition-colors">
 									{label}
@@ -81,7 +109,8 @@ export default function Footer() {
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">Quick Links</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{quickLinks.map(({ label, href }) => (
+						{!store.isPlatformHome && <li><a href={platformHomeHref} className="font-semibold text-primary hover:underline">Nurava Tech Homepage</a></li>}
+						{(store.isPlatformHome ? platformQuickLinks : quickLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={href} className="hover:text-primary transition-colors">
 									{label}

@@ -221,6 +221,37 @@ pre-billing state.
 - Added setup-fee and recurring-price inputs to `/platform/billing`; plan edits are persisted through the existing platform billing API and apply to future billing configuration.
 - Verification remains gated on the configured database for real tenant metrics; unavailable database states remain explicit and do not use fabricated data.
 
+### 2026-08-20 — Platform social-proof store discovery
+
+- Restructured the platform root homepage so first-time shoppers see store discovery instead of merchant shopping sections. It now groups published stores as Top Rated, Most Reviewed, and New and Growing using approved review ratings/review volume, product counts, and catalogue image previews.
+- Kept merchant hero, shop-by-category, featured products, testimonials, newsletter, contact/map sections, and merchant search/cart/account/mobile/floating actions on individual store hosts only.
+- Added a `Nurava Tech Homepage` quick link to merchant-store footers. It returns to the canonical platform homepage and uses the local platform host during `{slug}.localhost` previews.
+- The platform discovery ranking is based only on stored approved reviews and catalogue data; stores without review history are labeled as new/growing rather than assigned an unsupported quality claim.
+
+### 2026-08-20 — Canonical platform footer navigation fix
+
+- Corrected the merchant-store `Nurava Tech Homepage` footer link so it always targets the canonical platform host `https://nuravatech.com` in deployed environments, rather than inheriting an individual store URL.
+- Local merchant previews now target the platform root on the active local port, and the link uses a normal browser navigation to switch hosts reliably.
+
+### 2026-08-20 — Canonical platform host resolution fix
+
+- Updated server host resolution so `nuravatech.com` and `www.nuravatech.com` are recognized as platform hosts before any merchant `Domain` record is consulted.
+- Platform-root store context now uses Nurava Tech platform defaults and loads the discovery directory separately, preventing a stale or misassigned domain row from rendering an individual merchant homepage after the footer navigation.
+- Merchant subdomains and verified custom domains retain their tenant-specific resolution; only the canonical platform hosts bypass merchant-domain lookup.
+- Verification: frontend and backend TypeScript checks passed.
+
+### 2026-08-20 — Platform-only splash and merchant support surfaces
+
+- Restricted the branded splash screen to the platform homepage (`/` on the canonical platform host) and the protected `/platform` control plane; individual merchant homepages, merchant pages, and legacy `/admin` pages no longer preload or display it.
+- Changed the platform footer section from shopper customer service to merchant support links for onboarding, merchant FAQs, platform support, and subscription billing. Storefront hosts retain shopper-facing contact, FAQ, returns, and warranty links.
+- Made the contact and FAQ surfaces host-aware so the platform host explains merchant onboarding, subscriptions, domains, hosting, and platform support while individual stores continue to answer shopper questions.
+- Added merchant-focused platform variants of the privacy policy and terms. Storefront hosts retain shopper-facing policy variants that identify the independent merchant as responsible for sales, delivery, refunds, replacements, warranties, and customer support.
+
+### 2026-08-20 — Platform navigation for merchants and shoppers
+
+- Added platform-only top navigation in the order `Home`, `Browse Stores`, and `Start a Store`, on both desktop and mobile menus.
+- Merchant storefront navigation remains store-specific and does not inherit the platform onboarding or discovery links.
+
 ### Pre-Phase 5 handoff
 
 - The shopper discovery and shared-storefront slice is ready for Phase 5 hardening: `/stores` is the shopper entry point, while each store's catalog, cart, account, and checkout remain on that store's resolved host.

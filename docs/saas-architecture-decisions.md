@@ -17,7 +17,7 @@ This document records implementation defaults for the first controlled beta. It 
 - The initial deployment uses one Next.js application and one PostgreSQL database with server-enforced logical tenant isolation.
 - The canonical platform domain is `nuravatech.com`; merchant platform hosts use `{store-slug}.nuravatech.com` once DNS and deployment routing are configured.
 - Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`, and supports published store previews at `{store-slug}.localhost`; unknown hosts do not silently select a tenant.
-- Verified custom domains take precedence over verified platform subdomains.
+- Verified custom domains take precedence over verified platform subdomains, while the canonical `nuravatech.com` and `www.nuravatech.com` hosts are reserved for platform discovery and are resolved before merchant domain records.
 - A store must be published and its host verified before public storefront resolution. Suspended, unpublished, unknown, and unverified hosts produce explicit unavailable states.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
 
@@ -25,8 +25,9 @@ This document records implementation defaults for the first controlled beta. It 
 
 - `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.
 - Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
-- The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing and selection remain inside the selected store, then the shopper contacts that merchant directly to complete the transaction.
-- The shared homepage component order and responsive layout are preserved across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`.
+- The platform homepage and directory may show approved review ratings, review volume, product counts, and catalogue image previews to support store choice, but they do not create a shared marketplace cart. Product browsing and selection remain inside the selected store, then the shopper contacts that merchant directly to complete the transaction.
+- Merchant store homepage component order and responsive layout remain shared across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`; these merchant sections are not rendered on the platform root homepage.
+- Merchant storefront action controls remain host-specific. The platform root focuses on discovery, while merchant footers link back to the canonical Nurava Tech homepage for choosing another store.
 - A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The legacy preferred-store cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
 - `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
 

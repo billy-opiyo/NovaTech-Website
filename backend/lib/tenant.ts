@@ -46,16 +46,26 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 	const hostname = normalizeHostname(request.headers.get("host"))
 	if (!hostname) throw new TenantResolutionError("UNKNOWN_HOST", "A valid request host is required.")
 
-	const domain = await prisma.domain.findUnique({
-		where: { hostname },
-		select: {
-			hostname: true,
-			verificationStatus: true,
-			tenantId: true,
-			storeId: true,
-			store: { select: { slug: true, publicationStatus: true, tenant: { select: { status: true } } } },
-		},
-	})
+	const platformDomain = getPlatformDomain()
+	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
+	const isLocalSubdomain = hostname.endsWith(".localhost")
+	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}`
+
+	// The canonical platform hosts must win over any stale or misconfigured
+	// Domain row. Otherwise the platform homepage can resolve as a merchant
+	// store after a full navigation from a storefront footer.
+	const domain = isCanonicalPlatformHost
+		? null
+		: await prisma.domain.findUnique({
+				where: { hostname },
+				select: {
+					hostname: true,
+					verificationStatus: true,
+					tenantId: true,
+					storeId: true,
+					store: { select: { slug: true, publicationStatus: true, tenant: { select: { status: true } } } },
+				},
+			})
 
 	if (domain) {
 		if (domain.verificationStatus !== "VERIFIED") {
@@ -74,11 +84,8 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 		}
 	}
 
-	const platformDomain = getPlatformDomain()
-	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
-	const isLocalSubdomain = hostname.endsWith(".localhost")
 	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`)
-	const slug = isLocalHost || hostname === platformDomain
+	const slug = isLocalHost || isCanonicalPlatformHost
 		? "novatech"
 		: isLocalSubdomain
 			? hostname.slice(0, -".localhost".length)

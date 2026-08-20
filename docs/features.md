@@ -4,9 +4,9 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Home Page** | Animated hero banner, shop-by-category grid, featured products carousel, customer testimonials, and newsletter signup. |
-| **Shared Multi-Store Homepage** | Every store keeps the same homepage component order and responsive layout; active-store branding, copy, categories, featured products, testimonials, newsletter content, contact details, and map links are resolved through `StoreContext`. |
-| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. The `Browse Stores` action is shown on the platform homepage only, not inside individual store navigation. |
+| **Platform Homepage** | The platform root is a store-discovery experience with social-proof groups for top-rated, most-reviewed, and new/growing stores. It shows approved review ratings, review volume, product counts, catalogue image previews, and store links. |
+| **Merchant Store Homepage** | Each resolved merchant host keeps its own hero, shop-by-category grid, featured products carousel, customer testimonials, newsletter, contact details, and map sections. |
+| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. `Browse Stores` and platform discovery controls stay outside individual merchant navigation. |
 | **Store Host Routing** | Local previews support `{store-slug}.localhost`; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
@@ -45,9 +45,9 @@
 | **Client Configuration and Store Context** | `frontend/src/config/client.config.ts` remains the safe code fallback for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags. Published store settings are resolved through the active `StoreContext`. |
 | **Theme Presets** | Reusable visual systems in `frontend/src/config/theme-presets.ts`, selected through `themePreset` without recoding individual pages. |
 | **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
-| **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, route loading skeletons, and accessible loading status messaging. |
+| **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, and accessible loading status messaging on the platform homepage and protected platform control plane only; merchant storefront and admin routes open without the splash. |
 | **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, and `aria-live` announcements. |
-| **Responsive Navigation** | Desktop header, mobile navigation, responsive footer grid, actionable contact links, theme toggle, cart/account actions, and shared search access. Store discovery navigation is platform-only; merchant storefronts keep shoppers inside the active store. |
+| **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Start a Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava Tech Homepage` return link. |
 
 ## 👑 Admin Panel
 

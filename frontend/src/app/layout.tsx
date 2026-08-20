@@ -34,9 +34,6 @@ export default async function RootLayout({
 	return (
 		<html
 			lang={store.site.language}
-			className={
-				store.features.showSplashScreen ? "splash-pending" : undefined
-			}
 			suppressHydrationWarning
 			style={themeToCssVariables(activeTheme) as React.CSSProperties}
 		>
@@ -58,31 +55,6 @@ export default async function RootLayout({
 					}}
 				/>
 				<link rel="icon" type="image/png" href={store.brand.favicon} />
-				{store.features.showSplashScreen && (
-					<>
-						<link
-							rel="preload"
-							as="image"
-							href="/images/NovaTech%20cover%20mobile.png"
-							media="(max-width: 767px)"
-							fetchPriority="high"
-						/>
-						<link
-							rel="preload"
-							as="image"
-							href="/images/NovaTech%20cover%20mobile.png"
-							media="(min-width: 768px) and (max-width: 1199px)"
-							fetchPriority="high"
-						/>
-						<link
-							rel="preload"
-							as="image"
-							href="/images/NovaTech%20cover%20desktop.png"
-							media="(min-width: 1200px)"
-							fetchPriority="high"
-						/>
-					</>
-				)}
 				<link rel="preconnect" href="https://images.unsplash.com" />
 				<link rel="dns-prefetch" href="https://images.unsplash.com" />
 				<link rel="preconnect" href="https://images.pexels.com" />
@@ -94,7 +66,7 @@ export default async function RootLayout({
 				<meta name="theme-color" content={activeTheme.dark.background} />
 			</head>
 			<body
-			className={`min-h-screen bg-theme-bg text-theme-text transition-colors duration-300 ${store.features.showSplashScreen ? "splash-pending" : ""}`}
+			className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300"
 			>
 				<StoreContextProvider value={store}>
 				<ThemeProvider>
@@ -102,29 +74,17 @@ export default async function RootLayout({
 						<CartProvider>
 							<SessionResume />
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
-							{store.features.showSplashScreen ? (
-								<SplashScreen>
-									<>
-										<Header />
-										<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
-											{children}
-										</main>
-										<Footer />
-										<MobileNav />
-										<FloatingActions />
-									</>
-								</SplashScreen>
-							) : (
+							<SplashScreen platformHome={store.isPlatformHome}>
 								<>
 									<Header />
 									<main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
 										{children}
 									</main>
 									<Footer />
-									<MobileNav />
-									<FloatingActions />
+									{!store.isPlatformHome && <MobileNav />}
+									{!store.isPlatformHome && <FloatingActions />}
 								</>
-							)}
+							</SplashScreen>
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>
