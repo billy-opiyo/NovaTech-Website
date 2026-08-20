@@ -339,7 +339,7 @@ export default function CategoryPage() {
 		trendingProducts: [],
 		subcategories: [],
 	}
-	if (!categoryData[slug]) return <NotFoundState title="Category not found" description="That product category is not available. Explore the full NovaTech Store catalogue instead." />
+	if (!categoryData[slug]) return <NotFoundState title="Category not found" description="That product category is not available. Explore the full Nurava Tech catalogue instead." />
 	const trendingProducts = categoryData[slug]?.trendingProducts || []
 
 	return (

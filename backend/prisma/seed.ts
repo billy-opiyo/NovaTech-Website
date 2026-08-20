@@ -15,11 +15,11 @@ async function main() {
 
 	const adminHash = await bcrypt.hash(seedPassword, 12)
 	const admin = await prisma.user.upsert({
-where: { email: "admin@novatechstore.co.ke" },
+		where: { email: "admin@nuravatech.com" },
 		update: {},
 		create: {
 			name: "Admin User",
-			email: "admin@novatechstore.co.ke",
+			email: "admin@nuravatech.com",
 			passwordHash: adminHash,
 			emailVerified: new Date(),
 			role: "SUPERADMIN",
@@ -59,19 +59,19 @@ where: { email: "admin@novatechstore.co.ke" },
 	const tenant = await prisma.tenant.upsert({
 		where: { id: "novatech-tenant" },
 		update: { planId: trialPlan.id, status: "ACTIVE" },
-		create: { id: "novatech-tenant", legalName: "NovaTech Store", status: "ACTIVE", planId: trialPlan.id },
+		create: { id: "novatech-tenant", legalName: "Nurava Tech", status: "ACTIVE", planId: trialPlan.id },
 	})
 	await prisma.store.upsert({
 		where: { id: "novatech-store" },
 		update: { tenantId: tenant.id, publicationStatus: "PUBLISHED" },
-		create: { id: "novatech-store", tenantId: tenant.id, name: "NovaTech Store", slug: "novatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
+		create: { id: "novatech-store", tenantId: tenant.id, name: "Nurava Tech", slug: "novatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
 	})
 	await prisma.membership.upsert({
 		where: { tenantId_userId: { tenantId: tenant.id, userId: admin.id } },
 		update: { role: "STORE_OWNER", active: true, acceptedAt: new Date() },
 		create: { tenantId: tenant.id, userId: admin.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
 	})
-	console.log("✅ NovaTech tenant and store ready")
+	console.log("✅ Nurava Tech tenant and store ready")
 
 	const categories = await Promise.all([
 		prisma.category.create({

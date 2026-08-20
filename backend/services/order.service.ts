@@ -2,6 +2,7 @@ import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
 import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
+import { PLATFORM_BRAND_NAME } from "../lib/brand"
 
 export interface CreateOrderData {
 	tenantId: string
@@ -305,7 +306,7 @@ export async function updateOrderStatus(
 
 			await sendWhatsAppMessage({
 				to: shippingPhone.replace(/^0/, "254"),
-text: `NovaTech Store Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
+text: `${PLATFORM_BRAND_NAME} Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
 			})
 		} catch (error) {
 			console.error("Failed to send WhatsApp notification:", error)

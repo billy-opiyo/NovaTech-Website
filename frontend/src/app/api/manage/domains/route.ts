@@ -6,6 +6,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
 import { customDomainSchema } from "backend/validators/domainValidator"
+import { getPlatformDomain } from "backend/lib/platform-domain"
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -30,11 +31,11 @@ export async function POST(request: NextRequest) {
 		const { context } = await access(request)
 		const parsed = customDomainSchema.safeParse(await request.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Enter a valid domain hostname.", issues: parsed.error.flatten() }, { status: 400 })
-		const platformDomain = (process.env.PLATFORM_DOMAIN || "novatechstore.co.ke").replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+		const platformDomain = getPlatformDomain()
 		if (parsed.data.hostname === platformDomain || parsed.data.hostname.endsWith(`.${platformDomain}`) || parsed.data.hostname.endsWith(".localhost")) return NextResponse.json({ message: "Use the store platform hostname for platform subdomains; custom domains must be independently owned hostnames." }, { status: 400 })
-		const verificationToken = `novatech-domain-${randomBytes(18).toString("hex")}`
+		const verificationToken = `nurava-domain-${randomBytes(18).toString("hex")}`
 		const domain = await prisma.domain.create({ data: { tenantId: context.tenantId, storeId: context.storeId, hostname: parsed.data.hostname, type: DomainType.CUSTOM, verificationToken, verificationStatus: "PENDING" }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true } })
-		return NextResponse.json({ domain, verification: { recordType: "TXT", name: `_novatech-verification.${domain.hostname}`, value: verificationToken, status: "pending_dns_check" } }, { status: 201 })
+		return NextResponse.json({ domain, verification: { recordType: "TXT", name: `_nurava-verification.${domain.hostname}`, value: verificationToken, status: "pending_dns_check" } }, { status: 201 })
 	} catch (error: any) {
 		return NextResponse.json({ message: error.code === "P2002" ? "That domain is already registered." : error.message || "Unable to add domain" }, { status: error.status || (error.code === "P2002" ? 409 : 503) })
 	}

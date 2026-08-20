@@ -7,6 +7,7 @@ import { z } from "zod"
 import { MembershipRole } from "@prisma/client"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireMembership } from "../lib/tenant-access"
+import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -151,7 +152,7 @@ export async function submitContact(req: NextRequest) {
 		})
 
 		await sendEmail({
-to: "support@novatechstore.co.ke",
+			to: PLATFORM_SUPPORT_EMAIL,
 			subject: `New Support Ticket: ${validated.subject}`,
 			html: `
 				<h2>New Support Request</h2>

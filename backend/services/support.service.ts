@@ -1,8 +1,9 @@
 import prisma from "../lib/db"
 import { sendEmail } from "../lib/email"
 import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
+import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 
-const SUPPORT_EMAIL = "support@novatechstore.co.ke"
+const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
 
 export interface SupportTicketData {
 	tenantId: string

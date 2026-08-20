@@ -1,6 +1,7 @@
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
+import { getPlatformDomain } from "backend/lib/platform-domain"
 import { clientConfig } from "@/config/client.config"
 import type { StoreContext } from "./store-context.types"
 
@@ -15,7 +16,7 @@ function isLocalPreviewHost(value: string | null): boolean {
 function isPlatformHost(value: string | null): boolean {
 	if (!value) return false
 	const hostname = value.trim().toLowerCase().split(":")[0]
-	const platformDomain = (process.env.PLATFORM_DOMAIN || "novatechstore.co.ke").replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+	const platformDomain = getPlatformDomain()
 	return isLocalPreviewHost(value) || hostname === platformDomain
 }
 

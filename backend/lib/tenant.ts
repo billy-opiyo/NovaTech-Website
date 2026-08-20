@@ -1,4 +1,5 @@
 import prisma from "./db"
+import { getPlatformDomain } from "./platform-domain"
 
 export type TenantContext = {
 	tenantId: string
@@ -73,7 +74,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 		}
 	}
 
-	const platformDomain = normalizeHostname(process.env.PLATFORM_DOMAIN || "novatechstore.co.ke")
+	const platformDomain = getPlatformDomain()
 	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
 	const isLocalSubdomain = hostname.endsWith(".localhost")
 	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`)

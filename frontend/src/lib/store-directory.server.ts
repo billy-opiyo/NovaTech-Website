@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
 import { normalizeHostname } from "backend/lib/tenant"
+import { getPlatformDomain } from "backend/lib/platform-domain"
 
 export type PublishedStoreDirectoryEntry = {
 	id: string
@@ -86,6 +87,6 @@ export async function getStorePublicUrl(slug: string): Promise<string> {
 		return `http://${slug}.localhost${port}`
 	}
 
-	const platformDomain = (process.env.PLATFORM_DOMAIN || "novatechstore.co.ke").replace(/^https?:\/\//, "").replace(/\/$/, "")
+	const platformDomain = getPlatformDomain()
 	return `https://${slug}.${platformDomain}`
 }

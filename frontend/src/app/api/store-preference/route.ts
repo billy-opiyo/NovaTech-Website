@@ -2,7 +2,12 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
+import { LEGACY_PREFERRED_STORE_COOKIE, PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
+
+function expireLegacyPreference(response: NextResponse) {
+	response.cookies.set(LEGACY_PREFERRED_STORE_COOKIE, "", { path: "/", maxAge: 0 })
+	return response
+}
 
 function localPreviewSlug(host: string | null): string | null {
 	if (!host) return null
@@ -25,7 +30,7 @@ export async function POST(request: Request) {
 					sameSite: "lax",
 					secure: false,
 				})
-				return response
+				return expireLegacyPreference(response)
 			}
 		}
 
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
 			sameSite: "lax",
 			secure: process.env.NODE_ENV === "production",
 		})
-		return response
+		return expireLegacyPreference(response)
 	} catch (error) {
 		return NextResponse.json({ message: error instanceof Error ? error.message : "Store preference unavailable" }, { status: 503 })
 	}

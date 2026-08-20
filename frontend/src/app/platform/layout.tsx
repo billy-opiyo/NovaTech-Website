@@ -7,7 +7,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 		<div className="min-h-screen bg-gray-50 p-6 text-gray-900 dark:bg-dark-bg dark:text-white">
 			<header className="mx-auto mb-8 flex max-w-6xl flex-wrap items-center justify-between gap-4">
 				<div>
-					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">NovaTech platform</p>
+					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nurava Tech platform</p>
 					<h1 className="text-2xl font-bold">Control plane</h1>
 				</div>
 				<nav className="flex flex-wrap gap-4 text-sm font-semibold">

@@ -74,7 +74,7 @@ export default function AccountSettingsPage() {
 	if (loading) return <div className="py-20 text-center text-gray-500">Loading your settings…</div>
 
 	return <div className="mx-auto max-w-3xl space-y-8 py-6 sm:py-10">
-		<div><h1 className="text-3xl font-bold">Account settings</h1><p className="mt-2 text-gray-500">Choose how NovaTech Store looks and how we keep you informed.</p></div>
+		<div><h1 className="text-3xl font-bold">Account settings</h1><p className="mt-2 text-gray-500">Choose how Nurava Tech looks and how we keep you informed.</p></div>
 		<form onSubmit={save} className="space-y-6">
 			<section className="glass-card p-6">
 				<h2 className="mb-5 flex items-center gap-2 text-xl font-semibold"><Palette className="text-primary" size={21} /> Profile and appearance</h2>

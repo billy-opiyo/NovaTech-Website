@@ -4,7 +4,7 @@ export default function AboutPage() {
 	return (
 		<InfoPage
 			title="About Us"
-			description="NovaTech Store makes it easier to buy genuine electronics with confidence anywhere in Kenya."
+			description="Nurava Tech makes it easier to buy genuine electronics with confidence anywhere in Kenya."
 			sections={[
 				{
 					title: "Who we are",

@@ -1,4 +1,4 @@
-# NovaTech SaaS Switch Plan
+# Nurava Tech SaaS Switch Plan
 
 ## Current implementation status (2026-08-19)
 
@@ -20,11 +20,19 @@ pre-billing state.
 
 ## Autonomous execution log
 
+### 2026-08-20 — DNS/SSL production preparation
+
+- Centralized `PLATFORM_DOMAIN` and production public-URL handling so tenant subdomain resolution and custom-domain validation use one configuration source.
+- Added production-only HSTS response headers and documented the Vercel wildcard-domain topology, registrar/DNS requirements, custom-domain sequence, and verification commands in `docs/dns-ssl-runbook.md`.
+- No database migration, DNS record change, certificate issuance, or secret configuration was attempted.
+- Verification passed: frontend/backend TypeScript and `git diff --check`; external verification requires Vercel project and registrar access.
+- Runtime boundary: Vercel domain attachment, wildcard nameserver delegation, DNS propagation, custom-domain routing, and SSL issuance remain external account operations.
+
 ### 2026-08-19 — Non-external SaaS implementation checkpoint complete
 
 - Completed every remaining source-level SaaS feature identified in this execution that does not require live billing, payment-provider credentials, DNS/SSL control, or legal/commercial decisions: tenant isolation hardening, membership authorization, local design preview, staff invitations, domain onboarding state, entitlement/usage visibility, protected API error handling, tenant data export, payment tenant matching, and store settings rollback.
 - Final verification passed: full test suite 44/44, frontend TypeScript, backend TypeScript, and `git diff --check`.
-- Local preview is running on `http://localhost:3000`; homepage probe returned HTTP 200 with NovaTech content. Database-backed routes correctly remain unavailable against the unreachable configured Neon database.
+- Local preview is running on `http://localhost:3000`; homepage probe returned HTTP 200 with Nurava Tech content. Database-backed routes correctly remain unavailable against the unreachable configured Neon database.
 - Remaining launch gates are intentionally untouched: database migration/restore verification, live SaaS billing and shopper payment providers, DNS/SSL automation, provider webhooks in production, and legal/tax/privacy/commercial decisions.
 
 ### 2026-08-19 — Store settings rollback
@@ -140,9 +148,9 @@ pre-billing state.
 - No live prices, tax assumptions, merchant-of-record claim, or provider credentials were invented.
 - Added additive Prisma tenant infrastructure: `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `Plan`, `Subscription`, `UsageCounter`, `FeatureEntitlement`, and `StoreSettingsVersion`.
 - Added nullable ownership columns and tenant indexes to merchant-owned catalog, cart, order, payment, address, review, coupon, notification, support, and audit records.
-- Added migration `backend/prisma/migrations/0004_saas_tenant_foundation` to create the schema, seed the NovaTech tenant/store/verified platform host, and backfill existing rows to `novatech-tenant`.
+- Added migration `backend/prisma/migrations/0004_saas_tenant_foundation` to create the schema, seed the Nurava Tech tenant/store/verified platform host, and backfill existing rows to `novatech-tenant`.
 - Added `resolveTenantFromRequest()`, hostname normalization, deny-by-default `tenantScope()`, active membership checks, and tenant isolation tests.
-- Updated development seed data so the admin is a platform owner and store owner, and new catalog data belongs to the NovaTech tenant.
+- Updated development seed data so the admin is a platform owner and store owner, and new catalog data belongs to the Nurava Tech tenant.
 - Verification passed: Prisma validate, frontend TypeScript, backend TypeScript, full test suite (39/39), focused tenant tests (4/4), and `git diff --check`.
 - Runtime boundary: no `DATABASE_URL` was available for a real migration/restore or live tenant-resolution probe; full tests use their existing no-database fallback and emitted expected missing-provider warnings.
 
@@ -166,7 +174,29 @@ pre-billing state.
 - Full test suite passed: 39/39. Existing test-only provider/database warnings remain expected and no live database migration was attempted.
 - Shopper discovery slice completed before Phase 5: `/stores` lists published stores and featured product context, links to each store's host-resolved storefront, and provides a browse-all escape hatch for returning shoppers.
 - The shared homepage order is preserved for every store while hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links are read from the active `StoreContext`.
-- Added authenticated `User.preferredStoreId` persistence plus the `novatech-preferred-store` browser fallback. Store visits update the preference only after host-based tenant resolution; the preference never authorizes access or replaces tenant scoping.
+- Added authenticated `User.preferredStoreId` persistence plus a legacy preferred-store browser fallback. Store visits update the preference only after host-based tenant resolution; the preference never authorizes access or replaces tenant scoping. The existing cookie key is retained for compatibility.
+
+### 2026-08-20 — Nurava Tech brand and documentation migration
+
+- Updated current Markdown documentation, platform copy, metadata, public URLs, and operational messaging to use the Nurava Tech brand.
+- Set the canonical platform domain to `nuravatech.com` and documented the production DNS/SSL target as `nuravatech.com` with `*.nuravatech.com` for tenant subdomains.
+- Standardized platform email usage to `hello@nuravatech.com` for outbound mail and `support@nuravatech.com` for support routing.
+- Preserved internal migration names, legacy browser keys, seeded compatibility identifiers, asset filenames, and historical repository paths so existing data and runtime lookups remain safe.
+- Verification: Markdown-wide old-brand scan now finds only documented compatibility/history identifiers; documentation links and current brand/domain references use Nurava Tech.
+
+### 2026-08-20 — Preferred-store cookie compatibility migration
+
+- Renamed the active browser preference cookie to `nurava-preferred-store`.
+- Existing `novatech-preferred-store` cookies are read as a one-time fallback and expired after the preference is saved, so this migration does not affect authorization or tenant isolation.
+- The seeded local slug, database tenant/store IDs, migration history, export format, and repository folder name remain unchanged because they require a coordinated database/URL or workspace migration.
+- Verification: frontend TypeScript, backend TypeScript, full tests (46/46), local homepage HTTP 200, and `git diff --check`.
+
+### 2026-08-20 — Prepared database brand follow-up migration
+
+- Added unapplied Prisma migration `0007_nurava_brand_domain` for the database step.
+- It changes the seeded tenant/store display names to Nurava Tech and changes the seeded platform hostname to `novatech.nuravatech.com`.
+- It intentionally preserves `novatech-tenant`, `novatech-store`, `novatech-domain`, and the `novatech` store slug so existing foreign keys and host resolution remain valid until a separately planned slug migration.
+- The migration has not been applied because database rollout remains scheduled as the second-last production-readiness step.
 - Local store previews support `{slug}.localhost`; production directory links use `{slug}.{PLATFORM_DOMAIN}`. The existing mobile artwork remains the storefront background for tablet/iPad widths.
 
 ### Pre-Phase 5 handoff
@@ -177,12 +207,12 @@ pre-billing state.
 - Remaining pre-launch work still includes payment-provider setup, custom-domain verification, preview routing, unscoped legacy admin/API paths, DNS/SSL, and legal/tax/privacy review.
 
 **Date:** 18 August 2026
-**Current implementation:** NovaTech Store's original electronics storefront plus the tenant/store foundation and pre-Phase 5 shopper discovery slice
+**Current implementation:** Nurava Tech's original electronics storefront plus the tenant/store foundation and pre-Phase 5 shopper discovery slice
 **Target product:** A multi-tenant SaaS platform that lets independent digital-electronics merchants create, brand, manage, and publish their own online stores
 
 ## 1. Recommended product direction
 
-NovaTech should become a hosted commerce platform for electronics merchants, rather than a collection of separately configured NovaTech websites.
+Nurava Tech should become a hosted commerce platform for electronics merchants, rather than a collection of separately configured Nurava Tech websites.
 
 Each paying client should be able to:
 
@@ -211,7 +241,7 @@ The current implementation is a good commerce engine for one store, but it is no
 | `frontend/src/config/client.config.ts` | Prototype deployment configuration | Move client branding, SEO, navigation, homepage content, commerce defaults, and feature flags into database-backed store settings. Keep code defaults only as safe fallbacks. |
 | `frontend/src/config/theme-presets.ts` | Reusable foundation | Expose approved presets in a tenant theme editor with validation and preview. Do not allow arbitrary CSS or unsafe HTML. |
 | M-Pesa and Stripe shopper payments | Existing integration | Make provider selection and credentials tenant-aware. Define whether the platform or each merchant is the merchant of record before enabling live payments. |
-| Admin routes under `/admin` | Existing single-store admin | Split into `/platform/*` for NovaTech staff and `/manage/*` for each merchant. |
+| Admin routes under `/admin` | Existing single-store admin | Split into `/platform/*` for Nurava Tech staff and `/manage/*` for each merchant. |
 | R2 storage | Existing foundation | Add tenant-prefixed object keys, ownership checks, quotas, deletion rules, and signed URL controls. |
 | Staging, migrations, CI, tests, health checks, backups | Existing readiness foundation | Add tenant-isolation tests, subscription webhook tests, domain tests, and cross-tenant security tests. |
 
@@ -257,10 +287,10 @@ The final prices, currency, tax treatment, trial length, overage rules, grace pe
 
 Separate these two payment flows:
 
-1. **SaaS billing:** the merchant pays NovaTech for use of the platform.
+1. **SaaS billing:** the merchant pays Nurava Tech for use of the platform.
 2. **Shopper checkout:** a shopper pays for products sold by that merchant.
 
-The platform must decide whether it processes shopper money on behalf of merchants or whether each merchant connects its own M-Pesa/Stripe account. This affects contracts, refunds, settlements, chargebacks, tax, KYC, reporting, and compliance. Do not silently reuse NovaTech's current payment credentials for every merchant.
+The platform must decide whether it processes shopper money on behalf of merchants or whether each merchant connects its own M-Pesa/Stripe account. This affects contracts, refunds, settlements, chargebacks, tax, KYC, reporting, and compliance. Do not silently reuse Nurava Tech's current payment credentials for every merchant.
 
 ## 4. Tenant and URL architecture
 
@@ -268,7 +298,7 @@ Use a shared application and shared PostgreSQL database initially, with strict l
 
 Support these URL forms in stages:
 
-- marketing site: `https://novatechstore.co.ke` or the chosen platform domain;
+- marketing site: `https://nuravatech.com`;
 - merchant preview: `https://{store-slug}.platform-domain.example`;
 - merchant custom domain: `https://shop.clientdomain.example`;
 - merchant dashboard: `https://{store-slug}.platform-domain.example/manage` or a central dashboard with an explicit active-store selector;
@@ -319,7 +349,7 @@ The current global uniqueness of product slugs, SKUs, category names, and coupon
 
 Keep a global `User` identity if desired, but make access store-specific through `Membership`. A shopper may have an account on more than one store, while a merchant staff member may belong to several stores with different roles.
 
-For safer migration, first add nullable tenant fields, create one tenant/store representing the current NovaTech data, backfill every existing row, add validation and indexes, then make the fields required and remove the old global assumptions.
+For safer migration, first add nullable tenant fields, create one tenant/store representing the current Nurava Tech data, backfill every existing row, add validation and indexes, then make the fields required and remove the old global assumptions.
 
 ## 6. Authentication, authorization, and tenant isolation
 
@@ -533,7 +563,7 @@ Add observability dimensions for `tenantId`, `storeId`, request ID, user ID, rou
 ### Phase 1 — Tenant foundation
 
 - Add tenant/store, membership, domain, plan, subscription, and settings models.
-- Create the NovaTech store as the first tenant and backfill all existing data.
+- Create the Nurava Tech store as the first tenant and backfill all existing data.
 - Implement request tenant resolution and tenant-scoped repositories.
 - Add migration, seed, rollback, and backup procedures.
 
@@ -593,7 +623,7 @@ The switch is ready for a controlled beta only when:
 The safest first coding slice is the tenant foundation, not billing or a new marketing homepage:
 
 1. add `Tenant`, `Store`, and `Membership` models;
-2. create a NovaTech tenant and backfill existing records;
+2. create a Nurava Tech tenant and backfill existing records;
 3. implement `resolveTenantFromRequest()`;
 4. add tenant scope to products, categories, carts, orders, coupons, reviews, and uploads;
 5. write cross-tenant authorization tests; and

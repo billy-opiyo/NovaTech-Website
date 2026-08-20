@@ -7,7 +7,7 @@ separate rollout step.
 
 ## Current architecture audit
 
-NovaTech is a Next.js App Router monorepo with shared server-side code under
+Nurava Tech is a Next.js App Router monorepo with shared server-side code under
 `backend/`. Prisma/PostgreSQL is the system of record. Merchant workspaces use
 `/manage`, platform operators use `/platform`, and storefront requests resolve
 their tenant through `resolveTenantFromRequest()` before tenant-owned queries.

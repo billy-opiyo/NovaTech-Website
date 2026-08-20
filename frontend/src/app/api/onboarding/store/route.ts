@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/storeValidator"
+import { getPlatformDomain } from "backend/lib/platform-domain"
 
 export async function GET() {
 	const session = await auth()
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 	const data = parsed.data
 	const slug = data.slug || normalizeStoreSlug(data.name)
 	if (slug.length < 3) return NextResponse.json({ message: "Choose a longer store name or slug" }, { status: 400 })
-	const platformDomain = (process.env.PLATFORM_DOMAIN || "novatechstore.co.ke").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "")
+	const platformDomain = getPlatformDomain()
 
 	try {
 		const result = await prisma.$transaction(async (transaction) => {

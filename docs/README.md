@@ -1,10 +1,10 @@
-# NovaTech Store — Documentation
+# Nurava Tech — Documentation
 
-This directory contains documentation for the NovaTech Store hosted storefront platform, whose first release supports separate electronics stores for the Kenyan market.
+This directory contains documentation for the Nurava Tech hosted storefront platform, whose first release supports separate electronics stores for the Kenyan market.
 
 ## Project Overview
 
-NovaTech Store is a **monorepo** managed with **npm workspaces**, containing:
+Nurava Tech is a **monorepo** managed with **npm workspaces**, containing:
 
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
@@ -17,7 +17,7 @@ The latest implementation updates include:
 
 - Added public company and customer-service pages for About, Blog, FAQs, Warranty, and Return Policy, linked through the footer's dynamic Customer Service and Quick Links sections.
 - Added direct `tel:` and `mailto:` links to the contact information shown on the home page.
-- Replaced the header's hardcoded logo with the NovaTech icon served through Next.js `Image`.
+- Replaced the header's hardcoded logo with the Nurava Tech icon served through Next.js `Image`.
 - Added local product image assets and a shared `getProductImage` resolver, with fallback handling across product listings, product details, recommendations, wishlist, inventory, and admin product views.
 - Added `/admin/dashboard` as the canonical dashboard route; `/admin` now redirects to it, and the support tickets link uses `/admin/support`.
 - Improved select controls for light and dark themes and disabled the development indicator overlay.
@@ -57,7 +57,7 @@ The latest UI implementation updates include:
 - Added SEO metadata and image-host preconnect configuration, and improved navbar text truncation and shared notification behavior.
 - Added the shopper `/stores` directory, published-store filtering, featured-product context, per-store host links, and a browse-all escape hatch.
 - Preserved the shared homepage structure for every store while resolving branding, homepage content, contact details, and map links from the active `StoreContext`.
-- Added authenticated preferred-store persistence through `User.preferredStoreId`, with the `novatech-preferred-store` cookie as a returning-browser fallback. This preference is not an authorization mechanism.
+- Added authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie as a returning-browser fallback. This preference is not an authorization mechanism.
 - Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
 - Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
 
@@ -101,7 +101,7 @@ Credentials are intentionally not documented here and must be configured only af
 
 ## Page links
 
-Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://novatechstore.co.ke`.
+Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://nuravatech.com`.
 
 The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. Legacy `/admin` pages use `ADMIN` or `SUPERADMIN`; merchant workspace pages under `/manage` use the resolved store membership boundary.
 
@@ -111,87 +111,87 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Store directory | Public | [Open](http://localhost:3000/stores) | [Open](https://novatechstore.co.ke/stores) |
-| Home | Public | [Open](http://localhost:3000/) | [Open](https://novatechstore.co.ke/) |
-| Products | Public | [Open](http://localhost:3000/products) | [Open](https://novatechstore.co.ke/products) |
-| Product detail | Public; dynamic | `http://localhost:3000/products/{product-slug}` | `https://novatechstore.co.ke/products/{product-slug}` |
-| Category landing | Public; dynamic | `http://localhost:3000/category/{category-slug}` | `https://novatechstore.co.ke/category/{category-slug}` |
-| Phones category | Public | [Open](http://localhost:3000/category/phones) | [Open](https://novatechstore.co.ke/category/phones) |
-| Laptops category | Public | [Open](http://localhost:3000/category/laptops) | [Open](https://novatechstore.co.ke/category/laptops) |
-| Tablets category | Public | [Open](http://localhost:3000/category/tablets) | [Open](https://novatechstore.co.ke/category/tablets) |
-| Accessories category | Public | [Open](http://localhost:3000/category/accessories) | [Open](https://novatechstore.co.ke/category/accessories) |
-| Deals | Public | [Open](http://localhost:3000/deals) | [Open](https://novatechstore.co.ke/deals) |
-| Compare products | Public | [Open](http://localhost:3000/compare) | [Open](https://novatechstore.co.ke/compare) |
-| Contact | Public | [Open](http://localhost:3000/contact) | [Open](https://novatechstore.co.ke/contact) |
-| About | Public | [Open](http://localhost:3000/about) | [Open](https://novatechstore.co.ke/about) |
-| Blog | Public | [Open](http://localhost:3000/blog) | [Open](https://novatechstore.co.ke/blog) |
-| FAQs | Public | [Open](http://localhost:3000/faqs) | [Open](https://novatechstore.co.ke/faqs) |
-| Return policy | Public | [Open](http://localhost:3000/return-policy) | [Open](https://novatechstore.co.ke/return-policy) |
-| Warranty | Public | [Open](http://localhost:3000/warranty) | [Open](https://novatechstore.co.ke/warranty) |
-| Cart | Signed in | [Open](http://localhost:3000/cart) | [Open](https://novatechstore.co.ke/cart) |
-| Checkout | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://novatechstore.co.ke/checkout) |
+| Store directory | Public | [Open](http://localhost:3000/stores) | [Open](https://nuravatech.com/stores) |
+| Home | Public | [Open](http://localhost:3000/) | [Open](https://nuravatech.com/) |
+| Products | Public | [Open](http://localhost:3000/products) | [Open](https://nuravatech.com/products) |
+| Product detail | Public; dynamic | `http://localhost:3000/products/{product-slug}` | `https://nuravatech.com/products/{product-slug}` |
+| Category landing | Public; dynamic | `http://localhost:3000/category/{category-slug}` | `https://nuravatech.com/category/{category-slug}` |
+| Phones category | Public | [Open](http://localhost:3000/category/phones) | [Open](https://nuravatech.com/category/phones) |
+| Laptops category | Public | [Open](http://localhost:3000/category/laptops) | [Open](https://nuravatech.com/category/laptops) |
+| Tablets category | Public | [Open](http://localhost:3000/category/tablets) | [Open](https://nuravatech.com/category/tablets) |
+| Accessories category | Public | [Open](http://localhost:3000/category/accessories) | [Open](https://nuravatech.com/category/accessories) |
+| Deals | Public | [Open](http://localhost:3000/deals) | [Open](https://nuravatech.com/deals) |
+| Compare products | Public | [Open](http://localhost:3000/compare) | [Open](https://nuravatech.com/compare) |
+| Contact | Public | [Open](http://localhost:3000/contact) | [Open](https://nuravatech.com/contact) |
+| About | Public | [Open](http://localhost:3000/about) | [Open](https://nuravatech.com/about) |
+| Blog | Public | [Open](http://localhost:3000/blog) | [Open](https://nuravatech.com/blog) |
+| FAQs | Public | [Open](http://localhost:3000/faqs) | [Open](https://nuravatech.com/faqs) |
+| Return policy | Public | [Open](http://localhost:3000/return-policy) | [Open](https://nuravatech.com/return-policy) |
+| Warranty | Public | [Open](http://localhost:3000/warranty) | [Open](https://nuravatech.com/warranty) |
+| Cart | Signed in | [Open](http://localhost:3000/cart) | [Open](https://nuravatech.com/cart) |
+| Checkout | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://nuravatech.com/checkout) |
 
 ### Authentication
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Sign in | Public | [Open](http://localhost:3000/auth/signin) | [Open](https://novatechstore.co.ke/auth/signin) |
-| Sign up | Public | [Open](http://localhost:3000/auth/signup) | [Open](https://novatechstore.co.ke/auth/signup) |
-| Forgot password | Public | [Open](http://localhost:3000/auth/forgot-password) | [Open](https://novatechstore.co.ke/auth/forgot-password) |
-| Reset password | Public; token required | [Open](http://localhost:3000/auth/reset-password) | [Open](https://novatechstore.co.ke/auth/reset-password) |
-| Verify email | Public; verification code required | [Open](http://localhost:3000/auth/verify-email) | [Open](https://novatechstore.co.ke/auth/verify-email) |
+| Sign in | Public | [Open](http://localhost:3000/auth/signin) | [Open](https://nuravatech.com/auth/signin) |
+| Sign up | Public | [Open](http://localhost:3000/auth/signup) | [Open](https://nuravatech.com/auth/signup) |
+| Forgot password | Public | [Open](http://localhost:3000/auth/forgot-password) | [Open](https://nuravatech.com/auth/forgot-password) |
+| Reset password | Public; token required | [Open](http://localhost:3000/auth/reset-password) | [Open](https://nuravatech.com/auth/reset-password) |
+| Verify email | Public; verification code required | [Open](http://localhost:3000/auth/verify-email) | [Open](https://nuravatech.com/auth/verify-email) |
 
 ### Legal and policy pages
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Privacy policy | Public | [Open](http://localhost:3000/privacy-policy) | [Open](https://novatechstore.co.ke/privacy-policy) |
-| Cookie policy | Public | [Open](http://localhost:3000/cookie-policy) | [Open](https://novatechstore.co.ke/cookie-policy) |
-| Terms and conditions | Public | [Open](http://localhost:3000/terms) | [Open](https://novatechstore.co.ke/terms) |
+| Privacy policy | Public | [Open](http://localhost:3000/privacy-policy) | [Open](https://nuravatech.com/privacy-policy) |
+| Cookie policy | Public | [Open](http://localhost:3000/cookie-policy) | [Open](https://nuravatech.com/cookie-policy) |
+| Terms and conditions | Public | [Open](http://localhost:3000/terms) | [Open](https://nuravatech.com/terms) |
 
 ### Customer account
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Account overview | Signed in | [Open](http://localhost:3000/account) | [Open](https://novatechstore.co.ke/account) |
-| Orders | Signed in | [Open](http://localhost:3000/account/orders) | [Open](https://novatechstore.co.ke/account/orders) |
-| Order detail | Signed in; dynamic | `http://localhost:3000/account/orders/{order-id}` | `https://novatechstore.co.ke/account/orders/{order-id}` |
-| Order tracking | Signed in; dynamic | `http://localhost:3000/account/orders/{order-id}/track` | `https://novatechstore.co.ke/account/orders/{order-id}/track` |
-| Addresses | Signed in | [Open](http://localhost:3000/account/addresses) | [Open](https://novatechstore.co.ke/account/addresses) |
-| Wishlist | Signed in | [Open](http://localhost:3000/account/wishlist) | [Open](https://novatechstore.co.ke/account/wishlist) |
-| Notifications | Signed in | [Open](http://localhost:3000/account/notifications) | [Open](https://novatechstore.co.ke/account/notifications) |
-| Account settings | Signed in | [Open](http://localhost:3000/account/settings) | [Open](https://novatechstore.co.ke/account/settings) |
+| Account overview | Signed in | [Open](http://localhost:3000/account) | [Open](https://nuravatech.com/account) |
+| Orders | Signed in | [Open](http://localhost:3000/account/orders) | [Open](https://nuravatech.com/account/orders) |
+| Order detail | Signed in; dynamic | `http://localhost:3000/account/orders/{order-id}` | `https://nuravatech.com/account/orders/{order-id}` |
+| Order tracking | Signed in; dynamic | `http://localhost:3000/account/orders/{order-id}/track` | `https://nuravatech.com/account/orders/{order-id}/track` |
+| Addresses | Signed in | [Open](http://localhost:3000/account/addresses) | [Open](https://nuravatech.com/account/addresses) |
+| Wishlist | Signed in | [Open](http://localhost:3000/account/wishlist) | [Open](https://nuravatech.com/account/wishlist) |
+| Notifications | Signed in | [Open](http://localhost:3000/account/notifications) | [Open](https://nuravatech.com/account/notifications) |
+| Account settings | Signed in | [Open](http://localhost:3000/account/settings) | [Open](https://nuravatech.com/account/settings) |
 
 ### Admin console
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Admin root (redirects to dashboard) | Admin | [Open](http://localhost:3000/admin) | [Open](https://novatechstore.co.ke/admin) |
-| Dashboard | Admin | [Open](http://localhost:3000/admin/dashboard) | [Open](https://novatechstore.co.ke/admin/dashboard) |
-| Analytics | Admin | [Open](http://localhost:3000/admin/analytics) | [Open](https://novatechstore.co.ke/admin/analytics) |
-| Products | Admin | [Open](http://localhost:3000/admin/products) | [Open](https://novatechstore.co.ke/admin/products) |
-| Orders | Admin | [Open](http://localhost:3000/admin/orders) | [Open](https://novatechstore.co.ke/admin/orders) |
-| Customers | Admin | [Open](http://localhost:3000/admin/customers) | [Open](https://novatechstore.co.ke/admin/customers) |
-| Reviews | Admin | [Open](http://localhost:3000/admin/reviews) | [Open](https://novatechstore.co.ke/admin/reviews) |
-| Coupons | Admin | [Open](http://localhost:3000/admin/coupons) | [Open](https://novatechstore.co.ke/admin/coupons) |
-| Inventory | Admin | [Open](http://localhost:3000/admin/inventory) | [Open](https://novatechstore.co.ke/admin/inventory) |
-| Deliveries | Admin | [Open](http://localhost:3000/admin/deliveries) | [Open](https://novatechstore.co.ke/admin/deliveries) |
-| Support tickets | Admin | [Open](http://localhost:3000/admin/support) | [Open](https://novatechstore.co.ke/admin/support) |
-| Messages | Admin | [Open](http://localhost:3000/admin/messages) | [Open](https://novatechstore.co.ke/admin/messages) |
-| Settings | Admin | [Open](http://localhost:3000/admin/settings) | [Open](https://novatechstore.co.ke/admin/settings) |
-| Security | Admin | [Open](http://localhost:3000/admin/security) | [Open](https://novatechstore.co.ke/admin/security) |
-| Activity log | Admin | [Open](http://localhost:3000/admin/activity) | [Open](https://novatechstore.co.ke/admin/activity) |
+| Admin root (redirects to dashboard) | Admin | [Open](http://localhost:3000/admin) | [Open](https://nuravatech.com/admin) |
+| Dashboard | Admin | [Open](http://localhost:3000/admin/dashboard) | [Open](https://nuravatech.com/admin/dashboard) |
+| Analytics | Admin | [Open](http://localhost:3000/admin/analytics) | [Open](https://nuravatech.com/admin/analytics) |
+| Products | Admin | [Open](http://localhost:3000/admin/products) | [Open](https://nuravatech.com/admin/products) |
+| Orders | Admin | [Open](http://localhost:3000/admin/orders) | [Open](https://nuravatech.com/admin/orders) |
+| Customers | Admin | [Open](http://localhost:3000/admin/customers) | [Open](https://nuravatech.com/admin/customers) |
+| Reviews | Admin | [Open](http://localhost:3000/admin/reviews) | [Open](https://nuravatech.com/admin/reviews) |
+| Coupons | Admin | [Open](http://localhost:3000/admin/coupons) | [Open](https://nuravatech.com/admin/coupons) |
+| Inventory | Admin | [Open](http://localhost:3000/admin/inventory) | [Open](https://nuravatech.com/admin/inventory) |
+| Deliveries | Admin | [Open](http://localhost:3000/admin/deliveries) | [Open](https://nuravatech.com/admin/deliveries) |
+| Support tickets | Admin | [Open](http://localhost:3000/admin/support) | [Open](https://nuravatech.com/admin/support) |
+| Messages | Admin | [Open](http://localhost:3000/admin/messages) | [Open](https://nuravatech.com/admin/messages) |
+| Settings | Admin | [Open](http://localhost:3000/admin/settings) | [Open](https://nuravatech.com/admin/settings) |
+| Security | Admin | [Open](http://localhost:3000/admin/security) | [Open](https://nuravatech.com/admin/security) |
+| Activity log | Admin | [Open](http://localhost:3000/admin/activity) | [Open](https://nuravatech.com/admin/activity) |
 
 ### Merchant workspace and platform control plane
 
 | Page | Access | Development | Production |
 |---|---|---|---|
-| Store onboarding | Signed in | [Open](http://localhost:3000/onboarding) | [Open](https://novatechstore.co.ke/onboarding) |
-| Merchant dashboard | Store membership | [Open](http://localhost:3000/manage) | [Open](https://novatechstore.co.ke/manage) |
-| Merchant billing | Store owner/admin for mutations | [Open](http://localhost:3000/manage/billing) | [Open](https://novatechstore.co.ke/manage/billing) |
-| Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://novatechstore.co.ke/platform) |
-| Platform tenants | Platform role | [Open](http://localhost:3000/platform/tenants) | [Open](https://novatechstore.co.ke/platform/tenants) |
-| Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://novatechstore.co.ke/platform/billing) |
+| Store onboarding | Signed in | [Open](http://localhost:3000/onboarding) | [Open](https://nuravatech.com/onboarding) |
+| Merchant dashboard | Store membership | [Open](http://localhost:3000/manage) | [Open](https://nuravatech.com/manage) |
+| Merchant billing | Store owner/admin for mutations | [Open](http://localhost:3000/manage/billing) | [Open](https://nuravatech.com/manage/billing) |
+| Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
+| Platform tenants | Platform role | [Open](http://localhost:3000/platform/tenants) | [Open](https://nuravatech.com/platform/tenants) |
+| Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
 
 ### Dynamic URL values
 

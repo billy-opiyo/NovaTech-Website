@@ -1,6 +1,6 @@
-# NovaTech Store — Project Architecture Rules
+# Nurava Tech — Project Architecture Rules
 
-Production-grade web application development rules and standards for the NovaTech Store e-commerce platform.
+Production-grade web application development rules and standards for the Nurava Tech e-commerce platform.
 
 ---
 

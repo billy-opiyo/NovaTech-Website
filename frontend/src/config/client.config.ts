@@ -6,15 +6,15 @@ import type { ThemePresetId } from "./theme-presets"
  */
 export const clientConfig = {
 	brand: {
-		name: "NovaTech Store",
-		shortName: "NovaTech",
+		name: "Nurava Tech",
+		shortName: "Nurava",
 		logo: "/images/NovaTech icon.png",
-		logoAlt: "NovaTech Store logo",
+		logoAlt: "Nurava Tech logo",
 		favicon: "/images/NovaTech%20icon.png",
 		tagline: "Kenya's trusted electronics store",
 	},
 	site: {
-		url: "https://novatechstore.co.ke",
+		url: "https://nuravatech.com",
 		locale: "en_KE",
 		language: "en",
 		country: "Kenya",
@@ -23,10 +23,10 @@ export const clientConfig = {
 	contact: {
 		phoneDisplay: "+254 700 123 456",
 		phoneHref: "tel:+254700123456",
-		email: "support@novatechstore.co.ke",
-		emailHref: "mailto:support@novatechstore.co.ke",
+		email: "support@nuravatech.com",
+		emailHref: "mailto:support@nuravatech.com",
 		whatsappNumber: "254700000000",
-		whatsappMessage: "Hello NovaTech Store, I need help with my order.",
+		whatsappMessage: "Hello Nurava Tech, I need help with my order.",
 		addressLine: "Kimathi Street, CBD",
 		cityCountry: "Nairobi, Kenya",
 		businessHours: "Mon - Sat, 8AM - 6PM",

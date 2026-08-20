@@ -19,7 +19,7 @@ export class BillingError extends Error {
 const paidSubscriptionStatuses = ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] as const
 
 function stripeAmount(amount: number, currency: string) {
-	// NovaTech stores customer-facing amounts in currency units. Stripe's
+	// Nurava Tech stores customer-facing amounts in currency units. Stripe's
 	// Checkout price_data expects the smallest currency unit.
 	return Math.round(amount * (currency.toUpperCase() === "JPY" ? 1 : 100))
 }

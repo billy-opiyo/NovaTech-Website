@@ -1,4 +1,4 @@
-# NovaTech SaaS architecture decisions
+# Nurava Tech SaaS architecture decisions
 
 **Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
 **Date:** 2026-08-19
@@ -15,7 +15,7 @@ This document records implementation defaults for the first controlled beta. It 
 ## Platform and tenant defaults
 
 - The initial deployment uses one Next.js application and one PostgreSQL database with server-enforced logical tenant isolation.
-- The canonical platform domain is `novatechstore.co.ke`; merchant platform hosts use `{store-slug}.novatechstore.co.ke` once DNS and deployment routing are configured.
+- The canonical platform domain is `nuravatech.com`; merchant platform hosts use `{store-slug}.nuravatech.com` once DNS and deployment routing are configured.
 - Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`, and supports published store previews at `{store-slug}.localhost`; unknown hosts do not silently select a tenant.
 - Verified custom domains take precedence over verified platform subdomains.
 - A store must be published and its host verified before public storefront resolution. Suspended, unpublished, unknown, and unverified hosts produce explicit unavailable states.
@@ -27,7 +27,7 @@ This document records implementation defaults for the first controlled beta. It 
 - Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
 - The directory may show featured product context, but it does not create a shared marketplace cart. Product browsing, cart, account, checkout, and orders remain inside the selected store.
 - The shared homepage component order and responsive layout are preserved across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`.
-- A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The `novatech-preferred-store` cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
+- A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The legacy preferred-store cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
 - `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
 
 These behaviors are implemented in source. Public DNS/SSL, a live database migration, regenerated Prisma Client, and live multi-store browser verification remain deployment and Phase 5 tasks.
@@ -36,7 +36,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 
 - The initial plan catalog is entitlement-based and database-backed: `TRIAL`, `STARTER`, `BUSINESS`, and `ENTERPRISE`. The implementation defaults for Starter, Business, and Enterprise are seed data and remain configurable.
 - Billing currency, tax treatment, trial length, grace period, overages, annual discount, refunds, and support SLAs remain commercial, legal, or operational decisions that must be finalized before production self-service billing is enabled.
-- SaaS billing (merchant to NovaTech) and shopper checkout (customer to merchant) are separate ledgers, webhooks, credentials, and audit events.
+- SaaS billing (merchant to Nurava Tech) and shopper checkout (customer to merchant) are separate ledgers, webhooks, credentials, and audit events.
 - Shopper payments remain test-mode only until a written merchant-of-record decision and provider connection strategy are approved. The application must not reuse a platform shopper credential for every merchant.
 - SaaS billing stores tenant billing-customer references and supports Stripe Billing plus invoice-driven M-Pesa setup-fee and renewal collection. Shopper payments remain a separate merchant-connected provider decision and must not reuse SaaS billing credentials.
 

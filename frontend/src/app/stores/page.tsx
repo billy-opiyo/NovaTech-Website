@@ -2,13 +2,14 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { ArrowRight, Store as StoreIcon } from "lucide-react"
 import { getPublishedStores, getStorePublicUrl } from "@/lib/store-directory.server"
-import { PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
+import { LEGACY_PREFERRED_STORE_COOKIE, PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
 
 export default async function StoreDirectoryPage({ searchParams }: { searchParams?: Promise<{ all?: string | string[] }> }) {
 	const stores = await getPublishedStores()
 	const params = searchParams ? await searchParams : {}
 	const browseAll = params.all === "1" || Array.isArray(params.all) && params.all.includes("1")
-	const preferredSlug = (await cookies()).get(PREFERRED_STORE_COOKIE)?.value
+	const cookieStore = await cookies()
+	const preferredSlug = cookieStore.get(PREFERRED_STORE_COOKIE)?.value || cookieStore.get(LEGACY_PREFERRED_STORE_COOKIE)?.value
 	const preferredStore = stores.find((store) => store.slug === preferredSlug)
 	if (preferredStore && !browseAll) redirect(await getStorePublicUrl(preferredStore.slug))
 	const storeLinks = await Promise.all(stores.map(async (store) => ({ store, href: await getStorePublicUrl(store.slug) })))

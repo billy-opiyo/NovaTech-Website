@@ -1,4 +1,4 @@
-# NovaTech Store — Electronics E-Commerce Platform (Kenya)
+# Nurava Tech — Electronics E-Commerce Platform (Kenya)
 
 A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through Stripe or invoice-driven M-Pesa flows.
 
@@ -86,7 +86,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 ### 🎨 Client Customization and Shared UX
 
 - Shared homepage layout with active-store branding and homepage content resolved through `StoreContext`; `client.config.ts` remains the safe developer fallback.
-- Authenticated preferred-store persistence through `User.preferredStoreId`, with a `novatech-preferred-store` cookie fallback for returning browsers.
+- Authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie fallback for returning browsers.
 - Reusable theme presets in `frontend/src/config/theme-presets.ts`.
 - Account profile image uploads for JPG, PNG, WEBP, and GIF files up to 5 MB, with generated storage keys and R2-backed storage.
 - Branded responsive splash screen, route loading UI, shared toast notifications, responsive footer grid, actionable contact links, and shared theme/search/cart/account controls.
@@ -329,6 +329,7 @@ NovaTech Website/
 | `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
 | `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |
 | `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
+| `PLATFORM_DOMAIN`                    | Production platform domain for tenant subdomains       |
 | `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
 | `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
@@ -381,7 +382,7 @@ npm run db:seed        # Seed admin user, categories, products
 The seed creates a **SUPERADMIN** account:
 
 ```
-Email:    admin@novatechstore.co.ke
+Email:    support@nuravatech.com
 Password: admin123
 ```
 
@@ -456,7 +457,7 @@ npm run dev:open
 - ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
 - ✔️ **Shopper store discovery** — `/stores` lists eligible published stores, provides featured product context, and links to host-resolved individual storefronts; `Browse Stores` remains platform-home navigation only
 - ✔️ **Shared store homepage content** — Store-specific content is resolved through `StoreContext` without changing the shared homepage order or responsive layout
-- ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the `novatech-preferred-store` browser fallback
+- ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the legacy preferred-store browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
 - ✔️ **Order API** — List, create (transactional stock decrement, validation, notifications), admin status update
 - ✔️ **Review API** — Full CRUD with verified-purchase detection and role-aware deletion
@@ -560,4 +561,4 @@ The implementation is feature-complete at code level, but production launch rema
 
 ---
 
-© NovaTech Store — Built with Next.js, Prisma & Tailwind CSS
+© Nurava Tech — Built with Next.js, Prisma & Tailwind CSS

@@ -511,7 +511,7 @@ export async function getAnalyticsExport(tenantId: string, timeRange: string = "
 
 	// CSV format
 	const csvRows: string[] = []
-	csvRows.push("NovaTech Analytics Export")
+	csvRows.push("Nurava Tech Analytics Export")
 	csvRows.push(`Time Range: ${timeRange}`)
 	csvRows.push(`Exported At: ${new Date().toISOString()}`)
 	csvRows.push("")

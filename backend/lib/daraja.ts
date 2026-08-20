@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { PLATFORM_BRAND_NAME } from "./brand"
 
 const SANDBOX_BASE_URL = "https://sandbox.safaricom.co.ke"
 const PRODUCTION_BASE_URL = "https://api.safaricom.co.ke"
@@ -114,7 +115,7 @@ export async function stkPush({
 	amount,
 	phone,
 	accountReference,
-	transactionDesc = "NovaTech Store Payment",
+	transactionDesc = `${PLATFORM_BRAND_NAME} Payment`,
 	callbackUrl,
 }: StkPushParams) {
 	const shortcode = process.env.MPESA_SHORTCODE

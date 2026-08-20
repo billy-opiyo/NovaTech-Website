@@ -1,4 +1,4 @@
-# NovaTech Store — Features
+# Nurava Tech — Features
 
 ## 🏠 Public Storefront
 

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 			const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 			await sendEmail({
 				to: normalizedEmail,
-				subject: "Reset your NovaTech password",
+				subject: "Reset your Nurava Tech password",
 				html: `<p>We received a request to reset your password.</p><p><a href="${appUrl}/auth/reset-password?token=${token}">Reset your password</a></p><p>This link expires in one hour.</p>`,
 			})
 		}

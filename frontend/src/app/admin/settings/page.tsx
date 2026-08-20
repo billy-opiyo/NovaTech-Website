@@ -74,7 +74,7 @@ export default function AdminSettingsPage() {
 										<label className="block text-sm font-medium mb-2">Store Name</label>
 										<input
 											type="text"
-											defaultValue="NovaTech Store"
+										defaultValue="Nurava Tech"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
 											readOnly
 										/>
@@ -83,7 +83,7 @@ export default function AdminSettingsPage() {
 										<label className="block text-sm font-medium mb-2">Store Email</label>
 										<input
 											type="email"
-											defaultValue="support@novatech.co.ke"
+										defaultValue="support@nuravatech.com"
 											className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
 											readOnly
 										/>

@@ -13,7 +13,7 @@ export default function HeroBanner() {
 		description: "Explore trusted independent electronics stores, compare their collections, and enter the store that has what you need.",
 		primaryLabel: "Browse Stores",
 		primaryHref: "/stores?all=1",
-		secondaryLabel: "Learn About NovaTech",
+		secondaryLabel: "Learn About Nurava Tech",
 		secondaryHref: "/about",
 	}
 	const copy = store.isPlatformHome ? platformCopy : {
