@@ -4,12 +4,14 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { FaWhatsapp, FaArrowUp } from "react-icons/fa"
-import { clientConfig, getWhatsAppHref } from "@/config/client.config"
+import { useStoreContext } from "@/lib/store-context"
 
 export default function FloatingActions() {
 	const pathname = usePathname()
+	const store = useStoreContext()
 	const [showToTop, setShowToTop] = useState(false)
 	const isAdminPage = pathname.startsWith("/admin")
+	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -27,8 +29,8 @@ export default function FloatingActions() {
 
 	return (
 		<>
-			{!isAdminPage && clientConfig.features.showWhatsAppButton && <Link
-				href={getWhatsAppHref()}
+			{!isAdminPage && store.features.showWhatsAppButton && <Link
+				href={whatsappHref}
 				target="_blank"
 				rel="noreferrer"
 				aria-label="Chat on WhatsApp"

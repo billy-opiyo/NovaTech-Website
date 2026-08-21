@@ -63,7 +63,7 @@ function SignInForm() {
 				className="w-full max-w-md"
 			>
 				<div className="glass-card relative p-8">
-					<AuthCloseButton fallback="/" skipHistory />
+					<AuthCloseButton fallback="/" skipHistory label="Close sign-in dialog" />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
 						<p className="text-gray-500">Sign in to your account to continue</p>

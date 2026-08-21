@@ -8,6 +8,8 @@ type Draft = {
 	themePreset?: string
 	seo?: { description?: string }
 	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string }
+	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; addressLine?: string; cityCountry?: string; businessHours?: string; responseTime?: string }
+	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
 
@@ -43,7 +45,16 @@ export default function StoreDesignPage() {
 				const data = await response.json()
 				const store = data.store || {}
 				setVersions(data.versions || [])
-				setDraft(store.draftSettings || { name: store.name, themePreset: store.themeSettings?.preset, seo: store.seoSettings, homepage: store.homepageSettings })
+					const savedDraft = store.draftSettings || {}
+					setDraft({
+						name: store.name,
+						themePreset: store.themeSettings?.preset,
+						...savedDraft,
+						seo: { ...store.seoSettings, ...savedDraft.seo },
+						homepage: { ...store.homepageSettings, ...savedDraft.homepage },
+						contact: { ...store.contactSettings, ...savedDraft.contact },
+						commerce: { ...store.commerceSettings, ...savedDraft.commerce },
+					})
 			})
 			.catch(() => {
 				setDraft(localDraft)
@@ -138,6 +149,25 @@ export default function StoreDesignPage() {
 					<label className="block"><span className="text-sm font-medium">Hero title</span><input value={draft.homepage?.heroTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">Hero highlight</span><input value={draft.homepage?.heroHighlight || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroHighlight: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">SEO description</span><textarea maxLength={320} value={draft.seo?.description || ""} onChange={(event) => updateDraft({ seo: { ...draft.seo, description: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<div className="border-t pt-5">
+						<h2 className="font-semibold">Store contact</h2>
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">
+							<label className="block"><span className="text-sm font-medium">Phone</span><input value={draft.contact?.phoneDisplay || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, phoneDisplay: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="+254 700 123 456" /></label>
+							<label className="block"><span className="text-sm font-medium">Email</span><input type="email" value={draft.contact?.email || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, email: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="hello@example.com" /></label>
+							<label className="block"><span className="text-sm font-medium">WhatsApp number</span><input inputMode="numeric" value={draft.contact?.whatsappNumber || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, whatsappNumber: event.target.value.replace(/\D/g, "") } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="254700123456" /></label>
+							<label className="block"><span className="text-sm font-medium">Business hours</span><input value={draft.contact?.businessHours || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, businessHours: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Mon - Sat, 8AM - 6PM" /></label>
+							<label className="block"><span className="text-sm font-medium">Address</span><input value={draft.contact?.addressLine || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, addressLine: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Street and building" /></label>
+							<label className="block"><span className="text-sm font-medium">City and country</span><input value={draft.contact?.cityCountry || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, cityCountry: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Nairobi, Kenya" /></label>
+							<label className="block sm:col-span-2"><span className="text-sm font-medium">Response time</span><input value={draft.contact?.responseTime || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, responseTime: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="We reply within 24 hours" /></label>
+						</div>
+					</div>
+					<div className="border-t pt-5">
+						<h2 className="font-semibold">Shipping defaults</h2>
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">
+							<label className="block"><span className="text-sm font-medium">Free shipping threshold</span><input type="number" min="0" value={draft.commerce?.freeShippingThreshold ?? ""} onChange={(event) => updateDraft({ commerce: { ...draft.commerce, freeShippingThreshold: event.target.value === "" ? undefined : Number(event.target.value) } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+							<label className="block"><span className="text-sm font-medium">Default shipping cost</span><input type="number" min="0" value={draft.commerce?.defaultShippingCost ?? ""} onChange={(event) => updateDraft({ commerce: { ...draft.commerce, defaultShippingCost: event.target.value === "" ? undefined : Number(event.target.value) } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+						</div>
+					</div>
 					{error && <p className="text-sm text-red-600">{error}</p>}
 					{message && <p className="text-sm text-green-600">{message}</p>}
 					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={save} className="btn-primary">{busy ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy || localPreview} onClick={publish} className="rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">Publish draft</button></div>

@@ -59,6 +59,18 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const contact = record(store.contactSettings)
 		const homepage = record(store.homepageSettings)
 		const commerce = record(store.commerceSettings)
+		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : clientConfig.contact.phoneDisplay
+		const email = typeof contact.email === "string" ? contact.email : clientConfig.contact.email
+		const addressLine = typeof contact.addressLine === "string" ? contact.addressLine : clientConfig.contact.addressLine
+		const cityCountry = typeof contact.cityCountry === "string" ? contact.cityCountry : clientConfig.contact.cityCountry
+		const locationQuery = [addressLine, cityCountry].filter(Boolean).join(", ")
+		const customLocation = contact.addressLine !== undefined || contact.cityCountry !== undefined
+		const mapLink = customLocation && locationQuery
+			? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationQuery)}`
+			: clientConfig.contact.mapLink
+		const mapEmbedUrl = customLocation && locationQuery
+			? `https://www.google.com/maps?q=${encodeURIComponent(locationQuery)}&output=embed`
+			: clientConfig.contact.mapEmbedUrl
 		return {
 			...fallbackStoreContext(),
 			tenantId: store.tenantId,
@@ -69,7 +81,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
-			contact: { ...clientConfig.contact, ...contact },
+			contact: { ...clientConfig.contact, ...contact, phoneDisplay, phoneHref: `tel:${phoneDisplay.replace(/[^\d+]/g, "")}`, email, emailHref: `mailto:${email}`, addressLine, cityCountry, mapLink, mapEmbedUrl },
 			homepage: { ...clientConfig.homepage, ...homepage },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },

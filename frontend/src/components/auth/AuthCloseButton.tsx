@@ -3,7 +3,15 @@
 import { useRouter } from "next/navigation"
 import { X } from "lucide-react"
 
-export default function AuthCloseButton({ fallback = "/", skipHistory = false }: { fallback?: string; skipHistory?: boolean }) {
+export default function AuthCloseButton({
+	fallback = "/",
+	skipHistory = false,
+	label = "Close authentication dialog",
+}: {
+	fallback?: string
+	skipHistory?: boolean
+	label?: string
+}) {
 	const router = useRouter()
 
 	function close() {
@@ -24,9 +32,9 @@ export default function AuthCloseButton({ fallback = "/", skipHistory = false }:
 		<button
 			type="button"
 			onClick={close}
-			aria-label="Close"
-			title="Close"
-			className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition hover:bg-black/10 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
+			aria-label={label}
+			title={label}
+			className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300/70 bg-white/60 text-gray-600 shadow-sm backdrop-blur transition hover:bg-white/90 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-white/15 dark:bg-black/20 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
 		>
 			<X size={20} aria-hidden="true" />
 		</button>

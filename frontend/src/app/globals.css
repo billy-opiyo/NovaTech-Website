@@ -148,28 +148,28 @@
   }
 
   .navy-glass {
-    background: linear-gradient(135deg, rgb(255 250 243 / 0.9), rgb(247 240 231 / 0.78));
-    border-color: rgb(148 120 90 / 0.24);
-    box-shadow: 0 14px 36px rgb(91 70 48 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.66);
-    color: #17202b;
+    background: linear-gradient(135deg, rgb(245 249 253 / 0.72), rgb(216 229 245 / 0.58));
+    border-color: rgb(255 255 255 / 0.72);
+    box-shadow: 0 14px 36px rgb(45 75 120 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.82);
+    color: #102858;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
 
   .navy-glass .text-gray-600 {
-    color: #334155;
+    color: #38547d;
   }
 
   .navy-glass .text-gray-500 {
-    color: #66717f;
+    color: #536b8f;
   }
 
   .navy-glass:hover {
-    border-color: rgb(0 112 243 / 0.38);
+    border-color: rgb(43 89 155 / 0.38);
   }
 
-  /* Reuse the warmer light surface for utility white panels without changing
-     dark mode or the brand's readable text contrast. */
+  /* Reuse the soft blue light surface for utility white panels without
+     changing dark mode or the brand's readable text contrast. */
   html:not(.dark) .bg-white {
     background-color: rgb(var(--color-theme-surface)) !important;
   }

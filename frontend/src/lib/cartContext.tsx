@@ -8,7 +8,7 @@ import {
 	useCallback,
 	ReactNode,
 } from "react"
-import { DEFAULT_SHIPPING_COST, FREE_SHIPPING_THRESHOLD } from "../constants"
+import { useStoreContext } from "./store-context"
 
 export interface CartItem {
 	id: string
@@ -41,6 +41,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
+	const store = useStoreContext()
 	const [items, setItems] = useState<CartItem[]>([])
 	const [savedItems, setSavedItems] = useState<CartItem[]>([])
 	const [mounted, setMounted] = useState(false)
@@ -158,7 +159,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 		(sum, item) => sum + item.price * item.quantity,
 		0,
 	)
-	const shippingEstimate = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_COST
+	const shippingEstimate = subtotal > store.ecommerce.freeShippingThreshold ? 0 : store.ecommerce.defaultShippingCost
 	const total = subtotal + shippingEstimate
 
 	return (

@@ -53,7 +53,7 @@ export const THEME_PRESETS = {
 		primary: "#0070f3",
 		primaryDark: "#005bb5",
 		accent: "#f97316",
-		light: mode({ background: "#f7f2eb", surface: "#fffaf3", text: "#17202b", muted: "#66717f", border: "#e6ddd2", glassBackground: "rgba(255, 250, 243, 0.78)", glassBorder: "rgba(148, 120, 90, 0.22)", glassShadow: "0 8px 32px rgba(91, 70, 48, 0.12)", scrollbarTrack: "rgba(148, 120, 90, 0.14)", scrollbarThumb: "rgba(0, 112, 243, 0.7)", scrollbarThumbHover: "rgba(0, 91, 181, 0.9)" }),
+		light: mode({ background: "#dbe6f4", surface: "#eaf1f8", text: "#102858", muted: "#536b8f", border: "#c1d1e6", glassBackground: "rgba(239, 245, 252, 0.64)", glassBorder: "rgba(255, 255, 255, 0.72)", glassShadow: "0 8px 32px rgba(42, 74, 121, 0.15)", scrollbarTrack: "rgba(126, 155, 196, 0.2)", scrollbarThumb: "rgba(27, 65, 126, 0.62)", scrollbarThumbHover: "rgba(16, 50, 106, 0.8)" }),
 		dark: mode({ background: "#0f172a", surface: "#1e293b", text: "#e2e8f0", muted: "#94a3b8", border: "#334155", glassBackground: "rgba(0, 0, 0, 0.3)", glassBorder: "rgba(255, 255, 255, 0.1)", glassShadow: "0 8px 32px rgba(0, 0, 0, 0.4)", scrollbarTrack: "rgba(15, 23, 42, 0.8)", scrollbarThumb: "rgba(59, 130, 246, 0.75)", scrollbarThumbHover: "rgba(96, 165, 250, 0.95)" }),
 		fontBody: "Inter, ui-sans-serif, system-ui, sans-serif",
 		fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif",

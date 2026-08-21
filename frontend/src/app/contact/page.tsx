@@ -19,7 +19,6 @@ import {
 } from "lucide-react"
 import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
-import { clientConfig, getWhatsAppHref } from "@/config/client.config"
 import { useStoreContext } from "@/lib/store-context"
 
 interface FAQ {
@@ -117,6 +116,7 @@ export default function ContactPage() {
 	const store = useStoreContext()
 	const isPlatformHome = store.isPlatformHome
 	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
+	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -185,17 +185,17 @@ export default function ContactPage() {
 					{
 						icon: Phone,
 						title: "Call Us",
-						description: clientConfig.contact.businessHours,
-						details: clientConfig.contact.phoneDisplay,
-						href: clientConfig.contact.phoneHref,
+						description: store.contact.businessHours,
+						details: store.contact.phoneDisplay,
+						href: store.contact.phoneHref,
 						color: "bg-blue-500",
 					},
 					{
 						icon: Mail,
 						title: "Email Us",
-						description: clientConfig.contact.responseTime,
-						details: clientConfig.contact.email,
-						href: clientConfig.contact.emailHref,
+						description: store.contact.responseTime,
+						details: store.contact.email,
+						href: store.contact.emailHref,
 						color: "bg-green-500",
 					},
 					{
@@ -203,7 +203,7 @@ export default function ContactPage() {
 						title: "WhatsApp",
 						description: "Quick chat support",
 						details: "Chat on WhatsApp",
-						href: getWhatsAppHref(),
+						href: whatsappHref,
 						color: "bg-green-600",
 					},
 				].map((card, index) => (

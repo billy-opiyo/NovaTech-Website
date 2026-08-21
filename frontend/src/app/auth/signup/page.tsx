@@ -5,12 +5,12 @@ import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check } from "lucide-react"
-import { clientConfig } from "@/config/client.config"
-import { FREE_SHIPPING_THRESHOLD } from "@/constants"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
+import { useStoreContext } from "@/lib/store-context"
 
 export default function SignUpPage() {
 	const router = useRouter()
+	const store = useStoreContext()
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState("")
 	const [showPassword, setShowPassword] = useState(false)
@@ -73,7 +73,7 @@ export default function SignUpPage() {
 					<AuthCloseButton />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
-						<p className="text-gray-500">Join {clientConfig.brand.name} for exclusive deals</p>
+						<p className="text-gray-500">Join {store.brand.name} for exclusive deals</p>
 					</div>
 
 					{error && (
@@ -182,7 +182,7 @@ export default function SignUpPage() {
 						<div className="text-sm text-gray-500">
 							<p className="flex items-center gap-2 mb-1">
 								<Check size={14} className="text-green-500" /> Free shipping on
-								orders over {clientConfig.site.currency} {FREE_SHIPPING_THRESHOLD.toLocaleString()}
+								orders over {store.site.currency} {store.ecommerce.freeShippingThreshold.toLocaleString()}
 							</p>
 							<p className="flex items-center gap-2">
 								<Check size={14} className="text-green-500" /> Exclusive deals
