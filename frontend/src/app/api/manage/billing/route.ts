@@ -33,7 +33,7 @@ const actionSchema = z.discriminatedUnion("action", [
 async function getAccess() {
 	const session = await auth()
 	if (!session?.user?.id || !session.user.email) throw new BillingError("Authentication required", 401, "AUTH_REQUIRED")
-	const context = await resolveTenantFromRequest({ headers: await (await import("next/headers")).headers() })
+	const context = await resolveTenantFromRequest({ headers: await (await import("next/headers")).headers() }, { allowUnpublished: true })
 	const membership = await requireMembership(session.user.id, context.tenantId)
 	return { session, context, membership }
 }

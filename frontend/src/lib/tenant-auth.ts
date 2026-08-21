@@ -12,7 +12,7 @@ export async function requireStoreSession(roles?: MembershipRole[]) {
 	if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/manage")
 
 	try {
-		const context = await resolveTenantFromRequest({ headers: await headers() })
+		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		const membership = await requireMembership(session.user.id, context.tenantId, roles)
 		return { session, context, membership }
 	} catch {

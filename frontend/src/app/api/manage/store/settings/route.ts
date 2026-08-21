@@ -10,7 +10,7 @@ import { THEME_PRESETS } from "@/config/theme-presets"
 async function storeAccess() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	const context = await resolveTenantFromRequest({ headers: await headers() })
+	const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 	const membership = await requireMembership(session.user.id, context.tenantId)
 	return { session, context, membership }
 }

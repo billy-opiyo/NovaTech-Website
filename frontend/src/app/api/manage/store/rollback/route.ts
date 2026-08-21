@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
-		const context = await resolveTenantFromRequest({ headers: await headers() })
+		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
 		const body = await request.json().catch(() => null) as { version?: unknown } | null
 		const version = Number(body?.version)

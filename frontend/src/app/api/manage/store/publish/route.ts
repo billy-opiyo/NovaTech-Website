@@ -5,16 +5,18 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
+import { merchantVerificationMessage } from "backend/lib/merchant-verification"
 
 export async function POST() {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
-		const context = await resolveTenantFromRequest({ headers: await headers() })
+		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		const membership = await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
 		void membership
-		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true } })
+		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true, tenant: { select: { verificationStatus: true } } } })
 		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
+		if (store.tenant.verificationStatus !== "APPROVED") return NextResponse.json({ message: merchantVerificationMessage(store.tenant.verificationStatus), code: "MERCHANT_VERIFICATION_REQUIRED", verificationStatus: store.tenant.verificationStatus }, { status: 409 })
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })
 		const draft = store.draftSettings as Record<string, any>
 		const latest = await prisma.storeSettingsVersion.findFirst({ where: { storeId: store.id, tenantId: store.tenantId }, orderBy: { version: "desc" }, select: { version: true } })

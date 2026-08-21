@@ -6,7 +6,7 @@
 |---------|-------------|
 | **Platform Homepage** | The platform root is a store-discovery experience with social-proof groups for top-rated, most-reviewed, and new/growing stores. It shows approved review ratings, review volume, product counts, catalogue image previews, and store links. |
 | **Merchant Store Homepage** | Each resolved merchant host keeps its own hero, shop-by-category grid, featured products carousel, customer testimonials, newsletter, contact details, and map sections. |
-| **Store Directory** | Public `/stores` directory for published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. `Browse Stores` and platform discovery controls stay outside individual merchant navigation. |
+| **Store Directory** | Public `/stores` directory for approved, published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. `Browse Stores` and platform discovery controls stay outside individual merchant navigation. |
 | **Store Host Routing** | Local previews support `{store-slug}.localhost`; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
@@ -79,7 +79,7 @@
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins; Stripe recurring items are supported when an add-on Stripe price ID is configured, otherwise M-Pesa charges are included in the next invoice. |
 | **Transaction commissions** | New shopper transaction commissions are disabled because each independent merchant completes its own sale. Existing historical records remain visible for reconciliation. |
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
-| **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
+| **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
 
 ## 📦 Backend API (App Router Route Handlers)
 
@@ -98,7 +98,7 @@
 | `/api/billing/plans` | GET | Lists active database-backed SaaS plans and add-ons. |
 | `/api/manage/billing` | GET, POST | Tenant-scoped merchant billing reads and owner/admin billing actions. |
 | `/api/platform/billing` | GET, POST | Platform-role-protected plan/add-on management and billing reporting. |
-| `/api/platform/operations` | GET, PATCH | Cross-store platform metrics, tenant activity, store previews, billing summaries, and authorized store status controls. |
+| `/api/platform/operations` | GET, PATCH | Cross-store platform metrics, tenant activity, store previews, billing summaries, merchant verification review, and authorized store status controls. |
 
 ## 🔐 Backend Services & Utilities
 

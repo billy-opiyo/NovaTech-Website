@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
-		const context = await resolveTenantFromRequest(request)
+		const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
 		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER])
 
 		const [tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets] = await Promise.all([

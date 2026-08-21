@@ -17,6 +17,14 @@ database. Live M-Pesa credentials, provider dashboard callback registration,
 payment sandbox tests, final legal/tax documents, individual-operator
 details, and production rollout remain external gates.
 
+Merchant verification is now a source-level lifecycle: merchants can submit a
+review request from `/manage/verification`, platform operators can approve or
+reject it from `/platform/operations`, and public host/directory resolution and
+store publication require `APPROVED`. Migration `0011_merchant_verification`
+stores only restricted status, timestamps, reviewer, and notes. Identity,
+KRA/tax, contact, location, and merchant M-Pesa evidence still require a secure
+collection design and legal/privacy review before being collected or stored.
+
 The execution notes below are historical checkpoints and may describe the
 pre-billing state.
 

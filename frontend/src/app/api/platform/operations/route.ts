@@ -82,6 +82,9 @@ export async function GET(request: NextRequest) {
 					id: true,
 					legalName: true,
 					status: true,
+					verificationStatus: true,
+					verificationSubmittedAt: true,
+					verificationReviewedAt: true,
 					createdAt: true,
 					updatedAt: true,
 					suspendedAt: true,
@@ -132,8 +135,9 @@ export async function GET(request: NextRequest) {
 }
 
 const mutationSchema = z.object({
-	action: z.enum(["suspend_store", "reactivate_store"]),
+	action: z.enum(["suspend_store", "reactivate_store", "approve_verification", "reject_verification", "request_verification"]),
 	tenantId: z.string().min(1),
+	notes: z.string().trim().max(1000).optional(),
 })
 
 export async function PATCH(request: NextRequest) {
@@ -142,16 +146,20 @@ export async function PATCH(request: NextRequest) {
 	try {
 		const parsed = mutationSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid platform operation", issues: parsed.error.flatten() }, { status: 400 })
-		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, store: { select: { id: true, publicationStatus: true } } } })
+		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, verificationStatus: true, store: { select: { id: true, publicationStatus: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant store not found" }, { status: 404 })
 
 		const suspended = parsed.data.action === "suspend_store"
+		const verificationAction = parsed.data.action.includes("verification")
 		const updated = await prisma.$transaction(async (transaction) => {
-			const nextTenant = await transaction.tenant.update({ where: { id: tenant.id }, data: { status: suspended ? "SUSPENDED" : "ACTIVE", suspendedAt: suspended ? new Date() : null } })
-			if (tenant.store) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: suspended ? "SUSPENDED" : tenant.store.publicationStatus === "SUSPENDED" ? "PUBLISHED" : tenant.store.publicationStatus } })
+			const nextTenant = verificationAction
+				? await transaction.tenant.update({ where: { id: tenant.id }, data: { verificationStatus: parsed.data.action === "approve_verification" ? "APPROVED" : parsed.data.action === "reject_verification" ? "REJECTED" : "PENDING_REVIEW", verificationReviewedAt: parsed.data.action === "request_verification" ? null : new Date(), verificationReviewerId: parsed.data.action === "request_verification" ? null : access.session!.user.id, verificationNotes: parsed.data.notes || null } })
+				: await transaction.tenant.update({ where: { id: tenant.id }, data: { status: suspended ? "SUSPENDED" : "ACTIVE", suspendedAt: suspended ? new Date() : null } })
+			if (tenant.store && (suspended || parsed.data.action === "reject_verification")) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: suspended || parsed.data.action === "reject_verification" ? "SUSPENDED" : tenant.store.publicationStatus } })
+			if (tenant.store && parsed.data.action === "reactivate_store" && tenant.store.publicationStatus === "SUSPENDED" && tenant.verificationStatus === "APPROVED") await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } })
 			return nextTenant
 		})
-		await prisma.adminLog.create({ data: { tenantId: tenant.id, adminId: access.session!.user.id, action: suspended ? "PLATFORM_SUSPENDED_STORE" : "PLATFORM_REACTIVATED_STORE", details: { previousStatus: tenant.status, nextStatus: updated.status } } }).catch((error) => console.error("Platform action audit failed", error))
+		await prisma.adminLog.create({ data: { tenantId: tenant.id, adminId: access.session!.user.id, action: verificationAction ? `MERCHANT_${parsed.data.action.toUpperCase()}` : suspended ? "PLATFORM_SUSPENDED_STORE" : "PLATFORM_REACTIVATED_STORE", details: { previousStatus: tenant.status, nextStatus: updated.status, previousVerificationStatus: tenant.verificationStatus, nextVerificationStatus: updated.verificationStatus, notes: parsed.data.notes || null } } }).catch((error) => console.error("Platform action audit failed", error))
 		return NextResponse.json({ tenant: updated })
 	} catch (error: any) {
 		console.error("Platform operation failed", error)

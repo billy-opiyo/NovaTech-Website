@@ -18,7 +18,7 @@ This document records implementation defaults for the first controlled beta. It 
 - The canonical platform domain is `nuravatech.com`; merchant platform hosts use `{store-slug}.nuravatech.com` once DNS and deployment routing are configured.
 - Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`, and supports published store previews at `{store-slug}.localhost`; unknown hosts do not silently select a tenant.
 - Verified custom domains take precedence over verified platform subdomains, while the canonical `nuravatech.com` and `www.nuravatech.com` hosts are reserved for platform discovery and are resolved before merchant domain records.
-- A store must be published and its host verified before public storefront resolution. Suspended, unpublished, unknown, and unverified hosts produce explicit unavailable states.
+- A store must be published, its host verified, and its merchant verification status approved before public storefront resolution. Suspended, unpublished, unapproved, unknown, and unverified hosts produce explicit unavailable states. Merchant owners submit review from `/manage/verification`; authorized platform operators review from `/platform/operations`.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
 
 ## Shopper discovery and storefront behavior
@@ -48,6 +48,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Super Admins and authorized platform operators use `/platform/operations` to inspect aggregate tenant/store metrics, recent cross-store activity, SaaS invoices, store previews, billing/setup-fee state, and store publication status. Suspension and reactivation actions are platform-authorized and audited.
 - Stripe subscription, invoice, payment-failure, and cancellation state is webhook-authoritative and idempotent. Browser return URLs do not activate subscriptions.
 - M-Pesa setup fees and first subscriptions are combined into one post-trial invoice; later renewals are invoice-driven. A successful provider callback updates the invoice/payment state and then synchronizes the related billing record, pending plan, tenant, and subscription.
+- Merchant verification status is server-enforced for publication and public discovery. Migration `0011_merchant_verification` intentionally stores workflow metadata only; secure identity, tax, contact, location, and settlement-evidence collection remains a separate launch gate.
 - Historical shopper order payments may have separate commission transactions using an effective plan rate snapshot; new shopper payment and commission creation is disabled in merchant-direct mode.
 - Migration `0006_billing_system` and the regenerated Prisma Client must be deployed before the new billing routes can run against a target database. Live provider credentials, webhook registration, and sandbox/provider verification remain rollout gates.
 
@@ -58,6 +59,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Webhook receipts are idempotent and authoritative; browser success pages never activate a subscription.
 - Suspension protects merchant data and stops public selling before any deletion action.
 - Tenant deletion is soft deletion followed by an export/retention workflow. The retention duration and deletion schedule require legal/privacy approval before launch.
+- Merchant review status is `NOT_STARTED`, `IN_PROGRESS`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`, or `SUSPENDED`; approval is required before a merchant can sell. Sensitive verification evidence must not be placed in ordinary notes or chat.
 - Platform support access is explicit, least-privilege, logged, and read-only by default.
 
 ## Permission boundary

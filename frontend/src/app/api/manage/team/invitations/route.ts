@@ -11,7 +11,7 @@ import { assertTenantStaffLimit } from "backend/billing/subscription"
 async function access(request: NextRequest) {
 	const session = await auth()
 	if (!session?.user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 })
-	const context = await resolveTenantFromRequest(request)
+	const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
 	await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 	return { session, context }
 }

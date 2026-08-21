@@ -58,8 +58,8 @@ async function main() {
 	})
 	const tenant = await prisma.tenant.upsert({
 		where: { id: "novatech-tenant" },
-		update: { planId: trialPlan.id, status: "ACTIVE" },
-		create: { id: "novatech-tenant", legalName: "Nurava Tech", status: "ACTIVE", planId: trialPlan.id },
+		update: { planId: trialPlan.id, status: "ACTIVE", verificationStatus: "APPROVED", verificationReviewedAt: new Date() },
+		create: { id: "novatech-tenant", legalName: "Nurava Tech", status: "ACTIVE", verificationStatus: "APPROVED", verificationReviewedAt: new Date(), planId: trialPlan.id },
 	})
 	await prisma.store.upsert({
 		where: { id: "novatech-store" },

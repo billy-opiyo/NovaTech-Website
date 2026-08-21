@@ -38,6 +38,7 @@ model User {
   memberships      Membership[]
   billingCustomers BillingCustomer[]
   billingRecords   BillingRecord[]
+  reviewedTenants  Tenant[]          @relation("TenantVerificationReviewer")
   preferredStore   Store?            @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
@@ -95,6 +96,15 @@ enum MembershipRole {
   STORE_EDITOR
 }
 
+enum MerchantVerificationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
 enum TenantStatus {
   TRIALING
   ACTIVE
@@ -140,51 +150,58 @@ enum SubscriptionStatus {
 }
 
 model Tenant {
-  id            String       @id @default(cuid())
-  legalName     String?
-  status        TenantStatus @default(TRIALING)
-  planId        String?
-  trialStartsAt DateTime?
-  trialEndsAt   DateTime?
-  suspendedAt   DateTime?
-  deletedAt     DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                      String                     @id @default(cuid())
+  legalName               String?
+  status                  TenantStatus               @default(TRIALING)
+  verificationStatus      MerchantVerificationStatus @default(NOT_STARTED)
+  verificationSubmittedAt DateTime?
+  verificationReviewedAt  DateTime?
+  verificationReviewerId  String?
+  verificationNotes       String?
+  planId                  String?
+  trialStartsAt           DateTime?
+  trialEndsAt             DateTime?
+  suspendedAt             DateTime?
+  deletedAt               DateTime?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
 
-  plan                Plan?                  @relation(fields: [planId], references: [id])
-  store               Store?
-  memberships         Membership[]
-  invitations         Invitation[]
-  domains             Domain[]
-  subscriptions       Subscription[]
-  usageCounters       UsageCounter[]
-  featureEntitlements FeatureEntitlement[]   @relation("TenantEntitlements")
-  settingsVersions    StoreSettingsVersion[]
-  categories          Category[]
-  products            Product[]
-  variants            Variant[]
-  cartItems           CartItem[]
-  wishlistItems       WishlistItem[]
-  recentlyViewed      RecentlyViewed[]
-  orders              Order[]
-  payments            Payment[]
-  orderItems          OrderItem[]
-  addresses           Address[]
-  deliveryRegions     DeliveryRegion[]
-  reviews             Review[]
-  coupons             Coupon[]
-  notifications       Notification[]
-  supportTickets      SupportTicket[]
-  ticketReplies       TicketReply[]
-  adminLogs           AdminLog[]
-  loginEvents         LoginEvent[]
-  billingCustomer     BillingCustomer?
-  billingRecord       BillingRecord?
-  invoices            Invoice[]
-  addonSubscriptions  AddonSubscription[]
-  transactions        Transaction[]
+  plan                 Plan?                  @relation(fields: [planId], references: [id])
+  verificationReviewer User?                  @relation("TenantVerificationReviewer", fields: [verificationReviewerId], references: [id], onDelete: SetNull)
+  store                Store?
+  memberships          Membership[]
+  invitations          Invitation[]
+  domains              Domain[]
+  subscriptions        Subscription[]
+  usageCounters        UsageCounter[]
+  featureEntitlements  FeatureEntitlement[]   @relation("TenantEntitlements")
+  settingsVersions     StoreSettingsVersion[]
+  categories           Category[]
+  products             Product[]
+  variants             Variant[]
+  cartItems            CartItem[]
+  wishlistItems        WishlistItem[]
+  recentlyViewed       RecentlyViewed[]
+  orders               Order[]
+  payments             Payment[]
+  orderItems           OrderItem[]
+  addresses            Address[]
+  deliveryRegions      DeliveryRegion[]
+  reviews              Review[]
+  coupons              Coupon[]
+  notifications        Notification[]
+  supportTickets       SupportTicket[]
+  ticketReplies        TicketReply[]
+  adminLogs            AdminLog[]
+  loginEvents          LoginEvent[]
+  billingCustomer      BillingCustomer?
+  billingRecord        BillingRecord?
+  invoices             Invoice[]
+  addonSubscriptions   AddonSubscription[]
+  transactions         Transaction[]
 
   @@index([status, createdAt])
+  @@index([verificationStatus])
 }
 
 model Store {

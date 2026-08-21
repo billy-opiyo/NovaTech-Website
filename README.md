@@ -1,6 +1,6 @@
 # Nurava Tech — Electronics E-Commerce Platform (Kenya)
 
-A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through Stripe or invoice-driven M-Pesa flows.
+A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -108,6 +108,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.
+- Merchant verification is required before publication or selling. `/manage/verification` submits a review request, while authorized platform operators review status in `/platform/operations`; sensitive identity, tax, contact, location, and settlement evidence is not yet collected by this source slice.
 - Historical shopper order/payment records remain separate from merchant SaaS billing; new shopper payments and transaction commission creation are disabled by the merchant-direct model.
 
 ### 📦 Backend API (App Router Route Handlers)

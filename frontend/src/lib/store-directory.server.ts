@@ -42,7 +42,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 		const stores = await prisma.store.findMany({
 			where: {
 				publicationStatus: "PUBLISHED",
-				tenant: { status: { in: ["ACTIVE", "TRIALING"] } },
+				tenant: { status: { in: ["ACTIVE", "TRIALING"] }, verificationStatus: "APPROVED" },
 			},
 			orderBy: { name: "asc" },
 			select: {
@@ -104,7 +104,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 		const stores = await prisma.store.findMany({
 			where: {
 				publicationStatus: "PUBLISHED",
-				tenant: { status: { in: ["ACTIVE", "TRIALING"] } },
+				tenant: { status: { in: ["ACTIVE", "TRIALING"] }, verificationStatus: "APPROVED" },
 			},
 			orderBy: { name: "asc" },
 			select: {

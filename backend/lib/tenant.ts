@@ -1,5 +1,6 @@
 import prisma from "./db"
 import { getPlatformDomain } from "./platform-domain"
+import { canMerchantSell } from "./merchant-verification"
 
 export type TenantContext = {
 	tenantId: string
@@ -42,7 +43,8 @@ function unavailableStore(context: { status: string; publicationStatus?: string 
  * Resolve the store from the request host. Callers must use the returned IDs
  * for every tenant-owned query; request bodies and query strings are not used.
  */
-export async function resolveTenantFromRequest(request: { headers: Headers }): Promise<TenantContext> {
+export async function resolveTenantFromRequest(request: { headers: Headers }, options: { allowUnpublished?: boolean } = {}): Promise<TenantContext> {
+	const allowUnpublished = options.allowUnpublished === true
 	const hostname = normalizeHostname(request.headers.get("host"))
 	if (!hostname) throw new TenantResolutionError("UNKNOWN_HOST", "A valid request host is required.")
 
@@ -63,7 +65,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 					verificationStatus: true,
 					tenantId: true,
 					storeId: true,
-					store: { select: { slug: true, publicationStatus: true, tenant: { select: { status: true } } } },
+					store: { select: { slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } } },
 				},
 			})
 
@@ -71,10 +73,11 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 		if (domain.verificationStatus !== "VERIFIED") {
 			throw new TenantResolutionError("UNVERIFIED_DOMAIN", "This domain is awaiting verification.", 409)
 		}
-		if (domain.store.tenant.status !== "ACTIVE" && domain.store.tenant.status !== "TRIALING") {
+		if (!allowUnpublished && domain.store.tenant.status !== "ACTIVE" && domain.store.tenant.status !== "TRIALING") {
 			throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
 		}
-		if (domain.store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
+		if (!allowUnpublished && !canMerchantSell(domain.store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
+		if (!allowUnpublished && domain.store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
 		return {
 			tenantId: domain.tenantId,
 			storeId: domain.storeId,
@@ -96,11 +99,12 @@ export async function resolveTenantFromRequest(request: { headers: Headers }): P
 
 	const store = await prisma.store.findUnique({
 		where: { slug },
-		select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true } } },
+		select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } },
 	})
 	if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
-	if (store.tenant.status !== "ACTIVE" && store.tenant.status !== "TRIALING") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
-	if (store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+	if (!allowUnpublished && store.tenant.status !== "ACTIVE" && store.tenant.status !== "TRIALING") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+	if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
+	if (!allowUnpublished && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
 
 	return {
 		tenantId: store.tenantId,
