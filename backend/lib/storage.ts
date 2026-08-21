@@ -2,6 +2,7 @@ import {
 	S3Client,
 	PutObjectCommand,
 	DeleteObjectCommand,
+	GetObjectCommand,
 } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
@@ -15,6 +16,12 @@ const R2 = new S3Client({
 })
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME!
+const PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME
+
+function privateBucketName() {
+	if (!PRIVATE_BUCKET_NAME) throw new Error("Private verification storage is not configured")
+	return PRIVATE_BUCKET_NAME
+}
 
 export async function uploadFile(
 	file: Buffer,
@@ -62,6 +69,22 @@ export function generateFileKey(productId: string, fileName: string): string {
 	return `products/${productId}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
 }
 
+export async function uploadPrivateFile(file: Buffer, key: string, contentType: string) {
+	const command = new PutObjectCommand({ Bucket: privateBucketName(), Key: key, Body: file, ContentType: contentType })
+	await R2.send(command)
+	return key
+}
+
+export async function deletePrivateFile(key: string) {
+	const command = new DeleteObjectCommand({ Bucket: privateBucketName(), Key: key })
+	await R2.send(command)
+}
+
+export async function getSignedDownloadUrl(key: string, expiresIn = 300) {
+	const command = new GetObjectCommand({ Bucket: privateBucketName(), Key: key })
+	return getSignedUrl(R2, command, { expiresIn })
+}
+
 export function generateTenantFileKey(tenantId: string, storeId: string, productId: string, fileName: string): string {
 	const extension = fileName.split(".").pop()?.toLowerCase() || "bin"
 	const timestamp = Date.now()
@@ -73,4 +96,9 @@ export function generateProfileFileKey(userId: string, fileName: string): string
 	const extension = fileName.split(".").pop()?.toLowerCase() || "jpg"
 	const timestamp = Date.now()
 	return `profiles/${userId}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`
+}
+
+export function generateVerificationFileKey(tenantId: string, evidenceId: string, fileName: string): string {
+	const extension = fileName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin"
+	return `private/tenants/${tenantId}/verification/${evidenceId}.${extension}`
 }

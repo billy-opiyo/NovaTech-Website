@@ -5,6 +5,7 @@ import { generateFileKey } from "../../backend/lib/storage"
 import { isStripeConfigured, getStripeWebhookSecret, getStripeClient } from "../../backend/lib/stripeClient"
 import { isMpesaConfigured, verifyStkCallbackPassword } from "../../backend/lib/daraja"
 import { getPaymentsConfig } from "../../backend/payments/config"
+import { decryptMerchantVerificationDetails, encryptMerchantVerificationDetails, hashMerchantVerificationOtp } from "../../backend/lib/merchant-verification-secrets"
 import { FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_COST, ORDER_STATUS_LABELS } from "../../frontend/src/constants"
 
 test("security helpers normalize and protect values", () => {
@@ -19,6 +20,22 @@ test("security helpers normalize and protect values", () => {
 test("storage keys preserve product identity and file extension", () => {
 	const key = generateFileKey("p-1", "photo.jpeg")
 	assert.match(key, /^products\/p-1\/\d+-[a-z0-9]+\.jpeg$/)
+})
+
+test("merchant verification details encrypt and OTP hashes remain one-way", () => {
+	const previous = process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY
+	process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64")
+	try {
+		const details = { phone: "254712345678", taxIdentifier: "A123456789Z" }
+		const encrypted = encryptMerchantVerificationDetails(details)
+		assert.notEqual(encrypted, JSON.stringify(details))
+		assert.deepEqual(decryptMerchantVerificationDetails(encrypted), details)
+		assert.equal(hashMerchantVerificationOtp("123456", "salt"), hashMerchantVerificationOtp("123456", "salt"))
+		assert.notEqual(hashMerchantVerificationOtp("123456", "salt"), "123456")
+	} finally {
+		if (previous === undefined) delete process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY
+		else process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY = previous
+	}
 })
 
 test("payment configuration reports disabled providers without secrets", () => {

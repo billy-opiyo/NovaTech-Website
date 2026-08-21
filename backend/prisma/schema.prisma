@@ -24,22 +24,24 @@ model User {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  accounts         Account[]
-  sessions         Session[]
-  orders           Order[]
-  reviews          Review[]
-  wishlistItems    WishlistItem[]
-  cartItems        CartItem[]
-  addresses        Address[]
-  supportTickets   SupportTicket[]
-  notifications    Notification[]
-  adminLogs        AdminLog[]
-  loginEvents      LoginEvent[]
-  memberships      Membership[]
-  billingCustomers BillingCustomer[]
-  billingRecords   BillingRecord[]
-  reviewedTenants  Tenant[]          @relation("TenantVerificationReviewer")
-  preferredStore   Store?            @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+  accounts                     Account[]
+  sessions                     Session[]
+  orders                       Order[]
+  reviews                      Review[]
+  wishlistItems                WishlistItem[]
+  cartItems                    CartItem[]
+  addresses                    Address[]
+  supportTickets               SupportTicket[]
+  notifications                Notification[]
+  adminLogs                    AdminLog[]
+  loginEvents                  LoginEvent[]
+  memberships                  Membership[]
+  billingCustomers             BillingCustomer[]
+  billingRecords               BillingRecord[]
+  reviewedTenants              Tenant[]                       @relation("TenantVerificationReviewer")
+  uploadedVerificationEvidence MerchantVerificationEvidence[] @relation("VerificationEvidenceUploader")
+  reviewedVerificationEvidence MerchantVerificationEvidence[] @relation("VerificationEvidenceReviewer")
+  preferredStore               Store?                         @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
 model Account {
@@ -105,6 +107,44 @@ enum MerchantVerificationStatus {
   SUSPENDED
 }
 
+enum MerchantBusinessType {
+  INDIVIDUAL
+  REGISTERED_BUSINESS
+}
+
+enum MerchantTaxStatus {
+  REGISTERED
+  NOT_REGISTERED
+  NOT_APPLICABLE
+  UNDER_REVIEW
+}
+
+enum MerchantLocationType {
+  PHYSICAL_LOCATION
+  ONLINE_ONLY
+}
+
+enum MerchantSettlementAccountType {
+  PAYBILL
+  TILL
+  OTHER
+}
+
+enum MerchantVerificationEvidenceType {
+  GOVERNMENT_ID
+  BUSINESS_REGISTRATION
+  KRA_PIN
+  LOCATION_PROOF
+  MPESA_OWNERSHIP
+  OWNER_DECLARATION
+}
+
+enum MerchantVerificationEvidenceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TenantStatus {
   TRIALING
   ACTIVE
@@ -163,18 +203,23 @@ model Tenant {
   trialEndsAt             DateTime?
   suspendedAt             DateTime?
   deletedAt               DateTime?
+  dataRetentionStartsAt   DateTime?
+  dataDeletionDueAt       DateTime?
+  dataDeletedAt           DateTime?
   createdAt               DateTime                   @default(now())
   updatedAt               DateTime                   @updatedAt
 
-  plan                 Plan?                  @relation(fields: [planId], references: [id])
-  verificationReviewer User?                  @relation("TenantVerificationReviewer", fields: [verificationReviewerId], references: [id], onDelete: SetNull)
+  plan                 Plan?                          @relation(fields: [planId], references: [id])
+  verificationReviewer User?                          @relation("TenantVerificationReviewer", fields: [verificationReviewerId], references: [id], onDelete: SetNull)
+  verificationProfile  MerchantVerificationProfile?
+  verificationEvidence MerchantVerificationEvidence[]
   store                Store?
   memberships          Membership[]
   invitations          Invitation[]
   domains              Domain[]
   subscriptions        Subscription[]
   usageCounters        UsageCounter[]
-  featureEntitlements  FeatureEntitlement[]   @relation("TenantEntitlements")
+  featureEntitlements  FeatureEntitlement[]           @relation("TenantEntitlements")
   settingsVersions     StoreSettingsVersion[]
   categories           Category[]
   products             Product[]
@@ -202,6 +247,52 @@ model Tenant {
 
   @@index([status, createdAt])
   @@index([verificationStatus])
+  @@index([dataDeletionDueAt, dataDeletedAt])
+}
+
+model MerchantVerificationProfile {
+  id                         String                        @id @default(cuid())
+  tenantId                   String                        @unique
+  businessType               MerchantBusinessType
+  taxStatus                  MerchantTaxStatus
+  locationType               MerchantLocationType
+  settlementAccountType      MerchantSettlementAccountType
+  sensitiveDetailsCiphertext String
+  phoneVerifiedAt            DateTime?
+  phoneOtpHash               String?
+  phoneOtpSalt               String?
+  phoneOtpExpiresAt          DateTime?
+  phoneOtpAttempts           Int                           @default(0)
+  phoneOtpSentAt             DateTime?
+  createdAt                  DateTime                      @default(now())
+  updatedAt                  DateTime                      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([phoneVerifiedAt])
+}
+
+model MerchantVerificationEvidence {
+  id           String                             @id @default(cuid())
+  tenantId     String
+  type         MerchantVerificationEvidenceType
+  status       MerchantVerificationEvidenceStatus @default(PENDING)
+  objectKey    String                             @unique
+  contentType  String
+  sizeBytes    Int
+  uploadedById String
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime                           @default(now())
+  updatedAt    DateTime                           @updatedAt
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploadedBy User   @relation("VerificationEvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewedBy User?  @relation("VerificationEvidenceReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, type])
 }
 
 model Store {

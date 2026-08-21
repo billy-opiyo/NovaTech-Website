@@ -148,6 +148,13 @@ export async function PATCH(request: NextRequest) {
 		if (!parsed.success) return NextResponse.json({ message: "Invalid platform operation", issues: parsed.error.flatten() }, { status: 400 })
 		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, verificationStatus: true, store: { select: { id: true, publicationStatus: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant store not found" }, { status: 404 })
+		if (parsed.data.action === "approve_verification") {
+			const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: tenant.id }, select: { businessType: true, taxStatus: true, phoneVerifiedAt: true } })
+			const evidence = await prisma.merchantVerificationEvidence.findMany({ where: { tenantId: tenant.id, status: "APPROVED" }, select: { type: true } })
+			const requiredTypes = profile ? ["GOVERNMENT_ID", "LOCATION_PROOF", "MPESA_OWNERSHIP", ...(profile.businessType === "REGISTERED_BUSINESS" ? ["BUSINESS_REGISTRATION"] : ["OWNER_DECLARATION"]), ...(profile.taxStatus === "REGISTERED" ? ["KRA_PIN"] : [])] : ["GOVERNMENT_ID", "LOCATION_PROOF", "MPESA_OWNERSHIP"]
+			const missing = requiredTypes.filter((type) => !evidence.some((item) => item.type === type))
+			if (!profile || !profile.phoneVerifiedAt || missing.length) return NextResponse.json({ message: "The merchant must complete phone verification and all required evidence must be approved before tenant approval.", code: "VERIFICATION_REQUIREMENTS_INCOMPLETE", missingEvidence: missing }, { status: 409 })
+		}
 
 		const suspended = parsed.data.action === "suspend_store"
 		const verificationAction = parsed.data.action.includes("verification")

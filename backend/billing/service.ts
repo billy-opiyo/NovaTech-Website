@@ -1,6 +1,7 @@
 import type Stripe from "stripe"
 import { BillingPaymentKind, BillingRecordStatus, InvoiceKind, InvoiceStatus, SubscriptionStatus } from "@prisma/client"
 import prisma from "../lib/db"
+import { retentionDueAt } from "../retention/tenant-retention"
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient"
 import { initiateMpesaPayment } from "../payments/mpesa"
 import { isShopperCheckoutEnabled } from "../lib/commerce-model"
@@ -217,7 +218,14 @@ export async function cancelSubscription(tenantId: string, immediate = false) {
 		if (immediate) await stripe.subscriptions.cancel(subscription.providerSubscriptionId)
 		else await stripe.subscriptions.update(subscription.providerSubscriptionId, { cancel_at_period_end: true })
 	}
-	return prisma.subscription.update({ where: { id: subscription.id }, data: { cancelAtPeriodEnd: !immediate, ...(immediate ? { status: "CANCELLED" as const } : {}) } })
+	if (!immediate) return prisma.subscription.update({ where: { id: subscription.id }, data: { cancelAtPeriodEnd: true } })
+	const cancelledAt = new Date()
+	return prisma.$transaction(async (transaction) => {
+		const updated = await transaction.subscription.update({ where: { id: subscription.id }, data: { cancelAtPeriodEnd: false, status: "CANCELLED" as const } })
+		await transaction.tenant.update({ where: { id: tenantId }, data: { status: "CANCELLED", dataRetentionStartsAt: cancelledAt, dataDeletionDueAt: retentionDueAt(cancelledAt) } })
+		await transaction.store.updateMany({ where: { tenantId }, data: { publicationStatus: "SUSPENDED" } })
+		return updated
+	})
 }
 
 export async function subscribeToAddon(tenantId: string, addonKey: string) {

@@ -80,6 +80,8 @@
 | **Transaction commissions** | New shopper transaction commissions are disabled because each independent merchant completes its own sale. Existing historical records remain visible for reconciliation. |
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
+| **Secure merchant verification** | `/manage/verification` collects encrypted merchant details, verifies the merchant phone by OTP, and uploads evidence to a separate private R2 bucket. Platform reviewers use restricted verification routes and short-lived document links; approval is required before publication or selling. |
+| **Lifecycle and retention worker** | `backend/workers/lifecycle.ts` applies local subscription expiry/grace transitions and schedules/processes the approved 90-day merchant-data retention policy while preserving SaaS billing/legal records. Deployment scheduling remains an operational gate. |
 
 ## 📦 Backend API (App Router Route Handlers)
 
@@ -99,6 +101,10 @@
 | `/api/manage/billing` | GET, POST | Tenant-scoped merchant billing reads and owner/admin billing actions. |
 | `/api/platform/billing` | GET, POST | Platform-role-protected plan/add-on management and billing reporting. |
 | `/api/platform/operations` | GET, PATCH | Cross-store platform metrics, tenant activity, store previews, billing summaries, merchant verification review, and authorized store status controls. |
+| `/api/manage/verification` | GET, POST | Tenant-scoped verification status and encrypted profile submission; sensitive values are not returned in status responses. |
+| `/api/manage/verification/phone` | POST, PATCH | Rate-limited merchant phone OTP request and confirmation. |
+| `/api/manage/verification/evidence` | GET, POST | Tenant-scoped private evidence metadata and upload handling. |
+| `/api/platform/verification/[tenantId]` | GET | Restricted platform reviewer view of a merchant verification submission. |
 
 ## 🔐 Backend Services & Utilities
 

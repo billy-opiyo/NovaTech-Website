@@ -108,7 +108,8 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.
-- Merchant verification is required before publication or selling. `/manage/verification` submits a review request, while authorized platform operators review status in `/platform/operations`; sensitive identity, tax, contact, location, and settlement evidence is not yet collected by this source slice.
+- Merchant verification is required before publication or selling. `/manage/verification` submits a review request, while authorized platform operators review status in `/platform/operations`; sensitive identity, tax, contact, location, and settlement evidence is encrypted or stored in the private verification workflow.
+- `npm --workspace backend run worker:lifecycle` runs the credential-free lifecycle worker source: subscription expiry/grace transitions and due retention processing. It is not automatic until a scheduler is configured, and it will not process due private evidence without the configured private bucket.
 - Historical shopper order/payment records remain separate from merchant SaaS billing; new shopper payments and transaction commission creation are disabled by the merchant-direct model.
 
 ### 📦 Backend API (App Router Route Handlers)
@@ -324,7 +325,9 @@ NovaTech Website/
 | `R2_ACCESS_KEY_ID`                   | Cloudflare R2 access key                               |
 | `R2_SECRET_ACCESS_KEY`               | Cloudflare R2 secret key                               |
 | `R2_BUCKET_NAME`                     | Cloudflare R2 bucket name                              |
+| `R2_PRIVATE_BUCKET_NAME`             | Separate private R2 bucket for merchant verification evidence |
 | `NEXT_PUBLIC_R2_PUBLIC_URL`          | Public base URL for R2-hosted files                    |
+| `MERCHANT_VERIFICATION_ENCRYPTION_KEY` | 32-byte hex/base64 key for encrypted merchant verification details |
 | `RESEND_API_KEY`                     | Resend email API key                                   |
 | `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
 | `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |

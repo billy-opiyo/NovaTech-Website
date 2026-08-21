@@ -19,6 +19,7 @@ This document records implementation defaults for the first controlled beta. It 
 - Local development resolves the seeded `novatech` store for `localhost` and `127.0.0.1`, and supports published store previews at `{store-slug}.localhost`; unknown hosts do not silently select a tenant.
 - Verified custom domains take precedence over verified platform subdomains, while the canonical `nuravatech.com` and `www.nuravatech.com` hosts are reserved for platform discovery and are resolved before merchant domain records.
 - A store must be published, its host verified, and its merchant verification status approved before public storefront resolution. Suspended, unpublished, unapproved, unknown, and unverified hosts produce explicit unavailable states. Merchant owners submit review from `/manage/verification`; authorized platform operators review from `/platform/operations`.
+- Merchant verification details are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`; identity, tax, location, and settlement documents are uploaded only to `R2_PRIVATE_BUCKET_NAME` and are opened through short-lived reviewer URLs. Public product storage is not used for verification evidence.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
 
 ## Shopper discovery and storefront behavior
@@ -59,7 +60,10 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Webhook receipts are idempotent and authoritative; browser success pages never activate a subscription.
 - Suspension protects merchant data and stops public selling before any deletion action.
 - Tenant deletion is soft deletion followed by an export/retention workflow. The retention duration and deletion schedule require legal/privacy approval before launch.
+- The approved provisional retention duration is 90 days after paid access ends. `dataRetentionStartsAt`, `dataDeletionDueAt`, and `dataDeletedAt` are server-side lifecycle markers. The lifecycle worker deletes merchant store/catalog/shopper workspace data only after due time, while preserving SaaS billing, invoice, payment, audit, and legal records. Private verification objects must be deleted successfully before database evidence rows are removed.
 - Merchant review status is `NOT_STARTED`, `IN_PROGRESS`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`, or `SUSPENDED`; approval is required before a merchant can sell. Sensitive verification evidence must not be placed in ordinary notes or chat.
+- The source workflow requires verified merchant email, phone OTP, government ID, location proof, merchant-owned M-Pesa ownership evidence, and an owner declaration or business-registration evidence as applicable. A registered tax status additionally requires KRA PIN evidence. Platform approval is blocked until the applicable evidence items are approved.
+- `backend/workers/lifecycle.ts` is a deployable worker entry point for subscription expiry/grace transitions and retention processing. It has no provider credential dependency, but it requires a reachable database and private storage when due verification files exist; no scheduler has been configured or run from this workspace.
 - Platform support access is explicit, least-privilege, logged, and read-only by default.
 
 ## Permission boundary

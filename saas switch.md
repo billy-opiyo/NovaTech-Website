@@ -11,19 +11,36 @@ the launch billing path.
 
 Merchant billing is available under `/manage/billing`; platform billing
 configuration and reporting is under `/platform/billing`. The
-`0006_billing_system` and `0010_commercial_billing_decisions` migrations and
+`0006_billing_system`, `0010_commercial_billing_decisions`, `0011_merchant_verification`,
+and `0012_secure_merchant_verification` migrations and
 regenerated Prisma Client still need to be deployed to a reachable target
-database. Live M-Pesa credentials, provider dashboard callback registration,
-payment sandbox tests, final legal/tax documents, individual-operator
-details, and production rollout remain external gates.
+database. Live M-Pesa credentials, private R2 bucket configuration, the
+merchant verification encryption key, provider dashboard callback registration,
+SMS sandbox tests, final legal/tax documents, individual-operator details, and
+production rollout remain external gates.
 
 Merchant verification is now a source-level lifecycle: merchants can submit a
 review request from `/manage/verification`, platform operators can approve or
 reject it from `/platform/operations`, and public host/directory resolution and
 store publication require `APPROVED`. Migration `0011_merchant_verification`
 stores only restricted status, timestamps, reviewer, and notes. Identity,
-KRA/tax, contact, location, and merchant M-Pesa evidence still require a secure
-collection design and legal/privacy review before being collected or stored.
+KRA/tax, contact, location, and merchant M-Pesa evidence are handled by the
+secure intake slice described below. Final legal/privacy review and external
+storage/SMS configuration remain launch gates.
+
+The secure intake slice is now implemented in migration
+`0012_secure_merchant_verification`: encrypted structured details, hashed
+phone OTP verification, private-bucket evidence uploads, evidence status
+review, and five-minute reviewer download URLs. The source does not place
+verification documents in public product storage or expose object keys to
+merchants.
+
+The credential-free lifecycle slice is implemented in migration
+`0013_retention_lifecycle` and `backend/workers/lifecycle.ts`. It applies the
+three-day trial/renewal grace rules, schedules 90-day merchant-data retention
+after access ends, preserves SaaS billing/legal records, and processes due
+tenants idempotently. It must be run by a deployed scheduler before it is
+treated as automatic production behavior.
 
 The execution notes below are historical checkpoints and may describe the
 pre-billing state.

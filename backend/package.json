@@ -10,7 +10,8 @@
 		"db:deploy": "prisma migrate deploy",
 		"db:push": "prisma db push",
 		"db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
-		"db:init-admin": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/init-admin.ts"
+		"db:init-admin": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/init-admin.ts",
+		"worker:lifecycle": "ts-node --compiler-options {\"module\":\"CommonJS\"} workers/lifecycle.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.637.0",
