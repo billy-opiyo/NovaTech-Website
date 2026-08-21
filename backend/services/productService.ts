@@ -1,5 +1,6 @@
 import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
+import { assertTenantProductLimit } from "../billing/subscription"
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
 	const where: Prisma.ProductWhereInput = { tenantId }
@@ -188,6 +189,7 @@ export async function searchProducts(query: string, tenantId: string) {
 }
 
 export async function createProduct(data: any, tenantId: string) {
+	await assertTenantProductLimit(tenantId)
 	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId }, select: { id: true } })
 	if (!category) throw new Error("Category not found")
 	return prisma.product.create({

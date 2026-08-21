@@ -9,36 +9,36 @@ datasource db {
 
 // --- User & Authentication ---
 model User {
-  id              String        @id @default(cuid())
-  name            String?
-  email           String        @unique
-  emailVerified   DateTime?
-  passwordHash    String?
-  image           String?
-  role            Role          @default(CUSTOMER)
-  platformRole    PlatformRole?
-  marketingEmails Boolean       @default(true)
-  orderUpdates    Boolean       @default(true)
-	preferredTheme  String        @default("dark")
-	preferredStoreId String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  name             String?
+  email            String        @unique
+  emailVerified    DateTime?
+  passwordHash     String?
+  image            String?
+  role             Role          @default(CUSTOMER)
+  platformRole     PlatformRole?
+  marketingEmails  Boolean       @default(true)
+  orderUpdates     Boolean       @default(true)
+  preferredTheme   String        @default("dark")
+  preferredStoreId String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  orders         Order[]
-  reviews        Review[]
-  wishlistItems  WishlistItem[]
-  cartItems      CartItem[]
-  addresses      Address[]
-  supportTickets SupportTicket[]
-  notifications  Notification[]
-  adminLogs      AdminLog[]
-	loginEvents    LoginEvent[]
-	memberships    Membership[]
-	billingCustomers BillingCustomer[]
-	billingRecords BillingRecord[]
-	preferredStore Store?         @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
+  accounts         Account[]
+  sessions         Session[]
+  orders           Order[]
+  reviews          Review[]
+  wishlistItems    WishlistItem[]
+  cartItems        CartItem[]
+  addresses        Address[]
+  supportTickets   SupportTicket[]
+  notifications    Notification[]
+  adminLogs        AdminLog[]
+  loginEvents      LoginEvent[]
+  memberships      Membership[]
+  billingCustomers BillingCustomer[]
+  billingRecords   BillingRecord[]
+  preferredStore   Store?            @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
 model Account {
@@ -211,8 +211,8 @@ model Store {
 
   tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   domains          Domain[]
-	settingsVersions StoreSettingsVersion[]
-	preferredUsers   User[]                 @relation("UserPreferredStore")
+  settingsVersions StoreSettingsVersion[]
+  preferredUsers   User[]                 @relation("UserPreferredStore")
 
   @@index([publicationStatus])
 }
@@ -273,48 +273,51 @@ model Invitation {
 }
 
 model Plan {
-  id               String           @id @default(cuid())
-  key              String           @unique
-  name             String
-  price            Int?
-  currency         String           @default("KES")
-  billingInterval  BillingInterval?
-  setupFeeAmount   Int              @default(0)
-  transactionFeePercent Float       @default(0)
-  stripePriceId    String?          @unique
-  active           Boolean          @default(true)
-  entitlementsJson Json?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                    String           @id @default(cuid())
+  key                   String           @unique
+  name                  String
+  price                 Int?
+  currency              String           @default("KES")
+  billingInterval       BillingInterval?
+  setupFeeAmount        Int              @default(0)
+  transactionFeePercent Float            @default(0)
+  stripePriceId         String?          @unique
+  active                Boolean          @default(true)
+  entitlementsJson      Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  tenants       Tenant[]
-  subscriptions Subscription[]
-  entitlements  FeatureEntitlement[] @relation("PlanEntitlements")
+  tenants              Tenant[]
+  subscriptions        Subscription[]
+  pendingSubscriptions Subscription[]       @relation("PendingSubscriptionPlan")
+  entitlements         FeatureEntitlement[] @relation("PlanEntitlements")
 }
 
 model Subscription {
-  id                     String             @id @default(cuid())
-  tenantId               String
-  planId                 String
-  status                 SubscriptionStatus @default(TRIALING)
-  provider               String?
-  providerCustomerId     String?
-  providerSubscriptionId String?
+  id                        String             @id @default(cuid())
+  tenantId                  String
+  planId                    String
+  pendingPlanId             String?
+  status                    SubscriptionStatus @default(TRIALING)
+  provider                  String?
+  providerCustomerId        String?
+  providerSubscriptionId    String?
   providerCheckoutSessionId String?
-  trialStartsAt          DateTime?
-  trialEndsAt            DateTime?
-  currentPeriodStart     DateTime?
-  currentPeriodEnd       DateTime?
-  cancelAtPeriodEnd      Boolean            @default(false)
-  gracePeriodEndsAt      DateTime?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  trialStartsAt             DateTime?
+  trialEndsAt               DateTime?
+  currentPeriodStart        DateTime?
+  currentPeriodEnd          DateTime?
+  cancelAtPeriodEnd         Boolean            @default(false)
+  gracePeriodEndsAt         DateTime?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan   Plan   @relation(fields: [planId], references: [id])
-	invoices Invoice[]
-	addonSubscriptions AddonSubscription[]
-	payments Payment[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan               Plan                @relation(fields: [planId], references: [id])
+  pendingPlan        Plan?               @relation("PendingSubscriptionPlan", fields: [pendingPlanId], references: [id], onDelete: SetNull)
+  invoices           Invoice[]
+  addonSubscriptions AddonSubscription[]
+  payments           Payment[]
 
   @@index([tenantId, status])
   @@index([provider, providerSubscriptionId])
@@ -421,18 +424,18 @@ model Addon {
 }
 
 model AddonSubscription {
-  id                          String                  @id @default(cuid())
-  tenantId                    String
-  addonId                     String
-  subscriptionId              String?
-  status                      AddonSubscriptionStatus @default(INCOMPLETE)
-  provider                    String?
+  id                         String                  @id @default(cuid())
+  tenantId                   String
+  addonId                    String
+  subscriptionId             String?
+  status                     AddonSubscriptionStatus @default(INCOMPLETE)
+  provider                   String?
   providerSubscriptionItemId String?
   currentPeriodStart         DateTime?
   currentPeriodEnd           DateTime?
-  cancelAtPeriodEnd           Boolean                 @default(false)
-  createdAt                   DateTime                @default(now())
-  updatedAt                   DateTime                @updatedAt
+  cancelAtPeriodEnd          Boolean                 @default(false)
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   addon        Addon         @relation(fields: [addonId], references: [id], onDelete: Restrict)
@@ -485,8 +488,8 @@ model Transaction {
   metadata         Json?
   createdAt        DateTime @default(now())
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
@@ -655,43 +658,43 @@ model Order {
   updatedAt       DateTime    @updatedAt
   idempotencyKey  String?
 
-  items    OrderItem[]
-  payments Payment[]
+  items        OrderItem[]
+  payments     Payment[]
   transactions Transaction[]
-  tenant   Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
-  @@unique([tenantId, idempotencyKey])
 }
 
 model Payment {
-  id                String        @id @default(cuid())
-  tenantId          String?
-  orderId           String?
-  order             Order?        @relation(fields: [orderId], references: [id])
-  provider          String // "mpesa" | "stripe"
-  amount            Float
-  currency          String        @default("KES")
-  status            PaymentStatus @default(PENDING)
-  providerReference String?       @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
-  invoiceId         String?
-  subscriptionId    String?
-  billingRecordId   String?
-  kind              BillingPaymentKind @default(ORDER)
-  phoneNumber       String?
-  customerEmail     String?
-  failureCode       String?
-  failureReason     String?
+  id                 String             @id @default(cuid())
+  tenantId           String?
+  orderId            String?
+  order              Order?             @relation(fields: [orderId], references: [id])
+  provider           String // "mpesa" | "stripe"
+  amount             Float
+  currency           String             @default("KES")
+  status             PaymentStatus      @default(PENDING)
+  providerReference  String?            @unique // CheckoutRequestID (M-Pesa) / PaymentIntent ID (Stripe)
+  invoiceId          String?
+  subscriptionId     String?
+  billingRecordId    String?
+  kind               BillingPaymentKind @default(ORDER)
+  phoneNumber        String?
+  customerEmail      String?
+  failureCode        String?
+  failureReason      String?
   providerCustomerId String?
-  metadata          Json?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  tenant            Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice           Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-  billingRecord     BillingRecord? @relation(fields: [billingRecordId], references: [id], onDelete: SetNull)
-  transaction       Transaction?
+  metadata           Json?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tenant             Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice            Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription       Subscription?      @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  billingRecord      BillingRecord?     @relation(fields: [billingRecordId], references: [id], onDelete: SetNull)
+  transaction        Transaction?
 
   @@index([orderId])
   @@index([providerReference])

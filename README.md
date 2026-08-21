@@ -104,10 +104,10 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 ### 💼 SaaS Billing
 
 - Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, and setup fees for merchant platform services.
-- Merchant billing at `/manage/billing`: subscription status, setup-fee state, Stripe Checkout, Stripe payment portal, M-Pesa renewal/setup collection, add-ons, invoices, and SaaS payment history.
+- Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-trial activation and renewal collection, scheduled plan changes, add-ons, invoices, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
 - Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
-- Stripe subscription, invoice, payment-failure, cancellation, and renewal events are processed through the signature-verified webhook route. M-Pesa renewals are invoice-driven because Daraja collection is initiated per payment request.
+- M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.
 - Historical shopper order/payment records remain separate from merchant SaaS billing; new shopper payments and transaction commission creation are disabled by the merchant-direct model.
 
 ### 📦 Backend API (App Router Route Handlers)
@@ -148,7 +148,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
   - `simulateMpesaPayment` — Sandbox C2B simulate helper.
   - Graceful "not configured" behavior when `MPESA_*` env vars are absent.
-- **Cards** (`backend/payments/cards/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed; SaaS subscriptions use `backend/billing/service.ts` and Stripe Checkout:
+- **Cards** (`backend/payments/cards/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed; SaaS subscriptions use the M-Pesa launch path and retain future-provider compatibility:
   - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
   - `verifyCardPayment` — Retrieves PaymentIntent, maps status, confirms order.
   - Graceful "not configured" behavior when `STRIPE_SECRET_KEY` is absent.
@@ -156,7 +156,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - Stripe signature verification (`stripe.webhooks.constructEvent`).
   - M-Pesa STK Push callback + C2B validation/confirmation processing.
   - Updates `Payment` + `Order` status on success/failure/refund and synchronizes SaaS subscription/invoice lifecycle events.
-- **SaaS billing** (`backend/billing/service.ts`) — Server-side plan catalog, Stripe Checkout/portal, subscription changes/cancellation, M-Pesa invoice collection, setup-fee tracking, add-ons, and commission snapshots.
+- **SaaS billing** (`backend/billing/service.ts`) — Server-side plan catalog, M-Pesa invoice collection, post-trial setup-fee tracking, next-renewal plan changes, add-ons, and legacy commission snapshots.
 - **API Routes** (`frontend/src/app/api/payments/`):
   - `POST /api/payments/mpesa/initiate` — Initiate STK Push.
   - `POST /api/payments/mpesa/verify` — Verify STK Push status.

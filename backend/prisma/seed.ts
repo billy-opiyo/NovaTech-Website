@@ -35,18 +35,18 @@ async function main() {
 	})
 	await prisma.plan.upsert({
 		where: { key: "STARTER" },
-		update: {},
-		create: { key: "STARTER", name: "Starter", price: 2500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 2500, transactionFeePercent: 2.5, active: true, entitlementsJson: { staffAccounts: 3, analytics: false, whatsappNotifications: true } },
+		update: { name: "Starter", price: 1500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 50, staffAccounts: 3, storageGb: 2, analyticsLevel: "basic", customDomain: false, whatsappNotifications: false } },
+		create: { key: "STARTER", name: "Starter", price: 1500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 50, staffAccounts: 3, storageGb: 2, analyticsLevel: "basic", customDomain: false, whatsappNotifications: false } },
 	})
 	await prisma.plan.upsert({
 		where: { key: "BUSINESS" },
-		update: {},
-		create: { key: "BUSINESS", name: "Business", price: 7500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 2500, transactionFeePercent: 1.5, active: true, entitlementsJson: { staffAccounts: 15, analytics: true, whatsappNotifications: true } },
+		update: { name: "Business", price: 3500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 250, staffAccounts: 15, storageGb: 10, analyticsLevel: "advanced", customDomain: true, whatsappNotifications: false } },
+		create: { key: "BUSINESS", name: "Business", price: 3500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 250, staffAccounts: 15, storageGb: 10, analyticsLevel: "advanced", customDomain: true, whatsappNotifications: false } },
 	})
 	await prisma.plan.upsert({
 		where: { key: "ENTERPRISE" },
-		update: {},
-		create: { key: "ENTERPRISE", name: "Enterprise", price: 25000, currency: "KES", billingInterval: "YEAR", setupFeeAmount: 0, transactionFeePercent: 0.5, active: true, entitlementsJson: { staffAccounts: 100, analytics: true, whatsappNotifications: true } },
+		update: { name: "Enterprise", price: 8500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 1500, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 1000, staffAccounts: 100, storageGb: 50, analyticsLevel: "advanced", customDomain: true, customDomainCount: 5, whatsappNotifications: false } },
+		create: { key: "ENTERPRISE", name: "Enterprise", price: 8500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 1500, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 1000, staffAccounts: 100, storageGb: 50, analyticsLevel: "advanced", customDomain: true, customDomainCount: 5, whatsappNotifications: false } },
 	})
 	await prisma.addon.createMany({
 		data: [

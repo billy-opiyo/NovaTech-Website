@@ -40,3 +40,29 @@ export async function assertTenantLimit(tenantId: string, metric: string, reques
 		throw error
 	}
 }
+
+export async function assertTenantProductLimit(tenantId: string, requested = 1) {
+	const limitValue = await getTenantEntitlement(tenantId, "productLimit", 50)
+	const limit = typeof limitValue === "number" ? limitValue : 50
+	const usage = await prisma.product.count({ where: { tenantId } })
+	if (usage + requested > limit) {
+		const error = new Error(`This plan allows ${limit} active products. Upgrade to add more.`)
+		Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "productLimit", limit, usage })
+		throw error
+	}
+}
+
+export async function assertTenantStaffLimit(tenantId: string, requested = 1) {
+	const limitValue = await getTenantEntitlement(tenantId, "staffAccounts", 3)
+	const limit = typeof limitValue === "number" ? limitValue : 3
+	const [activeMemberships, pendingInvitations] = await Promise.all([
+		prisma.membership.count({ where: { tenantId, active: true } }),
+		prisma.invitation.count({ where: { tenantId, acceptedAt: null, expiresAt: { gt: new Date() } } }),
+	])
+	const usage = activeMemberships + pendingInvitations
+	if (usage + requested > limit) {
+		const error = new Error(`This plan allows ${limit} staff accounts. Upgrade to add more.`)
+		Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "staffAccounts", limit, usage })
+		throw error
+	}
+}

@@ -6,6 +6,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
 import { createInvitationToken, hashInvitationToken } from "backend/lib/invitation-token"
 import { storeInvitationSchema } from "backend/validators/teamValidator"
+import { assertTenantStaffLimit } from "backend/billing/subscription"
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
 		const { session, context } = await access(request)
 		const parsed = storeInvitationSchema.safeParse(await request.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Enter a valid email and store role.", issues: parsed.error.flatten() }, { status: 400 })
+		await assertTenantStaffLimit(context.tenantId)
 
 		const existingUser = await prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } })
 		if (existingUser) {

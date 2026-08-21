@@ -1,7 +1,7 @@
 # Nurava Tech SaaS architecture decisions
 
 **Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
-**Date:** 2026-08-19
+**Date:** 2026-08-21
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
 
@@ -36,10 +36,10 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 ## Commercial and payment gates
 
 - The initial plan catalog is entitlement-based and database-backed: `TRIAL`, `STARTER`, `BUSINESS`, and `ENTERPRISE`. The implementation defaults for Starter, Business, and Enterprise are seed data and remain configurable.
-- Billing currency, tax treatment, trial length, grace period, overages, annual discount, refunds, and support SLAs remain commercial, legal, or operational decisions that must be finalized before production self-service billing is enabled.
+- Launch commercial configuration is Kenya/KES, monthly billing, a 30-day trial, a 3-day payment grace period, no automatic overages, and M-Pesa-only SaaS collection. The final tax rate/treatment, refund wording, privacy/retention documents, support SLA text, and operator identity remain launch gates.
 - SaaS billing (merchant to Nurava Tech) remains separate from shopper commerce (customer to merchant), with separate ledgers, webhooks, credentials, and audit events.
 - The approved shopper model is merchant-direct: Nurava Tech provides discovery, storefront hosting, and enquiry handoff, while each independent merchant handles its own payment, delivery, refunds, warranty, taxes, and customer support. Nurava Tech does not collect shopper payments or present itself as merchant of record.
-- SaaS billing stores tenant billing-customer references and supports Stripe Billing plus invoice-driven M-Pesa setup-fee and renewal collection. Shopper payment initiation and verification routes are disabled in this model.
+- SaaS billing stores tenant billing references and uses invoice-driven M-Pesa setup-fee, first-subscription, and renewal collection at launch. Stripe remains provider-ready but is disabled by the launch billing configuration. Shopper payment initiation and verification routes are disabled in this model.
 
 ### Source-level SaaS billing behavior
 
@@ -47,7 +47,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Platform owners and admins use `/platform/billing` to manage plan and add-on configuration, including recurring prices and one-time setup fees, and inspect billing customers and subscriptions.
 - Super Admins and authorized platform operators use `/platform/operations` to inspect aggregate tenant/store metrics, recent cross-store activity, SaaS invoices, store previews, billing/setup-fee state, and store publication status. Suspension and reactivation actions are platform-authorized and audited.
 - Stripe subscription, invoice, payment-failure, and cancellation state is webhook-authoritative and idempotent. Browser return URLs do not activate subscriptions.
-- M-Pesa setup fees and renewals are invoice-driven. A successful verification updates the invoice/payment state and then synchronizes the related billing record or subscription.
+- M-Pesa setup fees and first subscriptions are combined into one post-trial invoice; later renewals are invoice-driven. A successful provider callback updates the invoice/payment state and then synchronizes the related billing record, pending plan, tenant, and subscription.
 - Historical shopper order payments may have separate commission transactions using an effective plan rate snapshot; new shopper payment and commission creation is disabled in merchant-direct mode.
 - Migration `0006_billing_system` and the regenerated Prisma Client must be deployed before the new billing routes can run against a target database. Live provider credentials, webhook registration, and sandbox/provider verification remain rollout gates.
 

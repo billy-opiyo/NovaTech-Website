@@ -1,22 +1,50 @@
 # Nurava Tech SaaS Switch Plan
 
-## Current implementation status (2026-08-19)
+## Current implementation status (2026-08-21)
 
 The tenant foundation and source-level merchant SaaS billing slice are
 implemented. Current billing code includes database-backed
 `TRIAL`/`STARTER`/`BUSINESS`/`ENTERPRISE` plans, setup-fee records,
-subscriptions, invoices, add-ons, Stripe Checkout/portal/webhooks,
-invoice-driven M-Pesa renewals, and plan commission transactions.
+subscriptions, invoices, add-ons, invoice-driven M-Pesa billing, and
+server-side plan entitlements. Stripe code remains provider-ready but is not
+the launch billing path.
 
 Merchant billing is available under `/manage/billing`; platform billing
 configuration and reporting is under `/platform/billing`. The
-`0006_billing_system` migration and regenerated Prisma Client still need to be
-deployed to a reachable target database. Live Stripe/M-Pesa credentials,
-provider dashboard webhook registration, payment sandbox tests, legal/tax/
-commercial decisions, and production rollout remain external gates.
+`0006_billing_system` and `0010_commercial_billing_decisions` migrations and
+regenerated Prisma Client still need to be deployed to a reachable target
+database. Live M-Pesa credentials, provider dashboard callback registration,
+payment sandbox tests, final legal/tax documents, individual-operator
+details, and production rollout remain external gates.
 
 The execution notes below are historical checkpoints and may describe the
 pre-billing state.
+
+## Approved provisional commercial decisions (2026-08-21)
+
+- Launch market and currency: Kenya and KES.
+- Each independent merchant is the merchant of record for its own electronics
+  sales, shopper payments, delivery, returns, refunds, warranties, product
+  taxes, and shopper complaints. Nurava does not collect shopper funds.
+- Merchant SaaS pricing is monthly: Starter KES 1,500 plus KES 5,000 setup;
+  Business KES 3,500 plus KES 5,000 setup; Enterprise KES 8,500 plus KES 1,500
+  setup. A 30-day trial is followed by a 3-day payment grace period; setup and
+  first subscription are collected together after the trial.
+- M-Pesa is the only SaaS billing method at launch. Renewals are invoice-driven,
+  provider-callback-authoritative, and do not assume automatic recurring debit.
+- Starter, Business, and Enterprise include 50, 250, and 1,000 active products;
+  3, 15, and 100 staff accounts; and 2 GB, 10 GB, and 50 GB storage. Product
+  additions are blocked at the server-side limit rather than billed as
+  surprise overages.
+- Starter uses a Nurava subdomain and basic analytics. Business adds one
+  custom domain and advanced analytics. Enterprise supports custom domain
+  expansion, advanced analytics, and negotiated support/SLA terms.
+- WhatsApp notifications are an opt-in paid add-on. Merchant promotional
+  messaging requires consent and unsubscribe controls.
+- These are launch configuration decisions, not legal or tax advice. Final
+  tax treatment/rate, privacy notice, Terms of Service, merchant policy
+  templates, refund language, retention schedule, and operator identity must
+  be reviewed before production self-service billing.
 
 ## Autonomous execution log
 
