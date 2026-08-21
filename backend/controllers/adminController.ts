@@ -38,6 +38,7 @@ export async function getAdminLogs(req: NextRequest) {
 
 		// Get distinct actions for filter UI
 		const distinctActions = await prisma.adminLog.findMany({
+			where: { tenantId: context.tenantId },
 			distinct: ["action"],
 			select: { action: true },
 		})

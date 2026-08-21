@@ -49,34 +49,52 @@ export async function createOrder(data: CreateOrderData) {
 		)
 		const productById = new Map(products.filter(Boolean).map((product) => [product!.id, product!]))
 		let subtotal = 0
+		const requestedQuantities = new Map<string, number>()
+		for (const item of data.items) {
+			requestedQuantities.set(item.productId, (requestedQuantities.get(item.productId) || 0) + item.quantity)
+		}
 
 		// Validate stock availability
-		for (const item of data.items) {
-			const product = productById.get(item.productId)
+		for (const [productId, quantity] of requestedQuantities) {
+			const product = productById.get(productId)
 
 			if (!product) {
-				throw new Error(`Product not found: ${item.productId}`)
+				throw new Error(`Product not found: ${productId}`)
 			}
 
-			if (product.stock < item.quantity) {
+			if (product.stock < quantity) {
 				throw new Error(
 					`Insufficient stock for ${product.name}. Available: ${product.stock}`,
 				)
 			}
-			subtotal += (product.discountedPrice ?? product.price) * item.quantity
+			subtotal += (product.discountedPrice ?? product.price) * quantity
 		}
 
 		let discount = 0
+		let couponUsedCount: number | undefined
 		if (data.couponCode) {
 			const coupon = await tx.coupon.findFirst({ where: { code: data.couponCode.trim().toUpperCase(), tenantId: data.tenantId } })
 			if (!coupon || !coupon.isActive || coupon.expiresAt < new Date() || (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit)) {
 				throw new Error("Invalid or expired coupon")
 			}
 			if (coupon.minOrderValue && subtotal < coupon.minOrderValue) throw new Error("Order does not meet the coupon minimum")
+			couponUsedCount = coupon.usedCount
 			discount = coupon.discountPercent ? subtotal * coupon.discountPercent / 100 : (coupon.discountAmount || 0)
 		}
-		const requestedShipping = data.deliveryMethod === "pickup" ? 0 : data.deliveryMethod === "express" ? 1000 : 500
-		const shippingCost = subtotal - discount >= 50000 ? 0 : requestedShipping
+		const store = await tx.store.findFirst({
+			where: { tenantId: data.tenantId },
+			select: { commerceSettings: true },
+		})
+		const commerceSettings = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
+			? store.commerceSettings as Record<string, unknown>
+			: {}
+		const freeShippingThreshold = typeof commerceSettings.freeShippingThreshold === "number" && Number.isFinite(commerceSettings.freeShippingThreshold)
+			? Math.max(0, commerceSettings.freeShippingThreshold)
+			: 50000
+		const defaultShippingCost = typeof commerceSettings.defaultShippingCost === "number" && Number.isFinite(commerceSettings.defaultShippingCost)
+			? Math.max(0, commerceSettings.defaultShippingCost)
+			: 500
+		const shippingCost = subtotal - discount >= freeShippingThreshold ? 0 : data.deliveryMethod === "pickup" ? 0 : data.deliveryMethod === "express" ? 1000 : defaultShippingCost
 		const total = Math.max(0, subtotal - discount + shippingCost)
 
 		// Get product prices for order items
@@ -104,6 +122,7 @@ export async function createOrder(data: CreateOrderData) {
 				paymentMethod: data.paymentMethod,
 				shippingAddress: data.shippingAddress,
 				notes: data.notes,
+				idempotencyKey: data.idempotencyKey,
 				items: {
 					create: orderItems,
 				},
@@ -124,27 +143,29 @@ export async function createOrder(data: CreateOrderData) {
 		})
 
 		if (data.couponCode) {
-			await tx.coupon.update({
-				where: { code: data.couponCode.trim().toUpperCase(), tenantId: data.tenantId },
+			const updatedCoupon = await tx.coupon.updateMany({
+				where: { tenantId: data.tenantId, code: data.couponCode.trim().toUpperCase(), usedCount: couponUsedCount },
 				data: { usedCount: { increment: 1 } },
 			})
+			if (updatedCoupon.count !== 1) throw new Error("Coupon could not be applied to this store")
 		}
 
-		// Decrement stock
-		for (const item of data.items) {
-			await tx.product.update({
-				where: { id: item.productId },
-				data: {
-					tenantId: data.tenantId,
-					stock: { decrement: item.quantity },
-				},
+		// Decrement stock atomically so concurrent checkouts cannot oversell.
+		for (const [productId, quantity] of requestedQuantities) {
+			const updated = await tx.product.updateMany({
+				where: { id: productId, tenantId: data.tenantId, stock: { gte: quantity } },
+				data: { stock: { decrement: quantity } },
 			})
+			if (updated.count !== 1) {
+				throw new Error("Product stock changed while placing the order. Please review your cart and try again.")
+			}
 		}
 
 		// Create notification for user
 		if (data.userId) {
 			await tx.notification.create({
 				data: {
+					tenantId: data.tenantId,
 					userId: data.userId,
 					type: "ORDER_STATUS",
 					message: `Order #${order.id.slice(-8).toUpperCase()} has been placed successfully.`,

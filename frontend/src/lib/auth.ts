@@ -3,6 +3,26 @@ import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcrypt"
 import prisma from "backend/lib/db"
+import { getPlatformDomain } from "backend/lib/platform-domain"
+import { normalizeHostname, resolveTenantFromRequest } from "backend/lib/tenant"
+
+async function resolveLoginTenantId(headers: Headers | undefined): Promise<string | undefined> {
+	const hostname = normalizeHostname(headers?.get("host"))
+	const platformDomain = getPlatformDomain()
+	const isPlatformHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === platformDomain || hostname === `www.${platformDomain}`
+	if (!hostname || isPlatformHost) return undefined
+
+	try {
+		return (await resolveTenantFromRequest({ headers: headers! })).tenantId
+	} catch {
+		// Login telemetry must never make authentication fail for an unknown host.
+		return undefined
+	}
+}
+
+async function recordLoginEvent(data: { tenantId?: string; userId?: string; email: string; ipAddress?: string; userAgent?: string; success: boolean }) {
+	await prisma.loginEvent.create({ data }).catch(() => undefined)
+}
 
 export const authOptions = {
 	providers: [
@@ -21,13 +41,14 @@ export const authOptions = {
 				const ipAddress = request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim()
 				const userAgent = request?.headers?.get("user-agent") || undefined
 				if (!email || !credentials?.password) return null
+				const tenantId = await resolveLoginTenantId(request?.headers)
 
 				const user = await prisma.user.findUnique({
 					where: { email },
 				})
 
 				if (!user || !user.passwordHash) {
-					await prisma.loginEvent.create({ data: { email, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					await recordLoginEvent({ tenantId, email, ipAddress, userAgent, success: false })
 					return null
 				}
 
@@ -37,14 +58,14 @@ export const authOptions = {
 				)
 
 				if (!isValid) {
-					await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					await recordLoginEvent({ tenantId, email, userId: user.id, ipAddress, userAgent, success: false })
 					return null
 				}
 				if (!user.emailVerified) {
-					await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: false } }).catch(() => undefined)
+					await recordLoginEvent({ tenantId, email, userId: user.id, ipAddress, userAgent, success: false })
 					return null
 				}
-				await prisma.loginEvent.create({ data: { email, userId: user.id, ipAddress, userAgent, success: true } }).catch(() => undefined)
+				await recordLoginEvent({ tenantId, email, userId: user.id, ipAddress, userAgent, success: true })
 
 				return {
 					id: user.id,

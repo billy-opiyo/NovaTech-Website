@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
+import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { getOrderById } from "backend/services/order.service"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +11,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 		}
 
 		const { id: orderId } = await params
-		const order = await getOrderById(orderId, session.user.id)
+		const context = await resolveTenantFromRequest(req)
+		const order = await getOrderById(orderId, context.tenantId, session.user.id)
 		if (!order.shippingAddress) {
 			return NextResponse.json({ message: "Order has no shipping address" }, { status: 422 })
 		}
@@ -102,11 +104,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 				streetAddress: shippingAddress.address,
 			},
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Tracking API error:", error)
+		const message = error instanceof Error ? error.message : "Failed to fetch tracking information"
+		const status = message === "Order not found" ? 404 : message === "Unauthorized" ? 403 : 500
 		return NextResponse.json(
-			{ message: "Failed to fetch tracking information", error: error.message },
-			{ status: 500 },
+			{ message: status === 500 ? "Failed to fetch tracking information" : message },
+			{ status },
 		)
 	}
 }

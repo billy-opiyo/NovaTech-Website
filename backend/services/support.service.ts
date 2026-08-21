@@ -76,7 +76,7 @@ export async function getAllTickets(filters?: {
 }
 
 export async function getTicketById(id: string, tenantId: string) {
-	const ticket = await prisma.supportTicket.findUnique({
+	const ticket = await prisma.supportTicket.findFirst({
 		where: { id, tenantId },
 		include: {
 			replies: {

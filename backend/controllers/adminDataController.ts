@@ -93,7 +93,7 @@ export async function getSecurity(req: NextRequest) {
 	const memberships = await prisma.membership.findMany({ where: { tenantId: context.tenantId, active: true }, select: { user: { select: { id: true, name: true, email: true, role: true, createdAt: true } } }, orderBy: { createdAt: "asc" } })
 	const memberIds = memberships.map(({ user }) => user.id)
 	const [events, admins] = await Promise.all([
-		memberIds.length ? prisma.loginEvent.findMany({ where: { userId: { in: memberIds } }, orderBy: { createdAt: "desc" }, take: 100, include: { user: { select: { name: true, role: true } } } }) : Promise.resolve([]),
+		memberIds.length ? prisma.loginEvent.findMany({ where: { tenantId: context.tenantId, userId: { in: memberIds } }, orderBy: { createdAt: "desc" }, take: 100, include: { user: { select: { name: true, role: true } } } }) : Promise.resolve([]),
 		Promise.resolve(memberships.map(({ user }) => user)),
 	])
 	return NextResponse.json({ events, admins, stats: { totalLogins: events.length, successful: events.filter((event) => event.success).length, failed: events.filter((event) => !event.success).length, activeAdmins: admins.length } })

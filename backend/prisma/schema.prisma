@@ -177,6 +177,7 @@ model Tenant {
   supportTickets      SupportTicket[]
   ticketReplies       TicketReply[]
   adminLogs           AdminLog[]
+  loginEvents         LoginEvent[]
   billingCustomer     BillingCustomer?
   billingRecord       BillingRecord?
   invoices            Invoice[]
@@ -652,7 +653,7 @@ model Order {
   notes           String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
-  idempotencyKey  String?     @unique
+  idempotencyKey  String?
 
   items    OrderItem[]
   payments Payment[]
@@ -661,6 +662,7 @@ model Order {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@unique([tenantId, idempotencyKey])
 }
 
 model Payment {
@@ -792,7 +794,7 @@ enum ReviewModerationStatus {
 model Coupon {
   id              String   @id @default(cuid())
   tenantId        String?
-  code            String   @unique
+  code            String
   discountPercent Float?
   discountAmount  Float?
   minOrderValue   Float?
@@ -802,7 +804,7 @@ model Coupon {
   isActive        Boolean  @default(true)
   tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, code])
+  @@unique([tenantId, code])
 }
 
 model Notification {
@@ -897,8 +899,10 @@ model AdminLog {
 
 model LoginEvent {
   id        String   @id @default(cuid())
+  tenantId  String?
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   email     String
   ipAddress String?
   userAgent String?
@@ -907,6 +911,7 @@ model LoginEvent {
 
   @@index([createdAt])
   @@index([email, createdAt])
+  @@index([tenantId, createdAt])
 }
 
 model RateLimitBucket {

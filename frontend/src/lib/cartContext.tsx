@@ -159,7 +159,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 		(sum, item) => sum + item.price * item.quantity,
 		0,
 	)
-	const shippingEstimate = subtotal > store.ecommerce.freeShippingThreshold ? 0 : store.ecommerce.defaultShippingCost
+	const shippingEstimate = subtotal >= store.ecommerce.freeShippingThreshold ? 0 : store.ecommerce.defaultShippingCost
 	const total = subtotal + shippingEstimate
 
 	return (
