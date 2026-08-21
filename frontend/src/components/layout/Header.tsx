@@ -38,7 +38,10 @@ export default function Header() {
 								className="object-contain"
 							/>
 						</div>
-						<span className="whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl">
+						<span
+							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
+							style={store.isPlatformHome ? { fontFamily: '"Times New Roman", Times, serif' } : undefined}
+						>
 							{store.brand.name}
 						</span>
 					</Link>
