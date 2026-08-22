@@ -45,7 +45,7 @@ const shopperServiceLinks = [
 const merchantServiceLinks = [
 	{ label: "Merchant Support", href: "/contact" },
 	{ label: "Merchant FAQs", href: "/faqs" },
-	{ label: "Start a Store", href: "/onboarding" },
+	{ label: "Create Store", href: "/onboarding" },
 	{ label: "Subscription & Billing", href: "/manage/billing" },
 ]
 

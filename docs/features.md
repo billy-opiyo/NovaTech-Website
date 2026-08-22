@@ -47,7 +47,7 @@
 | **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
 | **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, and accessible loading status messaging on the platform homepage and protected platform control plane only; merchant storefront and admin routes open without the splash. |
 | **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, and `aria-live` announcements. |
-| **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Start a Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava Tech Homepage` return link. |
+| **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Create Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava Tech Homepage` return link. |
 
 ## 👑 Admin Panel
 

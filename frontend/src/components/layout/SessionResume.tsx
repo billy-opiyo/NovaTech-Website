@@ -80,7 +80,7 @@ function restoreScroll(scrollY: number) {
 	return () => window.cancelAnimationFrame(frame)
 }
 
-export default function SessionResume() {
+export default function SessionResume({ isPlatformHome }: { isPlatformHome: boolean }) {
 	const pathname = usePathname()
 	const router = useRouter()
 	const initialCheckDone = useRef(false)
@@ -96,6 +96,13 @@ export default function SessionResume() {
 			}
 
 			const location = currentLocation()
+			// The platform root is an intentional entry point. Do not send a
+			// visitor back to a merchant directory or another saved route here.
+			if (isPlatformHome && pathname === "/") {
+				storageReady.current = true
+				return
+			}
+
 			if (isExplicitPlatformHome(location)) {
 				window.history.replaceState(window.history.state, "", "/")
 				storageReady.current = true
@@ -122,7 +129,7 @@ export default function SessionResume() {
 			storageReady.current = true
 			restoreScroll(saved.scrollY)
 		}
-	}, [pathname, router])
+	}, [isPlatformHome, pathname, router])
 
 	useEffect(() => {
 		const previousScrollRestoration = window.history.scrollRestoration

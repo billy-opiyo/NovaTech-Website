@@ -73,7 +73,7 @@ export default async function RootLayout({
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
-							<SessionResume />
+							<SessionResume isPlatformHome={store.isPlatformHome} />
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							<SplashScreen platformHome={store.isPlatformHome}>
 								<>

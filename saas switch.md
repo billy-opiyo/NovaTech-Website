@@ -303,7 +303,7 @@ pre-billing state.
 
 ### 2026-08-20 — Platform navigation for merchants and shoppers
 
-- Added platform-only top navigation in the order `Home`, `Browse Stores`, and `Start a Store`, on both desktop and mobile menus.
+- Added platform-only top navigation in the order `Home`, `Browse Stores`, and `Create Store`, on both desktop and mobile menus.
 - Merchant storefront navigation remains store-specific and does not inherit the platform onboarding or discovery links.
 
 ### Pre-Phase 5 handoff

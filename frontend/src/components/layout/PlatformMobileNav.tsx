@@ -8,7 +8,7 @@ import clsx from "clsx"
 const navItems = [
 	{ icon: Home, label: "Home", href: "/" },
 	{ icon: Store, label: "Browse Stores", href: "/stores?all=1", match: "/stores" },
-	{ icon: PlusCircle, label: "Start a Store", href: "/onboarding", match: "/onboarding" },
+	{ icon: PlusCircle, label: "Create Store", href: "/onboarding", match: "/onboarding" },
 ]
 
 export default function PlatformMobileNav() {

@@ -66,7 +66,7 @@ The latest UI implementation updates include:
 - The merchant footer return link uses the canonical `https://nuravatech.com` platform host in deployed environments and the active local root during local subdomain previews. The server reserves both `nuravatech.com` and `www.nuravatech.com` for platform discovery before merchant domain lookup.
 - Restricted the branded splash to the platform homepage and protected `/platform` control plane; individual store routes and legacy `/admin` routes do not show it.
 - Platform footer support, FAQ, privacy, and terms surfaces target merchants. Individual store hosts retain shopper support links and shopper-facing policy variants.
-- Added platform-only `Home`, `Browse Stores`, and `Start a Store` links to the desktop and mobile top navigation; merchant storefront navigation remains store-specific.
+- Added platform-only `Home`, `Browse Stores`, and `Create Store` links to the desktop and mobile top navigation; merchant storefront navigation remains store-specific.
 
 ## Production verification
 

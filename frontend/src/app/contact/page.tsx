@@ -93,7 +93,7 @@ const merchantFaqs: FAQ[] = [
 	{
 		category: "Platform & onboarding",
 		question: "How do I create a merchant store?",
-		answer: "Use Start a Store to create your merchant workspace, choose an available plan, and continue setup from the merchant dashboard.",
+	answer: "Use Create Store to create your merchant workspace, choose an available plan, and continue setup from the merchant dashboard.",
 	},
 	{
 		category: "Plans & billing",
