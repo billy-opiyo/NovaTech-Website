@@ -3,14 +3,14 @@ import { MembershipRole } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 
 export async function GET(request: NextRequest) {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
 		const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER])
+		await requireStorePermission(session.user.id, context.tenantId, "EXPORT_DATA")
 
 		const [tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets, legalAcceptances] = await Promise.all([
 			prisma.tenant.findFirst({ where: { id: context.tenantId }, select: { id: true, legalName: true, status: true, createdAt: true, dataRetentionStartsAt: true, dataDeletionDueAt: true } }),

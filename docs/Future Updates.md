@@ -36,6 +36,14 @@ implemented:
 - CSV catalog import/export at `/manage/catalog`, with preview, row validation,
   SKU-based updates, product entitlements, partial success reporting, and audit
   records.
+- Centralized merchant role permissions for catalog, orders, support, reviews,
+  analytics, billing, domains, verification, team, enquiries, publishing, and
+  data export mutations.
+- Server-backed launch readiness checks at `/manage/readiness`, with publication
+  blocked until tenant status, merchant approval, legal acceptance, contact
+  details, settings, and canonical-domain readiness are truthful.
+- Minimum observability foundation with request IDs on critical operational
+  endpoints, structured failure events, and database-aware `/api/health` output.
 
 The production database still requires migrations `0015_commercial_alignment`
 and `0017_merchant_enquiries_and_quotes` to be deployed against a configured
@@ -91,7 +99,7 @@ Invitation resend/revoke actions remain a later P1 improvement.
 **Remaining verification:** run the acceptance journey and cross-tenant tests
 against a reachable database and configured email provider.
 
-### 3.2 Add a first-class multi-store switcher
+### 3.2 Add a first-class multi-store switcher — remaining P0
 
 **Current baseline:** onboarding lists memberships, but workspace tenant selection
 is host-based. A query parameter must never be allowed to widen access.
@@ -110,41 +118,48 @@ is host-based. A query parameter must never be allowed to widen access.
 every API call uses the selected host tenant, and authorization tests prove that
 a forged store ID cannot switch context.
 
-### 3.3 Enforce role permissions consistently
+### 3.3 Enforce role permissions consistently — implemented foundation
 
-**Current baseline:** role guards exist, but the workspace contains many pages
-and shared administrative surfaces.
+**Current status:** the shared permission matrix and server-side permission
+helper are implemented and applied to the priority merchant mutations. Existing
+legacy role-array callers remain compatibility paths and should be migrated as
+new mutations are added.
 
-**Build:**
+**Delivered:**
 
 - Create a single permission matrix for owner, admin, manager, support, and
   editor capabilities.
-- Apply it to every page action and every API mutation.
-- Return clear 403 responses and hide unavailable actions without relying on
-  hidden buttons.
-- Add role-management audit records and least-privilege tests.
-- Consider per-user custom permissions only after the fixed matrix is reliable.
+- Apply it to the priority catalog, order, support, review, analytics, billing,
+  domain, verification, team, enquiry, publishing, and export mutations.
+- Return server-side permission errors rather than relying on hidden buttons.
 
-**Definition of done:** each mutation has a server-side permission test and a
-role-by-action matrix is part of the documentation.
+Role-management audit records, complete legacy-caller migration, and
+least-privilege tests remain.
 
-### 3.4 Make publication and domain status observable
+**Remaining verification:** add automated allow/deny tests for every matrix
+action and complete migration of the remaining compatibility callers.
 
-**Current baseline:** publication, verification, DNS, SSL, and provider checks
-are separate and can be operationally confusing.
+### 3.4 Make publication and domain status observable — implemented foundation
 
-**Build:**
+**Current status:** `/manage/readiness` now shows explicit PASS, PENDING, and
+FAIL checks with their server-side source, and the publish endpoint refuses to
+publish while required checks are incomplete.
+
+**Delivered:**
 
 - Add a merchant launch checklist with explicit pass/fail/pending states.
 - Check verified domain, DNS resolution, SSL certificate, tenant status,
   merchant approval, legal acceptance, required contact details, and published
   settings.
-- Add platform alerts for a published store whose canonical domain fails.
 - Show last checked time and the source of each status.
 - Never turn a failed external check into an inferred success.
 
-**Definition of done:** a merchant can see exactly why a store cannot publish or
-cannot be reached, and platform staff can monitor failures.
+Live DNS/SSL probes and platform alerts remain dependent on provider
+infrastructure.
+
+**Remaining work:** connect live DNS/SSL probes and platform alerts when the
+provider infrastructure is available; the application does not infer external
+success from a stored hostname.
 
 ### 3.5 Make SaaS billing launch-ready
 
@@ -170,23 +185,18 @@ is still required before launch claims.
 payment, subscription, tenant, and notification state exactly once, with a
 repeat callback remaining harmless.
 
-### 3.6 Production observability and incident response
+### 3.6 Production observability and incident response — implemented minimum
 
-**Build:**
+**Delivered:**
 
-- Structured logs with request ID, tenant ID, route, actor, provider event ID,
-  and latency, while excluding secrets and sensitive verification values.
-- Error tracking with source maps and alert thresholds.
-- Metrics for request failure, database latency, webhook lag, email/SMS failure,
-  queue depth, image upload failure, and subscription churn.
-- Uptime checks for platform root, a merchant host, health endpoint, database,
-  and provider callbacks.
-- Incident runbooks for database outage, tenant isolation suspicion, failed
-  billing callback, R2 outage, and accidental publication.
-- A status page or operator-facing incident banner.
+- Shared structured event logging with request IDs and tenant/actor/route context.
+- Request IDs and safe error correlation on health, readiness, publication, and
+  shared API error-handler responses.
+- `/api/health` reports application/database state without exposing secrets.
 
-**Definition of done:** an operator can identify a failing tenant/provider path,
-trace one request safely, and follow a documented recovery procedure.
+**Remaining work:** external error tracking, latency/provider metrics, uptime
+checks, alert thresholds, and incident runbooks.
+
 
 ## 4. P1: merchant productivity features
 
@@ -547,14 +557,17 @@ canonical values incorrectly.
 1. Secure invitation acceptance.
 2. Merchant enquiry and quote foundation.
 3. CSV catalog import/export foundation.
+4. Centralized permission matrix foundation.
+5. Launch readiness checklist and publication guard.
+6. Minimum request-correlated observability foundation.
 
 ### P0 — implement next before adding growth features
 
 1. Multi-store switcher with host-safe switching.
-2. One permission matrix applied consistently to every merchant action.
-3. Publication/domain launch checklist with observable DNS and SSL status.
+2. Complete permission-matrix migration, automated allow/deny coverage, and role-management audit records.
+3. Live DNS/SSL probes and platform alerts for canonical-domain failures.
 4. Billing sandbox, webhook retry/dead-letter handling, reconciliation, and receipts.
-5. Production observability, backups, restore drills, and incident runbooks.
+5. External error tracking, metrics, uptime checks, backups, restore drills, and incident runbooks.
 6. Two-factor authentication for merchant and platform accounts.
 
 ### P1 — next productivity wave

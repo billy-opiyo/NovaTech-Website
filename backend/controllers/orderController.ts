@@ -5,8 +5,7 @@ import { orderSchema, orderStatusSchema } from "../validators/orderValidator"
 import { z } from "zod"
 import { createActionRecord } from "../actions"
 import { resolveTenantFromRequest } from "../lib/tenant"
-import { requireMembership } from "../lib/tenant-access"
-import { MembershipRole } from "@prisma/client"
+import { requireMembership, requireStorePermission } from "../lib/tenant-access"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../lib/commerce-model"
 
 export async function getOrders(req: NextRequest) {
@@ -88,7 +87,7 @@ export async function getOrderById(
 		const context = await resolveTenantFromRequest(req)
 		let canManageOrders = false
 		try {
-			await requireMembership(session.user.id!, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+			await requireStorePermission(session.user.id!, context.tenantId, "VIEW_ORDERS")
 			canManageOrders = true
 		} catch {
 			// Shoppers may still read their own order in this store.
@@ -123,7 +122,7 @@ export async function updateOrderStatus(
 		const validated = orderStatusSchema.parse(body)
 
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+		await requireStorePermission(session.user.id, context.tenantId, "UPDATE_ORDERS")
 		const order = await orderService.updateOrderStatus(
 			id,
 			validated.status,
@@ -157,7 +156,7 @@ export async function getAllOrders(req: NextRequest) {
 		const status = url.searchParams.get("status") || undefined
 
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+		await requireStorePermission(session.user.id, context.tenantId, "VIEW_ORDERS")
 		const result = await orderService.getAllOrders(context.tenantId, page, limit, status)
 		return NextResponse.json(result)
 	} catch (error: any) {
@@ -173,7 +172,7 @@ export async function getOrderStats(req?: NextRequest) {
 		}
 
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+		await requireStorePermission(session.user.id, context.tenantId, "VIEW_ORDERS")
 		const stats = await orderService.getOrderStats(context.tenantId)
 		return NextResponse.json(stats)
 	} catch (error: any) {

@@ -68,6 +68,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - **Merchant Handoff Page** — collects consented shopper contact details, saves a tenant-scoped enquiry with server-authoritative product snapshots, then sends the selected products to the independent store through WhatsApp or email. The merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
 - **Merchant Enquiries and Quotes** — `/manage/enquiries` provides status tracking, internal notes, enquiry history, and owner/admin quote creation with email delivery.
 - **Catalog Import/Export** — `/manage/catalog` provides CSV templates, preview validation, SKU-based create/update imports, entitlement checks, partial success reporting, audit records, and current catalog export.
+- **Launch Readiness** — `/manage/readiness` provides server-backed publication checks and blocks publishing while required tenant, verification, legal, contact, settings, or canonical-domain checks are incomplete.
+- **Centralized Store Permissions** — A server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports.
+- **Operational Observability** — Critical operational responses include request IDs, structured safe failure events, and database-aware `/api/health` output.
 - **Platform boundary** — Nurava Tech does not create new shopper orders or collect shopper payments in `MERCHANT_DIRECT` mode.
 
 ### 👤 Authentication
@@ -134,6 +137,8 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/manage/enquiries/{id}/quote` | POST              | Owner/admin quote creation and email delivery for a merchant enquiry.                                                                                              |
 | `/api/manage/catalog/import` | POST                | CSV preview or partial commit with validation, SKU matching, entitlement checks, and audit reporting.                                                             |
 | `/api/manage/catalog/export` | GET                  | Tenant-scoped CSV catalog export for authorized merchant staff.                                                                                                    |
+| `/api/manage/readiness` | GET | Tenant-scoped launch checklist with explicit publication and canonical-domain readiness states. |
+| `/api/health` | GET | Database-aware application health response with safe request correlation. |
 | `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
 | `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2 (images only, 5MB max).                                                                                                 |
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
@@ -145,6 +150,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 ### 🔐 Backend Services & Utilities
 
 - **`backend/lib/db.ts`** — Prisma client singleton for dev hot-reload safety.
+- **`backend/lib/permissions.ts`** — Centralized tenant membership role-to-permission matrix.
+- **`backend/lib/launch-readiness.ts`** — Server-backed publication and canonical-domain readiness checks.
+- **`backend/lib/observability.ts`** — Safe request IDs, structured events, and response correlation.
 - **`backend/lib/email.ts`** — Resend email sending with branded order-confirmation template.
 - **`backend/lib/storage.ts`** — Cloudflare R2 upload/delete/signed-URL generation.
 - **`backend/lib/whatsapp.ts`** — WhatsApp integration helper.

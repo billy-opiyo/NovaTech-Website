@@ -237,6 +237,7 @@ host-based; a first-class multi-store switcher is a future update.
 | Settings | Store/account configuration |
 | Store design | Draft, preview, publish, and roll back storefront settings |
 | Domains | Add and inspect custom hostnames |
+| Launch readiness | Review server-backed publication, verification, legal, contact, settings, and domain checks |
 | Subscription | Plans, invoices, setup fee, renewals, cancellation, and add-ons |
 | Verification | Profile, phone OTP, and evidence submission |
 | Data export | Download a tenant-scoped JSON export |
@@ -318,6 +319,16 @@ The Domains page creates a custom hostname record and displays the DNS
 verification record. DNS and SSL are configured outside the application. The
 server displays verification and SSL state and must not assume a hostname works
 just because it was entered.
+
+### Launch readiness
+
+Open `/manage/readiness` before publishing a store. The checklist reports
+PASS, PENDING, or FAIL for tenant availability, merchant approval, current legal
+acceptance, public contact details, saved settings, the platform storefront
+host, and any canonical custom domain. Each result identifies its server-side
+source and the page can be refreshed. The publish endpoint blocks publication
+when a required check is incomplete; entered DNS or SSL values are never treated
+as proof that an external hostname is reachable.
 
 ### Team access
 
@@ -434,6 +445,17 @@ supports action/search filters, pagination, detail inspection, and CSV export.
 Privileged product, order, coupon, review, and platform mutations are intended
 to create AdminLog audit records.
 
+Store authorization uses a centralized server-side permission matrix for
+catalog, orders, support, reviews, analytics, billing, domains, verification,
+team, enquiries, publishing, and data export actions. UI visibility is only a
+convenience; API handlers enforce the permission again and return 403 when the
+membership role is insufficient.
+
+Critical operational responses expose an `x-request-id` and structured failure
+events include the request, tenant, actor, and route context without logging
+secrets. `/api/health` reports application and database state for deployment
+health checks.
+
 ## 9. API and service map
 
 Browser pages call the Next.js App Router handlers under frontend/src/app/api,
@@ -459,7 +481,7 @@ which use Prisma-backed controllers/services.
 /api/manage/verification/phone, /api/manage/verification/evidence,
 /api/manage/enquiries, /api/manage/enquiries/{id}/quote,
 /api/manage/catalog/import, /api/manage/catalog/export, /api/analytics,
-/api/analytics/export, and /api/inventory.
+/api/analytics/export, /api/manage/readiness, and /api/inventory.
 
 **Admin/platform:** /api/admin/customers, /api/admin/orders,
 /api/admin/deliveries, /api/admin/deliveries/{id}, /api/admin/coupons,

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
-import { MembershipRole } from "@prisma/client"
 import { resolveTenantFromRequest } from "../lib/tenant"
-import { requireMembership } from "../lib/tenant-access"
+import { requireStorePermission } from "../lib/tenant-access"
 import { getTenantEntitlement } from "../billing/subscription"
 import {
 	getAnalyticsOverview,
@@ -19,11 +18,7 @@ async function analyticsAccess(req: NextRequest) {
 	const session = await getServerSession()
 	if (!session?.user?.id) throw Object.assign(new Error("Unauthorized"), { status: 401 })
 	const context = await resolveTenantFromRequest(req)
-	await requireMembership(session.user.id, context.tenantId, [
-		MembershipRole.STORE_OWNER,
-		MembershipRole.STORE_ADMIN,
-		MembershipRole.STORE_MANAGER,
-	])
+	await requireStorePermission(session.user.id, context.tenantId, "VIEW_ANALYTICS")
 	const platformAdmin = ["ADMIN", "SUPERADMIN"].includes(String(session.user.role)) || ["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_ANALYST"].includes(String(session.user.platformRole))
 	const analyticsLevel = platformAdmin ? "advanced" : await getTenantEntitlement(context.tenantId, "analyticsLevel", "basic")
 	return { context, advancedAvailable: analyticsLevel === "advanced" }

@@ -28,6 +28,7 @@ import {
 	Globe2,
 	Download,
 	ClipboardList,
+	ClipboardCheck,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -64,7 +65,8 @@ const sidebarLinks = (basePath: string) => [
 		items: [
 		{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
 			{ icon: Palette, label: "Store design", href: `${basePath}/design` },
-			{ icon: Globe2, label: "Domains", href: `${basePath}/domains` },
+		{ icon: Globe2, label: "Domains", href: `${basePath}/domains` },
+			{ icon: ClipboardCheck, label: "Launch readiness", href: `${basePath}/readiness` },
 			{ icon: CreditCard, label: "Subscription", href: `${basePath}/billing` },
 			{ icon: ShieldCheck, label: "Verification", href: `${basePath}/verification` },
 			{ icon: Download, label: "Data export", href: `${basePath}/data-export` },

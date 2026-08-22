@@ -3,7 +3,7 @@ import { getServerSession } from "@/lib/auth"
 import { deleteFile, uploadFile } from "backend/lib/storage"
 import { generateTenantFileKey } from "backend/lib/storage"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
 import { assertTenantStorageLimit } from "backend/billing/subscription"
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_EDITOR])
+		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
 
 		const formData = await req.formData()
 		const file = formData.get("file") as File | null

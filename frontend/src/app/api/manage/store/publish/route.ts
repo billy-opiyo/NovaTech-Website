@@ -4,20 +4,24 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { merchantVerificationMessage } from "backend/lib/merchant-verification"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
+import { getLaunchReadiness } from "backend/lib/launch-readiness"
+import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
 
 export async function POST(request: Request) {
+	const requestId = getRequestId(request)
 	try {
 		const session = await auth()
-		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
+		if (!session?.user?.id) return withRequestId(NextResponse.json({ message: "Authentication required" }, { status: 401 }), requestId)
 		const body = await request.json().catch(() => ({})) as { acceptLegalTerms?: boolean }
 		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
-		const membership = await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
-		void membership
+		await requireStorePermission(session.user.id, context.tenantId, "PUBLISH_STORE")
 		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true, tenant: { select: { verificationStatus: true } } } })
-		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
+		if (!store) return withRequestId(NextResponse.json({ message: "Store not found" }, { status: 404 }), requestId)
+		const readiness = await getLaunchReadiness(context.tenantId, context.storeId, { legalAcceptanceOverride: body.acceptLegalTerms === true })
+		if (!readiness.ready) return withRequestId(NextResponse.json({ message: "Complete the launch readiness checks before publishing.", code: "LAUNCH_READINESS_INCOMPLETE", checks: readiness.checks, requestId }, { status: 409 }), requestId)
 		if (store.tenant.verificationStatus !== "APPROVED") return NextResponse.json({ message: merchantVerificationMessage(store.tenant.verificationStatus), code: "MERCHANT_VERIFICATION_REQUIRED", verificationStatus: store.tenant.verificationStatus }, { status: 409 })
 		const currentAcceptance = await getCurrentMerchantLegalAcceptance(context.tenantId, "SELLING")
 		if (!currentAcceptance && body.acceptLegalTerms !== true) return NextResponse.json({ message: "Confirm the current merchant terms, privacy notice, and merchant responsibilities before publishing.", code: "MERCHANT_LEGAL_ACCEPTANCE_REQUIRED" }, { status: 409 })
@@ -31,9 +35,12 @@ export async function POST(request: Request) {
 			await transaction.storeSettingsVersion.create({ data: { tenantId: store.tenantId, storeId: store.id, version: nextVersion, settings: draft, publishedAt: new Date(), publishedBy: session.user.id } })
 			return result
 		})
-		return NextResponse.json({ store: updated, version: nextVersion })
+		logEvent("info", "store_published", { requestId, tenantId: context.tenantId, actorId: session.user.id, route: "/api/manage/store/publish" }, { storeId: context.storeId, version: nextVersion })
+		return withRequestId(NextResponse.json({ store: updated, version: nextVersion, requestId }), requestId)
 	} catch (error) {
-		console.error("Store publish failed", error)
-		return NextResponse.json({ message: "Store could not be published" }, { status: 503 })
+		logEvent("error", "store_publish_failed", { requestId, route: "/api/manage/store/publish" }, { message: error })
+		const status = typeof error === "object" && error && "status" in error && Number.isInteger((error as { status?: unknown }).status) ? Number((error as { status: number }).status) : 503
+		const message = status >= 400 && status < 500 && error instanceof Error ? error.message : "Store could not be published"
+		return withRequestId(NextResponse.json({ message, requestId }, { status }), requestId)
 	}
 }

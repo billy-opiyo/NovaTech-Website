@@ -5,8 +5,7 @@ import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../validat
 import { z } from "zod"
 import { findBlockedReviewTerms } from "../constants/reviewModeration"
 import { resolveTenantFromRequest } from "../lib/tenant"
-import { MembershipRole } from "@prisma/client"
-import { requireMembership } from "../lib/tenant-access"
+import { requireStorePermission } from "../lib/tenant-access"
 
 export async function getReviews(req: NextRequest) {
 	try {
@@ -195,7 +194,7 @@ export async function deleteReview(req: NextRequest) {
 
 		if (review.userId !== session.user.id) {
 			try {
-				await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+				await requireStorePermission(session.user.id, context.tenantId, "MODERATE_REVIEWS")
 			} catch (error: any) {
 				if (error?.status === 401 || error?.status === 403) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 				throw error

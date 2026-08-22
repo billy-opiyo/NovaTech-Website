@@ -59,6 +59,9 @@
 | **Admin Products Page** | Full CRUD-style UI with:<br>- Stats cards (total products, active, out of stock, drafts)<br>- Search, status filters (active/draft/out-of-stock/archived), sorting<br>- Bulk selection, table rows with product details, stock levels, sales, ratings<br>- Delete confirmation modal.|
 | **Merchant Enquiries and Quotes** | `/manage/enquiries` lists tenant-scoped shopper handoffs, supports search/status updates/internal notes, and lets owners/admins create and email quotes with delivery fees, terms, expiry, and unique references. |
 | **Catalog Import/Export** | `/manage/catalog` provides CSV template download, current-catalog CSV export, preview validation, SKU-based create/update import, entitlement checks, partial success reporting, and audit records. |
+| **Launch Readiness** | `/manage/readiness` reports server-backed PASS/PENDING/FAIL publication checks and the publish API blocks incomplete required checks. |
+| **Centralized Store Permissions** | Server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports. |
+| **Operational Observability** | Critical operational responses expose request IDs, structured failure events carry safe tenant/actor/route context, and `/api/health` reports application/database state. |
 | **Admin Orders Page** | Order management table with status tracking.|
 | **Admin Analytics** | Growth comparison calculations (period-over-period), CSV/JSON export functionality, real-time growth data in metric cards.|
 | **Admin Customers Page** | Customer listing with filters and details.|
@@ -104,6 +107,8 @@
 | `/api/manage/enquiries/{id}/quote` | POST | Owner/admin-only quote creation and email delivery for an enquiry. |
 | `/api/manage/catalog/import` | POST | Owner/admin/manager/editor CSV preview or partial commit with validation, SKU matching, entitlement checks, and audit reporting. |
 | `/api/manage/catalog/export` | GET | Tenant-scoped CSV catalog export for authorized store users. |
+| `/api/manage/readiness` | GET | Tenant-scoped publication and domain readiness checklist with server-backed check sources. |
+| `/api/health` | GET | Database-aware health response with safe application state and request correlation ID. |
 | `/api/newsletter` | POST | Requires explicit consent and stores a tenant-scoped newsletter subscription. |
 | `/api/newsletter/unsubscribe` | POST | Removes promotional newsletter consent for the current store without revealing whether an address was previously subscribed. |
 | `/api/products/upload` | POST | Admin product image upload to Cloudflare R2 (images only, 5MB max). |
@@ -122,6 +127,9 @@
 | Service / Utility | Description |
 |-------------------|-------------|
 | `backend/lib/db.ts` | Prisma client singleton for dev hot-reload safety. |
+| `backend/lib/permissions.ts` | Centralized tenant membership role-to-permission matrix. |
+| `backend/lib/launch-readiness.ts` | Server-backed publication and canonical-domain readiness checks. |
+| `backend/lib/observability.ts` | Safe request IDs, structured events, and response correlation. |
 | `backend/lib/email.ts` | Resend email sending with branded order-confirmation template. |
 | `backend/lib/storage.ts` | Cloudflare R2 file operations (upload, delete, signed-URL generation). |
 | `backend/lib/whatsapp.ts` | WhatsApp integration helper. |

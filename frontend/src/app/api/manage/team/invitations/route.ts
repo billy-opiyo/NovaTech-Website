@@ -3,7 +3,7 @@ import { MembershipRole } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { createInvitationToken, hashInvitationToken } from "backend/lib/invitation-token"
 import { storeInvitationSchema } from "backend/validators/teamValidator"
 import { assertTenantStaffLimit } from "backend/billing/subscription"
@@ -13,7 +13,7 @@ async function access(request: NextRequest) {
 	const session = await auth()
 	if (!session?.user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 })
 	const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
-	await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+	await requireStorePermission(session.user.id, context.tenantId, "MANAGE_TEAM")
 	return { session, context }
 }
 

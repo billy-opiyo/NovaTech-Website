@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getRequestId, logEvent, withRequestId } from "./observability"
 
 type ErrorWithMetadata = { message?: string; status?: number; code?: string }
 
@@ -14,5 +15,12 @@ export function apiErrorResponse(error: unknown, fallback = "Request unavailable
 }
 
 export function withApiError<T extends (...args: any[]) => Promise<Response>>(handler: T, ...args: Parameters<T>): Promise<Response> {
-	return handler(...args).catch((error) => apiErrorResponse(error))
+	const request = args[0] as { headers?: Headers; url?: string } | undefined
+	const requestId = getRequestId(request?.headers ? request as { headers: Headers } : undefined)
+	return handler(...args)
+		.then((response) => withRequestId(response, requestId))
+		.catch((error) => {
+			logEvent("error", "api_request_failed", { requestId, route: request?.url }, { message: error })
+			return withRequestId(apiErrorResponse(error), requestId)
+		})
 }
