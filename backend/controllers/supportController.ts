@@ -4,21 +4,15 @@ import * as supportService from "../services/support.service"
 import { contactSchema, updateTicketSchema, ticketReplySchema } from "../validators/supportValidator"
 import { sendEmail } from "../lib/email"
 import { z } from "zod"
-import { MembershipRole } from "@prisma/client"
 import { resolveTenantFromRequest } from "../lib/tenant"
-import { requireMembership } from "../lib/tenant-access"
+import { requireStorePermission } from "../lib/tenant-access"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
 	if (!session?.user?.id) throw Object.assign(new Error("Unauthorized"), { status: 401 })
 	const context = await resolveTenantFromRequest(req)
-	const membership = await requireMembership(session.user.id, context.tenantId, [
-		MembershipRole.STORE_OWNER,
-		MembershipRole.STORE_ADMIN,
-		MembershipRole.STORE_MANAGER,
-		MembershipRole.STORE_SUPPORT,
-	])
+	const membership = await requireStorePermission(session.user.id, context.tenantId, "MANAGE_SUPPORT")
 	return { session, context, membership }
 }
 

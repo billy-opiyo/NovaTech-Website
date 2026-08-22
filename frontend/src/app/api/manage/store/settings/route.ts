@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { storeSettingsPatchSchema } from "backend/validators/storeSettingsValidator"
 import { THEME_PRESETS } from "@/config/theme-presets"
 
@@ -11,7 +11,7 @@ async function storeAccess() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
 	const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
-	const membership = await requireMembership(session.user.id, context.tenantId)
+	const membership = await requireStorePermission(session.user.id, context.tenantId, "MANAGE_STORE_SETTINGS")
 	return { session, context, membership }
 }
 

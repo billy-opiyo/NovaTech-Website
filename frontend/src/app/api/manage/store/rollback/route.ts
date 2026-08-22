@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 
 export async function POST(request: Request) {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
 		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
-		await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
+		await requireStorePermission(session.user.id, context.tenantId, "PUBLISH_STORE")
 		const body = await request.json().catch(() => null) as { version?: unknown; acceptLegalTerms?: boolean } | null
 		const version = Number(body?.version)
 		if (!Number.isInteger(version) || version < 1) return NextResponse.json({ message: "A valid published version is required" }, { status: 400 })

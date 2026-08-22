@@ -3,7 +3,7 @@ import { MembershipRole } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { assertTenantProductLimit } from "backend/billing/subscription"
 import { parseCsv, type CatalogCsvRow } from "backend/lib/catalog-csv"
 import { createActionRecord } from "backend/actions"
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
 		const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_EDITOR])
+		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
 		const form = await request.formData()
 		const file = form.get("file")
 		const mode = form.get("mode") === "commit" ? "commit" : "preview"

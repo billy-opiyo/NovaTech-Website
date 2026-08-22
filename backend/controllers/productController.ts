@@ -4,8 +4,7 @@ import * as productService from "../services/productService"
 import { productSchema } from "../validators/productValidator"
 import { createActionRecord } from "../actions"
 import { resolveTenantFromRequest } from "../lib/tenant"
-import { requireMembership } from "../lib/tenant-access"
-import { MembershipRole } from "@prisma/client"
+import { requireStorePermission } from "../lib/tenant-access"
 
 export async function getProducts(req: NextRequest) {
 	try {
@@ -42,7 +41,7 @@ export async function createProduct(req: NextRequest) {
 			return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		}
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_EDITOR])
+		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
 
 		const body = await req.json()
 		const validated = productSchema.parse(body)
@@ -70,7 +69,7 @@ export async function updateProduct(req: NextRequest, slug: string) {
 		const session = await getServerSession()
 		if (!session?.user?.id) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_EDITOR])
+		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
 		const body = await req.json()
 		const product = await productService.updateProduct(slug, body, context.tenantId)
 		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
@@ -83,7 +82,7 @@ export async function deleteProduct(req: NextRequest, slug: string) {
 		const session = await getServerSession()
 		if (!session?.user?.id) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 		const context = await resolveTenantFromRequest(req)
-		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+		await requireStorePermission(session.user.id, context.tenantId, "DELETE_CATALOG")
 		const product = await productService.deleteProduct(slug, context.tenantId)
 		await createActionRecord("DELETED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json({ ok: true })

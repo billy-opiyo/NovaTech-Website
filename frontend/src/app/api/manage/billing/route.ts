@@ -3,7 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership, storeManagementRoles } from "backend/lib/tenant-access"
+import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
 import {
 	BillingError,
 	cancelSubscription,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 		const parsed = actionSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid billing action", issues: parsed.error.flatten() }, { status: 400 })
 		if (["checkout", "change_plan", "cancel", "renew_mpesa", "setup_mpesa", "portal", "addon_subscribe", "addon_unsubscribe"].includes(parsed.data.action)) {
-			await requireMembership(session.user.id, context.tenantId, storeManagementRoles)
+			await requireStorePermission(session.user.id, context.tenantId, "MANAGE_BILLING")
 		}
 		const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
 		const email = session.user.email as string

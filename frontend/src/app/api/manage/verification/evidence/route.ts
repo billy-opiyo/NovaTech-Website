@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireStorePermission } from "backend/lib/tenant-access"
 import { deletePrivateFile, generateVerificationFileKey, uploadPrivateFile } from "backend/lib/storage"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 
@@ -18,7 +18,7 @@ async function access() {
 	const session = await auth()
 	if (!session?.user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 })
 	const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
-	await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
+	await requireStorePermission(session.user.id, context.tenantId, "MANAGE_VERIFICATION")
 	return { session, context }
 }
 

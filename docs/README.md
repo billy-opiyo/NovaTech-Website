@@ -191,6 +191,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Settings | Admin | [Open](http://localhost:3000/admin/settings) | [Open](https://nuravatech.com/admin/settings) |
 | Security | Admin | [Open](http://localhost:3000/admin/security) | [Open](https://nuravatech.com/admin/security) |
 | Activity log | Admin | [Open](http://localhost:3000/admin/activity) | [Open](https://nuravatech.com/admin/activity) |
+| Launch readiness | Store membership; server-backed checks | [Open](http://localhost:3000/manage/readiness) | `https://{merchant-host}/manage/readiness` |
 
 ### Merchant workspace and platform control plane
 
@@ -204,6 +205,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
 | Merchant enquiries and quotes | Store membership; quote creation owner/admin | `http://{store-slug}.localhost:3000/manage/enquiries` | `https://{merchant-host}/manage/enquiries` |
 | Catalog import/export | Store owner/admin/manager/editor | `http://{store-slug}.localhost:3000/manage/catalog` | `https://{merchant-host}/manage/catalog` |
+| Launch readiness | Store membership; read-only checklist | `http://{store-slug}.localhost:3000/manage/readiness` | `https://{merchant-host}/manage/readiness` |
 
 ### Dynamic URL values
 

@@ -3,7 +3,7 @@ import { MembershipRole } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
-import { requireMembership } from "backend/lib/tenant-access"
+import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
 import { merchantEnquiryUpdateSchema } from "backend/validators/merchantEnquiryValidator"
 import { createActionRecord } from "backend/actions"
 
@@ -11,7 +11,7 @@ async function access(request: NextRequest, roles: MembershipRole[] = [Membershi
 	const session = await auth()
 	if (!session?.user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 })
 	const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
-	const membership = await requireMembership(session.user.id, context.tenantId, roles)
+	const membership = await requireStorePermission(session.user.id, context.tenantId, "MANAGE_ENQUIRIES")
 	return { session, context, membership }
 }
 
