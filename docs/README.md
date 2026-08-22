@@ -215,6 +215,8 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 | `README.md` | This overview file |
 | `features.md` | Comprehensive list of all implemented features |
 | `client-customization.md` | Client branding, theme presets, content, and staging customization guide |
+| `User Manual.md` | Deep operational guide for shoppers, merchants, platform operators, and developers |
+| `Future Updates.md` | Prioritized roadmap for advanced features, productivity, revenue, security, and scale |
 
 ## Tech Stack
 
@@ -234,6 +236,8 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 
 - [Features](features.md) — Complete list of implemented features
 - [Client customization](client-customization.md) — Branding, themes, content, and client setup
+- [User Manual](User%20Manual.md) — Full operating guide
+- [Future Updates](Future%20Updates.md) — Advanced feature and implementation roadmap
 - [Page links](#page-links) — Development and production URLs for every UI page
 - [Database Schema](../README.md#database-schema-overview) — Prisma model overview
 - [API Endpoints](../README.md#-backend-api-app-router-route-handlers) — Backend API reference
