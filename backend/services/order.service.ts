@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
 import { PLATFORM_BRAND_NAME } from "../lib/brand"
+import { getTenantEntitlement } from "../billing/subscription"
 
 export interface CreateOrderData {
 	tenantId: string
@@ -231,6 +232,7 @@ export async function getOrderById(orderId: string, tenantId: string, userId?: s
 				select: {
 					name: true,
 					email: true,
+					orderUpdates: true,
 				},
 			},
 		},
@@ -277,6 +279,7 @@ export async function updateOrderStatus(
 				select: {
 					name: true,
 					email: true,
+					orderUpdates: true,
 				},
 			},
 		},
@@ -309,8 +312,9 @@ export async function updateOrderStatus(
 		}
 	}
 
-	// Send WhatsApp notification if phone number exists
-	if (shippingPhone) {
+	// Send WhatsApp notification when the merchant has enabled the paid add-on
+	const whatsappEnabled = await getTenantEntitlement(tenantId, "whatsappNotifications", false)
+	if (shippingPhone && whatsappEnabled === true && order.user?.orderUpdates !== false) {
 		try {
 			const statusMessages: Record<string, string> = {
 				CONFIRMED: "Your order has been confirmed and is being prepared.",

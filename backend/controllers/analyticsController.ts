@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/auth"
 import { MembershipRole } from "@prisma/client"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireMembership } from "../lib/tenant-access"
+import { getTenantEntitlement } from "../billing/subscription"
 import {
 	getAnalyticsOverview,
 	getSalesData,
@@ -23,12 +24,15 @@ async function analyticsAccess(req: NextRequest) {
 		MembershipRole.STORE_ADMIN,
 		MembershipRole.STORE_MANAGER,
 	])
-	return context
+	const platformAdmin = ["ADMIN", "SUPERADMIN"].includes(String(session.user.role)) || ["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_ANALYST"].includes(String(session.user.platformRole))
+	const analyticsLevel = platformAdmin ? "advanced" : await getTenantEntitlement(context.tenantId, "analyticsLevel", "basic")
+	return { context, advancedAvailable: analyticsLevel === "advanced" }
 }
 
 export async function getAnalytics(req: NextRequest) {
 	try {
-		const context = await analyticsAccess(req)
+		const access = await analyticsAccess(req)
+		const context = access.context
 
 		const searchParams = req.nextUrl.searchParams
 		const timeRange = searchParams.get("timeRange") || "7d"
@@ -37,11 +41,11 @@ export async function getAnalytics(req: NextRequest) {
 			await Promise.all([
 				getAnalyticsOverview(context.tenantId, timeRange),
 				getSalesData(context.tenantId, timeRange),
-				getCategorySales(context.tenantId, timeRange),
+				access.advancedAvailable ? getCategorySales(context.tenantId, timeRange) : Promise.resolve([]),
 				getTopProducts(context.tenantId, timeRange, 5),
-				getRegionSales(context.tenantId, timeRange),
-				getPaymentMethodStats(context.tenantId, timeRange),
-				getGrowthComparison(context.tenantId, timeRange),
+				access.advancedAvailable ? getRegionSales(context.tenantId, timeRange) : Promise.resolve([]),
+				access.advancedAvailable ? getPaymentMethodStats(context.tenantId, timeRange) : Promise.resolve([]),
+				access.advancedAvailable ? getGrowthComparison(context.tenantId, timeRange) : Promise.resolve(null),
 			])
 
 		return NextResponse.json({
@@ -52,6 +56,8 @@ export async function getAnalytics(req: NextRequest) {
 			regionSales,
 			paymentMethods,
 			growth,
+			analyticsLevel: access.advancedAvailable ? "advanced" : "basic",
+			advancedAvailable: access.advancedAvailable,
 		})
 	} catch (error: any) {
 		console.error("Analytics API error:", error)
@@ -64,7 +70,9 @@ export async function getAnalytics(req: NextRequest) {
 
 export async function exportAnalytics(req: NextRequest) {
 	try {
-		const context = await analyticsAccess(req)
+		const access = await analyticsAccess(req)
+		const context = access.context
+		if (!access.advancedAvailable) return NextResponse.json({ message: "Advanced analytics exports require the Business or Enterprise plan.", code: "ANALYTICS_LEVEL_UPGRADE_REQUIRED" }, { status: 409 })
 
 		const searchParams = req.nextUrl.searchParams
 		const timeRange = searchParams.get("timeRange") || "7d"

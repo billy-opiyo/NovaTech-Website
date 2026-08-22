@@ -10,6 +10,10 @@ export type TenantContext = {
 	publicationStatus: "DRAFT" | "PUBLISHED" | "SUSPENDED"
 }
 
+export function isPublicTenantStatus(status: string) {
+	return ["ACTIVE", "TRIALING", "GRACE_PERIOD"].includes(status)
+}
+
 export class TenantResolutionError extends Error {
 	readonly status: number
 	readonly reason: "UNKNOWN_HOST" | "UNVERIFIED_DOMAIN" | "UNAVAILABLE_STORE"
@@ -73,7 +77,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		if (domain.verificationStatus !== "VERIFIED") {
 			throw new TenantResolutionError("UNVERIFIED_DOMAIN", "This domain is awaiting verification.", 409)
 		}
-		if (!allowUnpublished && domain.store.tenant.status !== "ACTIVE" && domain.store.tenant.status !== "TRIALING") {
+		if (!allowUnpublished && !isPublicTenantStatus(domain.store.tenant.status)) {
 			throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
 		}
 		if (!allowUnpublished && !canMerchantSell(domain.store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
@@ -102,7 +106,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } },
 	})
 	if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
-	if (!allowUnpublished && store.tenant.status !== "ACTIVE" && store.tenant.status !== "TRIALING") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+	if (!allowUnpublished && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
 	if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
 	if (!allowUnpublished && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
 

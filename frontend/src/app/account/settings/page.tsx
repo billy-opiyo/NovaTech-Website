@@ -15,7 +15,7 @@ type Settings = {
 	preferredTheme: "light" | "dark"
 }
 
-const defaults: Settings = { name: "", email: "", image: null, emailVerified: null, marketingEmails: true, orderUpdates: true, preferredTheme: "dark" }
+const defaults: Settings = { name: "", email: "", image: null, emailVerified: null, marketingEmails: false, orderUpdates: true, preferredTheme: "dark" }
 
 export default function AccountSettingsPage() {
 	const { theme, setTheme } = useTheme()

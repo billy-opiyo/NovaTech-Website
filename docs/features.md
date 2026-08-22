@@ -76,7 +76,8 @@
 | **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
 | **M-Pesa SaaS collection** | At launch, setup fees and the first subscription are combined after the trial; later renewals create local invoices and Daraja STK requests. Callbacks confirm or fail the invoice/payment and update subscription state. This is invoice-driven rather than an automatic recurring charge. |
 | **Future provider support** | Stripe provider helpers and historical webhook synchronization remain available behind the billing-provider boundary but are not presented as an active launch payment method. |
-| **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins; Stripe recurring items are supported when an add-on Stripe price ID is configured, otherwise M-Pesa charges are included in the next invoice. |
+| **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins. In M-Pesa-only launch mode, an add-on remains pending until the next successful invoice callback, then its entitlement activates. |
+| **Plan entitlement enforcement** | Product, staff, custom-domain, storage, analytics-level, and WhatsApp-notification capabilities are checked server-side. Product-image uploads create tenant-scoped storage records and are blocked when the plan limit is reached. |
 | **Transaction commissions** | New shopper transaction commissions are disabled because each independent merchant completes its own sale. Existing historical records remain visible for reconciliation. |
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
@@ -94,7 +95,8 @@
 | `/api/orders/[id]` | GET, PATCH | Fetch single order (owner or admin), admin updates order status / tracking number with user notification. |
 | `/api/coupons/validate` | POST | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation. |
 | `/api/contact` | POST | Creates a support ticket and sends email via Resend (support team + customer confirmation). |
-| `/api/newsletter` | POST | Validates email and acknowledges subscription. |
+| `/api/newsletter` | POST | Requires explicit consent and stores a tenant-scoped newsletter subscription. |
+| `/api/newsletter/unsubscribe` | POST | Removes promotional newsletter consent for the current store without revealing whether an address was previously subscribed. |
 | `/api/products/upload` | POST | Admin product image upload to Cloudflare R2 (images only, 5MB max). |
 | `/api/auth/[...nextauth]` | GET, POST | NextAuth handlers. |
 | `/api/billing/plans` | GET | Lists active database-backed SaaS plans and add-ons. |
@@ -171,7 +173,7 @@ initiation and verification routes fail closed.
 |----------|----------|
 | **Resend** (`backend/notifications/resend/`) | Real Resend email sending (re-exports from `lib/email.ts`). |
 | **SMS** (`backend/notifications/sms/`) | Real Twilio SMS integration with:<br>- Order confirmation SMS<br>- Order status update SMS (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)<br>- Payment request SMS<br>- Support message SMS<br>- Graceful "not configured" behavior when `TWILIO_*` env vars are absent<br>- Kenyan phone number formatting (+254 prefix) |
-| **WhatsApp** (`backend/notifications/whatsapp/`) | Real WhatsApp Cloud API integration with:<br>- Order confirmation messages<br>- Order status updates<br>- Payment requests<br>- Support messages<br>- Wired into `order.service.ts` for automated order status notifications |
+| **WhatsApp** (`backend/notifications/whatsapp/`) | Real WhatsApp Cloud API integration with order confirmation, status, payment-request, and support messages. Automated order-status WhatsApp messages are gated by the active paid add-on and the customer's order-update preference. |
 
 ## 🗄 Database (Prisma Schema)
 
@@ -202,6 +204,8 @@ Core models:
 | `Plan` / `Subscription` | Configurable SaaS pricing and tenant subscription lifecycle |
 | `BillingCustomer` / `BillingRecord` | Provider references and separately tracked setup-fee state |
 | `Addon` / `AddonSubscription` | Optional database-managed merchant capabilities |
+| `NewsletterSubscription` | Tenant-scoped promotional consent, subscription, and unsubscribe state |
+| `StorageAsset` | Tenant/store-scoped product asset byte counts used for storage entitlements |
 | `Invoice` / `Payment` | SaaS invoices and provider payments, while retaining shopper order payments |
 | `Transaction` | Commission ledger for completed shopper payments |
 
@@ -213,13 +217,14 @@ Core models:
 
 | Feature | Description |
 |---------|-------------|
-| Real-time analytics dashboard with: | |
+| Plan-aware analytics dashboard with: | Basic plan metrics plus advanced reports for eligible plans and platform roles |
 | - Revenue, orders, average order value, and conversion rate metrics | |
 | - Daily sales and orders charts (7d, 30d, 3m, 1y time ranges) | |
 | - Category sales breakdown with percentages | |
 | - Top selling products with revenue | |
 | - Regional sales distribution | |
 | - Payment method breakdown (M-Pesa, Card, COD) | |
+| - Advanced reports and CSV/JSON export | Business/Enterprise plans and authorized platform roles |
 
 ## 🛡 Security & Infrastructure
 

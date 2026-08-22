@@ -73,6 +73,7 @@ export default function AdminAnalyticsPage() {
 	const [regionData, setRegionData] = useState<any[]>([])
 	const [paymentMethods, setPaymentMethods] = useState<any[]>([])
 	const [growthData, setGrowthData] = useState<any>(null)
+	const [advancedAvailable, setAdvancedAvailable] = useState(true)
 
 	useEffect(() => {
 		fetchAnalytics()
@@ -89,6 +90,7 @@ export default function AdminAnalyticsPage() {
 			}
 
 			const data = await response.json()
+			setAdvancedAvailable(data.advancedAvailable !== false)
 
 			// Store growth data
 			if (data.growth) {
@@ -210,6 +212,11 @@ export default function AdminAnalyticsPage() {
 
 	return (
 		<div className="space-y-6">
+			{!advancedAvailable && (
+				<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+					This is the Basic analytics view. Category, regional, payment-method, growth, and export reports are available on the Business and Enterprise plans.
+				</div>
+			)}
 			{loading && (
 				<div className="flex items-center justify-center py-12">
 					<div className="text-lg text-gray-500">Loading analytics data...</div>

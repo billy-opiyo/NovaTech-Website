@@ -34,6 +34,7 @@ The current implementation also includes the following production hardening work
 - Replaced process-local rate limiting with PostgreSQL-backed rate-limit buckets for multi-instance deployments.
 - Added historical checkout idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa compatibility flows; new shopper order/payment creation is disabled in merchant-direct mode.
 - Added database-backed SaaS billing with Starter/Business/Enterprise plans, setup-fee records, subscriptions, invoices, add-ons, provider payments, and commission transactions.
+- Added commercial-alignment enforcement for M-Pesa add-on activation, grace-period public access, server-side storage and analytics entitlements, paid WhatsApp order-update gating, explicit newsletter consent/unsubscribe, and tenant-scoped storage/newsletter records through migration `0015_commercial_alignment`.
 - Added merchant `/manage/billing` actions for Stripe Checkout/portal, M-Pesa invoice collection, plan changes, cancellation, renewal, setup-fee payment, add-ons, and billing history.
 - Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments.
 - Added the platform operations control plane at `/platform/operations` with cross-store metrics, tenant/store search, activity and invoice feeds, storefront preview links, billing/setup-fee visibility, and authorized suspension/reactivation controls.

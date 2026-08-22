@@ -24,6 +24,10 @@ export function assertSubscriptionTransition(from: SubscriptionLifecycle, to: Su
 export async function getTenantEntitlement(tenantId: string, featureKey: string, fallback: unknown = null) {
 	const override = await prisma.featureEntitlement.findFirst({ where: { tenantId, featureKey, effectiveAt: { lte: new Date() }, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, orderBy: { effectiveAt: "desc" } })
 	if (override) return override.value
+	if (featureKey === "whatsappNotifications") {
+		const addon = await prisma.addonSubscription.findFirst({ where: { tenantId, status: "ACTIVE", addon: { key: "whatsapp-notifications" } }, select: { id: true } })
+		if (addon) return true
+	}
 	const subscription = await prisma.subscription.findFirst({ where: { tenantId, status: { in: ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] } }, orderBy: { createdAt: "desc" }, include: { plan: true } })
 	const entitlements = subscription?.plan.entitlementsJson
 	if (entitlements && typeof entitlements === "object" && !Array.isArray(entitlements) && featureKey in entitlements) return (entitlements as Record<string, unknown>)[featureKey]
@@ -80,6 +84,19 @@ export async function assertTenantCustomDomainLimit(tenantId: string, requested 
 	if (usage + requested > limit) {
 		const error = new Error(`This plan allows ${limit} custom domain${limit === 1 ? "" : "s"}. Upgrade to add more.`)
 		Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "customDomainCount", limit, usage, status: 409 })
+		throw error
+	}
+}
+
+export async function assertTenantStorageLimit(tenantId: string, requestedBytes: number) {
+	const limitValue = await getTenantEntitlement(tenantId, "storageGb", 2)
+	const limitGb = typeof limitValue === "number" ? limitValue : 2
+	const limitBytes = limitGb * 1024 * 1024 * 1024
+	const usage = await prisma.storageAsset.aggregate({ where: { tenantId }, _sum: { bytes: true } })
+	const usedBytes = usage._sum.bytes || 0
+	if (usedBytes + requestedBytes > limitBytes) {
+		const error = new Error(`This plan includes ${limitGb} GB of storage. Upgrade to add more files.`)
+		Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "storageGb", limit: limitGb, usage: usedBytes, status: 409 })
 		throw error
 	}
 }

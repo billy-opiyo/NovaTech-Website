@@ -10,6 +10,25 @@ not claims that the current application already provides them. Each item
 includes the reason to build it, the implementation direction, and a practical
 definition of done.
 
+## Implemented alignment updates
+
+The following commercial and legal alignment items are now implemented in
+source and documented in [User Manual.md](User%20Manual.md):
+
+- M-Pesa-only SaaS billing with pending add-ons that activate only after a
+  successful invoice callback.
+- Public merchant access during the approved three-day payment grace period.
+- Server-side storage limits for product-image uploads and plan-aware analytics
+  access and exports.
+- Paid WhatsApp order-update gating plus respect for the customer's preference.
+- Explicit marketing consent, tenant-scoped newsletter subscriptions, and an
+  unsubscribe flow.
+- Host-aware returns/refunds wording and a real support-ticket contact form.
+
+The production database still requires migration `0015_commercial_alignment`
+to be deployed against a configured database before these schema-backed features
+can operate in a live environment.
+
 ## 1. Delivery principles
 
 Future work should preserve these existing decisions:
@@ -119,9 +138,10 @@ cannot be reached, and platform staff can monitor failures.
 
 ### 3.5 Make SaaS billing launch-ready
 
-**Current baseline:** M-Pesa invoice-driven billing is implemented in source;
-Stripe remains provider-ready. Live provider/database/webhook evidence is still
-required before launch claims.
+**Current baseline:** M-Pesa invoice-driven billing, the three-day grace-period
+state, pending M-Pesa add-ons, and server-side plan checks are implemented in
+source. Stripe remains provider-ready. Live provider/database/webhook evidence
+is still required before launch claims.
 
 **Build:**
 
@@ -131,7 +151,8 @@ required before launch claims.
 - Add idempotent retry/dead-letter handling for failed webhook processing.
 - Add invoice PDF/receipt generation and merchant email delivery.
 - Add payment reconciliation and manual operator resolution.
-- Add grace-period notifications before suspension.
+- Add grace-period notifications before suspension; grace-period access behavior
+  itself is implemented.
 - Add billing test fixtures for trial expiry, renewal, failure, retry, plan
   change, cancellation, and reactivation.
 
@@ -273,8 +294,9 @@ from the correct channel, and measure response/resolution time.
 
 ### 4.8 Notification templates and preference center
 
-**Current baseline:** email, SMS, and WhatsApp helpers exist, but templates and
-delivery observability should be centralized.
+**Current baseline:** email, SMS, and WhatsApp helpers exist. WhatsApp order
+updates are gated by the paid add-on and customer preference, while versioned
+templates and delivery observability still need centralization.
 
 **Build:**
 
@@ -293,13 +315,15 @@ through which provider, with which delivery result, without exposing secrets.
 
 ### 5.1 Enforce plan entitlements and usage
 
-**Current baseline:** plan entitlements and usage counters exist in the schema and
-billing services, while many limits need systematic enforcement.
+**Current baseline:** product, staff, custom-domain, storage, analytics-level,
+and WhatsApp-notification checks are enforced in the relevant source paths.
+Usage dashboards, warnings, expiry handling, and complete cross-feature coverage
+still need systematic expansion.
 
 **Build:**
 
-- Central entitlement service for products, staff, storage, custom domains,
-  analytics level, notifications, and API usage.
+- Expand the central entitlement service for API usage, warnings, effective and
+  expiry dates, and a single cross-feature audit surface.
 - Usage dashboards for merchants and platform operators.
 - Soft warnings at 80/90/100 percent.
 - Upgrade paths that preserve data and explain the affected capability.
@@ -375,13 +399,16 @@ maps to one local state transition, and finance can reconcile a period.
 ### 6.1 Advanced analytics and event tracking
 
 **Current baseline:** database-derived revenue, orders, AOV, conversion, daily
-sales, categories, top products, regions, payment methods, growth, and exports.
+sales, categories, top products, regions, payment methods, growth, and exports
+exist. Analytics access is plan-aware: basic plans receive core metrics while
+advanced reports and exports require the appropriate plan or platform role.
 
 **Build:**
 
 - First-party event model for views, searches, comparisons, enquiries, quote
   responses, conversions, and campaign interactions.
-- Consent-aware analytics collection.
+- Extend consent-aware collection beyond the current marketing/newsletter
+  controls.
 - Funnel and cohort reports.
 - Storefront performance, search-zero-result, and conversion dashboards.
 - Data warehouse or event pipeline for large tenants.
@@ -557,4 +584,3 @@ Track these metrics after the underlying events are implemented:
 
 Metrics must be derived from real events and records. Do not populate dashboards
 with invented numbers merely to make an empty state look complete.
-

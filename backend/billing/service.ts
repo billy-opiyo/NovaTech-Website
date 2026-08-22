@@ -105,7 +105,8 @@ export async function getBillingSnapshot(tenantId: string) {
 	if (!tenant) throw new BillingError("Tenant not found", 404, "TENANT_NOT_FOUND")
 	const usage = await prisma.usageCounter.findMany({ where: { tenantId, periodStart: { lte: now }, periodEnd: { gt: now } }, orderBy: { metric: "asc" }, select: { metric: true, value: true, periodStart: true, periodEnd: true } })
 	const activeAddons = tenant.subscriptions[0]?.addonSubscriptions.filter((item) => ["ACTIVE", "PAST_DUE"].includes(item.status)) || []
-	return { tenant, subscription: tenant.subscriptions[0] || null, activeAddons, usage }
+	const pendingAddons = tenant.subscriptions[0]?.addonSubscriptions.filter((item) => item.status === "INCOMPLETE") || []
+	return { tenant, subscription: tenant.subscriptions[0] || null, activeAddons, pendingAddons, usage }
 }
 
 async function getPlanAndAddons(planKey: string, addonKeys: string[]) {
@@ -189,7 +190,7 @@ export async function changeSubscriptionPlan(input: { tenantId: string; ownerUse
 }
 
 export async function createMpesaInvoicePayment(input: { tenantId: string; ownerUserId: string; phone: string; kind?: InvoiceKind }) {
-	const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, include: { plan: true, billingRecord: true, subscriptions: { where: { status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" }, take: 1, include: { plan: true, pendingPlan: true, addonSubscriptions: { where: { status: "ACTIVE" }, include: { addon: true } } } } } })
+	const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, include: { plan: true, billingRecord: true, subscriptions: { where: { status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" }, take: 1, include: { plan: true, pendingPlan: true, addonSubscriptions: { where: { status: { in: ["ACTIVE", "INCOMPLETE"] } }, include: { addon: true } } } } } })
 	if (!tenant?.plan || !tenant.subscriptions[0]) throw new BillingError("An active subscription is required before requesting a renewal", 409, "NO_ACTIVE_SUBSCRIPTION")
 	const subscription = tenant.subscriptions[0]
 	const billingPlan = subscription.pendingPlan || subscription.plan || tenant.plan
@@ -238,7 +239,8 @@ export async function subscribeToAddon(tenantId: string, addonKey: string) {
 		const item = await getStripeClient().subscriptionItems.create({ subscription: subscription.providerSubscriptionId, price: addon.stripePriceId, quantity: 1 })
 		providerSubscriptionItemId = item.id
 	}
-	return prisma.addonSubscription.upsert({ where: { tenantId_addonId: { tenantId, addonId: addon.id } }, update: { status: "ACTIVE", cancelAtPeriodEnd: false, subscriptionId: subscription.id, provider: subscription.provider, providerSubscriptionItemId }, create: { tenantId, addonId: addon.id, subscriptionId: subscription.id, status: "ACTIVE", provider: subscription.provider, providerSubscriptionItemId } })
+	const status = isMpesaOnlySaasBilling() ? "INCOMPLETE" as const : "ACTIVE" as const
+	return prisma.addonSubscription.upsert({ where: { tenantId_addonId: { tenantId, addonId: addon.id } }, update: { status, cancelAtPeriodEnd: false, subscriptionId: subscription.id, provider: subscription.provider || (isMpesaOnlySaasBilling() ? "mpesa" : undefined), providerSubscriptionItemId }, create: { tenantId, addonId: addon.id, subscriptionId: subscription.id, status, provider: subscription.provider || (isMpesaOnlySaasBilling() ? "mpesa" : undefined), providerSubscriptionItemId } })
 }
 
 export async function unsubscribeFromAddon(tenantId: string, addonKey: string) {
@@ -315,7 +317,10 @@ export async function markBillingPaymentFromMpesa(payment: { id: string; status:
 	if (payment.subscriptionId && completed) {
 		const subscription = await prisma.subscription.findUnique({ where: { id: payment.subscriptionId }, select: { tenantId: true, pendingPlanId: true } })
 		const activated = await prisma.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", planId: subscription?.pendingPlanId || undefined, pendingPlanId: null, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 30 * 86400000), gracePeriodEndsAt: null } }).catch(() => null)
-		if (activated) await prisma.tenant.update({ where: { id: activated.tenantId }, data: { status: "ACTIVE", planId: activated.planId } }).catch(() => undefined)
+		if (activated) {
+			await prisma.addonSubscription.updateMany({ where: { subscriptionId: payment.subscriptionId, status: "INCOMPLETE" }, data: { status: "ACTIVE" } }).catch(() => undefined)
+			await prisma.tenant.update({ where: { id: activated.tenantId }, data: { status: "ACTIVE", planId: activated.planId } }).catch(() => undefined)
+		}
 	}
 	if (payment.billingRecordId) await prisma.billingRecord.update({ where: { id: payment.billingRecordId }, data: { setupFeeStatus: completed ? "PAID" : "FAILED", setupFeePaidAt: completed ? new Date() : undefined, failureReason: completed ? null : payment.failureReason || "M-Pesa payment failed" } }).catch(() => undefined)
 }

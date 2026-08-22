@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
-import { uploadFile, generateFileKey } from "backend/lib/storage"
+import { deleteFile, uploadFile } from "backend/lib/storage"
 import { generateTenantFileKey } from "backend/lib/storage"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
+import { assertTenantStorageLimit } from "backend/billing/subscription"
 
 export async function POST(req: NextRequest) {
 	try {
@@ -44,17 +45,25 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
+		await assertTenantStorageLimit(context.tenantId, file.size)
+
 		const buffer = Buffer.from(await file.arrayBuffer())
 		const key = generateTenantFileKey(context.tenantId, context.storeId, productId, file.name)
 
 		const url = await uploadFile(buffer, key, file.type)
+		try {
+			await prisma.storageAsset.create({ data: { tenantId: context.tenantId, storeId: context.storeId, objectKey: key, bytes: file.size, kind: "PRODUCT_IMAGE" } })
+		} catch (error) {
+			await deleteFile(key).catch(() => undefined)
+			throw error
+		}
 
 		return NextResponse.json({ url, key }, { status: 201 })
 	} catch (error: any) {
 		console.error("Product image upload error:", error)
 		return NextResponse.json(
 			{ message: error.message || "Upload failed" },
-			{ status: 500 },
+			{ status: error?.status || (error?.code === "ENTITLEMENT_LIMIT_REACHED" ? 409 : 500) },
 		)
 	}
 }

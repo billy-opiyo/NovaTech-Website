@@ -128,6 +128,7 @@ export default function ContactPage() {
 	const [formStatus, setFormStatus] = useState<
 		"idle" | "sending" | "sent" | "error"
 	>("idle")
+	const [formError, setFormError] = useState("")
 	const [openFaqs, setOpenFaqs] = useState<number[]>([])
 	const [activeCategory, setActiveCategory] = useState<string>("All")
 
@@ -149,20 +150,17 @@ export default function ContactPage() {
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault()
 		setFormStatus("sending")
-		await new Promise((resolve) => setTimeout(resolve, 1500))
-		setFormStatus("sent")
-
-		setTimeout(() => {
-			setFormStatus("idle")
-			setFormData({
-				name: "",
-				email: "",
-				phone: "",
-				subject: "",
-				message: "",
-				orderNumber: "",
-			})
-		}, 3000)
+		setFormError("")
+		try {
+			const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to send your message.")
+			setFormStatus("sent")
+			setFormData({ name: "", email: "", phone: "", subject: "", message: "", orderNumber: "" })
+		} catch (error) {
+			setFormStatus("error")
+			setFormError(error instanceof Error ? error.message : "Unable to send your message.")
+		}
 	}
 
 	return (
@@ -402,6 +400,7 @@ export default function ContactPage() {
 										</>
 									)}
 								</button>
+								{formError && <p className="text-sm text-red-500">{formError}</p>}
 							</motion.form>
 						)}
 					</AnimatePresence>

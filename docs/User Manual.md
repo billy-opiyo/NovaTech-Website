@@ -185,8 +185,9 @@ available.
 Public pages include About, Blog, Contact, FAQs, Warranty, Return Policy,
 Privacy Policy, Cookie Policy, and Terms and Conditions. Contact submission
 creates a support ticket and attempts Resend notifications. Newsletter
-submission validates and acknowledges an email; durable campaigns still require
-a mailing-list provider.
+subscription requires explicit consent, is stored per merchant tenant, and has
+an unsubscribe endpoint/page; a campaign sender/provider is still required for
+future promotional delivery.
 
 Merchant-host policy/support copy is shopper-facing. Platform-host policy,
 support, and billing copy is merchant/SaaS-facing.
@@ -217,7 +218,7 @@ host-based; a first-class multi-store switcher is a future update.
 | Area | Function |
 |---|---|
 | Dashboard | Store summary and quick actions |
-| Analytics | Revenue, orders, AOV, conversion, product, category, region, payment, and growth reports |
+| Analytics | Basic plans receive core revenue/order metrics; Business, Enterprise, and authorized platform roles receive category, region, payment, growth, and export reports |
 | Products | Create, inspect, edit, search, filter, and remove products where allowed |
 | Orders | View store orders and update operational status/tracking |
 | Customers | Store customer summaries and order history metrics |
@@ -351,8 +352,12 @@ Stripe Checkout, portal, subscription/invoice synchronization, and signed
 webhooks remain provider-ready and should only be advertised after live
 configuration and sandbox tests pass. Seed add-ons include WhatsApp
 notifications, advanced analytics, and extra staff accounts. Stripe recurring
-items work when an add-on Stripe price exists; otherwise M-Pesa can include the
-charge in the next invoice.
+items work when an add-on Stripe price exists; in M-Pesa-only launch mode an
+add-on remains pending until the next invoice callback confirms payment. The
+WhatsApp add-on gates transactional WhatsApp order updates, while the shopper's
+order-update preference remains respected. Product-image uploads are recorded
+against the plan's storage limit, and merchant analytics expose only the
+reports included by the plan.
 
 Shopper transaction commissions are disabled in merchant-direct mode. Historical
 commission records remain for reconciliation.
@@ -403,7 +408,7 @@ which use Prisma-backed controllers/services.
 /api/products/upload, /api/recommendations, /api/reviews, /api/wishlist,
 /api/cart, /api/cart/{id}, /api/orders, /api/orders/{id},
 /api/orders/{id}/tracking, /api/coupons/validate, /api/contact,
-/api/newsletter, /api/store-preference, /api/account/addresses,
+/api/newsletter, /api/newsletter/unsubscribe, /api/store-preference, /api/account/addresses,
 /api/account/addresses/{id}, /api/account/notifications, and
 /api/account/settings.
 
@@ -540,4 +545,3 @@ backup restore, or deployed browser behavior.
 - Architecture: docs/saas-architecture-decisions.md.
 - Client setup: docs/client-customization.md.
 - Future roadmap: [Future Updates.md](Future%20Updates.md).
-

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 			case "portal":
 				return NextResponse.json(await createCustomerPortalSession(context.tenantId, `${baseUrl}/manage/billing`))
 			case "addon_subscribe":
-				return NextResponse.json({ addon: await subscribeToAddon(context.tenantId, parsed.data.addonKey) }, { status: 201 })
+				return NextResponse.json({ addon: await subscribeToAddon(context.tenantId, parsed.data.addonKey), message: "The add-on is queued and will activate after the next successful M-Pesa invoice payment." }, { status: 201 })
 			case "addon_unsubscribe":
 				return NextResponse.json({ addon: await unsubscribeFromAddon(context.tenantId, parsed.data.addonKey) })
 		}

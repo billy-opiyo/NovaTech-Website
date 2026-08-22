@@ -17,7 +17,7 @@ model User {
   image            String?
   role             Role          @default(CUSTOMER)
   platformRole     PlatformRole?
-  marketingEmails  Boolean       @default(true)
+  marketingEmails  Boolean       @default(false)
   orderUpdates     Boolean       @default(true)
   preferredTheme   String        @default("dark")
   preferredStoreId String?
@@ -251,6 +251,8 @@ model Tenant {
   invoices             Invoice[]
   addonSubscriptions   AddonSubscription[]
   transactions         Transaction[]
+  newsletterSubscriptions NewsletterSubscription[]
+  storageAssets         StorageAsset[]
 
   @@index([status, createdAt])
   @@index([verificationStatus])
@@ -344,6 +346,7 @@ model Store {
   domains          Domain[]
   settingsVersions StoreSettingsVersion[]
   preferredUsers   User[]                 @relation("UserPreferredStore")
+  storageAssets    StorageAsset[]
 
   @@index([publicationStatus])
 }
@@ -953,6 +956,38 @@ model Notification {
   tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
+}
+
+model NewsletterSubscription {
+  id             String   @id @default(cuid())
+  tenantId       String
+  email          String
+  consentedAt    DateTime
+  unsubscribedAt DateTime?
+  source         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, unsubscribedAt])
+}
+
+model StorageAsset {
+  id        String   @id @default(cuid())
+  tenantId  String
+  storeId   String
+  objectKey String   @unique
+  bytes     Int
+  kind      String   @default("STORE_ASSET")
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([storeId, createdAt])
 }
 
 // --- Support & Admin Logs ---
