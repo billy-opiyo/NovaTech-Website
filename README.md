@@ -334,6 +334,7 @@ NovaTech Website/
 | `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
 | `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |
 | `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
+| `CRON_SECRET`                        | Secret used to authenticate the protected Vercel lifecycle Cron route |
 | `PLATFORM_DOMAIN`                    | Production platform domain for tenant subdomains       |
 | `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
 | `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
@@ -555,7 +556,7 @@ The implementation is feature-complete at code level, but production launch rema
 
 ## 🔮 Planned / Next Steps
 
-- Set up deployment (Vercel for frontend, Neon for DB, Cloudflare for storage)
+- Set up deployment (Vercel for frontend and hourly lifecycle Cron, Neon for DB, Cloudflare for storage)
 
 ---
 
