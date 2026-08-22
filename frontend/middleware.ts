@@ -2,7 +2,16 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { auth } from "./src/lib/auth.js"
 
-const adminRoutes = ["/admin"]
+function isPathUnder(pathname: string, basePath: string) {
+	return pathname === basePath || pathname.startsWith(`${basePath}/`)
+}
+
+function redirectToSignIn(request: NextRequest) {
+	const signInUrl = new URL("/auth/signin", request.url)
+	const callbackUrl = `${request.nextUrl.pathname}${request.nextUrl.search}`
+	signInUrl.searchParams.set("callbackUrl", callbackUrl)
+	return NextResponse.redirect(signInUrl)
+}
 
 export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl
@@ -11,18 +20,14 @@ export async function middleware(request: NextRequest) {
 	const userRole = session?.user?.role
 
 	// Check if the route is an admin route
-	const isAdminRoute = adminRoutes.some((route) =>
-		pathname.startsWith(route),
-	)
-	const isWorkspaceRoute = pathname.startsWith("/manage") || pathname.startsWith("/platform")
+	const isAdminRoute = isPathUnder(pathname, "/admin")
+	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform")
 
 	// Handle admin routes
 	if (isAdminRoute) {
 		// Redirect to sign-in if not authenticated
 		if (!isAuthenticated) {
-			const signInUrl = new URL("/auth/signin", request.url)
-			signInUrl.searchParams.set("callbackUrl", pathname)
-			return NextResponse.redirect(signInUrl)
+			return redirectToSignIn(request)
 		}
 
 		// Redirect to home if authenticated but not admin
@@ -35,9 +40,7 @@ export async function middleware(request: NextRequest) {
 
 	if (isWorkspaceRoute) {
 		if (!isAuthenticated) {
-			const signInUrl = new URL("/auth/signin", request.url)
-			signInUrl.searchParams.set("callbackUrl", pathname)
-			return NextResponse.redirect(signInUrl)
+			return redirectToSignIn(request)
 		}
 		return NextResponse.next()
 	}
@@ -49,9 +52,7 @@ export async function middleware(request: NextRequest) {
 		pathname === "/checkout"
 
 	if (isProtectedRoute && !isAuthenticated) {
-		const signInUrl = new URL("/auth/signin", request.url)
-		signInUrl.searchParams.set("callbackUrl", pathname)
-		return NextResponse.redirect(signInUrl)
+		return redirectToSignIn(request)
 	}
 
 	return NextResponse.next()

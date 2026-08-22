@@ -1,6 +1,10 @@
 import Link from "next/link"
 import { requirePlatformSession } from "@/lib/tenant-auth"
 
+export const metadata = {
+	robots: { index: false, follow: false },
+}
+
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
 	await requirePlatformSession()
 	return (
