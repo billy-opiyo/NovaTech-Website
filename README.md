@@ -65,7 +65,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
 - **Cart Page** — optional product selection list with quantity controls and save-for-later support.
-- **Merchant Handoff Page** — sends selected products to the independent store through WhatsApp or email. The merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
+- **Merchant Handoff Page** — collects consented shopper contact details, saves a tenant-scoped enquiry with server-authoritative product snapshots, then sends the selected products to the independent store through WhatsApp or email. The merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
+- **Merchant Enquiries and Quotes** — `/manage/enquiries` provides status tracking, internal notes, enquiry history, and owner/admin quote creation with email delivery.
+- **Catalog Import/Export** — `/manage/catalog` provides CSV templates, preview validation, SKU-based create/update imports, entitlement checks, partial success reporting, audit records, and current catalog export.
 - **Platform boundary** — Nurava Tech does not create new shopper orders or collect shopper payments in `MERCHANT_DIRECT` mode.
 
 ### 👤 Authentication
@@ -76,6 +78,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - JWT session strategy with role (`CUSTOMER`, `ADMIN`, `SUPERADMIN`) and user ID attached to sessions.
 - Sign-in and Sign-up pages with form validation and error handling.
 - Email verification with six-digit codes and resend support.
+- Secure merchant invitation acceptance at `/auth/accept-invitation` with hashed expiring tokens, invited-email matching, membership activation, and email/manual link delivery.
 - Forgot-password email flow and token-based password reset.
 - `getServerSession()` helper used across API routes for protected endpoints.
 - Account loading states and middleware protection for authenticated account routes.
@@ -125,6 +128,12 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/orders/[id]`        | GET, PATCH             | Fetch single order (owner or admin), admin updates order status / tracking number with user notification.                                                           |
 | `/api/coupons/validate`   | POST                   | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation.                                                     |
 | `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend (support team + customer confirmation).                                                                         |
+| `/api/enquiries`          | POST                   | Rate-limited merchant-direct enquiry creation with host-derived tenant scope and server-authoritative product snapshots.                                            |
+| `/api/invitations/accept` | GET, POST              | Previews and atomically accepts an expiring invitation for the authenticated invited email.                                                                         |
+| `/api/manage/enquiries`   | GET, PATCH              | Tenant-scoped enquiry search, status, notes, tags, and assignment updates.                                                                                         |
+| `/api/manage/enquiries/{id}/quote` | POST              | Owner/admin quote creation and email delivery for a merchant enquiry.                                                                                              |
+| `/api/manage/catalog/import` | POST                | CSV preview or partial commit with validation, SKU matching, entitlement checks, and audit reporting.                                                             |
+| `/api/manage/catalog/export` | GET                  | Tenant-scoped CSV catalog export for authorized merchant staff.                                                                                                    |
 | `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
 | `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2 (images only, 5MB max).                                                                                                 |
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
@@ -175,7 +184,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 🗄 Database (Prisma Schema)
 
-Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
+Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `MerchantEnquiry`, `MerchantQuote`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
 
 Roles: `CUSTOMER`, `ADMIN`, `SUPERADMIN`. Order statuses: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`.
 
@@ -289,6 +298,7 @@ NovaTech Website/
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `Tenant` / `Store` / `Domain`               | Tenant ownership, store identity, publication status, and host mapping                                  |
 | `Membership` / `Invitation`                 | Merchant workspace membership and staff onboarding                                                       |
+| `MerchantEnquiry` / `MerchantQuote`         | Tenant-scoped shopper handoffs, merchant follow-up states, and quote records                           |
 | `User`                                      | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN)                                                  |
 | `User.preferredStoreId`                     | Preferred shopper store; discovery convenience only, not an authorization boundary                    |
 | `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support                                                                         |

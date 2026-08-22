@@ -149,6 +149,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Forgot password | Public | [Open](http://localhost:3000/auth/forgot-password) | [Open](https://nuravatech.com/auth/forgot-password) |
 | Reset password | Public; token required | [Open](http://localhost:3000/auth/reset-password) | [Open](https://nuravatech.com/auth/reset-password) |
 | Verify email | Public; verification code required | [Open](http://localhost:3000/auth/verify-email) | [Open](https://nuravatech.com/auth/verify-email) |
+| Accept merchant invitation | Public; one-time token, then invited-email authentication | `http://localhost:3000/auth/accept-invitation?token={token}` | `https://{merchant-host}/auth/accept-invitation?token={token}` |
 
 ### Legal and policy pages
 
@@ -201,6 +202,8 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
 | Platform operations | Platform role | [Open](http://localhost:3000/platform/operations) | [Open](https://nuravatech.com/platform/operations) |
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
+| Merchant enquiries and quotes | Store membership; quote creation owner/admin | `http://{store-slug}.localhost:3000/manage/enquiries` | `https://{merchant-host}/manage/enquiries` |
+| Catalog import/export | Store owner/admin/manager/editor | `http://{store-slug}.localhost:3000/manage/catalog` | `https://{merchant-host}/manage/catalog` |
 
 ### Dynamic URL values
 

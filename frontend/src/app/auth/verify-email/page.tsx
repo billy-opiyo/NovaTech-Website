@@ -20,7 +20,7 @@ function VerifyEmailForm() {
 		const response = await fetch("/api/auth/verify-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) })
 		const result = await response.json()
 		if (!response.ok) setError(result.message)
-		else { setMessage(result.message); window.setTimeout(() => router.push("/auth/signin?verified=true"), 900) }
+		else { setMessage(result.message); window.setTimeout(() => { const callbackUrl = params.get("callbackUrl"); router.push(callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? `/auth/signin?verified=true&callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signin?verified=true") }, 900) }
 		setLoading(false)
 	}
 

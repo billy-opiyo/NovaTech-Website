@@ -180,7 +180,8 @@ Profile uploads accept JPG, PNG, WEBP, and GIF up to 5 MB and use generated
 storage keys.
 
 Authentication pages are /auth/signup, /auth/signin, /auth/verify-email,
-/auth/forgot-password, and /auth/reset-password. NextAuth v5 supports Google
+/auth/forgot-password, /auth/reset-password, and /auth/accept-invitation.
+NextAuth v5 supports Google
 OAuth and bcrypt-backed credentials with JWT sessions. Credential login
 successes and failures are recorded as LoginEvent records when the database is
 available.
@@ -227,7 +228,9 @@ host-based; a first-class multi-store switcher is a future update.
 | Products | Create, inspect, edit, search, filter, and remove products where allowed |
 | Orders | View store orders and update operational status/tracking |
 | Customers | Store customer summaries and order history metrics |
-| Team access | Invite staff and inspect pending invitations |
+| Team access | Invite staff, email/copy one-time acceptance links, and inspect pending invitations |
+| Enquiries and quotes | Track shopper handoffs, update lead state, save notes, and create/email merchant quotes |
+| Catalog tools | Preview and commit tenant-scoped CSV imports, update products by SKU, and export the current catalog |
 | Reviews | Approve, reject, flag, and moderate reviews |
 | Deliveries | Monitor delivery-oriented order records |
 | Support | Manage tickets, replies, status, priority, category, and messages |
@@ -320,11 +323,38 @@ just because it was entered.
 
 Owner/admin users can invite an email with a store role. Invitation tokens are
 hashed, expire after seven days, and are limited by plan staff entitlements.
-The API returns a manual invite link.
+The invitation email is sent when Resend is configured; the Team page also shows
+the one-time link for controlled manual delivery. The recipient opens
+/auth/accept-invitation, reviews the store and role, then signs in or creates an
+account with the invited email. New accounts must complete email verification
+before acceptance. The token is hashed, expires after seven days, cannot be
+reused, and atomically activates the membership.
 
-**Known gap:** the route tree has invitation API plumbing but no current
-/auth/accept-invitation browser page. Do not promise a complete self-service
-invitation journey until that page is implemented and tested.
+### Enquiries and quotes
+
+The checkout handoff collects the shopper's name, email, optional phone/message,
+and explicit consent before opening WhatsApp or email. The server resolves the
+store from the request host and stores a MerchantEnquiry with authoritative
+product names, SKUs, quantities, variants, and advertised prices. It does not
+create a platform order or collect payment.
+
+Authorized staff open /manage/enquiries to search enquiries and update NEW,
+CONTACTED, QUOTED, WON, LOST, or SPAM state. Staff can save internal notes;
+owners and store admins can create a quote with delivery fee, terms, expiry,
+and a unique reference. The quote is emailed when email delivery is configured.
+Quotes remain merchant-direct records and are not platform payment records.
+
+### Catalog import and export
+
+Open /manage/catalog and download the CSV template. The import requires product
+name, description, brand, SKU, price, stock, category, and one or more HTTP(S)
+image URLs. Existing products are matched by SKU within the active tenant;
+new products are checked against the plan product limit. Preview validates up to
+500 rows before commit. Commit processes valid rows and reports failed rows
+without silently discarding the successful rows. Imports create audit records.
+
+The export is a tenant-scoped CSV catalog snapshot. It is separate from the
+owner-only JSON data export and is not a database backup.
 
 ### Data export
 
@@ -409,7 +439,7 @@ to create AdminLog audit records.
 Browser pages call the Next.js App Router handlers under frontend/src/app/api,
 which use Prisma-backed controllers/services.
 
-**Public/shopper:** /api/products, /api/products/{slug},
+**Public/shopper:** /api/products, /api/products/{slug}, /api/enquiries,
 /api/products/upload, /api/recommendations, /api/reviews, /api/wishlist,
 /api/cart, /api/cart/{id}, /api/orders, /api/orders/{id},
 /api/orders/{id}/tracking, /api/coupons/validate, /api/contact,
@@ -427,7 +457,9 @@ which use Prisma-backed controllers/services.
 /api/manage/store/publish, /api/manage/store/rollback,
 /api/manage/team/invitations, /api/manage/verification,
 /api/manage/verification/phone, /api/manage/verification/evidence,
-/api/analytics, /api/analytics/export, and /api/inventory.
+/api/manage/enquiries, /api/manage/enquiries/{id}/quote,
+/api/manage/catalog/import, /api/manage/catalog/export, /api/analytics,
+/api/analytics/export, and /api/inventory.
 
 **Admin/platform:** /api/admin/customers, /api/admin/orders,
 /api/admin/deliveries, /api/admin/deliveries/{id}, /api/admin/coupons,
@@ -467,7 +499,8 @@ MerchantLegalAcceptance. Billing models are Plan, Subscription, UsageCounter,
 BillingCustomer, BillingRecord, Addon, AddonSubscription, Invoice, Payment,
 Transaction, FeatureEntitlement, and StoreSettingsVersion.
 
-Catalog models are Category, Product, and Variant. Shopper/commerce models are
+Catalog models are Category, Product, Variant, MerchantEnquiry, and
+MerchantQuote. Shopper/commerce models are
 CartItem, WishlistItem, RecentlyViewed, Order, OrderItem, Address, and
 DeliveryRegion. Service models are Review, Coupon, Notification, SupportTicket,
 and TicketReply. Operations/security models are AdminLog, LoginEvent,

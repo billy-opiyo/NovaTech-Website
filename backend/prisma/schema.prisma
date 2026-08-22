@@ -36,6 +36,8 @@ model User {
   adminLogs                    AdminLog[]
   loginEvents                  LoginEvent[]
   memberships                  Membership[]
+  merchantEnquiries            MerchantEnquiry[]
+  merchantQuotes               MerchantQuote[]
   billingCustomers             BillingCustomer[]
   billingRecords               BillingRecord[]
   reviewedTenants              Tenant[]                       @relation("TenantVerificationReviewer")
@@ -97,6 +99,28 @@ enum MembershipRole {
   STORE_MANAGER
   STORE_SUPPORT
   STORE_EDITOR
+}
+
+enum MerchantEnquiryStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  WON
+  LOST
+  SPAM
+}
+
+enum MerchantEnquiryContactMethod {
+  WHATSAPP
+  EMAIL
+}
+
+enum MerchantQuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }
 
 enum MerchantVerificationStatus {
@@ -223,6 +247,8 @@ model Tenant {
   store                Store?
   memberships          Membership[]
   invitations          Invitation[]
+  merchantEnquiries    MerchantEnquiry[]
+  merchantQuotes       MerchantQuote[]
   domains              Domain[]
   subscriptions        Subscription[]
   usageCounters        UsageCounter[]
@@ -346,7 +372,8 @@ model Store {
   domains          Domain[]
   settingsVersions StoreSettingsVersion[]
   preferredUsers   User[]                 @relation("UserPreferredStore")
-  storageAssets    StorageAsset[]
+  storageAssets     StorageAsset[]
+  merchantEnquiries MerchantEnquiry[]
 
   @@index([publicationStatus])
 }
@@ -404,6 +431,67 @@ model Invitation {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, email])
+}
+
+model MerchantEnquiry {
+  id             String                       @id @default(cuid())
+  tenantId       String
+  storeId        String
+  userId         String?
+  customerName   String
+  customerEmail  String
+  customerPhone  String?
+  message        String?
+  contactMethod  MerchantEnquiryContactMethod
+  source         String                       @default("CHECKOUT_HANDOFF")
+  consent        Boolean                      @default(false)
+  items          Json
+  estimatedTotal Float                        @default(0)
+  status         MerchantEnquiryStatus        @default(NEW)
+  assignedToId   String?
+  tags           String[]                     @default([])
+  notes          String?
+  lastContactedAt DateTime?
+  quotedAt       DateTime?
+  convertedAt    DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  quotes MerchantQuote[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([storeId, createdAt])
+  @@index([tenantId, customerEmail])
+}
+
+model MerchantQuote {
+  id           String              @id @default(cuid())
+  tenantId     String
+  enquiryId    String
+  createdById  String
+  quoteNumber  String              @unique
+  status       MerchantQuoteStatus @default(DRAFT)
+  currency     String              @default("KES")
+  subtotal     Float
+  deliveryFee  Float               @default(0)
+  total        Float
+  lines        Json
+  terms        String?
+  expiresAt    DateTime?
+  sentAt       DateTime?
+  acceptedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enquiry   MerchantEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  createdBy User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status, createdAt])
+  @@index([enquiryId, createdAt])
 }
 
 model Plan {

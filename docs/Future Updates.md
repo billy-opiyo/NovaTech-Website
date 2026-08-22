@@ -25,9 +25,21 @@ source and documented in [User Manual.md](User%20Manual.md):
   unsubscribe flow.
 - Host-aware returns/refunds wording and a real support-ticket contact form.
 
-The production database still requires migration `0015_commercial_alignment`
-to be deployed against a configured database before these schema-backed features
-can operate in a live environment.
+The three immediate productivity features selected for this release are now
+implemented:
+
+- Secure invitation acceptance at `/auth/accept-invitation`, including email
+  delivery when Resend is configured, verified-email continuation, one-time
+  token use, and membership activation.
+- Tenant-scoped merchant enquiries and quote tracking from the shopper handoff
+  into `/manage/enquiries`.
+- CSV catalog import/export at `/manage/catalog`, with preview, row validation,
+  SKU-based updates, product entitlements, partial success reporting, and audit
+  records.
+
+The production database still requires migrations `0015_commercial_alignment`
+and `0017_merchant_enquiries_and_quotes` to be deployed against a configured
+database before these schema-backed features can operate in a live environment.
 
 ## 1. Delivery principles
 
@@ -60,26 +72,24 @@ Future work should preserve these existing decisions:
 
 ## 3. P0: close the operational gaps
 
-### 3.1 Complete invitation acceptance
+### 3.1 Complete invitation acceptance — implemented
 
-**Current baseline:** the merchant API creates a hashed, seven-day invitation and
-returns a manual link, but the route tree has no browser page for
-/auth/accept-invitation.
+**Current status:** the browser page and acceptance flow are implemented. The
+API still returns a manual link for controlled delivery when email is not
+configured.
 
-**Build:**
+**Delivered:**
 
-- Add an App Router acceptance page.
-- Validate the token server-side and display tenant/store, email, and role.
-- Support an existing account signing in before acceptance.
-- Support account creation when the invited email has no account.
-- Atomically mark the invitation accepted and create/reactivate the membership.
-- Reject expired, already-accepted, mismatched, or revoked tokens.
-- Send invitation and acceptance emails through Resend.
-- Add resend/revoke actions with audit records.
+- App Router acceptance page with store, email, role, and expiry preview.
+- Existing-account sign-in and new-account continuation through email verification.
+- Atomic membership activation and invitation consumption.
+- Expired, already-accepted, and mismatched-email rejection.
+- Resend invitation delivery when `RESEND_API_KEY` is configured, with manual-link fallback.
 
-**Definition of done:** a new user can accept an invite end-to-end, an existing
-user can accept without a duplicate membership, the token cannot be reused, and
-cross-tenant invitation tests pass.
+Invitation resend/revoke actions remain a later P1 improvement.
+
+**Remaining verification:** run the acceptance journey and cross-tenant tests
+against a reachable database and configured email provider.
 
 ### 3.2 Add a first-class multi-store switcher
 
@@ -180,40 +190,40 @@ trace one request safely, and follow a documented recovery procedure.
 
 ## 4. P1: merchant productivity features
 
-### 4.1 Merchant enquiry and lightweight CRM
+### 4.1 Merchant enquiry and lightweight CRM — implemented foundation
 
 This is the highest-value feature while the platform remains merchant-direct.
 
-**Build:**
+**Delivered:**
 
-- Persist a shopper enquiry/lead when the cart handoff is created.
-- Record selected products, quantity, source store, contact method, consent,
-  attribution, and last activity.
-- Add lead statuses: NEW, CONTACTED, QUOTED, WON, LOST, SPAM.
-- Let merchants assign, tag, search, and add notes.
-- Generate a quote with expiry, merchant-confirmed price, delivery, and terms.
-- Keep a clear distinction between an enquiry, a quote, and a completed external
-  sale.
-- Add WhatsApp/email conversation links and follow-up reminders.
+- Persist a consented shopper enquiry when the handoff is submitted.
+- Snapshot server-authoritative products, prices, quantities, store, and contact method.
+- Provide NEW, CONTACTED, QUOTED, WON, LOST, and SPAM states.
+- Provide merchant search, status updates, internal notes, and quote history.
+- Generate and email a quote with delivery fee, terms, expiry, and a unique reference.
+- Keep enquiries and quotes distinct from completed external merchant sales.
 
-**Definition of done:** a merchant can turn a storefront enquiry into an
-assigned quote, measure conversion, and export the lead history without
-pretending Nurava processed the payment.
+Assignment, tags, reminders, lead export, and conversion attribution remain P1.
 
-### 4.2 Bulk catalog import and export
+**Remaining work:** assignment UI, reminders, lead export, and conversion
+attribution. The current foundation already preserves the merchant-direct
+boundary and supports enquiry-to-quote tracking.
 
-**Build:**
+### 4.2 Bulk catalog import and export — implemented CSV foundation
 
-- CSV/XLSX import with a downloadable template.
-- Preview, validation, duplicate-SKU detection, category mapping, and dry run.
-- Background import jobs with progress and per-row error reports.
-- Bulk price, stock, featured, and publication updates.
-- Image URL import with safe allowlists and R2 transfer.
-- Versioned rollback for a bulk change.
-- Enforce product and storage entitlements during import.
+**Delivered:**
 
-**Definition of done:** a merchant can import 500 valid products, see invalid rows
-without losing valid rows, and roll back one import batch.
+- CSV import with a downloadable template and current-catalog export.
+- Preview validation, duplicate-SKU detection, category mapping, and per-row errors.
+- SKU-based create/update behavior with valid-row partial commits.
+- Bulk price, stock, featured, publication, images, specs, and warranty fields.
+- Product entitlement checks for newly created products and audit records.
+
+XLSX support, background jobs, image transfer, and versioned rollback remain P1.
+
+**Remaining work:** XLSX/background processing and versioned rollback. The CSV
+foundation already previews up to 500 rows, commits valid rows separately, and
+reports invalid rows without claiming rollback support.
 
 ### 4.3 Purchase orders and suppliers
 
@@ -532,17 +542,39 @@ canonical values incorrectly.
 
 ## 8. Recommended implementation order
 
-1. Invitation acceptance and multi-store switching.
-2. Permission matrix and tenant-isolation regression suite.
-3. Launch checklist, observability, billing sandbox, and backup/restore gates.
-4. Merchant enquiry/CRM and quote workflow.
-5. Bulk catalog, inventory ledger, purchase orders, and fulfillment workflow.
-6. Notification templates, support inbox, saved views, and scheduled reports.
-7. Entitlement enforcement and advanced billing.
-8. Campaigns, loyalty, and retention features.
-9. Event analytics, search/recommendations, AI assistant, and content tools.
-10. Optional first-party checkout only after business/legal approval.
-11. 2FA, privacy center, immutable audit, disaster recovery, and scale work.
+### Completed in the current release
+
+1. Secure invitation acceptance.
+2. Merchant enquiry and quote foundation.
+3. CSV catalog import/export foundation.
+
+### P0 — implement next before adding growth features
+
+1. Multi-store switcher with host-safe switching.
+2. One permission matrix applied consistently to every merchant action.
+3. Publication/domain launch checklist with observable DNS and SSL status.
+4. Billing sandbox, webhook retry/dead-letter handling, reconciliation, and receipts.
+5. Production observability, backups, restore drills, and incident runbooks.
+6. Two-factor authentication for merchant and platform accounts.
+
+### P1 — next productivity wave
+
+1. Inventory ledger, suppliers, purchase orders, and stock receiving.
+2. Quote assignment, tags, reminders, lead export, and conversion attribution.
+3. XLSX/background catalog imports and versioned rollback.
+4. Support inbox, notification templates, saved views, bulk actions, and scheduled reports.
+
+### P2 — revenue and retention
+
+1. Broader entitlement/usage dashboards.
+2. Merchant campaigns, loyalty, referrals, and retention automation.
+3. Advanced billing and accounting reconciliation.
+
+### P3 — only after the operational foundation is proven
+
+1. Event analytics, advanced search, recommendations, content tools, and AI assistance.
+2. PWA/offline operations and multi-region localization.
+3. First-party shopper checkout only after legal, tax, settlement, fraud, and refund decisions.
 
 ## 9. Feature implementation checklist
 
