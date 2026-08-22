@@ -54,7 +54,10 @@ export default function SignUpPage() {
 				throw new Error(data.message || "Registration failed")
 			}
 
-			router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email.trim().toLowerCase())}`)
+			const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl")
+			const verifyUrl = new URLSearchParams({ email: formData.email.trim().toLowerCase() })
+			if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) verifyUrl.set("callbackUrl", callbackUrl)
+			router.push(`/auth/verify-email?${verifyUrl.toString()}`)
 		} catch (err: any) {
 			setError(err.message || "Something went wrong")
 		} finally {

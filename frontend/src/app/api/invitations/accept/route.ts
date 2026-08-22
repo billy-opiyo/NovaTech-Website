@@ -3,6 +3,25 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { hashInvitationToken } from "backend/lib/invitation-token"
 
+function tokenFrom(request: NextRequest) {
+	return request.nextUrl.searchParams.get("token")?.trim() || ""
+}
+
+export async function GET(request: NextRequest) {
+	const token = tokenFrom(request)
+	if (token.length < 32) return NextResponse.json({ message: "Invitation link is invalid." }, { status: 400 })
+	try {
+		const invitation = await prisma.invitation.findFirst({
+			where: { tokenHash: hashInvitationToken(token), acceptedAt: null, expiresAt: { gt: new Date() } },
+			select: { email: true, role: true, expiresAt: true, tenant: { select: { store: { select: { name: true, slug: true } } } } },
+		})
+		if (!invitation) return NextResponse.json({ message: "This invitation is invalid or expired." }, { status: 404 })
+		return NextResponse.json({ invitation: { email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt, storeName: invitation.tenant.store?.name || "Merchant store", storeSlug: invitation.tenant.store?.slug || null } })
+	} catch {
+		return NextResponse.json({ message: "Invitation preview is unavailable." }, { status: 503 })
+	}
+}
+
 export async function POST(request: NextRequest) {
 	const session = await auth()
 	if (!session?.user?.id || !session.user.email) return NextResponse.json({ message: "Sign in with the invited email before accepting." }, { status: 401 })
@@ -22,7 +41,7 @@ export async function POST(request: NextRequest) {
 			else await transaction.membership.create({ data: { tenantId: invitation.tenantId, userId: session.user.id, role: invitation.role, active: true, invitedAt: new Date(), acceptedAt: new Date() } })
 			await transaction.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } })
 		})
-		return NextResponse.json({ ok: true, tenantId: invitation.tenantId, role: invitation.role })
+		return NextResponse.json({ ok: true, tenantId: invitation.tenantId, role: invitation.role, redirectTo: "/manage" })
 	} catch (error: any) {
 		return NextResponse.json({ message: error.message || "Unable to accept invitation" }, { status: 503 })
 	}

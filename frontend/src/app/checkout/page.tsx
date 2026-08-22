@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ArrowLeft, Mail, MessageCircle, Store } from "lucide-react"
+import { useState } from "react"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
@@ -9,6 +10,13 @@ import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-co
 export default function CheckoutPage() {
 	const { items, subtotal } = useCart()
 	const store = useStoreContext()
+	const [customerName, setCustomerName] = useState("")
+	const [customerEmail, setCustomerEmail] = useState("")
+	const [customerPhone, setCustomerPhone] = useState("")
+	const [message, setMessage] = useState("")
+	const [consent, setConsent] = useState(false)
+	const [error, setError] = useState("")
+	const [busy, setBusy] = useState(false)
 
 	if (items.length === 0) {
 		return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-3xl font-bold">No products selected</h1><p className="mt-3 text-gray-500">Choose a product first, then contact the store directly.</p><Link href="/products" className="btn-primary mt-8 inline-flex">Browse products</Link></div>
@@ -17,6 +25,20 @@ export default function CheckoutPage() {
 	const inquiryItems = items.map((item) => ({ name: item.name, quantity: item.quantity, variant: item.variant, price: item.price * item.quantity }))
 	const whatsappHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: inquiryItems })
 	const emailHref = getMerchantEmailHref(store.contact.email, store.brand.name, inquiryItems)
+	const enquiryItems = items.map((item) => ({ productId: item.productId, quantity: item.quantity, variant: item.variant || null }))
+
+	async function continueToMerchant(contactMethod: "WHATSAPP" | "EMAIL") {
+		setError("")
+		if (!customerName.trim() || !customerEmail.trim() || !consent) { setError("Enter your name and email, then accept consent so the merchant can follow up."); return }
+		setBusy(true)
+		try {
+			const response = await fetch("/api/enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerName, customerEmail, customerPhone, message, contactMethod, consent, items: enquiryItems }) })
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
+			if (contactMethod === "WHATSAPP") window.open(whatsappHref, "_blank", "noopener,noreferrer")
+			else window.location.href = emailHref
+		} catch (reason: any) { setError(reason.message || "Unable to save enquiry") } finally { setBusy(false) }
+	}
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-8 py-8">
@@ -31,7 +53,8 @@ export default function CheckoutPage() {
 					<div className="mt-4 flex justify-between border-t border-gray-200 pt-4 font-semibold dark:border-gray-700"><span>Advertised selection total</span><span>KES {subtotal.toLocaleString()}</span></div>
 					<p className="mt-3 text-xs text-gray-500">The merchant confirms the final price, delivery cost, taxes, and payment terms.</p>
 				</div>
-				<div className="mt-8 grid gap-3 sm:grid-cols-2"><a href={whatsappHref} target="_blank" rel="noreferrer" className="btn-primary inline-flex items-center justify-center gap-2"><MessageCircle size={18} /> Message on WhatsApp</a><a href={emailHref} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary hover:bg-primary hover:text-white"><Mail size={18} /> Email the store</a></div>
+				<div className="mt-8 space-y-3 text-left"><h2 className="font-semibold">Your contact details</h2><div className="grid gap-3 sm:grid-cols-2"><input required value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" className="rounded-lg border bg-transparent px-3 py-3"/><input required type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} placeholder="Email address" className="rounded-lg border bg-transparent px-3 py-3"/></div><input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone number (optional)" className="w-full rounded-lg border bg-transparent px-3 py-3"/><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Message to the merchant (optional)" rows={3} className="w-full rounded-lg border bg-transparent px-3 py-3"/><label className="flex items-start gap-2 text-sm text-gray-500"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 accent-primary"/><span>I agree that this store may use my details to respond to this enquiry.</span></label>{error && <p className="text-sm text-red-600">{error}</p>}</div>
+				<div className="mt-5 grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy} onClick={() => continueToMerchant("WHATSAPP")} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50"><MessageCircle size={18} /> {busy ? "Saving…" : "Message on WhatsApp"}</button><button type="button" disabled={busy} onClick={() => continueToMerchant("EMAIL")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"><Mail size={18} /> Email the store</button></div>
 				<p className="mt-5 text-xs text-gray-500">You will not enter payment or shipping details on Nurava Tech. The merchant handles the transaction directly.</p>
 			</div>
 		</div>

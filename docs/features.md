@@ -24,7 +24,7 @@
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
 | **Cart Page** | Item list with quantity controls, selection summary, save-for-later section, and direct merchant handoff. |
-| **Merchant Handoff Page** | Shows selected products and creates WhatsApp/email enquiry links to the independent store. The merchant confirms price, delivery, payment, refunds, and warranty directly. |
+| **Merchant Handoff Page** | Collects consented shopper contact details, persists a tenant-scoped enquiry with server-authoritative product snapshots, then opens WhatsApp/email links to the independent store. The merchant confirms price, delivery, payment, refunds, and warranty directly. |
 
 ## 👤 Authentication
 
@@ -34,6 +34,7 @@
 | **JWT Sessions** | Role-based (`CUSTOMER`, `ADMIN`, `SUPERADMIN`) with user ID attached to sessions.|
 | **Sign-in/Sign-up Pages** | Form validation and error handling.|
 | **Email Verification** | Six-digit verification-code flow after registration, with resend support and expiry handling.|
+| **Merchant Invitation Acceptance** | Hashed seven-day invitation tokens, store/role preview, invited-email matching, existing/new account continuation, atomic membership activation, and Resend/manual delivery.|
 | **Password Recovery** | Forgot-password email flow and token-based password reset page.|
 | **Session Protection** | `getServerSession()` helper used across API routes for protected endpoints.|
 | **Account Loading and Route Guards** | Loading states for account screens and middleware protection for authenticated account routes.|
@@ -56,6 +57,8 @@
 | **Admin Layout** | Collapsible sidebar (desktop) + slide-in mobile sidebar with sections: Dashboard, Analytics, Products, Orders, Customers, Reviews, Deliveries, Support Tickets, Messages, Settings, Security, Activity Log.|
 | **Top Bar** | Search and notifications badge.|
 | **Admin Products Page** | Full CRUD-style UI with:<br>- Stats cards (total products, active, out of stock, drafts)<br>- Search, status filters (active/draft/out-of-stock/archived), sorting<br>- Bulk selection, table rows with product details, stock levels, sales, ratings<br>- Delete confirmation modal.|
+| **Merchant Enquiries and Quotes** | `/manage/enquiries` lists tenant-scoped shopper handoffs, supports search/status updates/internal notes, and lets owners/admins create and email quotes with delivery fees, terms, expiry, and unique references. |
+| **Catalog Import/Export** | `/manage/catalog` provides CSV template download, current-catalog CSV export, preview validation, SKU-based create/update import, entitlement checks, partial success reporting, and audit records. |
 | **Admin Orders Page** | Order management table with status tracking.|
 | **Admin Analytics** | Growth comparison calculations (period-over-period), CSV/JSON export functionality, real-time growth data in metric cards.|
 | **Admin Customers Page** | Customer listing with filters and details.|
@@ -95,6 +98,12 @@
 | `/api/orders/[id]` | GET, PATCH | Fetch single order (owner or admin), admin updates order status / tracking number with user notification. |
 | `/api/coupons/validate` | POST | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation. |
 | `/api/contact` | POST | Creates a support ticket and sends email via Resend (support team + customer confirmation). |
+| `/api/enquiries` | POST | Rate-limited public merchant-direct enquiry creation; resolves the store from the host and snapshots authoritative product values. |
+| `/api/invitations/accept` | GET, POST | Previews and atomically accepts a hashed, expiring invitation for the authenticated invited email. |
+| `/api/manage/enquiries` | GET, PATCH | Tenant-scoped merchant enquiry search, status, notes, tags, and assignment updates. |
+| `/api/manage/enquiries/{id}/quote` | POST | Owner/admin-only quote creation and email delivery for an enquiry. |
+| `/api/manage/catalog/import` | POST | Owner/admin/manager/editor CSV preview or partial commit with validation, SKU matching, entitlement checks, and audit reporting. |
+| `/api/manage/catalog/export` | GET | Tenant-scoped CSV catalog export for authorized store users. |
 | `/api/newsletter` | POST | Requires explicit consent and stores a tenant-scoped newsletter subscription. |
 | `/api/newsletter/unsubscribe` | POST | Removes promotional newsletter consent for the current store without revealing whether an address was previously subscribed. |
 | `/api/products/upload` | POST | Admin product image upload to Cloudflare R2 (images only, 5MB max). |
@@ -183,6 +192,7 @@ Core models:
 |-------|---------|
 | `Tenant` / `Store` / `Domain` | Tenant ownership, published store identity, and verified host mapping for separate storefronts |
 | `Membership` / `Invitation` | Merchant workspace membership and staff onboarding |
+| `MerchantEnquiry` / `MerchantQuote` | Tenant-scoped shopper handoffs, merchant follow-up states, and quote records |
 | `User.preferredStoreId` | Authenticated shopper's preferred store for returning-store discovery; not an authorization boundary |
 | `User` | Customers & admins (roles: CUSTOMER, ADMIN, SUPERADMIN) |
 | `Account` / `Session` / `VerificationToken` | NextAuth OAuth + session support |

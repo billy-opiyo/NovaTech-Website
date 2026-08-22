@@ -27,6 +27,7 @@ import {
 	CreditCard,
 	Globe2,
 	Download,
+	ClipboardList,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -42,6 +43,8 @@ const sidebarLinks = (basePath: string) => [
 		section: "Management",
 		items: [
 			{ icon: Package, label: "Products", href: `${basePath}/products` },
+			{ icon: Download, label: "Catalog import/export", href: `${basePath}/catalog` },
+			{ icon: ClipboardList, label: "Enquiries & quotes", href: `${basePath}/enquiries` },
 			{ icon: ShoppingCart, label: "Orders", href: `${basePath}/orders` },
 		{ icon: Users, label: "Customers", href: `${basePath}/customers` },
 			{ icon: UsersRound, label: "Team access", href: `${basePath}/team` },
