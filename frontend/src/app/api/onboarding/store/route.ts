@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/storeValidator"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 
 export async function GET() {
 	const session = await auth()
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt, trialEndsAt } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
+			await recordMerchantLegalAcceptance({ tenantId: tenant.id, acceptedById: session.user.id, context: "TRIAL_START", transaction })
 			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: "TRIALING", trialStartsAt, trialEndsAt } })
 			await transaction.billingCustomer.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id } })
 			await transaction.billingRecord.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id, setupFeeAmount: plan.setupFeeAmount, currency: plan.currency, setupFeeStatus: plan.setupFeeAmount > 0 ? "PENDING" : "PAID", setupFeePaidAt: plan.setupFeeAmount > 0 ? undefined : new Date() } })

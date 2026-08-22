@@ -41,7 +41,7 @@ test("canonical platform hosts bypass merchant domain mappings", async () => {
 			verificationStatus: "VERIFIED",
 			tenantId: "merchant-tenant",
 			storeId: "merchant-store",
-			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE" } },
+			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE", verificationStatus: "APPROVED" } },
 		}
 	}
 	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "novatech" ? {
@@ -49,7 +49,7 @@ test("canonical platform hosts bypass merchant domain mappings", async () => {
 		tenantId: "platform-tenant",
 		slug: "novatech",
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "ACTIVE" },
+			tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null
 	try {
 		for (const hostname of ["nuravatech.com:3000", "www.nuravatech.com:3000"]) {
@@ -73,7 +73,7 @@ test("local store subdomains resolve by store slug", async () => {
 		tenantId: "tenant-demo",
 		slug: "demo",
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "TRIALING" },
+			tenant: { status: "TRIALING", verificationStatus: "APPROVED" },
 	} : null
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) })

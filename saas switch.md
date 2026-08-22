@@ -12,7 +12,8 @@ the launch billing path.
 Merchant billing is available under `/manage/billing`; platform billing
 configuration and reporting is under `/platform/billing`. The
 `0006_billing_system`, `0010_commercial_billing_decisions`, `0011_merchant_verification`,
-and `0012_secure_merchant_verification` migrations and
+`0012_secure_merchant_verification`, `0013_retention_lifecycle`, and
+`0014_merchant_legal_acceptance` migrations and
 regenerated Prisma Client still need to be deployed to a reachable target
 database. Live M-Pesa credentials, private R2 bucket configuration, the
 merchant verification encryption key, provider dashboard callback registration,
@@ -736,3 +737,8 @@ The safest first coding slice is the tenant foundation, not billing or a new mar
 6. keep the current storefront visually stable while it renders from the first tenant's database-backed settings.
 
 Once this slice is verified, billing, onboarding, custom domains, and merchant self-service can be built on a real isolation boundary instead of being layered onto the current single-store assumptions.
+### 2026-08-22 — Credential-free legal acceptance and retention boundary
+
+- Added server-authoritative, versioned merchant legal acceptance records for trial creation and first selling publication. Onboarding, publication, and rollback require an explicit acknowledgement; the record is included in merchant exports and preserved with billing/legal data.
+- Added migration `0014_merchant_legal_acceptance`; it has not been applied to a live database.
+- Source validation passed after the change: Prisma formatting/generation, backend TypeScript build, and frontend TypeScript validation. Live database, credentials, provider callbacks, scheduler configuration, and professional legal/tax/privacy review remain final rollout gates.

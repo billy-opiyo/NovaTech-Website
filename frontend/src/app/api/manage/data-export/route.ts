@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
 		const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
 		await requireMembership(session.user.id, context.tenantId, [MembershipRole.STORE_OWNER])
 
-		const [tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets] = await Promise.all([
-			prisma.tenant.findFirst({ where: { id: context.tenantId }, select: { id: true, legalName: true, status: true, createdAt: true } }),
+		const [tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets, legalAcceptances] = await Promise.all([
+			prisma.tenant.findFirst({ where: { id: context.tenantId }, select: { id: true, legalName: true, status: true, createdAt: true, dataRetentionStartsAt: true, dataDeletionDueAt: true } }),
 			prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, name: true, slug: true, publicationStatus: true, defaultLocale: true, currency: true, country: true, timezone: true, logoUrl: true, faviconUrl: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, publishedAt: true, createdAt: true } }),
 			prisma.membership.findMany({ where: { tenantId: context.tenantId }, select: { id: true, userId: true, role: true, active: true, invitedAt: true, acceptedAt: true, createdAt: true, user: { select: { name: true, email: true } } } }),
 			prisma.domain.findMany({ where: { tenantId: context.tenantId, storeId: context.storeId }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true } }),
@@ -25,10 +25,11 @@ export async function GET(request: NextRequest) {
 			prisma.review.findMany({ where: { tenantId: context.tenantId }, orderBy: { createdAt: "asc" }, select: { id: true, userId: true, productId: true, rating: true, title: true, comment: true, photos: true, isVerifiedPurchase: true, moderationStatus: true, createdAt: true, updatedAt: true, user: { select: { name: true, email: true } }, product: { select: { name: true, sku: true } } } }),
 			prisma.coupon.findMany({ where: { tenantId: context.tenantId }, select: { id: true, code: true, discountPercent: true, discountAmount: true, minOrderValue: true, expiresAt: true, usageLimit: true, usedCount: true, isActive: true } }),
 			prisma.supportTicket.findMany({ where: { tenantId: context.tenantId }, orderBy: { createdAt: "asc" }, select: { id: true, userId: true, customerName: true, customerEmail: true, customerPhone: true, subject: true, description: true, category: true, priority: true, status: true, orderId: true, assignedTo: true, attachments: true, createdAt: true, updatedAt: true, replies: { select: { id: true, reply: true, isAdmin: true, createdAt: true } } } }),
+			prisma.merchantLegalAcceptance.findMany({ where: { tenantId: context.tenantId }, orderBy: { acceptedAt: "asc" }, select: { id: true, context: true, termsVersion: true, privacyVersion: true, agreementVersion: true, acceptedAt: true, acceptedById: true } }),
 		])
 
 		if (!tenant || !store) return NextResponse.json({ message: "Tenant data unavailable" }, { status: 404 })
-		const payload = { format: "novatech-tenant-export", version: 1, exportedAt: new Date().toISOString(), tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets }
+		const payload = { format: "novatech-tenant-export", version: 1, exportedAt: new Date().toISOString(), tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets, legalAcceptances }
 		return NextResponse.json(payload, { headers: { "Content-Disposition": `attachment; filename="${context.storeSlug}-export.json"`, "Cache-Control": "no-store" } })
 	} catch (error: any) {
 		console.error("Tenant data export unavailable", error)

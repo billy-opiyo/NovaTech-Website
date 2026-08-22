@@ -31,6 +31,7 @@ export default function StoreDesignPage() {
 	const [busy, setBusy] = useState(false)
 	const [localPreview, setLocalPreview] = useState(false)
 	const [versions, setVersions] = useState<Version[]>([])
+	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
 
 	const preset = useMemo(
 		() => Object.values(THEME_PRESETS).find((item) => item.id === draft.themePreset) || Object.values(THEME_PRESETS)[0],
@@ -72,7 +73,7 @@ export default function StoreDesignPage() {
 		setMessage("")
 		setError("")
 		try {
-			const response = await fetch("/api/manage/store/rollback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version }) })
+			const response = await fetch("/api/manage/store/rollback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version, acceptLegalTerms }) })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to roll back")
 			setLocalPreview(false)
@@ -116,7 +117,7 @@ export default function StoreDesignPage() {
 		setMessage("")
 		setError("")
 		try {
-			const response = await fetch("/api/manage/store/publish", { method: "POST" })
+			const response = await fetch("/api/manage/store/publish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acceptLegalTerms }) })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to publish")
 			setLocalPreview(false)
@@ -170,7 +171,8 @@ export default function StoreDesignPage() {
 					</div>
 					{error && <p className="text-sm text-red-600">{error}</p>}
 					{message && <p className="text-sm text-green-600">{message}</p>}
-					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={save} className="btn-primary">{busy ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy || localPreview} onClick={publish} className="rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">Publish draft</button></div>
+					<label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={acceptLegalTerms} onChange={(event) => setAcceptLegalTerms(event.target.checked)} className="mt-1" /><span>Before publishing, I confirm that I have reviewed the current <a href="/terms" target="_blank" rel="noreferrer" className="text-primary underline">merchant terms</a> and <a href="/privacy-policy" target="_blank" rel="noreferrer" className="text-primary underline">privacy notice</a>, and understand that the merchant is responsible for its store sales, customers, delivery, refunds, taxes, and warranties.</span></label>
+					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={save} className="btn-primary">{busy ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy || localPreview || !acceptLegalTerms} onClick={publish} className="rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">Publish draft</button></div>
 					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy || localPreview} onClick={() => void rollback(item.version)} className="rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">Restore</button></div>)}</div></div>}
 				</section>
 

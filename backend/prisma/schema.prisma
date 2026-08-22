@@ -41,6 +41,7 @@ model User {
   reviewedTenants              Tenant[]                       @relation("TenantVerificationReviewer")
   uploadedVerificationEvidence MerchantVerificationEvidence[] @relation("VerificationEvidenceUploader")
   reviewedVerificationEvidence MerchantVerificationEvidence[] @relation("VerificationEvidenceReviewer")
+  merchantLegalAcceptances     MerchantLegalAcceptance[]      @relation("MerchantLegalAcceptanceActor")
   preferredStore               Store?                         @relation("UserPreferredStore", fields: [preferredStoreId], references: [id], onDelete: SetNull)
 }
 
@@ -145,6 +146,11 @@ enum MerchantVerificationEvidenceStatus {
   REJECTED
 }
 
+enum MerchantLegalAcceptanceContext {
+  TRIAL_START
+  SELLING
+}
+
 enum TenantStatus {
   TRIALING
   ACTIVE
@@ -213,6 +219,7 @@ model Tenant {
   verificationReviewer User?                          @relation("TenantVerificationReviewer", fields: [verificationReviewerId], references: [id], onDelete: SetNull)
   verificationProfile  MerchantVerificationProfile?
   verificationEvidence MerchantVerificationEvidence[]
+  legalAcceptances     MerchantLegalAcceptance[]
   store                Store?
   memberships          Membership[]
   invitations          Invitation[]
@@ -270,6 +277,22 @@ model MerchantVerificationProfile {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([phoneVerifiedAt])
+}
+
+model MerchantLegalAcceptance {
+  id               String                         @id @default(cuid())
+  tenantId         String
+  acceptedById     String
+  context          MerchantLegalAcceptanceContext
+  termsVersion     String
+  privacyVersion   String
+  agreementVersion String
+  acceptedAt       DateTime                       @default(now())
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  acceptedBy User   @relation("MerchantLegalAcceptanceActor", fields: [acceptedById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, context, acceptedAt])
 }
 
 model MerchantVerificationEvidence {

@@ -6,6 +6,7 @@ import { isStripeConfigured, getStripeWebhookSecret, getStripeClient } from "../
 import { isMpesaConfigured, verifyStkCallbackPassword } from "../../backend/lib/daraja"
 import { getPaymentsConfig } from "../../backend/payments/config"
 import { decryptMerchantVerificationDetails, encryptMerchantVerificationDetails, hashMerchantVerificationOtp } from "../../backend/lib/merchant-verification-secrets"
+import { CURRENT_MERCHANT_LEGAL_DOCUMENTS, isCurrentMerchantLegalAcceptance } from "../../backend/lib/legal-acceptance"
 import { FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_COST, ORDER_STATUS_LABELS } from "../../frontend/src/constants"
 
 test("security helpers normalize and protect values", () => {
@@ -36,6 +37,11 @@ test("merchant verification details encrypt and OTP hashes remain one-way", () =
 		if (previous === undefined) delete process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY
 		else process.env.MERCHANT_VERIFICATION_ENCRYPTION_KEY = previous
 	}
+})
+
+test("merchant legal acceptance is version-sensitive", () => {
+	assert.equal(isCurrentMerchantLegalAcceptance(CURRENT_MERCHANT_LEGAL_DOCUMENTS), true)
+	assert.equal(isCurrentMerchantLegalAcceptance({ ...CURRENT_MERCHANT_LEGAL_DOCUMENTS, termsVersion: "old-version" }), false)
 })
 
 test("payment configuration reports disabled providers without secrets", () => {

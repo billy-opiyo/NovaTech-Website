@@ -7,6 +7,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
 import { customDomainSchema } from "backend/validators/domainValidator"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import { assertTenantCustomDomainLimit } from "backend/billing/subscription"
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
 		const { context } = await access(request)
 		const parsed = customDomainSchema.safeParse(await request.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Enter a valid domain hostname.", issues: parsed.error.flatten() }, { status: 400 })
+		await assertTenantCustomDomainLimit(context.tenantId)
 		const platformDomain = getPlatformDomain()
 		if (parsed.data.hostname === platformDomain || parsed.data.hostname.endsWith(`.${platformDomain}`) || parsed.data.hostname.endsWith(".localhost")) return NextResponse.json({ message: "Use the store platform hostname for platform subdomains; custom domains must be independently owned hostnames." }, { status: 400 })
 		const verificationToken = `nurava-domain-${randomBytes(18).toString("hex")}`

@@ -8,6 +8,7 @@ export const storeOnboardingSchema = z.object({
 	timezone: z.string().trim().min(3).max(80).default("Africa/Nairobi"),
 	defaultLocale: z.string().trim().min(2).max(20).default("en-KE"),
 	planKey: z.string().min(2).max(40).default("STARTER"),
+	acceptLegalTerms: z.literal(true),
 })
 
 export function normalizeStoreSlug(name: string) {

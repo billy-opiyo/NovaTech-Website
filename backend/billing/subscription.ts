@@ -66,3 +66,20 @@ export async function assertTenantStaffLimit(tenantId: string, requested = 1) {
 		throw error
 	}
 }
+
+export async function assertTenantCustomDomainLimit(tenantId: string, requested = 1) {
+	const enabled = await getTenantEntitlement(tenantId, "customDomain", false)
+	if (enabled !== true) {
+		const error = new Error("Custom domains are not included in this plan. Upgrade to add one.")
+		Object.assign(error, { code: "ENTITLEMENT_FEATURE_NOT_INCLUDED", metric: "customDomain", status: 409 })
+		throw error
+	}
+	const limitValue = await getTenantEntitlement(tenantId, "customDomainCount", 1)
+	const limit = typeof limitValue === "number" ? limitValue : 1
+	const usage = await prisma.domain.count({ where: { tenantId, type: "CUSTOM" } })
+	if (usage + requested > limit) {
+		const error = new Error(`This plan allows ${limit} custom domain${limit === 1 ? "" : "s"}. Upgrade to add more.`)
+		Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "customDomainCount", limit, usage, status: 409 })
+		throw error
+	}
+}

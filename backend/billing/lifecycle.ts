@@ -1,11 +1,12 @@
 import prisma from "../lib/db"
 import { retentionDueAt } from "../retention/tenant-retention"
+import type { SubscriptionStatus } from "@prisma/client"
 
 export const ACCESS_GRACE_PERIOD_DAYS = 3
 const dayMilliseconds = 24 * 60 * 60 * 1000
 
 type LifecycleSnapshot = {
-	status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "GRACE_PERIOD"
+	status: SubscriptionStatus
 	trialEndsAt: Date | null
 	currentPeriodEnd: Date | null
 	gracePeriodEndsAt: Date | null

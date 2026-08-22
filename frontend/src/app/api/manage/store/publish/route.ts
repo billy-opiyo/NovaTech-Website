@@ -6,22 +6,27 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
 import { merchantVerificationMessage } from "backend/lib/merchant-verification"
+import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 
-export async function POST() {
+export async function POST(request: Request) {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
+		const body = await request.json().catch(() => ({})) as { acceptLegalTerms?: boolean }
 		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		const membership = await requireMembership(session.user.id, context.tenantId, ["STORE_OWNER", "STORE_ADMIN"])
 		void membership
 		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true, tenant: { select: { verificationStatus: true } } } })
 		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
 		if (store.tenant.verificationStatus !== "APPROVED") return NextResponse.json({ message: merchantVerificationMessage(store.tenant.verificationStatus), code: "MERCHANT_VERIFICATION_REQUIRED", verificationStatus: store.tenant.verificationStatus }, { status: 409 })
+		const currentAcceptance = await getCurrentMerchantLegalAcceptance(context.tenantId, "SELLING")
+		if (!currentAcceptance && body.acceptLegalTerms !== true) return NextResponse.json({ message: "Confirm the current merchant terms, privacy notice, and merchant responsibilities before publishing.", code: "MERCHANT_LEGAL_ACCEPTANCE_REQUIRED" }, { status: 409 })
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })
 		const draft = store.draftSettings as Record<string, any>
 		const latest = await prisma.storeSettingsVersion.findFirst({ where: { storeId: store.id, tenantId: store.tenantId }, orderBy: { version: "desc" }, select: { version: true } })
 		const nextVersion = (latest?.version || 0) + 1
 		const updated = await prisma.$transaction(async (transaction) => {
+			if (!currentAcceptance) await recordMerchantLegalAcceptance({ tenantId: context.tenantId, acceptedById: session.user.id, context: "SELLING", transaction })
 			const result = await transaction.store.update({ where: { id: store.id }, data: { name: typeof draft.name === "string" ? draft.name : undefined, themeSettings: draft.themePreset ? { preset: draft.themePreset } : undefined, seoSettings: draft.seo, contactSettings: draft.contact, homepageSettings: draft.homepage, commerceSettings: draft.commerce, draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
 			await transaction.storeSettingsVersion.create({ data: { tenantId: store.tenantId, storeId: store.id, version: nextVersion, settings: draft, publishedAt: new Date(), publishedBy: session.user.id } })
 			return result
