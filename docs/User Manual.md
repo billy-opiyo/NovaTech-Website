@@ -96,7 +96,12 @@ authorization mechanism.
 
 Middleware requires authentication for /account, /cart, /checkout, /manage,
 /platform, and /admin. Server membership/role guards then enforce access to
-sensitive data and mutations.
+sensitive data and mutations. Merchants should use `/manage` on their own
+verified store host (for example `https://store-slug.nuravatech.com/manage` or
+their custom domain followed by `/manage`). Nurava platform operators use
+`https://nuravatech.com/platform`; this is a separate platform-role boundary.
+Both workspaces redirect signed-out visitors to `/auth/signin` and preserve
+the requested destination after successful sign-in.
 
 ## 4. Shopper guide
 

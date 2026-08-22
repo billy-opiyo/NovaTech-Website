@@ -2,16 +2,20 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react"
 
 const actions = [
-	{ label: "Add Product", icon: Package, href: "/admin/products" },
-	{ label: "View Orders", icon: ShoppingCart, href: "/admin/orders" },
-	{ label: "Manage Customers", icon: Users, href: "/admin/customers" },
-	{ label: "View Analytics", icon: TrendingUp, href: "/admin/analytics" },
+	{ label: "Add Product", icon: Package, path: "/products" },
+	{ label: "View Orders", icon: ShoppingCart, path: "/orders" },
+	{ label: "Manage Customers", icon: Users, path: "/customers" },
+	{ label: "View Analytics", icon: TrendingUp, path: "/analytics" },
 ]
 
 export default function QuickActions() {
+	const pathname = usePathname()
+	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
@@ -24,7 +28,7 @@ export default function QuickActions() {
 				{actions.map((action) => (
 					<Link
 						key={action.label}
-						href={action.href}
+						href={`${basePath}${action.path}`}
 						className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary hover:bg-primary/5 transition"
 					>
 						<action.icon size={28} className="text-primary" />

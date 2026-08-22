@@ -3,12 +3,16 @@
 import { motion } from "framer-motion"
 import { TrendingUp, Eye } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import StatsGrid from "@/components/dashboard/StatsGrid"
 import RecentOrders from "@/components/dashboard/RecentOrders"
 import TopProducts from "@/components/dashboard/TopProducts"
 import QuickActions from "@/components/dashboard/QuickActions"
 
 export default function AdminDashboardPage() {
+	const pathname = usePathname()
+	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
+
 	return (
 		<div className="space-y-6">
 			{/* Header */}
@@ -21,7 +25,7 @@ export default function AdminDashboardPage() {
 					<Link href="/" className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">
 						<Eye size={18} /> View Store
 					</Link>
-					<Link href="/admin/analytics" className="btn-primary flex items-center gap-2">
+					<Link href={`${basePath}/analytics`} className="btn-primary flex items-center gap-2">
 						<TrendingUp size={18} /> View Report
 					</Link>
 				</div>
@@ -46,7 +50,7 @@ export default function AdminDashboardPage() {
 					</div>
 					<div className="rounded-xl border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
 						<p className="text-gray-500">Live revenue and order charts are available in Analytics.</p>
-						<Link href="/admin/analytics" className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">Open Analytics</Link>
+						<Link href={`${basePath}/analytics`} className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">Open Analytics</Link>
 					</div>
 				</motion.div>
 			</div>

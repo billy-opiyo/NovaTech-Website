@@ -112,7 +112,7 @@ Credentials are intentionally not documented here and must be configured only af
 
 Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://nuravatech.com`.
 
-The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. Legacy `/admin` pages use `ADMIN` or `SUPERADMIN`; merchant workspace pages under `/manage` use the resolved store membership boundary.
+The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. The canonical merchant admin workspace is `/manage` on the merchant's verified host, while the Nurava Tech platform control plane is `/platform` on the platform host. Both are server-protected and marked no-index. `/admin` is retained only as a legacy ADMIN/SUPERADMIN console and is not the merchant link to share.
 
 Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and direct merchant contact options. The merchant completes the shopper transaction outside Nurava Tech's payment flow.
 
@@ -196,8 +196,8 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Page | Access | Development | Production |
 |---|---|---|---|
 | Store onboarding | Signed in | [Open](http://localhost:3000/onboarding) | [Open](https://nuravatech.com/onboarding) |
-| Merchant dashboard | Store membership | [Open](http://localhost:3000/manage) | [Open](https://nuravatech.com/manage) |
-| Merchant billing | Store owner/admin for mutations | [Open](http://localhost:3000/manage/billing) | [Open](https://nuravatech.com/manage/billing) |
+| Merchant dashboard | Store membership | `http://{store-slug}.localhost:3000/manage` | `https://{merchant-host}/manage` |
+| Merchant billing | Store owner/admin for mutations | `http://{store-slug}.localhost:3000/manage/billing` | `https://{merchant-host}/manage/billing` |
 | Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
 | Platform operations | Platform role | [Open](http://localhost:3000/platform/operations) | [Open](https://nuravatech.com/platform/operations) |
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
