@@ -6,13 +6,13 @@ import { z } from "zod"
 import { findBlockedReviewTerms } from "../constants/reviewModeration"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
+import { parsePagination } from "../lib/pagination"
 
 export async function getReviews(req: NextRequest) {
 	try {
 		const url = new URL(req.url)
 		const productId = url.searchParams.get("productId")
-		const page = parseInt(url.searchParams.get("page") || "1", 10)
-		const limit = parseInt(url.searchParams.get("limit") || "10", 10)
+		const { page, limit } = parsePagination(url.searchParams, 10)
 		const context = await resolveTenantFromRequest(req)
 
 		if (!productId) {
