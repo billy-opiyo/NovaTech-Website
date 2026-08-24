@@ -2,6 +2,8 @@ import Link from "next/link"
 import { ArrowRight, BadgeCheck, MessageCircle, ShieldCheck, Star } from "lucide-react"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 import PlatformHero from "@/components/home/PlatformHero"
+import PlatformPlans from "@/components/home/PlatformPlans"
+import type { PublicPlan, PublicPlanCatalogSource } from "@/lib/public-plans.server"
 
 type DiscoveryEntry = PlatformDiscoveryStore & { href: string }
 
@@ -25,12 +27,13 @@ function StoreGroup({ category, stores }: { category: keyof typeof groupCopy; st
 	return <section><div className="mb-6"><h2 className="text-2xl font-bold sm:text-3xl">{groupCopy[category].title}</h2><p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">{groupCopy[category].description}</p></div><div className="grid gap-6 lg:grid-cols-2">{stores.map((entry) => <StoreCard key={`${category}-${entry.id}`} entry={entry} />)}</div></section>
 }
 
-export default function PlatformDiscoveryHome({ stores }: { stores: DiscoveryEntry[] }) {
+export default function PlatformDiscoveryHome({ stores, plans, plansUnavailable, plansSource }: { stores: DiscoveryEntry[]; plans: PublicPlan[]; plansUnavailable: boolean; plansSource: PublicPlanCatalogSource }) {
 	const topRated = stores.filter((store) => store.category === "TOP_RATED")
 	const mostReviewed = stores.filter((store) => store.category === "MOST_REVIEWED")
 	const newAndGrowing = stores.filter((store) => store.category === "NEW_AND_GROWING")
 	return <div className="space-y-16">
 		<PlatformHero stores={stores} />
+		<PlatformPlans plans={plans} unavailable={plansUnavailable} source={plansSource} />
 		<section className="grid gap-4 md:grid-cols-3"><div className="glass-card p-5"><Star className="text-yellow-500" /><h2 className="mt-3 font-bold">Social proof first</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">See approved ratings and review volume before choosing where to enquire.</p></div><div className="glass-card p-5"><ShieldCheck className="text-primary" /><h2 className="mt-3 font-bold">Independent merchants</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Each store manages its own product information, availability, payment, delivery, refunds, and warranty.</p></div><div className="glass-card p-5"><BadgeCheck className="text-emerald-600" /><h2 className="mt-3 font-bold">Product previews</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Preview real catalogue images from each store before opening its storefront.</p></div></section>
 		{stores.length ? <><StoreGroup category="TOP_RATED" stores={topRated} /><StoreGroup category="MOST_REVIEWED" stores={mostReviewed} /><StoreGroup category="NEW_AND_GROWING" stores={newAndGrowing} /></> : <section className="glass-card p-8 text-center"><h2 className="text-xl font-bold">Store discovery is temporarily unavailable</h2><p className="mt-2 text-gray-600 dark:text-gray-300">Published merchant stores will appear here once the platform database is connected.</p><Link href="/stores?all=1" className="mt-5 inline-flex items-center gap-2 font-semibold text-primary">Open store directory <ArrowRight size={16} /></Link></section>}
 	</div>
