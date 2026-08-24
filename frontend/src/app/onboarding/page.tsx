@@ -17,7 +17,15 @@ export default function OnboardingPage() {
 	const [error, setError] = useState("")
 	const [saving, setSaving] = useState(false)
 
-	useEffect(() => { fetch("/api/onboarding/store").then((response) => response.ok ? response.json() : null).then((data) => setStores(data?.stores || [])).catch(() => undefined); fetch("/api/billing/plans").then((response) => response.ok ? response.json() : null).then((data) => setPlans(data?.plans || [])).catch(() => undefined) }, [])
+	useEffect(() => {
+		const requestedPlan = new URLSearchParams(window.location.search).get("plan")?.toUpperCase()
+		fetch("/api/onboarding/store").then((response) => response.ok ? response.json() : null).then((data) => setStores(data?.stores || [])).catch(() => undefined)
+		fetch("/api/billing/plans").then((response) => response.ok ? response.json() : null).then((data) => {
+			const availablePlans = data?.plans || []
+			setPlans(availablePlans)
+			if (requestedPlan && availablePlans.some((plan: PlanOption) => plan.key === requestedPlan)) setPlanKey(requestedPlan)
+		}).catch(() => undefined)
+	}, [])
 
 	async function submit(event: FormEvent) {
 		event.preventDefault()

@@ -1,5 +1,6 @@
 import MerchantHomePage from "@/components/home/MerchantHomePage"
 import PlatformDiscoveryHome from "@/components/home/PlatformDiscoveryHome"
+import { getPublicPlans } from "@/lib/public-plans.server"
 import { getPlatformDiscoveryStores, getStorePublicUrl } from "@/lib/store-directory.server"
 import { getStoreContext } from "@/lib/store-context.server"
 
@@ -8,7 +9,8 @@ export default async function HomePage() {
 	if (store.isPlatformHome) {
 		const stores = await getPlatformDiscoveryStores()
 		const entries = await Promise.all(stores.map(async (entry) => ({ ...entry, href: await getStorePublicUrl(entry.slug) })))
-		return <PlatformDiscoveryHome stores={entries} />
+		const publicPlans = await getPublicPlans()
+		return <PlatformDiscoveryHome stores={entries} plans={publicPlans.plans} plansUnavailable={publicPlans.unavailable} plansSource={publicPlans.source} />
 	}
 
 	return <MerchantHomePage />

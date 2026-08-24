@@ -14,6 +14,7 @@ import { useStoreContext } from "@/lib/store-context"
 const platformNavigation = [
 	{ name: "Home", href: "/" },
 	{ name: "Browse Stores", href: "/stores" },
+	{ name: "Plans", href: "/#plans" },
 	{ name: "Create Store", href: "/onboarding" },
 ]
 
