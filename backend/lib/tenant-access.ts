@@ -20,7 +20,7 @@ export async function requireMembership(userId: string, tenantId: string, roles?
 export async function requireStorePermission(userId: string, tenantId: string, permission: StorePermission) {
 	const membership = await getActiveMembership(userId, tenantId)
 	if (!membership || !hasStorePermission(membership.role, permission)) {
-		const error = new Error(`The ${permission.toLowerCase().replaceAll("_", " ")} permission is required`)
+		const error = new Error(`The ${permission.toLowerCase().replace(/_/g, " ")} permission is required`)
 		Object.assign(error, { status: 403, code: "STORE_PERMISSION_DENIED", permission })
 		throw error
 	}

@@ -3,14 +3,14 @@ import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
 import { MembershipRole } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
+import { parsePagination } from "../lib/pagination"
 
 export async function getAdminLogs(req: NextRequest) {
 	try {
 		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
 
 		const searchParams = req.nextUrl.searchParams
-		const page = parseInt(searchParams.get("page") || "1", 10)
-		const limit = parseInt(searchParams.get("limit") || "20", 10)
+		const { page, limit } = parsePagination(searchParams)
 		const action = searchParams.get("action") || undefined
 		const adminId = searchParams.get("adminId") || undefined
 

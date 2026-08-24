@@ -24,13 +24,25 @@ function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string,
 	if (!categoryId) throw new Error(`Category '${row.category}' was not found in this store`)
 	const images = row.images.split("|").map((image) => image.trim()).filter(Boolean)
 	if (!images.length || images.some((image) => !/^https?:\/\//i.test(image))) throw new Error("images must contain one or more http(s) URLs separated by |")
+	const price = number(row.price, "price")
+	if (price <= 0) throw new Error("price must be positive")
+	const stock = number(row.stock, "stock", true)
+	if (stock < 0) throw new Error("stock cannot be negative")
 	const discountedPrice = row.discountedPrice?.trim() ? number(row.discountedPrice, "discountedPrice") : null
 	if (discountedPrice !== null && discountedPrice <= 0) throw new Error("discountedPrice must be positive")
+	if (discountedPrice !== null && discountedPrice > price) throw new Error("discountedPrice cannot exceed price")
 	let specs: Record<string, string> | undefined
 	if (row.specs?.trim()) { try { const parsed = JSON.parse(row.specs); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); specs = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, String(value)])) } catch { throw new Error("specs must be a JSON object") } }
 	let variants: Array<{ name: string; value: string; priceModifier?: number; stock?: number; sku?: string }> | undefined
-	if (row.variants?.trim()) { try { const parsed = JSON.parse(row.variants); if (!Array.isArray(parsed)) throw new Error(); variants = parsed.map((variant) => ({ name: String(variant.name), value: String(variant.value), priceModifier: variant.priceModifier == null ? undefined : Number(variant.priceModifier), stock: variant.stock == null ? undefined : Number(variant.stock), sku: variant.sku ? String(variant.sku) : undefined })) } catch { throw new Error("variants must be a JSON array") } }
-	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price: number(row.price, "price"), discountedPrice, stock: number(row.stock, "stock", true), warranty: row.warranty?.trim() || null, categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), specs, variants }
+	if (row.variants?.trim()) {
+		try {
+			const parsed = JSON.parse(row.variants)
+			if (!Array.isArray(parsed)) throw new Error()
+			variants = parsed.map((variant) => ({ name: String(variant.name || "").trim(), value: String(variant.value || "").trim(), priceModifier: variant.priceModifier == null ? undefined : Number(variant.priceModifier), stock: variant.stock == null ? undefined : Number(variant.stock), sku: variant.sku ? String(variant.sku) : undefined }))
+			if (variants.some((variant) => !variant.name || !variant.value || (variant.priceModifier !== undefined && !Number.isFinite(variant.priceModifier)) || (variant.stock !== undefined && (!Number.isInteger(variant.stock) || variant.stock < 0)))) throw new Error()
+		} catch { throw new Error("variants must be a valid JSON array with non-negative stock") }
+	}
+	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price, discountedPrice, stock, warranty: row.warranty?.trim() || null, categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), specs, variants }
 }
 
 export async function POST(request: NextRequest) {

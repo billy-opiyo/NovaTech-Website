@@ -7,6 +7,7 @@ import { z } from "zod"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
+import { parsePagination } from "../lib/pagination"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -25,8 +26,7 @@ export async function getTickets(req: NextRequest) {
 		const priority = searchParams.get("priority") || "All"
 		const category = searchParams.get("category") || "All"
 		const search = searchParams.get("search") || undefined
-		const page = parseInt(searchParams.get("page") || "1", 10)
-		const limit = parseInt(searchParams.get("limit") || "20", 10)
+		const { page, limit } = parsePagination(searchParams)
 
 		if (searchParams.get("stats") === "true") {
 			const stats = await supportService.getTicketStats(context.tenantId)

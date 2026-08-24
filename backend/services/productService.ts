@@ -235,8 +235,12 @@ export async function updateProduct(slug: string, data: any, tenantId: string) {
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
 	if (update.stock !== undefined) update.stock = Number(update.stock)
-	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true } })
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true } })
 	if (!product) throw new Error("Product not found")
+	const nextPrice = update.price === undefined ? product.price : Number(update.price)
+	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
+		throw new Error("discountedPrice cannot exceed price")
+	}
 	return prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: true } })
 }
 

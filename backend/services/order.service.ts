@@ -1,4 +1,5 @@
 import prisma from "../lib/db"
+import { normalizePagination } from "../lib/pagination"
 import { Prisma } from "@prisma/client"
 import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
@@ -179,7 +180,10 @@ export async function createOrder(data: CreateOrderData) {
 }
 
 export async function getOrdersByUserId(userId: string, tenantId: string, page = 1, limit = 20) {
-	const skip = (page - 1) * limit
+	const pagination = normalizePagination(page, limit)
+	page = pagination.page
+	limit = pagination.limit
+	const skip = pagination.skip
 
 	const [orders, total] = await Promise.all([
 		prisma.order.findMany({
@@ -342,7 +346,10 @@ text: `${PLATFORM_BRAND_NAME} Order Update\n\nOrder: #${order.id.slice(-8).toUpp
 }
 
 export async function getAllOrders(tenantId: string, page = 1, limit = 20, status?: string) {
-	const skip = (page - 1) * limit
+	const pagination = normalizePagination(page, limit)
+	page = pagination.page
+	limit = pagination.limit
+	const skip = pagination.skip
 	const where: Prisma.OrderWhereInput = { tenantId }
 	if (status) {
 		where.status = status as Prisma.OrderWhereInput["status"]

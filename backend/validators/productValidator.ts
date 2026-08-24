@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const productSchema = z.object({
+const productFields = {
 	name: z.string().min(3).max(200),
 	slug: z
 		.string()
@@ -22,14 +22,34 @@ export const productSchema = z.object({
 	variants: z
 		.array(
 			z.object({
-				name: z.string(),
-				value: z.string(),
-				priceModifier: z.number().optional(),
+				name: z.string().min(1),
+				value: z.string().min(1),
+				priceModifier: z.number().finite().optional(),
 				stock: z.number().int().min(0).optional(),
 				sku: z.string().optional(),
 			}),
 		)
 		.optional(),
+} satisfies z.ZodRawShape
+
+export const productSchema = z.object(productFields).superRefine((value, context) => {
+	if (value.discountedPrice !== undefined && value.discountedPrice > value.price) {
+		context.addIssue({ code: z.ZodIssueCode.custom, path: ["discountedPrice"], message: "discountedPrice cannot exceed price" })
+	}
+})
+
+export const productUpdateSchema = z.object({
+	name: productFields.name.optional(),
+	description: productFields.description.optional(),
+	brand: productFields.brand.optional(),
+	price: productFields.price.optional(),
+	discountedPrice: productFields.discountedPrice.nullable().optional(),
+	stock: productFields.stock.optional(),
+	warranty: productFields.warranty.nullable().optional(),
+	specs: productFields.specs.nullable().optional(),
+	images: productFields.images.optional(),
+	isFeatured: productFields.isFeatured.optional(),
+	isNewArrival: productFields.isNewArrival.optional(),
 })
 
 export type ProductInput = z.infer<typeof productSchema>

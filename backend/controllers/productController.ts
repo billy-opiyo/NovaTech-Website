@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import * as productService from "../services/productService"
-import { productSchema } from "../validators/productValidator"
+import { productSchema, productUpdateSchema } from "../validators/productValidator"
 import { createActionRecord } from "../actions"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
@@ -71,7 +71,8 @@ export async function updateProduct(req: NextRequest, slug: string) {
 		const context = await resolveTenantFromRequest(req)
 		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
 		const body = await req.json()
-		const product = await productService.updateProduct(slug, body, context.tenantId)
+		const validated = productUpdateSchema.parse(body)
+		const product = await productService.updateProduct(slug, validated, context.tenantId)
 		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json(product)
 	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }

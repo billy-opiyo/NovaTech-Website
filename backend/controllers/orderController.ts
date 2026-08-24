@@ -7,6 +7,7 @@ import { createActionRecord } from "../actions"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireMembership, requireStorePermission } from "../lib/tenant-access"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../lib/commerce-model"
+import { parsePagination } from "../lib/pagination"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -16,8 +17,7 @@ export async function getOrders(req: NextRequest) {
 		}
 
 		const url = new URL(req.url)
-		const page = parseInt(url.searchParams.get("page") || "1", 10)
-		const limit = parseInt(url.searchParams.get("limit") || "20", 10)
+		const { page, limit } = parsePagination(url.searchParams)
 
 		const context = await resolveTenantFromRequest(req)
 		const result = await orderService.getOrdersByUserId(session.user.id!, context.tenantId, page, limit)
@@ -151,8 +151,7 @@ export async function getAllOrders(req: NextRequest) {
 		}
 
 		const url = new URL(req.url)
-		const page = parseInt(url.searchParams.get("page") || "1", 10)
-		const limit = parseInt(url.searchParams.get("limit") || "20", 10)
+		const { page, limit } = parsePagination(url.searchParams)
 		const status = url.searchParams.get("status") || undefined
 
 		const context = await resolveTenantFromRequest(req)

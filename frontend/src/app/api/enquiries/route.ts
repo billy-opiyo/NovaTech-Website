@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { merchantEnquirySchema } from "backend/validators/merchantEnquiryValidator"
+import { resolveVariantSelection } from "backend/lib/product-variant"
 
 export async function POST(request: NextRequest) {
 	const limited = await rateLimiter(request, "merchant-enquiry")
@@ -15,13 +16,19 @@ export async function POST(request: NextRequest) {
 		const session = await auth()
 		const products = await prisma.product.findMany({
 			where: { tenantId: context.tenantId, id: { in: parsed.data.items.map((item) => item.productId) } },
-			select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true },
+			select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true, variants: { select: { name: true, value: true, priceModifier: true, stock: true } } },
 		})
 		const productById = new Map(products.map((product) => [product.id, product]))
 		if (products.length !== new Set(parsed.data.items.map((item) => item.productId)).size) return NextResponse.json({ message: "One or more selected products are no longer available in this store." }, { status: 409 })
-		const items = parsed.data.items.map((item) => {
+		const resolvedItems = parsed.data.items.map((item) => {
 			const product = productById.get(item.productId)!
-			const unitPrice = product.discountedPrice ?? product.price
+			const selectedVariant = resolveVariantSelection(product.variants, item.variant)
+			return { item, product, selectedVariant }
+		})
+		if (resolvedItems.some(({ selectedVariant }) => !selectedVariant.valid)) return NextResponse.json({ message: "One or more selected product variants are no longer available." }, { status: 409 })
+		if (resolvedItems.some(({ item, selectedVariant }) => selectedVariant.stock !== null && item.quantity > selectedVariant.stock)) return NextResponse.json({ message: "One or more selected product variants do not have enough stock." }, { status: 409 })
+		const items = resolvedItems.map(({ item, product, selectedVariant }) => {
+			const unitPrice = (product.discountedPrice ?? product.price) + selectedVariant.priceModifier
 			return { productId: product.id, name: product.name, slug: product.slug, sku: product.sku, quantity: item.quantity, variant: item.variant || null, unitPrice, lineTotal: unitPrice * item.quantity }
 		})
 		const estimatedTotal = items.reduce((total, item) => total + item.lineTotal, 0)

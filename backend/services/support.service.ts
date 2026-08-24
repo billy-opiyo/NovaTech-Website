@@ -2,6 +2,7 @@ import prisma from "../lib/db"
 import { sendEmail } from "../lib/email"
 import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
+import { normalizePagination } from "../lib/pagination"
 
 const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
 
@@ -34,9 +35,10 @@ export async function getAllTickets(filters?: {
 	page?: number
 	limit?: number
 }) {
-	const page = filters?.page || 1
-	const limit = filters?.limit || 20
-	const skip = (page - 1) * limit
+	const pagination = normalizePagination(filters?.page, filters?.limit)
+	const page = pagination.page
+	const limit = pagination.limit
+	const skip = pagination.skip
 
 	const where: any = { tenantId: filters?.tenantId }
 

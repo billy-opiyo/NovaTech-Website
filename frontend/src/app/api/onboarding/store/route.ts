@@ -30,7 +30,8 @@ export async function POST(request: Request) {
 		const result = await prisma.$transaction(async (transaction) => {
 			const trialStartsAt = new Date()
 			const trialEndsAt = new Date(trialStartsAt.getTime() + 30 * 24 * 60 * 60 * 1000)
-			const plan = await transaction.plan.findFirst({ where: { key: data.planKey, active: true } }) || await transaction.plan.upsert({ where: { key: "TRIAL" }, update: {}, create: { key: "TRIAL", name: "Trial", currency: data.currency, active: true } })
+			const plan = await transaction.plan.findFirst({ where: { key: data.planKey, active: true } })
+			if (!plan) throw Object.assign(new Error("The selected plan is unavailable."), { code: "PLAN_NOT_FOUND" })
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt, trialEndsAt } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
 		return NextResponse.json(result, { status: 201 })
 	} catch (error: any) {
 		if (error?.code === "P2002") return NextResponse.json({ message: "That store slug is already in use" }, { status: 409 })
+		if (error?.code === "PLAN_NOT_FOUND") return NextResponse.json({ message: error.message }, { status: 409 })
 		console.error("Store onboarding failed", error)
 		return NextResponse.json({ message: "Unable to create the store" }, { status: 503 })
 	}
