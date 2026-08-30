@@ -18,7 +18,12 @@ export default function OnboardingPage() {
 	const [saving, setSaving] = useState(false)
 
 	useEffect(() => {
-		const requestedPlan = new URLSearchParams(window.location.search).get("plan")?.toUpperCase()
+		const params = new URLSearchParams(window.location.search)
+		const requestedPlan = params.get("plan")?.toUpperCase()
+		const requestedName = params.get("name")
+		const requestedSlug = params.get("slug")
+		if (requestedName) setName(requestedName)
+		if (requestedSlug) setSlug(requestedSlug)
 		fetch("/api/onboarding/store").then((response) => response.ok ? response.json() : null).then((data) => setStores(data?.stores || [])).catch(() => undefined)
 		fetch("/api/billing/plans").then((response) => response.ok ? response.json() : null).then((data) => {
 			const availablePlans = data?.plans || []
@@ -33,6 +38,14 @@ export default function OnboardingPage() {
 		setError("")
 		const response = await fetch("/api/onboarding/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, slug: slug || undefined, planKey, acceptLegalTerms }) })
 		const data = await response.json().catch(() => ({}))
+		if (response.status === 401) {
+			const resume = new URLSearchParams({ plan: planKey })
+			if (name) resume.set("name", name)
+			if (slug) resume.set("slug", slug)
+			router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/onboarding?${resume.toString()}`)}`)
+			setSaving(false)
+			return
+		}
 		if (!response.ok) setError(data.message || "Unable to create store")
 		else router.push(`/manage?store=${data.slug}`)
 		setSaving(false)

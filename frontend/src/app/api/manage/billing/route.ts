@@ -18,6 +18,7 @@ import {
 	subscribeToAddon,
 	unsubscribeFromAddon,
 } from "backend/billing/service"
+import { isMpesaConfigured } from "backend/lib/daraja"
 
 const actionSchema = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("checkout"), planKey: z.string().min(1), addonKeys: z.array(z.string()).max(20).default([]) }),
@@ -42,7 +43,13 @@ export async function GET() {
 	try {
 		const { context } = await getAccess()
 		const [snapshot, plans, addons] = await Promise.all([getBillingSnapshot(context.tenantId), listActivePlans(), listActiveAddons()])
-		return NextResponse.json({ ...snapshot, plans, addons })
+		const paymentMethod = {
+			provider: "mpesa" as const,
+			configured: isMpesaConfigured(),
+			shortcode: process.env.MPESA_SHORTCODE || "",
+			env: process.env.MPESA_ENV === "production" ? "production" : "sandbox",
+		}
+		return NextResponse.json({ ...snapshot, paymentMethod, plans, addons })
 	} catch (error: any) {
 		console.error("Billing status unavailable", error)
 		return NextResponse.json({ message: error instanceof BillingError ? error.message : "Billing status unavailable" }, { status: error?.status || 503 })

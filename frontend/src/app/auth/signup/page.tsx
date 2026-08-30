@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -13,7 +13,15 @@ export default function SignUpPage() {
 	const store = useStoreContext()
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState("")
+	const [signInHref, setSignInHref] = useState("/auth/signin")
 	const [showPassword, setShowPassword] = useState(false)
+
+	useEffect(() => {
+		const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl")
+		if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+			setSignInHref(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`)
+		}
+	}, [])
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -221,7 +229,7 @@ export default function SignUpPage() {
 					<p className="text-center text-sm mt-6 text-gray-500">
 						Already have an account?{" "}
 						<Link
-							href="/auth/signin"
+							href={signInHref}
 							className="text-primary hover:underline font-medium"
 						>
 							Sign In
