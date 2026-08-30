@@ -110,7 +110,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 ### 💼 SaaS Billing
 
 - Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, and setup fees for merchant platform services.
-- Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-trial activation and renewal collection, scheduled plan changes, add-ons, invoices, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
+- Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-trial activation and renewal collection, VAT/credit-aware invoices, scheduled plan changes, add-ons, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
 - Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.
@@ -354,11 +354,15 @@ NovaTech Website/
 | `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
 | `CRON_SECRET`                        | Secret used to authenticate the protected Vercel lifecycle Cron route |
 | `PLATFORM_DOMAIN`                    | Production platform domain for tenant subdomains       |
+| `NURAVA_VAT_ENABLED`                 | Enables the agreed 16% VAT-inclusive SaaS invoice policy after tax confirmation |
+| `NURAVA_VAT_RATE`                    | Nurava SaaS VAT rate; launch policy is 16 when enabled |
+| `NURAVA_VAT_INCLUSIVE`               | Documents that Nurava SaaS prices include VAT          |
 | `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
 | `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
 | `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
 | `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
+| `MPESA_BUSINESS_NAME`                | Registered M-Pesa business descriptor; production must be `Nurava Tech` |
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |

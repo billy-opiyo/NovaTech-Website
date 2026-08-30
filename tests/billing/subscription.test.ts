@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import { assertSubscriptionTransition, canTransitionSubscription } from "../../backend/billing/subscription"
 import { lifecycleDecision } from "../../backend/billing/lifecycle"
 import { retentionDueAt } from "../../backend/retention/tenant-retention"
+import { calculateInclusiveVat, calculateSaasInvoiceTotals, setupFeeRefundPolicy } from "../../backend/billing/policy"
+import { calculateServiceCreditAmount } from "../../backend/billing/credits"
 
 test("subscription lifecycle allows recovery and cancellation paths", () => {
 	assert.equal(canTransitionSubscription("TRIALING", "ACTIVE"), true)
@@ -25,4 +27,22 @@ test("subscription lifecycle worker applies the configured three-day grace perio
 
 test("tenant retention due date is ninety days after access ends", () => {
 	assert.equal(retentionDueAt(new Date("2026-01-01T00:00:00.000Z")).toISOString(), "2026-04-01T00:00:00.000Z")
+})
+
+test("VAT-inclusive SaaS totals preserve the advertised gross price", () => {
+	assert.deepEqual(calculateInclusiveVat(1500, 16), { grossAmount: 1500, netAmount: 1293, taxAmount: 207 })
+	assert.deepEqual(calculateSaasInvoiceTotals({ subscription: 1500, addons: 350, setupFee: 5000, vatRate: 16 }), { grossAmount: 6850, netAmount: 5905, taxAmount: 945, vatRate: 16 })
+})
+
+test("setup fee is refundable only before setup work starts when provisioning fails", () => {
+	assert.equal(setupFeeRefundPolicy(false, true), true)
+	assert.equal(setupFeeRefundPolicy(true, true), false)
+	assert.equal(setupFeeRefundPolicy(false, false), false)
+})
+
+test("service credits start at 24 hours and cap at one monthly subscription", () => {
+	const start = new Date("2026-01-01T00:00:00.000Z")
+	assert.equal(calculateServiceCreditAmount(1500, start, new Date("2026-01-01T23:59:59.000Z")), 0)
+	assert.equal(calculateServiceCreditAmount(1500, start, new Date("2026-01-02T00:00:00.000Z")), 50)
+	assert.equal(calculateServiceCreditAmount(1500, start, new Date("2026-02-15T00:00:00.000Z")), 1500)
 })

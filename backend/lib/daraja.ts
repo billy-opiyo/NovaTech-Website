@@ -13,6 +13,7 @@ function getBaseUrl(): string {
 }
 
 export function isMpesaConfigured(): boolean {
+	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_BRAND_NAME) return false
 	return Boolean(
 		process.env.MPESA_CONSUMER_KEY &&
 			process.env.MPESA_CONSUMER_SECRET &&

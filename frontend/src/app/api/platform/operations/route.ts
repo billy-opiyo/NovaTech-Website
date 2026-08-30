@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import { verificationEvidenceDueAt } from "backend/retention/tenant-retention"
 
 const readRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
 const manageRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
@@ -164,6 +165,7 @@ export async function PATCH(request: NextRequest) {
 				: await transaction.tenant.update({ where: { id: tenant.id }, data: { status: suspended ? "SUSPENDED" : "ACTIVE", suspendedAt: suspended ? new Date() : null } })
 			if (tenant.store && (suspended || parsed.data.action === "reject_verification")) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: suspended || parsed.data.action === "reject_verification" ? "SUSPENDED" : tenant.store.publicationStatus } })
 			if (tenant.store && parsed.data.action === "reactivate_store" && tenant.store.publicationStatus === "SUSPENDED" && tenant.verificationStatus === "APPROVED") await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } })
+			if (parsed.data.action === "approve_verification" || parsed.data.action === "reject_verification") await transaction.merchantVerificationEvidence.updateMany({ where: { tenantId: tenant.id, retentionDueAt: null }, data: { retentionDueAt: verificationEvidenceDueAt(new Date()) } })
 			return nextTenant
 		})
 		await prisma.adminLog.create({ data: { tenantId: tenant.id, adminId: access.session!.user.id, action: verificationAction ? `MERCHANT_${parsed.data.action.toUpperCase()}` : suspended ? "PLATFORM_SUSPENDED_STORE" : "PLATFORM_REACTIVATED_STORE", details: { previousStatus: tenant.status, nextStatus: updated.status, previousVerificationStatus: tenant.verificationStatus, nextVerificationStatus: updated.verificationStatus, notes: parsed.data.notes || null } } }).catch((error) => console.error("Platform action audit failed", error))

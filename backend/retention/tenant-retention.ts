@@ -1,11 +1,11 @@
 import prisma from "../lib/db"
 import { deletePrivateFile } from "../lib/storage"
+import { retentionDueAt as policyRetentionDueAt, SHOPPER_ENQUIRY_RETENTION_DAYS, TENANT_WORKSPACE_RETENTION_DAYS, VERIFICATION_EVIDENCE_RETENTION_DAYS } from "../billing/policy"
 
-export const TENANT_DATA_RETENTION_DAYS = 90
-const dayMilliseconds = 24 * 60 * 60 * 1000
+export const TENANT_DATA_RETENTION_DAYS = TENANT_WORKSPACE_RETENTION_DAYS
 
 export function retentionDueAt(startsAt: Date, retentionDays = TENANT_DATA_RETENTION_DAYS) {
-	return new Date(startsAt.getTime() + retentionDays * dayMilliseconds)
+	return policyRetentionDueAt(startsAt, retentionDays)
 }
 
 export async function scheduleTenantDataRetention(tenantId: string, startsAt: Date) {
@@ -28,7 +28,6 @@ async function deleteMerchantData(tenantId: string) {
 		await transaction.coupon.deleteMany({ where: { tenantId } })
 		await transaction.orderItem.deleteMany({ where: { tenantId } })
 		await transaction.payment.deleteMany({ where: { tenantId, kind: "ORDER" } })
-		await transaction.transaction.deleteMany({ where: { tenantId } })
 		await transaction.order.deleteMany({ where: { tenantId } })
 		await transaction.variant.deleteMany({ where: { tenantId } })
 		await transaction.product.deleteMany({ where: { tenantId } })
@@ -40,6 +39,32 @@ async function deleteMerchantData(tenantId: string) {
 		await transaction.featureEntitlement.deleteMany({ where: { tenantId } })
 		await transaction.tenant.update({ where: { id: tenantId }, data: { status: "DELETED", deletedAt: new Date(), dataDeletedAt: new Date() } })
 	})
+}
+
+export async function processShopperEnquiryRetention(now = new Date(), limit = 500) {
+	const enquiries = await prisma.merchantEnquiry.findMany({ where: { dataRetentionDueAt: { lte: now }, tenant: { dataDeletedAt: null } }, orderBy: { dataRetentionDueAt: "asc" }, take: Math.min(Math.max(limit, 1), 1000), select: { id: true } })
+	if (!enquiries.length) return { scanned: 0, deleted: 0 }
+	const deleted = await prisma.merchantEnquiry.deleteMany({ where: { id: { in: enquiries.map((item) => item.id) } } })
+	return { scanned: enquiries.length, deleted: deleted.count }
+}
+
+export async function processVerificationEvidenceRetention(now = new Date(), limit = 100) {
+	const evidenceRows = await prisma.merchantVerificationEvidence.findMany({ where: { retentionDueAt: { lte: now } }, orderBy: { retentionDueAt: "asc" }, take: Math.min(Math.max(limit, 1), 200), select: { id: true, objectKey: true } })
+	let deleted = 0
+	for (const evidence of evidenceRows) {
+		await deletePrivateFile(evidence.objectKey)
+		await prisma.merchantVerificationEvidence.delete({ where: { id: evidence.id } })
+		deleted += 1
+	}
+	return { scanned: evidenceRows.length, deleted }
+}
+
+export function verificationEvidenceDueAt(decidedAt: Date) {
+	return retentionDueAt(decidedAt, VERIFICATION_EVIDENCE_RETENTION_DAYS)
+}
+
+export function shopperEnquiryDueAt(closedAt: Date) {
+	return retentionDueAt(closedAt, SHOPPER_ENQUIRY_RETENTION_DAYS)
 }
 
 export async function processTenantRetention(tenantId: string, now = new Date()) {

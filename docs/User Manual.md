@@ -394,6 +394,18 @@ create a local invoice and initiate a Daraja STK request. A successful callback
 updates invoice, payment, subscription, tenant, and setup-fee state. It is not
 an automatic recurring M-Pesa debit.
 
+Nurava SaaS prices are configured as VAT-inclusive. When `NURAVA_VAT_ENABLED=true`,
+the invoice records the agreed 16% VAT rate and shows the net amount, VAT, any
+account credit, and amount due. The example environment keeps this disabled until
+Nurava’s registration and tax classification are confirmed.
+
+Voluntary cancellation has no routine subscription refund; access continues to
+the end of the paid period. The setup fee is refundable only when Nurava cannot
+provision the store before setup work begins. A verified core-platform outage of
+at least 24 continuous hours automatically creates a credit for every paid plan:
+one day of recurring subscription value per complete 24 hours, capped at one
+monthly subscription fee.
+
 Stripe Checkout, portal, subscription/invoice synchronization, and signed
 webhooks remain provider-ready and should only be advertised after live
 configuration and sandbox tests pass. Seed add-ons include WhatsApp
@@ -408,10 +420,12 @@ reports included by the plan.
 Shopper transaction commissions are disabled in merchant-direct mode. Historical
 commission records remain for reconciliation.
 
-The lifecycle worker applies subscription expiry/grace decisions and the
-approved 90-day merchant-data retention policy while preserving SaaS billing
-and legal records. Scheduling, monitoring, backup, and restore must be
-configured before this is production-operated.
+The lifecycle worker applies subscription expiry/grace decisions, deletes closed
+shopper enquiries after 12 months of inactivity, removes due private verification
+files, and applies the 90-day merchant-workspace retention policy. Billing,
+payment, refund/credit, audit, and legal-acceptance records are retained for 7
+years. Scheduling, monitoring, backup, and restore must be configured before this
+is production-operated.
 
 ## 7. Platform control plane
 

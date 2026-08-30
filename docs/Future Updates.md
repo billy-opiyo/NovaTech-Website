@@ -405,7 +405,7 @@ fully server-authoritative and accurately represented to shoppers and merchants.
 **Build:**
 
 - Metered usage billing for storage, messages, API calls, or staff seats.
-- Annual plans, coupons, trials by plan, prorations, and tax-inclusive pricing.
+- Annual plans, coupons, trials by plan, prorations, and regional tax profiles beyond the agreed launch policy.
 - Provider-neutral billing adapter with Stripe and future local providers.
 - Dunning sequences, payment-method expiry, retry schedules, and account holds.
 - Reconciliation reports by provider event, invoice, and local payment.

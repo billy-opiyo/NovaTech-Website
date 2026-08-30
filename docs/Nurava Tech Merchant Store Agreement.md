@@ -124,9 +124,9 @@ Nurava may update platform components, security controls, or implementation deta
 
 5.8 Add-ons may have separate billing and lifecycle records. In M-Pesa launch mode, an add-on remains pending until the related invoice is successfully confirmed.
 
-5.9 **Tax treatment and tax rate:** **[LEGAL REVIEW / CONFIRMATION]**. The launch market and currency decision is complete; the final tax treatment and rate must be confirmed by a qualified tax professional and reflected in the invoice schedule. No tax-inclusive or tax-exclusive treatment should be assumed from this draft.
+5.9 **Tax treatment and tax rate:** Nurava’s agreed commercial policy is **16% VAT-inclusive pricing** for taxable Nurava SaaS subscriptions, one-time setup fees, and paid add-ons. A displayed amount is the total payable amount; the invoice should separately show the taxable/net amount, VAT rate, VAT amount, credits, and final total. The application of VAT remains subject to Nurava’s registration and service classification being confirmed by a qualified tax professional before live charging.
 
-5.10 **Refunds, cancellation credits, and setup-fee treatment:** **[LEGAL REVIEW / CONFIRMATION]**. The parties should attach or reference the final lawyer-reviewed billing, refund, and cancellation policy before signature. This is a wording and compliance confirmation, not a request to reopen the agreed pricing or billing model.
+5.10 **Refunds, cancellation credits, and setup-fee treatment:** A voluntary cancellation does not create a routine subscription refund; access continues through the paid period. Refunds are limited to duplicate payments, billing errors, or cases required by law. The setup fee is refundable only if Nurava cannot provision the store before setup work begins; after setup work starts, it is non-refundable. A verified core-platform outage caused by Nurava or its hosting infrastructure qualifies for an automatic account credit for all paid plans after 24 continuous hours: one day of the recurring monthly subscription for each complete 24-hour period, capped at one monthly subscription fee. The credit does not apply to the setup fee, and planned maintenance, merchant-side internet/device failures, force majeure, and optional third-party services are excluded. Counsel should confirm the final wording and any mandatory consumer or tax treatment before signature.
 
 ---
 
@@ -144,7 +144,7 @@ The following launch configuration was recorded in the commercial decisions. The
 
 6.2 Product, staff, custom-domain, storage, analytics, and add-on capabilities are subject to server-side entitlement checks. The Merchant may not bypass a limit through direct requests, uploads, staff invitations, or other technical means.
 
-6.3 Enterprise support, response times, uptime commitments, onboarding assistance, and service credits are not included unless written in a signed Enterprise schedule.
+6.3 No separate uptime or response-time SLA is promised by the standard plans. The service-credit policy in Section 5.10 applies to all paid plans; any additional Enterprise support, response-time, uptime, onboarding, or service-credit commitment must be written in a signed Enterprise schedule.
 
 6.4 WhatsApp notifications are an opt-in paid add-on. Promotional messages require appropriate consent and unsubscribe controls. Automated order-update messages are subject to the active add-on and the shopper’s order-update preference.
 
@@ -191,7 +191,7 @@ The Merchant remains responsible for the legality and accuracy of its storefront
 
 9.3 Billing lifecycle actions are partly automated. The platform records payment state and may move a subscription through past-due, grace-period, suspended, cancelled, incomplete, or unpaid states according to the configured lifecycle rules. Unpaid access must not be treated as permanently deleted immediately.
 
-9.4 Where access ends, the platform uses a soft-deletion and retention workflow. The approved provisional retention period is 90 days after paid access ends, subject to the final approved privacy and retention policy. During that workflow, Nurava preserves SaaS billing, invoice, payment, audit, and legal acceptance records and may delete merchant workspace data after the due date.
+9.4 Where access ends, the platform uses a soft-deletion and retention workflow. Merchant store, catalogue, and workspace data is retained for 90 days after paid access ends, then deleted or anonymized. Closed shopper enquiries and contact details are retained for 12 months after the last interaction while the merchant workspace remains active. Sensitive verification document files are deleted 90 days after the final verification decision or account end, whichever is later; the verification result and audit record are retained separately. Nurava retains SaaS billing, invoice, payment, refund/credit, audit, and legal acceptance records for 7 years after the relationship or last transaction ends, unless a legal hold or applicable law requires longer.
 
 9.5 Private verification objects must be successfully deleted before the related database evidence rows are removed, where the retention workflow requires deletion.
 
@@ -205,13 +205,13 @@ The Merchant remains responsible for the legality and accuracy of its storefront
 
 10.1 The Agreement begins on the date signed or the trial start date, whichever is stated in Section 1.3, and continues through the trial and monthly subscription periods unless ended under this Agreement.
 
-10.2 The Merchant may request cancellation through the available billing or support process. The effective date, final invoice, setup-fee treatment, and any refund or credit will follow the final lawyer-reviewed cancellation and refund policy attached to this Agreement.
+10.2 The Merchant may request cancellation through the available billing or support process. Unless Nurava is required by law or confirms a billing error, cancellation takes effect at the end of the paid period and does not create a routine cash refund. The setup fee is refundable only where Nurava cannot provision the store before setup work begins. Any approved outage credit is applied automatically to a future subscription invoice and is not a cash refund.
 
 10.3 Nurava may suspend or terminate access for non-payment, serious breach, unlawful activity, security risk, fraudulent information, prohibited content, failed verification, or a requirement of law or a provider.
 
 10.4 Before access ends, the Merchant should use the available export process to obtain eligible tenant data. Exports do not include secrets, provider credentials, private platform security data, or information the Merchant is not authorized to receive.
 
-10.5 After the applicable retention period, merchant store, catalogue, and shopper workspace data may be deleted according to the approved retention policy. SaaS billing, invoice, payment, audit, and legal acceptance records may be retained for legal, accounting, security, and reconciliation purposes.
+10.5 After 90 days from the end of paid access, merchant store, catalogue, and workspace data may be deleted or anonymized. Closed shopper enquiries and contact details are due for deletion or anonymization 12 months after the last interaction while the workspace remains active. Verification document files are due 90 days after the final verification decision or account end, whichever is later. SaaS billing, invoice, payment, refund/credit, audit, and legal acceptance records are retained for 7 years after the relationship or last transaction ends, unless a legal hold or applicable law requires longer.
 
 10.6 **Final termination notice, post-termination access, and deletion wording:** **[LEGAL/PRIVACY REVIEW / CONFIRMATION]**. The agreed soft-deletion, export, retention, and preservation approach is recorded above; counsel should confirm the final notice and wording.
 
@@ -247,11 +247,11 @@ The Merchant remains responsible for the legality and accuracy of its storefront
 
 13.1 The Platform is provided as a hosted service. Planned maintenance, provider outages, internet failures, security events, force majeure, and third-party service failures may affect availability.
 
-13.2 Nurava will provide support through the contact details and channels it publishes for the Merchant. No response time, uptime percentage, service credit, or priority commitment is promised unless recorded in a signed Enterprise or support schedule.
+13.2 Nurava will provide support through the contact details and channels it publishes for the Merchant. The standard service-credit protection is available to all paid plans for qualifying core-platform outages under Section 5.10. No additional response time, uptime percentage, priority, or Enterprise commitment is promised unless recorded in a signed Enterprise or support schedule.
 
 13.3 Nurava may change features, integrations, plan entitlements, prices, or policies for future billing periods, subject to the notice and renewal terms in the final approved commercial policy.
 
-13.4 **Support SLA, maintenance notice, price-change notice, service credits, and change-control wording:** **[LEGAL/COMMERCIAL REVIEW / CONFIRMATION]**. The selected plan and agreed pricing are recorded; counsel and the Platform Provider should confirm the final service wording and any Enterprise-specific commitments.
+13.4 **Support SLA, maintenance notice, price-change notice, service credits, and change-control wording:** The agreed standard service-credit policy is recorded in Section 5.10. Counsel should confirm the final notice, exclusions, dispute, and Enterprise schedule wording without reopening the selected plan or pricing.
 
 ---
 
@@ -286,7 +286,7 @@ The platform implementation uses versioned merchant acceptance records. At trial
 - merchant privacy notice: **merchant-privacy-v1**; and
 - this merchant agreement: **merchant-agreement-v1**.
 
-Changing a document version requires renewed acceptance. Acceptance records may be exported and are preserved with billing and legal records separately from merchant workspace-retention deletion.
+Changing a document version requires renewed acceptance. Material changes receive at least 30 days’ notice and take effect for an existing Merchant at renewal. Existing Merchants remain on their accepted version until renewal; urgent security or legal changes may require earlier acceptance. Minor formatting or typo corrections do not by themselves require a new version. Acceptance records may be exported and are preserved with billing and legal records separately from merchant workspace-retention deletion.
 
 By signing below, the parties confirm that they have read the commercial schedule, understand the merchant-direct sales boundary, understand that this is SaaS and not a physical lease, and will complete the marked legal, tax, privacy, and operational fields before relying on this document as the final Agreement.
 
@@ -311,6 +311,10 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | Shopper funds | Nurava does not collect shopper funds |
 | Shopper responsibilities | Merchant handles payment, delivery, returns, refunds, warranties, taxes, complaints, and sale contract |
 | Setup fee and first subscription | Collected together after the trial, through the applicable invoice/payment request |
+| Nurava SaaS tax policy | 16% VAT-inclusive pricing for taxable subscriptions, setup fees, and paid add-ons; invoices show the tax breakdown when enabled after registration/classification confirmation |
+| Subscription cancellation refund | No routine refund; access continues through the paid period, subject to duplicate-payment, billing-error, or legal exceptions |
+| Setup-fee refund | Refund only if Nurava cannot provision the store before setup work begins; non-refundable after setup work starts |
+| Standard outage credit | All paid plans; after 24 continuous hours of a verified Nurava/core-hosting outage, one recurring-subscription day per complete 24 hours, capped at one monthly subscription fee and applied automatically |
 | Add-ons | Optional paid add-ons; M-Pesa add-ons remain pending until successful invoice confirmation |
 | WhatsApp | Opt-in paid order-update add-on; promotional messaging requires consent and unsubscribe controls |
 | Overages | No automatic surprise overages; server-side limits block additions at plan capacity |
@@ -318,8 +322,10 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | Security/policy suspension | Authorized platform action may restrict access or publication; actions are audited |
 | Billing suspension | Lifecycle rules can move unpaid subscriptions through past-due, grace, suspended, cancelled, incomplete, or unpaid states |
 | Data deletion | Soft deletion followed by export/retention workflow |
-| Provisional retention period | 90 days after paid access ends, pending final legal/privacy approval |
-| Preserved records | SaaS billing, invoices, payments, audit records, and legal acceptance records |
+| Merchant workspace retention | 90 days after paid access ends, then delete or anonymize |
+| Closed shopper enquiry retention | 12 months after the last interaction while the merchant workspace remains active |
+| Verification document retention | 90 days after final verification decision or account end, whichever is later; decision/audit metadata is retained separately |
+| Preserved billing/legal records | 7 years after the relationship or last transaction, subject to legal hold or applicable law |
 | Historical commissions | Historical records may remain for reconciliation; new shopper commission creation is disabled in merchant-direct mode |
 
 ### Schedule A acknowledgement
@@ -375,7 +381,7 @@ Before publication or first selling access, confirm:
 
 # Signature page
 
-The parties sign this Agreement after professional review confirms the legal, privacy, tax, billing, refund, support, and dispute schedules and the parties complete the entity-specific fields. The commercial decisions themselves are recorded and are not being reopened by this review.
+The parties sign this Agreement after professional review confirms the legal, privacy, tax, billing, refund, support, and dispute schedules and the parties complete the entity-specific fields. The commercial decisions themselves are recorded and are not being reopened by this review. The intended platform business identity is **Nurava Tech**; its registered business details and PayBill registration must be completed before live M-Pesa collection.
 
 ## For Nurava Tech Platform
 
