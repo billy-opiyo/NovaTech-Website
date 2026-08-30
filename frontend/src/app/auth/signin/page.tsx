@@ -172,7 +172,7 @@ function SignInForm() {
 					<p className="text-center text-sm mt-6 text-gray-500">
 						Don't have an account?{" "}
 						<Link
-							href="/auth/signup"
+							href={callbackUrl ? `/auth/signup?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/auth/signup"}
 							className="text-primary hover:underline font-medium"
 						>
 							Sign Up
