@@ -5,6 +5,8 @@ import { retentionDueAt } from "../retention/tenant-retention"
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient"
 import { initiateMpesaPayment } from "../payments/mpesa"
 import { isShopperCheckoutEnabled } from "../lib/commerce-model"
+import { calculateSaasInvoiceTotals, configuredSaasVatRate } from "./policy"
+import { finalizeInvoiceCredits, releaseInvoiceCredits, reserveBillingCredits } from "./credits"
 
 export class BillingError extends Error {
 	status: number
@@ -100,6 +102,7 @@ export async function getBillingSnapshot(tenantId: string) {
 			invoices: { orderBy: { createdAt: "desc" }, take: 25, include: { payments: { orderBy: { createdAt: "desc" }, take: 3 } } },
 			payments: { where: { kind: { not: "ORDER" } }, orderBy: { createdAt: "desc" }, take: 25 },
 			transactions: { orderBy: { createdAt: "desc" }, take: 25 },
+			billingCredits: { where: { status: "AVAILABLE", remainingAmount: { gt: 0 } }, orderBy: { issuedAt: "asc" } },
 		},
 	})
 	if (!tenant) throw new BillingError("Tenant not found", 404, "TENANT_NOT_FOUND")
@@ -131,7 +134,7 @@ async function ensureStripeCustomer(tenantId: string, ownerUserId: string, email
 function recurringLineItem(name: string, price: number, currency: string, interval: "month" | "year", stripePriceId?: string | null) {
 	return stripePriceId
 		? { price: stripePriceId, quantity: 1 }
-		: { price_data: { currency: currency.toLowerCase(), product_data: { name }, unit_amount: stripeAmount(price, currency), recurring: { interval } }, quantity: 1 }
+		: { price_data: { currency: currency.toLowerCase(), product_data: { name }, unit_amount: stripeAmount(price, currency), recurring: { interval }, ...(configuredSaasVatRate() > 0 ? { tax_behavior: "inclusive" } : {}) }, quantity: 1 }
 }
 
 export async function createStripeCheckoutSession(input: { tenantId: string; ownerUserId: string; email: string; planKey: string; addonKeys?: string[]; successUrl: string; cancelUrl: string }) {
@@ -145,7 +148,7 @@ export async function createStripeCheckoutSession(input: { tenantId: string; own
 	const lineItems: any[] = [recurringLineItem(plan.name, plan.price || 0, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month", plan.stripePriceId)]
 	for (const addon of addons) lineItems.push(recurringLineItem(addon.name, addon.price, addon.currency, addon.billingInterval === "YEAR" ? "year" : "month", addon.stripePriceId))
 	if (billing.record.setupFeeStatus === BillingRecordStatus.PENDING && billing.record.setupFeeAmount > 0) {
-		lineItems.push({ price_data: { currency: billing.record.currency.toLowerCase(), product_data: { name: "One-time onboarding/setup fee" }, unit_amount: stripeAmount(billing.record.setupFeeAmount, billing.record.currency) }, quantity: 1 })
+			lineItems.push({ price_data: { currency: billing.record.currency.toLowerCase(), product_data: { name: "One-time onboarding/setup fee" }, unit_amount: stripeAmount(billing.record.setupFeeAmount, billing.record.currency), ...(configuredSaasVatRate() > 0 ? { tax_behavior: "inclusive" } : {}) }, quantity: 1 })
 	}
 	const subscription = await prisma.subscription.create({ data: { tenantId: input.tenantId, planId: plan.id, status: "INCOMPLETE", provider: "stripe", providerCustomerId: customerId } })
 	try {
@@ -198,12 +201,24 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 	const setupFeeAmount = tenant.billingRecord && tenant.billingRecord.setupFeeStatus !== BillingRecordStatus.PAID ? tenant.billingRecord.setupFeeAmount : 0
 	const firstActivation = subscription.status === "TRIALING" || !subscription.currentPeriodStart
 	if (firstActivation && subscription.trialEndsAt && subscription.trialEndsAt > new Date()) throw new BillingError("Your 30-day trial is still active. Payment becomes available after the trial ends.", 409, "TRIAL_ACTIVE")
-	const total = (billingPlan.price || 0) + addonTotal + (firstActivation ? setupFeeAmount : 0)
-	if (total <= 0) throw new BillingError("The selected plan has no payable amount", 409, "BILLING_TOTAL_ZERO")
+	const totals = calculateSaasInvoiceTotals({ subscription: billingPlan.price || 0, addons: addonTotal, setupFee: firstActivation ? setupFeeAmount : 0, vatRate: configuredSaasVatRate() })
+	if (totals.grossAmount <= 0) throw new BillingError("The selected plan has no payable amount", 409, "BILLING_TOTAL_ZERO")
 	const kind = firstActivation ? InvoiceKind.SUBSCRIPTION : input.kind || InvoiceKind.RENEWAL
-	const invoice = await prisma.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, total, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000) } })
-	const result = await initiateMpesaPayment({ amount: total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id } })
-	if (!result.ok) await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "FAILED" } })
+	const invoice = await prisma.$transaction(async (transaction) => {
+		const created = await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000) } })
+		const creditAmount = await reserveBillingCredits(transaction, input.tenantId, billingPlan.currency, totals.grossAmount, created.id)
+		return transaction.invoice.update({ where: { id: created.id }, data: { creditAmount, total: totals.grossAmount - creditAmount } })
+	})
+	if (invoice.total === 0) {
+		const payment = await prisma.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: "internal-credit", amount: 0, currency: invoice.currency, status: "COMPLETED", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, reason: "SERVICE_CREDIT" } } })
+		await markBillingPaymentFromMpesa({ id: payment.id, status: "COMPLETED", invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined })
+		return { ok: true, provider: "internal-credit" as const, reference: `INV-${invoice.id}`, checkoutRequestId: "", phone: input.phone, amount: 0, currency: invoice.currency, status: "COMPLETED", message: "Invoice settled by account credit.", invoiceId: invoice.id }
+	}
+	const result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id, grossTotal: totals.grossAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, creditAmount: invoice.creditAmount } })
+	if (!result.ok) {
+		await releaseInvoiceCredits(invoice.id)
+		await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "FAILED" } })
+	}
 	return { ...result, invoiceId: invoice.id }
 }
 
@@ -292,7 +307,7 @@ export async function applyStripeInvoiceEvent(invoiceObject: Record<string, any>
 	const localInvoice = await prisma.invoice.upsert({
 		where: { providerInvoiceId },
 		update: { status: paid ? "PAID" : failed ? "FAILED" : "OPEN", paidAt: paid ? new Date() : undefined, hostedInvoiceUrl: invoiceObject.hosted_invoice_url || undefined, invoicePdfUrl: invoiceObject.invoice_pdf || undefined },
-		create: { tenantId: invoiceTenantId, subscriptionId: localSubscription?.id, kind: "RENEWAL", status: paid ? "PAID" : failed ? "FAILED" : "OPEN", provider: "stripe", providerInvoiceId, subtotal: Number(invoiceObject.subtotal || invoiceObject.amount_due || 0) / 100, total: Number(invoiceObject.amount_paid || invoiceObject.amount_due || 0) / 100, currency: String(invoiceObject.currency || "kes").toUpperCase(), paidAt: paid ? new Date() : undefined, hostedInvoiceUrl: invoiceObject.hosted_invoice_url || undefined, invoicePdfUrl: invoiceObject.invoice_pdf || undefined },
+		create: { tenantId: invoiceTenantId, subscriptionId: localSubscription?.id, kind: "RENEWAL", status: paid ? "PAID" : failed ? "FAILED" : "OPEN", provider: "stripe", providerInvoiceId, subtotal: Math.round(Number(invoiceObject.subtotal || invoiceObject.amount_due || 0) / 100), grossTotal: Math.round(Number(invoiceObject.amount_due || 0) / 100), total: Math.round(Number(invoiceObject.amount_paid || invoiceObject.amount_due || 0) / 100), currency: String(invoiceObject.currency || "kes").toUpperCase(), paidAt: paid ? new Date() : undefined, hostedInvoiceUrl: invoiceObject.hosted_invoice_url || undefined, invoicePdfUrl: invoiceObject.invoice_pdf || undefined },
 	})
 	const paymentIntentId = typeof invoiceObject.payment_intent === "string" ? invoiceObject.payment_intent : undefined
 	if (paymentIntentId && localInvoice.tenantId) {
@@ -314,6 +329,7 @@ export async function applyStripeInvoiceEvent(invoiceObject: Record<string, any>
 export async function markBillingPaymentFromMpesa(payment: { id: string; status: string; invoiceId?: string | null; subscriptionId?: string | null; billingRecordId?: string | null; failureReason?: string | null }) {
 	const completed = payment.status === "COMPLETED"
 	if (payment.invoiceId) await prisma.invoice.update({ where: { id: payment.invoiceId }, data: { status: completed ? "PAID" : "FAILED", paidAt: completed ? new Date() : undefined } }).catch(() => undefined)
+	if (payment.invoiceId) await (completed ? finalizeInvoiceCredits(payment.invoiceId) : releaseInvoiceCredits(payment.invoiceId)).catch(() => undefined)
 	if (payment.subscriptionId && completed) {
 		const subscription = await prisma.subscription.findUnique({ where: { id: payment.subscriptionId }, select: { tenantId: true, pendingPlanId: true } })
 		const activated = await prisma.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", planId: subscription?.pendingPlanId || undefined, pendingPlanId: null, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 30 * 86400000), gracePeriodEndsAt: null } }).catch(() => null)

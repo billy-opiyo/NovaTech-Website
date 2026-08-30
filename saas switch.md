@@ -67,10 +67,13 @@ pre-billing state.
   expansion, advanced analytics, and negotiated support/SLA terms.
 - WhatsApp notifications are an opt-in paid add-on. Merchant promotional
   messaging requires consent and unsubscribe controls.
-- These are launch configuration decisions, not legal or tax advice. Final
-  tax treatment/rate, privacy notice, Terms of Service, merchant policy
-  templates, refund language, retention schedule, and operator identity must
-  be reviewed before production self-service billing.
+- These are launch configuration decisions, not legal or tax advice. The agreed
+  SaaS policy is 16% VAT-inclusive pricing when enabled, no routine subscription
+  refunds, conditional setup-fee refunds, automatic outage credits after 24
+  continuous hours, and the retention windows recorded in the merchant
+  agreement. Professional review must still confirm the final tax treatment,
+  privacy/terms wording, refund language, entity details, and registered
+  operator identity before production self-service billing.
 
 ## Autonomous execution log
 

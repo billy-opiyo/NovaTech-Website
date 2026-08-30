@@ -79,7 +79,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, and Stripe price IDs. Legacy commission-rate fields remain for historical compatibility. |
-| **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
+| **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, VAT/credit-aware invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
 | **M-Pesa SaaS collection** | At launch, setup fees and the first subscription are combined after the trial; later renewals create local invoices and Daraja STK requests. Callbacks confirm or fail the invoice/payment and update subscription state. This is invoice-driven rather than an automatic recurring charge. |
 | **Future provider support** | Stripe provider helpers and historical webhook synchronization remain available behind the billing-provider boundary but are not presented as an active launch payment method. |
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins. In M-Pesa-only launch mode, an add-on remains pending until the next successful invoice callback, then its entitlement activates. |
@@ -88,7 +88,7 @@
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
 | **Secure merchant verification** | `/manage/verification` collects encrypted merchant details, verifies the merchant phone by OTP, and uploads evidence to a separate private R2 bucket. Platform reviewers use restricted verification routes and short-lived document links; approval is required before publication or selling. |
-| **Lifecycle and retention worker** | `backend/workers/lifecycle.ts` applies local subscription expiry/grace transitions and schedules/processes the approved 90-day merchant-data retention policy while preserving SaaS billing/legal records. Deployment scheduling remains an operational gate. |
+| **Lifecycle and retention worker** | `backend/workers/lifecycle.ts` applies subscription expiry/grace transitions, processes 90-day merchant-workspace retention, 12-month closed-enquiry retention, and due private verification-file deletion while preserving 7-year SaaS billing/legal records. Deployment scheduling remains an operational gate. |
 
 ## 📦 Backend API (App Router Route Handlers)
 

@@ -3,9 +3,10 @@ import path from "node:path"
 
 const input = process.argv[2]
 const output = process.argv[3]
+const pdfOutput = process.argv[4]
 
 if (!input || !output) {
-  console.error("Usage: node scripts/render-merchant-agreement.mjs <input.md> <output.html>")
+  console.error("Usage: node scripts/render-merchant-agreement.mjs <input.md> <output.html> [output.pdf]")
   process.exit(1)
 }
 
@@ -163,3 +164,17 @@ const html = `<!doctype html>
 fs.mkdirSync(path.dirname(output), { recursive: true })
 fs.writeFileSync(output, html)
 console.log(`Rendered ${output}`)
+
+if (pdfOutput) {
+  const { chromium } = await import("playwright")
+  const browser = await chromium.launch({ headless: true })
+  try {
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: "load" })
+    fs.mkdirSync(path.dirname(pdfOutput), { recursive: true })
+    await page.pdf({ path: pdfOutput, printBackground: true, preferCSSPageSize: true })
+    console.log(`Rendered ${pdfOutput}`)
+  } finally {
+    await browser.close()
+  }
+}
