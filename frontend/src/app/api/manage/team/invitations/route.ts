@@ -9,6 +9,12 @@ import { storeInvitationSchema } from "backend/validators/teamValidator"
 import { assertTenantStaffLimit } from "backend/billing/subscription"
 import { sendEmail } from "backend/lib/email"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getPublicAppUrl } from "backend/lib/platform-domain"
+
+function escapeHtml(value: string) {
+	const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }
+	return value.replace(/[&<>"']/g, (character) => entities[character] || character)
+}
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -50,12 +56,15 @@ export async function POST(request: NextRequest) {
 
 		const token = createInvitationToken()
 		const invitation = await prisma.invitation.create({ data: { tenantId: context.tenantId, email: parsed.data.email, role: parsed.data.role, tokenHash: hashInvitationToken(token), expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), invitedById: session.user.id }, select: { id: true, email: true, role: true, expiresAt: true } })
-		const inviteLink = new URL(`/auth/accept-invitation?token=${encodeURIComponent(token)}`, request.url).toString()
 		const store = await prisma.store.findUnique({ where: { id: context.storeId }, select: { name: true } })
+		const storeName = (store?.name || "a merchant store").replace(/[\r\n]/g, " ").trim().slice(0, 200) || "a merchant store"
+		const safeStoreName = escapeHtml(storeName)
+		const safeRole = escapeHtml(invitation.role.replace("STORE_", "").replaceAll("_", " "))
+		const inviteLink = new URL(`/auth/accept-invitation?token=${encodeURIComponent(token)}`, `${getPublicAppUrl()}/`).toString()
 		await sendEmail({
 			to: invitation.email,
-			subject: `You have been invited to manage ${store?.name || "a Nurava Tech store"}`,
-			html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Nurava Tech</h1><p>You have been invited to join <strong>${store?.name || "a merchant store"}</strong> as <strong>${invitation.role.replace("STORE_", "").replaceAll("_", " ")}</strong>.</p><p>This invitation expires in seven days and can only be accepted by ${invitation.email}.</p><p><a href="${inviteLink}" style="display:inline-block;background:#0070f3;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Accept invitation</a></p><p>If you were not expecting this invitation, you can ignore this email.</p></div>`,
+			subject: `You have been invited to manage ${storeName}`,
+			html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Nurava Tech</h1><p>You have been invited to join <strong>${safeStoreName}</strong> as <strong>${safeRole}</strong>.</p><p>This invitation expires in seven days and can only be accepted by ${escapeHtml(invitation.email)}.</p><p><a href="${escapeHtml(inviteLink)}" style="display:inline-block;background:#0070f3;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Accept invitation</a></p><p>If you were not expecting this invitation, you can ignore this email.</p></div>`,
 		}).catch((error) => console.error("Invitation email could not be sent:", error))
 		return NextResponse.json({ invitation, delivery: "email-and-manual-link", inviteLink }, { status: 201 })
 	} catch (error: unknown) {

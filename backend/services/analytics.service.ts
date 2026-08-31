@@ -104,7 +104,13 @@ function getPreviousDateRange(timeRange: string): { startDate: Date; endDate: Da
 
 type SettledOrderAggregate = {
 	revenue: number
-	orders: number
+	settledOrders: number
+	eligibleOrders: number
+}
+
+export function calculatePaidOrderRate(settledOrders: number, eligibleOrders: number) {
+	if (!Number.isFinite(settledOrders) || !Number.isFinite(eligibleOrders) || eligibleOrders <= 0) return 0
+	return Math.min(100, Math.max(0, (settledOrders / eligibleOrders) * 100))
 }
 
 async function getSettledOrderAggregate(
@@ -112,20 +118,27 @@ async function getSettledOrderAggregate(
 	startDate: Date,
 	endDate: Date,
 ): Promise<SettledOrderAggregate> {
-	const aggregate = await prisma.order.aggregate({
-		where: {
-			tenantId,
-			createdAt: { gte: startDate, lte: endDate },
-			status: { not: "CANCELLED" },
-			payments: { some: { status: "COMPLETED" } },
-		},
-		_sum: { total: true },
-		_count: { _all: true },
-	})
+	const eligibleWhere = {
+		tenantId,
+		createdAt: { gte: startDate, lte: endDate },
+		status: { not: "CANCELLED" as const },
+	}
+	const [aggregate, eligibleOrders] = await Promise.all([
+		prisma.order.aggregate({
+			where: {
+				...eligibleWhere,
+				payments: { some: { status: "COMPLETED" } },
+			},
+			_sum: { total: true },
+			_count: { _all: true },
+		}),
+		prisma.order.count({ where: eligibleWhere }),
+	])
 
 	return {
 		revenue: aggregate._sum.total ?? 0,
-		orders: aggregate._count._all,
+		settledOrders: aggregate._count._all,
+		eligibleOrders,
 	}
 }
 
@@ -133,9 +146,9 @@ export async function getAnalyticsOverview(tenantId: string, timeRange: string =
 	const { startDate, endDate } = getDateRange(timeRange)
 	const aggregate = await getSettledOrderAggregate(tenantId, startDate, endDate)
 	const totalRevenue = aggregate.revenue
-	const totalOrders = aggregate.orders
+	const totalOrders = aggregate.settledOrders
 	const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
-	const conversionRate = totalOrders > 0 ? 100 : 0
+	const conversionRate = calculatePaidOrderRate(totalOrders, aggregate.eligibleOrders)
 
 	return {
 		totalRevenue,
@@ -155,14 +168,14 @@ export async function getGrowthComparison(tenantId: string, timeRange: string = 
 	])
 
 	const currentRevenue = current.revenue
-	const currentOrderCount = current.orders
+	const currentOrderCount = current.settledOrders
 	const currentAov = currentOrderCount > 0 ? currentRevenue / currentOrderCount : 0
-	const currentConversion = currentOrderCount > 0 ? 100 : 0
+	const currentConversion = calculatePaidOrderRate(currentOrderCount, current.eligibleOrders)
 
 	const previousRevenue = previous.revenue
-	const previousOrderCount = previous.orders
+	const previousOrderCount = previous.settledOrders
 	const previousAov = previousOrderCount > 0 ? previousRevenue / previousOrderCount : 0
-	const previousConversion = previousOrderCount > 0 ? 100 : 0
+	const previousConversion = calculatePaidOrderRate(previousOrderCount, previous.eligibleOrders)
 
 	const calculateGrowth = (current: number, previous: number): number => {
 		if (previous === 0) return current > 0 ? 100 : 0

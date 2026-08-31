@@ -1,6 +1,6 @@
 # Project Bug Audit
 
-Status: source audit and repair cycle complete; live-environment gates remain
+Status: fresh audit cycle 7 repaired and recursively source-verified; live-environment gates remain
 Audit started: 2026-08-31
 Repository: NovaTech Website
 Branch: main
@@ -317,7 +317,7 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-013 | Verified | CSV cell encoder and formula-injection regression test added. |
 | BUG-014 | Verified | Cart add operations now serialize the tenant/user/product/variant logical key with a PostgreSQL transaction lock; a future uniqueness migration remains recommended for legacy duplicate cleanup. |
 | BUG-015 | Verified | Product uploads reserve quota under a tenant advisory transaction lock; failed uploads compensate, and product replacement/deletion retires obsolete R2 objects and asset rows. Live R2/Neon execution remains unverified. |
-| BUG-016 | Verified | Migration `0021_tenant_consistency_triggers` adds database triggers for cross-tenant store, catalog, order, payment, billing, review, cart, wishlist, and enquiry references. It has not been applied to a live database. |
+| BUG-016 | Pending | Fresh cycle 7 confirmed that Category name/slug, Product slug/SKU, and Variant SKU remain globally unique in the Prisma schema; tenant-consistency triggers do not resolve legitimate cross-tenant identifier collisions. |
 | BUG-017 | Verified | Analytics top-product payload now includes and uses `slug`; source compilation passed. |
 | BUG-018 | Verified | Product cards, wishlist, enquiry, and checkout-facing selection paths now use variant-aware availability; source checks and tests pass. |
 | BUG-019 | Verified | Platform discovery validates remote media origins and uses optimized `next/image` rendering with configured R2 host patterns. Other non-catalog legacy image warnings remain outside this finding. |
@@ -334,6 +334,16 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-030 | Verified | Analytics overview, growth, sales periods, categories, top products, regions, payment methods, and customer reporting now use tenant-scoped database aggregation; top-product output is bounded to 100 rows. |
 | BUG-031 | Verified | Updated direct-merchant assertion; Playwright smoke passes. |
 | BUG-032 | Verified | VerificationToken now records delivery status, attempts, deliveredAt, and bounded delivery errors for register/resend recovery. A full external outbox remains a future scale enhancement. |
+| BUG-033 | Verified | Paid-order analytics now counts eligible non-cancelled orders separately from settled orders; regression coverage passes. |
+| BUG-034 | Verified | Recommendation feeds use tenant-scoped base-or-variant availability and report effective variant stock; source checks and tests pass. |
+| BUG-035 | Verified | Profile uploads require matching magic bytes and clean up replaced/failed public objects. |
+| BUG-036 | Verified | Password reset records store keyed one-way token digests with a reset-specific identifier namespace; regression coverage passes. |
+| BUG-037 | Verified | Invitation email values are escaped and links use the configured public application URL. |
+| BUG-038 | Verified | Consolidated into BUG-016; migration 0022 replaces global catalog uniqueness with tenant-scoped constraints after duplicate preflight checks. |
+| BUG-039 | Verified | Stock movement history now requires a completed payment and tenant-scopes order items. |
+| BUG-040 | Verified | Inventory alerts now emit one record for every affected tenant variant. |
+| BUG-041 | Verified | Reorder reporting stores selected variant IDs on new order items, uses variant velocity, and avoids misleading base-product suggestions for variant products. |
+| BUG-042 | Verified | Card, M-Pesa, and webhook order finalization now claims only still-pending orders atomically before sending confirmation. |
 
 ## Newly observed operational verification gap
 
@@ -376,6 +386,31 @@ This register is the authoritative current status for the findings above. “Ver
 - Complete pre-repair issue report recorded above.
 - No application source repair has begun.
 - Next action: repair findings in severity order, updating each status `Pending -> In Progress -> Fixed -> Verified` only with evidence.
+
+### Repair batch 3 — 2026-08-31
+
+- Cycle 7 findings were repaired after being recorded: analytics denominator, variant-aware recommendations, profile file validation/cleanup, reset-token hashing, invitation email escaping/link origin, tenant-scoped catalog uniqueness, inventory settlement/variant reporting, durable order-item variant IDs, and atomic payment order finalization.
+- BUG-016 was re-opened by the fresh audit and resolved through schema changes plus migration `0022_tenant_scoped_catalog_identifiers`; migration `0023_order_item_variant_ids` adds the variant-velocity data field. These migrations require deployment to the intended database before the changes are live.
+- BUG-038 is retained as a duplicate audit record and consolidated into BUG-016; no separate defect remains.
+
+### Recursive audit cycles 8 and 9 — 2026-08-31
+
+- Cycle 8 re-scanned the repaired analytics, recommendation, upload, authentication, invitation, catalog schema/migrations, inventory, order-item, payment verification, webhook, tenant, API, and test paths. No new source findings were discovered.
+- Cycle 9 repeated the repository-wide changed-file and consumer scan, including the atomic payment transition and migration/schema alignment. No new source findings were discovered.
+- The two consecutive post-repair full source audits found no new defects. Authenticated browser workflows, live Neon migration state, provider callbacks, object storage, and dependency advisory results remain external verification gates.
+
+### Automated validation after repair batch 3 — 2026-08-31
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| Prisma schema validation | PASS | `DATABASE_URL` supplied as a non-live test URL; schema loaded successfully. |
+| `npm run type-check` | PASS | Frontend and backend TypeScript completed with exit code 0 after Prisma client regeneration. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors and 79 warnings; existing warning debt remains. |
+| `npm test` | PASS | 65 tests passed, 0 failed, 0 skipped, including new analytics/reset-token/recommendation regressions. |
+| `npm run build` | PASS WITH WARNINGS | Production build generated 137 routes; Neon fallback, webpack cache, and Node deprecation warnings remain. |
+| `npm run test:e2e` | ENVIRONMENT-LIMITED | Managed Playwright reached the app but could not complete because the configured Neon endpoint was unreachable; the run was stopped cleanly. |
+| `npm audit --omit=dev --audit-level=high --json` | NOT VERIFIED | npm advisory endpoint was unreachable. |
+| `git diff --check` | PASS | No whitespace errors. |
 
 ### Repair batch 1 — 2026-08-31
 
@@ -450,3 +485,116 @@ This register is the authoritative current status for the findings above. “Ver
 | `npm run lint` | PASS WITH WARNINGS | 0 errors and 79 warnings; remaining warnings are legacy UI hook/unused-symbol warnings and presentation-only admin typing debt. |
 | `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped. |
 | `npm run build` | PASS WITH WARNINGS | Next.js production build completed and generated 137 routes; unavailable Neon and dependency deprecation warnings remain. |
+
+## Fresh full audit cycle 7 — 2026-08-31
+
+This is a new audit cycle requested against `PROJECT_AUDIT_FIX_HANDOFF.md`. The repository was rescanned before this cycle's repairs. The review covered all tracked application/configuration/documentation/test areas, API route wrappers and controllers, authentication and tenant boundaries, Prisma schema and migrations, payment/billing flows, uploads, analytics/reporting, inventory, recommendation consumers, UI route inventory, and existing automated test configuration.
+
+### Automated evidence collected before repair
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| `npm install --ignore-scripts --no-audit --no-fund` | PASS | Dependencies already up to date. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors and 79 warnings. Existing warning debt is recorded under BUG-028 and remains a maintainability follow-up. |
+| `npm run type-check` | PASS | Frontend and backend TypeScript checks completed with exit code 0. |
+| `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped. Provider/local-DB fallback warnings were expected in the test environment. |
+| `npm run build` | PASS WITH WARNINGS | Next.js generated 137 routes. The configured Neon endpoint was unreachable during static data fallback; webpack cache and Node `url.parse()` deprecation warnings remain. |
+| `npm audit --omit=dev --audit-level=high --json` | NOT VERIFIED | npm could not reach the advisory endpoint; this is not evidence of either a clean or vulnerable dependency set. |
+| `npm run test:e2e` | ENVIRONMENT-LIMITED | Managed Playwright reached the local application but hung while `/api/products` waited on the unreachable configured Neon endpoint; the run was stopped cleanly. Authenticated/provider flows remain unverified without live seeded services. |
+| Payment amount integrity trace | PASS (source) | Card and M-Pesa order initiation compare the submitted amount to the server-side order total before provider initiation; no new amount-tampering finding was opened. |
+
+### New and re-opened findings discovered before repair
+
+#### BUG-033 — Analytics conversion rate is hardcoded to 100% for any settled order
+
+- **File path:** `backend/services/analytics.service.ts` (`getAnalyticsOverview`, `getGrowthComparison`); displayed by `frontend/src/components/dashboard/StatsGrid.tsx` and `frontend/src/app/admin/analytics/page.tsx`
+- **Description:** The service counts settled orders, then sets conversion rate to `100` whenever the settled-order count is greater than zero. It has no denominator for eligible/non-cancelled orders, so a period containing one paid order and many unpaid orders reports 100%; growth is likewise flattened whenever both periods contain a paid order.
+- **Severity:** Medium
+- **Root cause:** The implementation uses the settled-order aggregate as both numerator and implicit denominator instead of separately counting eligible orders.
+- **Recommended fix:** Count non-cancelled tenant orders separately, calculate the paid-order rate as settled orders divided by eligible orders, cap it to 100%, and add regression coverage for mixed paid/unpaid periods and empty periods.
+- **Status:** Pending
+
+#### BUG-034 — Recommendation feeds do not use variant-aware availability
+
+- **File path:** `backend/services/recommendation.service.ts` (`getRecommendedForUser`, `getTrendingProducts`, `getSimilarProducts`, `getFeaturedProducts`, `getNewArrivals`, `getDeals`, `formatProduct`)
+- **Description:** Public recommendation queries filter on the base product `stock` only, while variant-aware storefront selection elsewhere treats variant stock as the sellable inventory. A product with base stock zero but an in-stock variant can be omitted; a product with base stock positive but all variants exhausted can be shown; personalized and trending results can also return unavailable products without any stock filter.
+- **Severity:** Medium
+- **Root cause:** Recommendation queries and response formatting were not updated with the variant availability model.
+- **Recommended fix:** Apply a tenant-scoped base-or-variant availability predicate to every public recommendation source, include tenant-scoped variants in the formatter, and report the effective available stock consistently.
+- **Status:** Pending
+
+#### BUG-035 — Profile image uploads trust the client MIME type and orphan prior public objects
+
+- **File path:** `frontend/src/app/api/account/settings/route.ts`, `backend/lib/storage.ts`
+- **Description:** The profile endpoint checks only `File.type` and size before uploading bytes to the public bucket; it does not verify the file signature as the product and verification upload paths do. Each replacement creates a new object and overwrites `User.image` without retiring the previous profile object, causing unbounded orphaned public files.
+- **Severity:** Medium
+- **Root cause:** Profile uploads use a separate validation path and have no replacement cleanup/compensation logic.
+- **Recommended fix:** Validate magic bytes against the declared image type, retain the previous image URL, delete the prior profile object after a successful database update, and delete the newly uploaded object if the database update fails.
+- **Status:** Pending
+
+#### BUG-036 — Password-reset bearer tokens are stored in plaintext
+
+- **File path:** `frontend/src/app/api/auth/forgot-password/route.ts`, `frontend/src/app/api/auth/reset-password/route.ts`
+- **Description:** The raw reset token placed in the email URL is stored directly in `VerificationToken.token`. Anyone who obtains a database read can use an unexpired token to reset an account without needing the email.
+- **Severity:** High
+- **Root cause:** The password-reset flow has no one-way token hash, unlike the email-verification code flow.
+- **Recommended fix:** Store only a keyed one-way digest of the reset token, query by the digest, use a reset-specific identifier namespace, bound the token input, and consume the record after a successful reset.
+- **Status:** Pending
+
+#### BUG-037 — Invitation email HTML and link origin are not safely constructed
+
+- **File path:** `frontend/src/app/api/manage/team/invitations/route.ts`
+- **Description:** Merchant-controlled store text is interpolated into HTML without escaping. The invitation URL is built from the request URL, so an untrusted Host header or proxy origin configuration can produce an invitation link pointing to an attacker-controlled host.
+- **Severity:** Medium
+- **Root cause:** Email rendering lacks an HTML escaping boundary and public-link construction trusts request-origin data.
+- **Recommended fix:** Escape all merchant-controlled HTML values, construct links from a validated configured public app URL (with a clearly bounded development fallback), and add regression tests for hostile store names and hosts.
+- **Status:** Pending
+
+#### BUG-038 — Catalog identifiers remain globally unique across tenants
+
+- **File path:** `backend/prisma/schema.prisma` (`Category`, `Product`, `Variant`); new migration required
+- **Description:** Category name/slug, product slug/SKU, and variant SKU retain global `@unique` constraints even though catalog queries and public URLs are tenant-scoped. Two legitimate merchants cannot independently use the same slug or SKU, and creation/import can fail with a uniqueness error caused by another tenant.
+- **Severity:** Medium
+- **Root cause:** The multi-tenant schema added tenant indexes/triggers but did not replace legacy global uniqueness with tenant-scoped uniqueness.
+- **Recommended fix:** Remove the global uniqueness attributes, add tenant-scoped composite unique constraints/indexes, check existing duplicate data before migration, and preserve explicit handling for legacy nullable global rows.
+- **Status:** Pending
+
+#### BUG-039 — Stock movement history counts unpaid orders as sales
+
+- **File path:** `backend/services/inventory.service.ts` (`getStockMovementHistory`)
+- **Description:** The movement query excludes cancelled orders but does not require a completed payment, so pending, failed, or otherwise unpaid order items are reported as `SALE` movements. This can mislead stock/revenue reconciliation and reorder decisions.
+- **Severity:** Medium
+- **Root cause:** The movement query lacks the settled-payment predicate used by the inventory velocity query.
+- **Recommended fix:** Restrict sale movements to non-cancelled orders with at least one completed payment, and add a regression case for pending and failed orders.
+- **Status:** Pending
+
+#### BUG-040 — Inventory alerts suppress all but one low-stock variant per product
+
+- **File path:** `backend/services/inventory.service.ts` (`getStockAlerts`)
+- **Description:** The variant alert query uses `take: 1`, so a product with multiple exhausted/low-stock variants produces only one alert and hides the remaining actionable inventory conditions.
+- **Severity:** Low
+- **Root cause:** A query-level limit was used to reduce payloads without preserving one alert per matching variant.
+- **Recommended fix:** Fetch all matching tenant-scoped variants or aggregate deliberately while retaining each variant's identity, then add coverage for multiple affected variants.
+- **Status:** Pending
+
+#### BUG-041 — Reorder suggestions use base-product velocity for variant inventory
+
+- **File path:** `backend/services/inventory.service.ts` (`getReorderSuggestions`)
+- **Description:** The service calculates sales velocity only by product because order items store the selected variant as text, then applies that product-level velocity and base stock to products that have variants. It can therefore suggest reordering the non-sellable base stock while variant stock is the actual inventory, and it cannot prioritize variant replenishment from the variant's own sales.
+- **Severity:** Medium
+- **Root cause:** Variant identity is not carried into the order-item aggregation used by reorder reporting, but the base-product suggestion is still emitted for variant products.
+- **Recommended fix:** Do not emit a base-stock suggestion for variant products; preserve variant-specific stock alerts, and add a durable variant identifier to order items in a compatible schema migration so future velocity can be calculated per variant.
+- **Status:** Pending
+
+#### BUG-042 — Payment finalization can overwrite a concurrent order cancellation
+
+- **File path:** `backend/payments/cards/index.ts`, `backend/payments/mpesa/index.ts`, `backend/payments/webhooks/index.ts`
+- **Description:** Payment verification and webhook reconciliation first read the order, then update it by ID to `CONFIRMED` without requiring the order to remain `PENDING`. A cancellation that commits between those operations can be overwritten by a late provider response.
+- **Severity:** High
+- **Root cause:** Order finalization is not an atomic compare-and-set transition.
+- **Recommended fix:** Claim the transition with an atomic tenant-scoped update requiring `status = PENDING`; only send confirmation after that claim succeeds, and make an already-finalized/cancelled order non-mutating.
+- **Status:** Pending
+
+### Cycle 7 audit conclusion before repair
+
+The source findings above were recorded before any cycle 7 application or migration repair. The payment amount trace and route/controller authorization trace did not reveal additional defects in those paths. Cycle 7 is therefore not a clean audit: BUG-016 is re-opened and BUG-033 through BUG-040 are pending. Repair must proceed in severity order, followed by automated checks, managed Playwright, and two fresh post-repair full audits.

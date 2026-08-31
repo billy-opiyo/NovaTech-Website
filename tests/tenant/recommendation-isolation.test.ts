@@ -13,7 +13,10 @@ test("recommendation reads stay inside the resolved tenant", async () => {
 		assert.deepEqual(await getFeaturedProducts("tenant-a", 4), [])
 		assert.deepEqual(await getSimilarProducts("product-b", "tenant-a", 4), [])
 		assert.deepEqual(calls, [
-			{ method: "findMany", where: { tenantId: "tenant-a", isFeatured: true, stock: { gt: 0 } } },
+			{ method: "findMany", where: { tenantId: "tenant-a", isFeatured: true, OR: [
+				{ variants: { none: { tenantId: "tenant-a" } }, stock: { gt: 0 } },
+				{ variants: { some: { tenantId: "tenant-a", stock: { gt: 0 } } } },
+			] } },
 			{ method: "findFirst", where: { id: "product-b", tenantId: "tenant-a" } },
 		])
 	} finally {

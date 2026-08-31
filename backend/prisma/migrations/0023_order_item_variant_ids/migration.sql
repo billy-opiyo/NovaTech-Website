@@ -1,0 +1,1 @@
+ALTER TABLE "OrderItem" ADD COLUMN "variantIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

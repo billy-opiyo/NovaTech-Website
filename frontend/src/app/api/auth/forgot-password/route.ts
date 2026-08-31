@@ -3,6 +3,7 @@ import crypto from "crypto"
 import prisma from "backend/lib/db"
 import { sendEmail } from "backend/lib/email"
 import { rateLimiter } from "backend/middleware/rateLimiter"
+import { hashPasswordResetToken, passwordResetIdentifier } from "backend/lib/password-reset-token"
 
 export async function POST(req: NextRequest) {
 	const limited = await rateLimiter(req, "auth-forgot-password")
@@ -15,9 +16,10 @@ export async function POST(req: NextRequest) {
 		// Always return the same response to avoid account enumeration.
 		if (user) {
 			const token = crypto.randomBytes(32).toString("hex")
-			await prisma.verificationToken.deleteMany({ where: { identifier: normalizedEmail } })
+			const identifier = passwordResetIdentifier(normalizedEmail)
+			await prisma.verificationToken.deleteMany({ where: { identifier: { in: [identifier, normalizedEmail] } } })
 			await prisma.verificationToken.create({
-				data: { identifier: normalizedEmail, token, expires: new Date(Date.now() + 60 * 60 * 1000) },
+				data: { identifier, token: hashPasswordResetToken(token), expires: new Date(Date.now() + 60 * 60 * 1000) },
 			})
 			const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 			await sendEmail({

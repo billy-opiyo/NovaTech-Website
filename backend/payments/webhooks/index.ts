@@ -357,6 +357,8 @@ async function updatePaymentByProviderReference(
 
 		if (payment.orderId && status === "COMPLETED") {
 			await recordOrderCommission(payment.id)
+			const claimed = await prisma.order.updateMany({ where: { id: payment.orderId, ...(payment.tenantId ? { tenantId: payment.tenantId } : {}), status: "PENDING" }, data: { status: "CONFIRMED" } })
+			if (claimed.count !== 1) return updatedPayment
 			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
 				data: { status: "CONFIRMED" },

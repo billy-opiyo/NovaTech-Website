@@ -71,7 +71,7 @@ export async function createOrder(data: CreateOrderData) {
 		let subtotal = 0
 		const requestedQuantities = new Map<string, number>()
 		const requestedVariantQuantities = new Map<string, number>()
-		const resolvedItems: { productId: string; quantity: number; variant?: string; price: number }[] = []
+		const resolvedItems: { productId: string; quantity: number; variant?: string; variantIds: string[]; price: number }[] = []
 		for (const item of data.items) {
 			if (!Number.isInteger(item.quantity) || item.quantity < 1) throw new Error("Order quantities must be positive integers")
 			const product = productById.get(item.productId)
@@ -95,7 +95,7 @@ export async function createOrder(data: CreateOrderData) {
 			} else {
 				requestedQuantities.set(item.productId, (requestedQuantities.get(item.productId) || 0) + item.quantity)
 			}
-			resolvedItems.push({ productId: item.productId, quantity: item.quantity, variant: item.variant, price: unitPrice })
+			resolvedItems.push({ productId: item.productId, quantity: item.quantity, variant: item.variant, variantIds: selectedVariant.selected.flatMap((variant) => variant.id ? [variant.id] : []), price: unitPrice })
 			subtotal += unitPrice * item.quantity
 		}
 
@@ -134,6 +134,7 @@ export async function createOrder(data: CreateOrderData) {
 					quantity: item.quantity,
 					price: item.price,
 					variant: item.variant,
+					variantIds: item.variantIds,
 				}
 			})
 
@@ -506,5 +507,15 @@ export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 			}
 		}
 		return tx.order.update({ where: { id: orderId, ...(tenantId ? { tenantId } : {}) }, data: { status: "CANCELLED" } })
+	})
+}
+
+export async function confirmPendingOrder(orderId: string, tenantId?: string) {
+	const where = { id: orderId, ...(tenantId ? { tenantId } : {}) }
+	const claimed = await prisma.order.updateMany({ where: { ...where, status: "PENDING" }, data: { status: "CONFIRMED" } })
+	if (claimed.count !== 1) return null
+	return prisma.order.findFirst({
+		where,
+		include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } },
 	})
 }

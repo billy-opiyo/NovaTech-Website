@@ -2,7 +2,7 @@ import prisma from "../../lib/db"
 import { sendOrderConfirmationEmail, shippingAddressEmail } from "../../lib/email"
 import { getStripeClient, isStripeConfigured } from "../../lib/stripeClient"
 import type { CardIntentResult, CardVerifyResult } from "../../types/payments"
-import { cancelPendingOrder } from "../../services/order.service"
+import { cancelPendingOrder, confirmPendingOrder } from "../../services/order.service"
 import { recordOrderCommission } from "../../billing/service"
 
 export type CardPaymentPayload = {
@@ -188,23 +188,8 @@ export async function verifyCardPayment(
 			await recordOrderCommission(payment.id)
 			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
 			if (!order) return { ok: false, provider: "stripe", reference, status: "FAILED", paymentIntentId, message: "Payment order is not available in this store." }
-			const updatedOrder = await prisma.order.update({
-				where: { id: payment.orderId },
-				data: { status: "CONFIRMED" },
-				include: {
-					items: {
-						include: {
-							product: {
-								select: {
-									name: true,
-									slug: true,
-									images: true,
-								},
-							},
-						},
-					},
-				},
-			})
+			const updatedOrder = await confirmPendingOrder(payment.orderId, tenantId || payment.tenantId || undefined)
+			if (!updatedOrder) return { ok: false, provider: "stripe", reference, status: "FAILED", paymentIntentId, message: "Payment received but the order is no longer pending." }
 
 			// Send order confirmation email (non-blocking)
 			try {

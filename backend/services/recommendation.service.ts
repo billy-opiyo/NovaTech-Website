@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import prisma from "../lib/db"
 
 export interface ProductRecommendation {
@@ -24,6 +25,16 @@ export interface SimilarProduct extends ProductRecommendation {
 	similarityScore: number
 }
 
+function availableProductWhere(tenantId: string): Prisma.ProductWhereInput {
+	return {
+		tenantId,
+		OR: [
+			{ variants: { none: { tenantId } }, stock: { gt: 0 } },
+			{ variants: { some: { tenantId, stock: { gt: 0 } } } },
+		],
+	}
+}
+
 /**
  * Get personalized product recommendations for a user based on:
  * - Recently viewed products
@@ -41,11 +52,12 @@ export async function getRecommendedForUser(
 
 	// 1. Get user's recently viewed products
 	const recentlyViewed = await prisma.recentlyViewed.findMany({
-		where: { userId, tenantId },
+		where: { userId, tenantId, product: availableProductWhere(tenantId) },
 		include: {
-			product: {
-				include: {
-					category: true,
+				product: {
+					include: {
+						category: true,
+						variants: { where: { tenantId }, select: { stock: true } },
 					reviews: {
 						where: { moderationStatus: "APPROVED" },
 						select: {
@@ -81,6 +93,7 @@ export async function getRecommendedForUser(
 		where: {
 			userId,
 			tenantId,
+			items: { some: { tenantId, product: availableProductWhere(tenantId) } },
 			status: {
 				not: "CANCELLED",
 			},
@@ -88,11 +101,12 @@ export async function getRecommendedForUser(
 		},
 		include: {
 		items: {
-			where: { tenantId },
+			where: { tenantId, product: availableProductWhere(tenantId) },
 			include: {
 					product: {
 						include: {
 							category: true,
+							variants: { where: { tenantId }, select: { stock: true } },
 							reviews: {
 								where: { moderationStatus: "APPROVED" },
 								select: {
@@ -134,11 +148,12 @@ export async function getRecommendedForUser(
 
 	// 3. Get user's wishlist
 	const wishlistItems = await prisma.wishlistItem.findMany({
-		where: { userId, tenantId },
+		where: { userId, tenantId, product: availableProductWhere(tenantId) },
 		include: {
 			product: {
 				include: {
 					category: true,
+					variants: { where: { tenantId }, select: { stock: true } },
 					reviews: {
 					where: { moderationStatus: "APPROVED" },
 						select: {
@@ -173,19 +188,17 @@ export async function getRecommendedForUser(
 
 		const categoryProducts = await prisma.product.findMany({
 			where: {
-				tenantId,
+				...availableProductWhere(tenantId),
 				categoryId: {
 					in: (await prisma.category.findMany({
 						where: { tenantId, name: { in: topCategories } },
 						select: { id: true },
 					})).map((c) => c.id),
 				},
-				stock: {
-					gt: 0,
-				},
 			},
 			include: {
 				category: true,
+				variants: { where: { tenantId }, select: { stock: true } },
 				reviews: {
 				where: { moderationStatus: "APPROVED" },
 					select: {
@@ -246,6 +259,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 					product: {
 						include: {
 							category: true,
+							variants: { where: { tenantId }, select: { stock: true } },
 							reviews: {
 								where: { moderationStatus: "APPROVED" },
 								select: {
@@ -280,14 +294,10 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 	if (topProductIds.length === 0) {
 		// Fallback to newest products if no recent sales
 		const products = await prisma.product.findMany({
-			where: {
-				tenantId,
-				stock: {
-					gt: 0,
-				},
-			},
+			where: availableProductWhere(tenantId),
 			include: {
 				category: true,
+				variants: { where: { tenantId }, select: { stock: true } },
 				reviews: {
 				where: { moderationStatus: "APPROVED" },
 					select: {
@@ -307,13 +317,12 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 	// Fetch full product details
 	const trendingProducts = await prisma.product.findMany({
 		where: {
-			tenantId,
-			id: {
-				in: topProductIds,
-			},
+			...availableProductWhere(tenantId),
+			id: { in: topProductIds },
 		},
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 			where: { moderationStatus: "APPROVED" },
 				select: {
@@ -348,6 +357,7 @@ export async function getSimilarProducts(
 		where: { id: productId, tenantId },
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 			where: { moderationStatus: "APPROVED" },
 				select: {
@@ -364,14 +374,11 @@ export async function getSimilarProducts(
 	// Find similar products in the same category
 	const similarProducts = await prisma.product.findMany({
 		where: {
-			tenantId,
+			...availableProductWhere(tenantId),
 			id: {
 				not: productId,
 			},
 			categoryId: referenceProduct.categoryId,
-			stock: {
-				gt: 0,
-			},
 			// Price within 50% of reference product
 			price: {
 				gte: referenceProduct.price * 0.5,
@@ -380,6 +387,7 @@ export async function getSimilarProducts(
 		},
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 			where: { moderationStatus: "APPROVED" },
 				select: {
@@ -426,15 +434,10 @@ export async function getSimilarProducts(
  */
 export async function getFeaturedProducts(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
-		where: {
-			tenantId,
-			isFeatured: true,
-			stock: {
-				gt: 0,
-			},
-		},
+		where: { ...availableProductWhere(tenantId), isFeatured: true },
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 			where: { moderationStatus: "APPROVED" },
 				select: {
@@ -459,15 +462,10 @@ export async function getFeaturedProducts(tenantId: string, limit: number = 12):
  */
 export async function getNewArrivals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
-		where: {
-			tenantId,
-			isNewArrival: true,
-			stock: {
-				gt: 0,
-			},
-		},
+		where: { ...availableProductWhere(tenantId), isNewArrival: true },
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 			where: { moderationStatus: "APPROVED" },
 				select: {
@@ -493,16 +491,14 @@ export async function getNewArrivals(tenantId: string, limit: number = 12): Prom
 export async function getDeals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
 	const products = await prisma.product.findMany({
 		where: {
-			tenantId,
+			...availableProductWhere(tenantId),
 			discountedPrice: {
 				not: null,
-			},
-			stock: {
-				gt: 0,
 			},
 		},
 		include: {
 			category: true,
+			variants: { where: { tenantId }, select: { stock: true } },
 			reviews: {
 				where: { moderationStatus: "APPROVED" },
 				select: {
@@ -539,6 +535,7 @@ function formatProduct(product: {
 		rating: number
 	}[]
 	stock: number
+	variants?: { stock: number }[]
 	brand?: string
 	rating?: number
 }): ProductRecommendation {
@@ -559,6 +556,8 @@ function formatProduct(product: {
 		brand: product.brand || "Unknown",
 		rating: Math.round(rating * 10) / 10,
 		reviewCount,
-		stock: product.stock,
+		stock: product.variants?.length
+			? Math.max(0, ...product.variants.map((variant) => variant.stock))
+			: product.stock,
 	}
 }

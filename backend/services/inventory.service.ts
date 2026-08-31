@@ -249,8 +249,8 @@ export async function getStockAlerts(tenantId: string): Promise<StockAlert[]> {
 					tenantId,
 					stock: { lte: 10 },
 				},
-				take: 1,
 				select: {
+					id: true,
 					name: true,
 					value: true,
 					stock: true,
@@ -260,17 +260,18 @@ export async function getStockAlerts(tenantId: string): Promise<StockAlert[]> {
 	})
 
 	for (const product of productsWithVariants) {
-		const variant = product.variants[0]
-		const variantName = variant ? `${variant.name}: ${variant.value}` : "variant"
-		alerts.push({
-			id: `variant-stock-${product.id}-${variantName}`,
-			type: variant?.stock === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
-			productId: product.id,
-			productName: product.name,
-			message: `${product.name} (${variantName}) has ${variant?.stock || 0} units remaining`,
-			severity: variant?.stock === 0 ? "CRITICAL" : "WARNING",
-			createdAt: product.updatedAt,
-		})
+		for (const variant of product.variants) {
+			const variantName = `${variant.name}: ${variant.value}`
+			alerts.push({
+				id: `variant-stock-${product.id}-${variant.id}`,
+				type: variant.stock === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
+				productId: product.id,
+				productName: product.name,
+				message: `${product.name} (${variantName}) has ${variant.stock} units remaining`,
+				severity: variant.stock === 0 ? "CRITICAL" : "WARNING",
+				createdAt: product.updatedAt,
+			})
+		}
 	}
 
 	return alerts.sort((a, b) => {
@@ -301,9 +302,11 @@ export async function getReorderSuggestions(tenantId: string, daysToConsider: nu
 		},
 		include: {
 			items: {
+				where: { tenantId },
 				select: {
 					productId: true,
 					quantity: true,
+					variantIds: true,
 				},
 			},
 		},
@@ -311,10 +314,18 @@ export async function getReorderSuggestions(tenantId: string, daysToConsider: nu
 
 	// Calculate sales velocity per product
 	const salesVelocity = new Map<string, number>()
+	const variantSalesVelocity = new Map<string, number>()
 	for (const order of orders) {
 		for (const item of order.items) {
-			const current = salesVelocity.get(item.productId) || 0
-			salesVelocity.set(item.productId, current + item.quantity)
+			if (item.variantIds.length > 0) {
+				for (const variantId of item.variantIds) {
+					const current = variantSalesVelocity.get(variantId) || 0
+					variantSalesVelocity.set(variantId, current + item.quantity)
+				}
+			} else {
+				const current = salesVelocity.get(item.productId) || 0
+				salesVelocity.set(item.productId, current + item.quantity)
+			}
 		}
 	}
 
@@ -338,48 +349,51 @@ export async function getReorderSuggestions(tenantId: string, daysToConsider: nu
 	const suggestions: ReorderSuggestion[] = []
 
 	for (const product of products) {
-		const velocity = salesVelocity.get(product.id) || 0
-		const dailyVelocity = velocity / daysToConsider
-		const currentStock = product.stock
 		const threshold = 10
-		const daysOfStockRemaining = dailyVelocity > 0 ? currentStock / dailyVelocity : Infinity
+		if (product.variants.length === 0) {
+			const velocity = salesVelocity.get(product.id) || 0
+			const dailyVelocity = velocity / daysToConsider
+			const currentStock = product.stock
+			const daysOfStockRemaining = dailyVelocity > 0 ? currentStock / dailyVelocity : Infinity
 
-		// Suggest reorder if stock is low or will run out soon (within 14 days)
-		if (currentStock <= threshold || (dailyVelocity > 0 && daysOfStockRemaining < 14)) {
-			const suggestedQuantity = Math.max(
-				Math.ceil(dailyVelocity * 30), // 30 days supply
-				threshold - currentStock + 10 // Minimum buffer
-			)
+			// Suggest reorder if stock is low or will run out soon (within 14 days)
+			if (currentStock <= threshold || (dailyVelocity > 0 && daysOfStockRemaining < 14)) {
+				const suggestedQuantity = Math.max(
+					Math.ceil(dailyVelocity * 30), // 30 days supply
+					threshold - currentStock + 10 // Minimum buffer
+				)
 
-			const priority =
-				currentStock === 0
-					? "HIGH"
-					: dailyVelocity > 0 && daysOfStockRemaining < 7
+				const priority =
+					currentStock === 0
 						? "HIGH"
-						: dailyVelocity > 0 && daysOfStockRemaining < 14
-							? "MEDIUM"
-							: "LOW"
+						: dailyVelocity > 0 && daysOfStockRemaining < 7
+							? "HIGH"
+							: dailyVelocity > 0 && daysOfStockRemaining < 14
+								? "MEDIUM"
+								: "LOW"
 
-			suggestions.push({
-				productId: product.id,
-				productName: product.name,
-				currentStock,
-				threshold,
-				suggestedQuantity,
-				estimatedCost: suggestedQuantity * product.price,
-				priority,
-			})
+				suggestions.push({
+					productId: product.id,
+					productName: product.name,
+					currentStock,
+					threshold,
+					suggestedQuantity,
+					estimatedCost: suggestedQuantity * product.price,
+					priority,
+				})
+			}
 		}
 
-		// Check variants (threshold-based; OrderItem has no variantId relation,
-		// so per-variant sales velocity cannot be computed)
+		// Check variants using the durable variant IDs stored on new order items.
 		for (const variant of product.variants) {
 			const variantStock = variant.stock
+			const variantDailyVelocity = (variantSalesVelocity.get(variant.id) || 0) / daysToConsider
+			const variantDaysRemaining = variantDailyVelocity > 0 ? variantStock / variantDailyVelocity : Infinity
 
-			if (variantStock <= threshold) {
-				const suggestedQty = Math.max(10, threshold - variantStock + 10)
+			if (variantStock <= threshold || (variantDailyVelocity > 0 && variantDaysRemaining < 14)) {
+				const suggestedQty = Math.max(Math.ceil(variantDailyVelocity * 30), threshold - variantStock + 10)
 
-				const priority = variantStock === 0 ? "HIGH" : "LOW"
+				const priority = variantStock === 0 || variantDaysRemaining < 7 ? "HIGH" : variantDaysRemaining < 14 ? "MEDIUM" : "LOW"
 
 				suggestions.push({
 					productId: product.id,
@@ -441,9 +455,11 @@ export async function getStockMovementHistory(productId: string, tenantId: strin
 	const orders = await prisma.order.findMany({
 		where: {
 			tenantId,
+			payments: { some: { status: "COMPLETED" } },
 			items: {
 				some: {
 					productId,
+					tenantId,
 				},
 			},
 		},
@@ -451,6 +467,7 @@ export async function getStockMovementHistory(productId: string, tenantId: strin
 			items: {
 				where: {
 					productId,
+					tenantId,
 				},
 				select: {
 					quantity: true,
