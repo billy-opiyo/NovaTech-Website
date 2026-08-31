@@ -1,11 +1,21 @@
 import prisma from "../lib/db"
 import { normalizePagination } from "../lib/pagination"
-import { Prisma } from "@prisma/client"
+import { Prisma, OrderStatus } from "@prisma/client"
 import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
 import { PLATFORM_BRAND_NAME } from "../lib/brand"
 import { getTenantEntitlement } from "../billing/subscription"
 import { resolveVariantSelection } from "../lib/product-variant"
+
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+	PENDING: ["CONFIRMED", "CANCELLED"],
+	CONFIRMED: ["PROCESSING", "CANCELLED"],
+	PROCESSING: ["SHIPPED", "CANCELLED"],
+	SHIPPED: ["OUT_FOR_DELIVERY", "DELIVERED"],
+	OUT_FOR_DELIVERY: ["DELIVERED"],
+	DELIVERED: [],
+	CANCELLED: [],
+}
 
 export interface CreateOrderData {
 	tenantId: string
@@ -288,8 +298,11 @@ export async function updateOrderStatus(
 	tenantId: string,
 	trackingNumber?: string,
 ) {
-	const existing = await prisma.order.findFirst({ where: { id: orderId, tenantId }, select: { id: true } })
+	const existing = await prisma.order.findFirst({ where: { id: orderId, tenantId }, select: { id: true, status: true } })
 	if (!existing) throw new Error("Order not found")
+	if (existing.status !== status && !ORDER_STATUS_TRANSITIONS[existing.status].includes(status as OrderStatus)) {
+		throw new Error(`Order cannot move from ${existing.status} to ${status}`)
+	}
 	const order = await prisma.order.update({
 		where: { id: existing.id },
 		data: {
@@ -333,7 +346,7 @@ export async function updateOrderStatus(
 	const shippingPhone = (order.shippingAddress as any)?.phone
 
 	// Send SMS notification if phone number exists
-	if (shippingPhone) {
+	if (shippingPhone && order.user?.orderUpdates !== false) {
 		try {
 			await sendOrderStatusUpdate(
 				shippingPhone,
@@ -442,7 +455,7 @@ export async function getOrderStats(tenantId: string) {
 		prisma.order.count({ where: { tenantId, status: "CANCELLED" } }),
 		prisma.order.aggregate({
 			_sum: { total: true },
-			where: { tenantId, status: { not: "CANCELLED" } },
+			where: { tenantId, status: { not: "CANCELLED" }, payments: { some: { status: "COMPLETED" } } },
 		}),
 	])
 

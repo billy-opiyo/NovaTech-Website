@@ -297,6 +297,7 @@ export async function getReorderSuggestions(tenantId: string, daysToConsider: nu
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 			items: {

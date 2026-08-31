@@ -29,7 +29,12 @@ export function lifecycleDecision(subscription: LifecycleSnapshot, now: Date) {
 }
 
 export async function runSubscriptionLifecycleSweep(now = new Date(), limit = 100) {
-	const subscriptions = await prisma.subscription.findMany({ where: { status: { in: ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] } }, orderBy: { updatedAt: "asc" }, take: Math.min(Math.max(limit, 1), 200), select: { id: true, tenantId: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true, cancelAtPeriodEnd: true, tenant: { select: { status: true, store: { select: { id: true, publicationStatus: true } } } } } })
+	const subscriptions = await prisma.subscription.findMany({ where: { OR: [
+		{ cancelAtPeriodEnd: true, currentPeriodEnd: { lte: now } },
+		{ status: "TRIALING", trialEndsAt: { lte: now } },
+		{ status: { in: ["ACTIVE", "PAST_DUE"] }, currentPeriodEnd: { lte: now } },
+		{ status: "GRACE_PERIOD", gracePeriodEndsAt: { lte: now } },
+	] }, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: Math.min(Math.max(limit, 1), 200), select: { id: true, tenantId: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true, cancelAtPeriodEnd: true, tenant: { select: { status: true, store: { select: { id: true, publicationStatus: true } } } } } })
 	const results: Array<{ subscriptionId: string; changed: boolean; error?: string }> = []
 	for (const subscription of subscriptions) {
 		const decision = lifecycleDecision(subscription, now)

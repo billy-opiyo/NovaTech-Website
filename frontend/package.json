@@ -4,6 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
+		"lint": "eslint src next.config.ts middleware.ts --max-warnings=9999",
 		"build": "npm --workspace backend run db:generate && next build",
 		"start": "next start"
 	},
@@ -26,6 +27,8 @@
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"autoprefixer": "^10.4.20",
+		"eslint": "^9.39.5",
+		"eslint-config-next": "^15.5.23",
 		"postcss": "^8.4.45",
 		"tailwindcss": "^3.4.10",
 		"typescript": "^5.6.2"

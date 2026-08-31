@@ -172,10 +172,11 @@ export async function verifyCardPayment(
 	}
 
 	if (payment) {
+		const effectiveStatus = payment.status === "COMPLETED" && status !== "COMPLETED" ? "COMPLETED" : status
 		await prisma.payment.update({
 			where: { id: payment.id },
 			data: {
-				status,
+				status: effectiveStatus,
 				metadata: {
 					...(payment.metadata as Record<string, unknown> | undefined),
 					stripeStatus: paymentIntent.status,
@@ -183,7 +184,7 @@ export async function verifyCardPayment(
 			},
 		})
 
-		if (ok && payment.orderId) {
+		if (effectiveStatus === "COMPLETED" && payment.orderId && payment.status !== "COMPLETED") {
 			await recordOrderCommission(payment.id)
 			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
 			if (!order) return { ok: false, provider: "stripe", reference, status: "FAILED", paymentIntentId, message: "Payment order is not available in this store." }
@@ -224,14 +225,15 @@ export async function verifyCardPayment(
 			}
 		}
 	}
-	if (!ok && payment?.orderId) await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
+	const effectiveStatus = payment?.status === "COMPLETED" && status !== "COMPLETED" ? "COMPLETED" : status
+	if (effectiveStatus !== "COMPLETED" && payment?.orderId && payment.status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 	return {
-		ok,
+		ok: effectiveStatus === "COMPLETED",
 		provider: "stripe",
 		reference,
 		paymentIntentId,
-		status,
+		status: effectiveStatus,
 		amount: paymentIntent.amount ? paymentIntent.amount / 100 : undefined,
 		currency: paymentIntent.currency?.toUpperCase(),
 		customerEmail: paymentIntent.receipt_email || undefined,

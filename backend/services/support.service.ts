@@ -145,7 +145,7 @@ export async function createTicket(data: SupportTicketData) {
 			subject: safeEmailSubject(`We received your request: ${ticket.subject}`),
 			html: `
 				<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
-				<p>Thank you for contacting ElectroBuy support. We have received your request and our team will get back to you within 24 hours.</p>
+				<p>Thank you for contacting Nurava Tech support. We have received your request and our team will get back to you within 24 hours.</p>
 				<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
 				<p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
 				<p><strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>

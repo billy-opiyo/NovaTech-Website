@@ -86,7 +86,7 @@ export async function getSignedDownloadUrl(key: string, expiresIn = 300) {
 }
 
 export function generateTenantFileKey(tenantId: string, storeId: string, productId: string, fileName: string): string {
-	const extension = fileName.split(".").pop()?.toLowerCase() || "bin"
+	const extension = fileName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin"
 	const timestamp = Date.now()
 	const scope = productId === "general" ? "assets" : `products/${productId}`
 	return `tenants/${tenantId}/stores/${storeId}/${scope}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${extension}`

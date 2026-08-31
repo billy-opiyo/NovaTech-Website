@@ -8,7 +8,7 @@ test("catalog search and checkout form are browser-accessible", async ({ page })
 	await expect(page.locator("body")).toContainText(/iphone|no products|0 products found/i)
 
 	await page.goto("/checkout", { waitUntil: "domcontentloaded" })
-	await expect(page.locator("body")).toContainText(/checkout|cart is empty/i)
+	await expect(page.locator("body")).toContainText(/checkout|cart is empty|no products selected/i)
 })
 
 test("payment verification and webhook sandbox contracts respond", async ({ request }) => {

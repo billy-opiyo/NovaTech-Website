@@ -1252,11 +1252,22 @@ model RateLimitBucket {
 }
 
 model WebhookReceipt {
-  id         String   @id @default(cuid())
-  provider   String
-  eventId    String
-  receivedAt DateTime @default(now())
+	id         String   @id @default(cuid())
+	provider   String
+	eventId    String
+	status     WebhookReceiptStatus @default(RECEIVED)
+	attempts   Int      @default(0)
+	lastError  String?
+	processedAt DateTime?
+	receivedAt DateTime @default(now())
 
   @@unique([provider, eventId])
-  @@index([receivedAt])
+	@@index([receivedAt])
+}
+
+enum WebhookReceiptStatus {
+	RECEIVED
+	PROCESSING
+	PROCESSED
+	FAILED
 }

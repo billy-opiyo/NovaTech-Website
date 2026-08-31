@@ -9,13 +9,13 @@ const testBuckets = new Map<string, { count: number; windowStart: number }>()
  * Distributed rate limiting backed by PostgreSQL. The bucket update is an
  * atomic Prisma increment, so limits remain consistent across app instances.
  */
-async function distributedRateLimiter(req: NextRequest, scope: string) {
+async function distributedRateLimiter(req: NextRequest, scope: string, identity?: string) {
 	const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
 	const ip = forwarded || req.headers.get("x-real-ip") || "anonymous"
 	const now = Date.now()
 	const windowStart = new Date(Math.floor(now / WINDOW_MS) * WINDOW_MS)
 	const expiresAt = new Date(windowStart.getTime() + WINDOW_MS)
-	const key = `${scope}:${ip}`
+	const key = `${scope}:${identity ? encodeURIComponent(identity) : ip}`
 
 	try {
 		const bucket = await prisma.rateLimitBucket.upsert({
@@ -49,8 +49,9 @@ async function distributedRateLimiter(req: NextRequest, scope: string) {
 // route passes an explicit scope and uses distributedRateLimiter above.
 export function rateLimiter(req: NextRequest): NextResponse | null
 export function rateLimiter(req: NextRequest, scope: string): Promise<NextResponse | null>
-export function rateLimiter(req: NextRequest, scope?: string): NextResponse | null | Promise<NextResponse | null> {
-	if (scope) return distributedRateLimiter(req, scope)
+export function rateLimiter(req: NextRequest, scope: string, identity: string): Promise<NextResponse | null>
+export function rateLimiter(req: NextRequest, scope?: string, identity?: string): NextResponse | null | Promise<NextResponse | null> {
+	if (scope) return distributedRateLimiter(req, scope, identity)
 	if (process.env.NODE_ENV === "production") return NextResponse.json({ message: "Request protection requires a scoped limiter" }, { status: 503 })
 	const ip = req.headers.get("x-forwarded-for") || "anonymous"
 	const now = Date.now()

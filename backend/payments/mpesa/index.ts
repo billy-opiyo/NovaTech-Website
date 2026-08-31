@@ -1,4 +1,5 @@
 import prisma from "../../lib/db"
+import { z } from "zod"
 import type { BillingPaymentKind } from "@prisma/client"
 import { sendOrderConfirmationEmail } from "../../lib/email"
 import {
@@ -29,6 +30,28 @@ export type MpesaPayload = {
 
 export interface MpesaInitiateInput extends MpesaPayload {
 	callbackUrl?: string
+	paymentId?: string
+}
+
+const mpesaInitiateResponseSchema = z.object({
+	MerchantRequestID: z.string().min(1),
+	CheckoutRequestID: z.string().min(1),
+	ResponseCode: z.string(),
+	ResponseDescription: z.string().optional(),
+	CustomerMessage: z.string().optional(),
+})
+
+const mpesaQueryResponseSchema = z.object({
+	ResponseCode: z.string(),
+	ResponseDescription: z.string().optional(),
+	ResultCode: z.number().int().optional(),
+	ResultDesc: z.string().optional(),
+})
+
+export function mapMpesaQueryStatus(response: { ResponseCode: string; ResultCode?: number }) {
+	const completed = response.ResponseCode === "0" && response.ResultCode === 0
+	const pending = response.ResponseCode === "0" && (response.ResultCode === 4999 || response.ResultCode === undefined)
+	return { status: completed ? "COMPLETED" as const : pending ? "PENDING" as const : "FAILED" as const, completed, pending }
 }
 
 export async function initiateMpesaPayment({
@@ -43,6 +66,7 @@ export async function initiateMpesaPayment({
 	billingRecordId,
 	kind = "ORDER",
 	callbackUrl,
+	paymentId,
 }: MpesaInitiateInput): Promise<MpesaInitiateResult> {
 	if (!isMpesaConfigured()) {
 		return {
@@ -71,10 +95,28 @@ export async function initiateMpesaPayment({
 		amount = order.total
 	}
 
-	const existing = await prisma.payment.findFirst({
-		where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
-	})
+	const existing = paymentId
+		? await prisma.payment.findFirst({ where: { id: paymentId, provider: "mpesa", ...(tenantId ? { tenantId } : {}) } })
+		: await prisma.payment.findFirst({
+				where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
+			})
 	if (existing) {
+		if (paymentId && !existing.providerReference) {
+			const claimed = await prisma.payment.updateMany({ where: { id: existing.id, status: "PENDING", providerReference: null }, data: { status: "PROCESSING" } })
+			if (!claimed.count) {
+				return {
+					ok: existing.status !== "FAILED" && existing.status !== "CANCELLED",
+					provider: "mpesa",
+					reference,
+					checkoutRequestId: existing.providerReference || "",
+					phone: existing.phoneNumber || phone,
+					amount: existing.amount,
+					currency: existing.currency,
+					status: existing.status === "PROCESSING" ? "PENDING" : existing.status,
+					message: "An M-Pesa request is already being initiated.",
+				}
+			}
+		} else {
 		const metadata = (existing.metadata || {}) as Record<string, unknown>
 		return {
 			ok: existing.status !== "FAILED" && existing.status !== "CANCELLED",
@@ -88,6 +130,7 @@ export async function initiateMpesaPayment({
 			message: "Existing M-Pesa request returned for this order.",
 			metadata: { paymentId: existing.id, merchantRequestId: metadata.merchantRequestId },
 		}
+		}
 	}
 
 	const normalizedPhone = normalizePhone(phone)
@@ -96,27 +139,39 @@ export async function initiateMpesaPayment({
 		callbackUrl ||
 		`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/payments/webhooks/mpesa/stk-callback`
 
-	const response = (await stkPush({
-		amount,
-		phone: normalizedPhone,
-		accountReference: reference.slice(0, 12),
-		callbackUrl: callback,
-	})) as {
-		MerchantRequestID: string
-		CheckoutRequestID: string
-		ResponseCode: string
-		ResponseDescription: string
-		CustomerMessage: string
+	let response: z.infer<typeof mpesaInitiateResponseSchema>
+	try {
+		response = mpesaInitiateResponseSchema.parse(await stkPush({
+			amount,
+			phone: normalizedPhone,
+			accountReference: reference.slice(0, 12),
+			callbackUrl: callback,
+		}))
+	} catch (error) {
+		if (existing && paymentId) await prisma.payment.update({ where: { id: existing.id }, data: { status: "FAILED", failureReason: "M-Pesa initiation failed" } }).catch(() => undefined)
+		throw error
 	}
 
-	const payment = await prisma.payment.create({
+	const status = response.ResponseCode === "0" ? "PENDING" : "FAILED"
+	const payment = existing && paymentId
+		? await prisma.payment.update({
+				where: { id: existing.id },
+				data: {
+					status,
+					providerReference: response.CheckoutRequestID,
+					phoneNumber: normalizedPhone,
+					failureReason: response.ResponseCode === "0" ? null : response.ResponseDescription || response.CustomerMessage || "M-Pesa request rejected",
+					metadata: { ...((existing.metadata || {}) as Record<string, unknown>), merchantRequestId: response.MerchantRequestID },
+				},
+			})
+		: await prisma.payment.create({
 		data: {
 			tenantId,
 			orderId,
 			provider: "mpesa",
 			amount,
 			currency: "KES",
-			status: "PENDING",
+			status,
 			invoiceId,
 			subscriptionId,
 			billingRecordId,
@@ -129,8 +184,7 @@ export async function initiateMpesaPayment({
 				...(metadata || {}),
 			},
 		},
-	})
-
+		})
 	return {
 		ok: response.ResponseCode === "0",
 		provider: "mpesa",
@@ -140,7 +194,7 @@ export async function initiateMpesaPayment({
 		phone: normalizedPhone,
 		amount,
 		currency: "KES",
-		status: "PENDING",
+		status,
 		message: response.ResponseDescription || response.CustomerMessage,
 		metadata: {
 			paymentId: payment.id,
@@ -177,36 +231,21 @@ export async function verifyMpesaPayment(
 
 	const checkoutRequestId = payment?.providerReference || reference
 
-	const response = (await stkQuery({
-		checkoutRequestId,
-	})) as {
-		ResponseCode: string
-		ResponseDescription: string
-		ResultCode?: number
-		ResultDesc?: string
+	const responseResult = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId }))
+	if (!responseResult.success) {
+		return { ok: false, provider: "mpesa", reference, checkoutRequestId, status: "PENDING", message: "M-Pesa returned an incomplete verification response. Please retry." }
 	}
+	const response = responseResult.data
 
-	const resultCode = response.ResultCode ?? 0
-	const completed = resultCode === 0
-	const pending = resultCode === 4999
+	const resultCode = response.ResultCode
+	const { status: queriedStatus, completed, pending } = mapMpesaQueryStatus(response)
 
-	const status = completed ? "COMPLETED" : pending ? "PENDING" : "FAILED"
+	const status = payment?.status === "COMPLETED" && queriedStatus !== "COMPLETED" ? "COMPLETED" : queriedStatus
 
 	if (payment) {
-		await prisma.payment.update({
-			where: { id: payment.id },
-			data: {
-				status,
-				metadata: {
-					...(payment.metadata as Record<string, unknown> | undefined),
-					verifyResponseCode: response.ResponseCode,
-					verifyResultCode: resultCode,
-					verifyResultDesc: response.ResultDesc,
-				},
-			},
-		})
+		await prisma.payment.update({ where: { id: payment.id }, data: { status, metadata: { ...(payment.metadata as Record<string, unknown> | undefined), verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } } })
 
-		if (completed && payment.orderId) {
+		if (status === "COMPLETED" && payment.orderId && payment.status !== "COMPLETED") {
 			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
 			if (!order) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment order is not available in this store." }
 			const updatedOrder = await prisma.order.update({
@@ -246,17 +285,17 @@ export async function verifyMpesaPayment(
 			}
 		}
 	}
-	if (!completed && !pending && payment?.orderId) await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
+	if (status === "FAILED" && payment?.orderId && payment.status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 	return {
-		ok: completed || pending,
+		ok: status === "COMPLETED" || status === "PENDING",
 		provider: "mpesa",
 		reference,
 		checkoutRequestId,
 		status,
 		resultCode,
 		resultDescription: response.ResultDesc || response.ResponseDescription,
-		message: completed
+		message: status === "COMPLETED"
 			? "M-Pesa payment completed successfully."
 			: pending
 			? "M-Pesa payment is still being processed."

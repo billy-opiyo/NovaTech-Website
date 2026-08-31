@@ -5,7 +5,8 @@ import type { MpesaStkCallbackPayload } from "backend/types/payments"
 export async function POST(req: NextRequest) {
 	try {
 		const payload = (await req.json()) as MpesaStkCallbackPayload
-		await handleMpesaStkCallback(payload)
+		const result = await handleMpesaStkCallback(payload, { strictReconciliation: true })
+		if (!result.received) return new NextResponse("Invalid callback", { status: 400 })
 
 		// Daraja requires a plain text "Success" response for STK callbacks
 		return new NextResponse("Success", {

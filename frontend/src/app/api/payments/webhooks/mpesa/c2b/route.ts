@@ -5,7 +5,8 @@ import type { MpesaC2BPayload } from "backend/types/payments"
 export async function POST(req: NextRequest) {
 	try {
 		const payload = (await req.json()) as MpesaC2BPayload
-		await handleMpesaC2B(payload)
+		const result = await handleMpesaC2B(payload, { strictReconciliation: true })
+		if (!result.received) return new NextResponse("Invalid callback", { status: 400 })
 
 		// Daraja C2B validation/confirmation expects a plain text response
 		return new NextResponse("Success", {

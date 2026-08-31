@@ -124,6 +124,7 @@ export default function ContactPage() {
 		subject: "",
 		message: "",
 		orderNumber: "",
+		website: "",
 	})
 	const [formStatus, setFormStatus] = useState<
 		"idle" | "sending" | "sent" | "error"
@@ -156,7 +157,7 @@ export default function ContactPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to send your message.")
 			setFormStatus("sent")
-			setFormData({ name: "", email: "", phone: "", subject: "", message: "", orderNumber: "" })
+			setFormData({ name: "", email: "", phone: "", subject: "", message: "", orderNumber: "", website: "" })
 		} catch (error) {
 			setFormStatus("error")
 			setFormError(error instanceof Error ? error.message : "Unable to send your message.")
@@ -274,6 +275,10 @@ export default function ContactPage() {
 								onSubmit={handleSubmit}
 								className="glass-card p-6 md:p-8 space-y-4"
 							>
+								<div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+									<label htmlFor="website">Website</label>
+									<input id="website" name="website" tabIndex={-1} autoComplete="off" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} />
+								</div>
 								<div className="grid md:grid-cols-2 gap-4">
 									<div>
 										<label className="block text-sm font-medium mb-1">

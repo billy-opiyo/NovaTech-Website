@@ -204,17 +204,36 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 	const totals = calculateSaasInvoiceTotals({ subscription: billingPlan.price || 0, addons: addonTotal, setupFee: firstActivation ? setupFeeAmount : 0, vatRate: configuredSaasVatRate() })
 	if (totals.grossAmount <= 0) throw new BillingError("The selected plan has no payable amount", 409, "BILLING_TOTAL_ZERO")
 	const kind = firstActivation ? InvoiceKind.SUBSCRIPTION : input.kind || InvoiceKind.RENEWAL
-	const invoice = await prisma.$transaction(async (transaction) => {
-		const created = await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000) } })
-		const creditAmount = await reserveBillingCredits(transaction, input.tenantId, billingPlan.currency, totals.grossAmount, created.id)
-		return transaction.invoice.update({ where: { id: created.id }, data: { creditAmount, total: totals.grossAmount - creditAmount } })
+	// Reuse one active invoice/payment per tenant subscription so browser and
+	// provider retries do not create duplicate payment prompts.
+	const billingAttempt = await prisma.$transaction(async (transaction) => {
+		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.tenantId}:${subscription.id}:${kind}`}))`
+		const existing = await transaction.invoice.findFirst({ where: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: "mpesa" }, orderBy: { createdAt: "desc" }, include: { payments: { where: { kind: { not: "ORDER" } }, orderBy: { createdAt: "desc" }, take: 1 } } })
+		const existingPayment = existing?.payments[0]
+		if (existing && existingPayment && ["PENDING", "PROCESSING", "COMPLETED"].includes(existingPayment.status)) return { invoice: existing, payment: existingPayment, created: false }
+		const invoice = existing || await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: "mpesa", subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000) } })
+		const creditAmount = existing ? existing.creditAmount : await reserveBillingCredits(transaction, input.tenantId, billingPlan.currency, totals.grossAmount, invoice.id)
+		const updatedInvoice = existing ? invoice : await transaction.invoice.update({ where: { id: invoice.id }, data: { creditAmount, total: totals.grossAmount - creditAmount } })
+		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: updatedInvoice.total === 0 ? "internal-credit" : "mpesa", amount: updatedInvoice.total, currency: updatedInvoice.currency, status: updatedInvoice.total === 0 ? "COMPLETED" : "PENDING", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, reference: `INV-${invoice.id}`, invoiceKind: invoice.kind, operation: "subscription-invoice" } } })
+		return { invoice: updatedInvoice, payment, created: true }
 	})
+	const invoice = billingAttempt.invoice
+	const paymentReservation = billingAttempt.payment
+	if (!billingAttempt.created && paymentReservation.status === "COMPLETED") return { ok: true, provider: "internal-credit" as const, reference: `INV-${invoice.id}`, checkoutRequestId: "", phone: input.phone, amount: 0, currency: invoice.currency, status: "COMPLETED" as const, message: "Invoice settlement already completed.", invoiceId: invoice.id }
+	if (!billingAttempt.created && paymentReservation.status === "PROCESSING") return { ok: true, provider: "mpesa" as const, reference: `INV-${invoice.id}`, checkoutRequestId: "", phone: input.phone, amount: paymentReservation.amount, currency: paymentReservation.currency, status: "PENDING" as const, message: "An M-Pesa request is already being initiated.", invoiceId: invoice.id }
 	if (invoice.total === 0) {
-		const payment = await prisma.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: "internal-credit", amount: 0, currency: invoice.currency, status: "COMPLETED", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, reason: "SERVICE_CREDIT" } } })
-		await markBillingPaymentFromMpesa({ id: payment.id, status: "COMPLETED", invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined })
+		await markBillingPaymentFromMpesa({ id: paymentReservation.id, status: "COMPLETED", invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined })
 		return { ok: true, provider: "internal-credit" as const, reference: `INV-${invoice.id}`, checkoutRequestId: "", phone: input.phone, amount: 0, currency: invoice.currency, status: "COMPLETED", message: "Invoice settled by account credit.", invoiceId: invoice.id }
 	}
-	const result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id, grossTotal: totals.grossAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, creditAmount: invoice.creditAmount } })
+	let result
+	try {
+		result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, paymentId: paymentReservation.id, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id, grossTotal: totals.grossAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, creditAmount: invoice.creditAmount } })
+	} catch (error) {
+		await prisma.payment.update({ where: { id: paymentReservation.id }, data: { status: "FAILED", failureReason: "M-Pesa initiation failed" } }).catch(() => undefined)
+		await releaseInvoiceCredits(invoice.id).catch(() => undefined)
+		await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "FAILED" } }).catch(() => undefined)
+		throw error
+	}
 	if (!result.ok) {
 		await releaseInvoiceCredits(invoice.id)
 		await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "FAILED" } })

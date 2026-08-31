@@ -84,6 +84,7 @@ export async function getRecommendedForUser(
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 		items: {
@@ -236,6 +237,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 		items: {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import prisma from "backend/lib/db"
+import { rateLimiter } from "backend/middleware/rateLimiter"
+import { matchesEmailVerificationCode } from "backend/lib/email-verification"
 
 const schema = z.object({ email: z.string().email(), code: z.string().regex(/^\d{6}$/, "Enter the six-digit code") })
 
@@ -8,8 +10,12 @@ export async function POST(request: NextRequest) {
 	try {
 		const input = schema.parse(await request.json())
 		const email = input.email.trim().toLowerCase()
-		const token = await prisma.verificationToken.findFirst({ where: { identifier: `verify:${email}`, token: input.code } })
-		if (!token || token.expires < new Date()) return NextResponse.json({ message: "That code is invalid or expired." }, { status: 400 })
+		const ipLimited = await rateLimiter(request, "auth-verify-email-ip")
+		if (ipLimited) return ipLimited
+		const accountLimited = await rateLimiter(request, "auth-verify-email-account", email)
+		if (accountLimited) return accountLimited
+		const token = await prisma.verificationToken.findFirst({ where: { identifier: `verify:${email}` } })
+		if (!token || token.expires < new Date() || !matchesEmailVerificationCode(token.token, input.code)) return NextResponse.json({ message: "That code is invalid or expired." }, { status: 400 })
 		await prisma.$transaction([
 			prisma.user.update({ where: { email }, data: { emailVerified: new Date() } }),
 			prisma.verificationToken.deleteMany({ where: { identifier: `verify:${email}` } }),

@@ -1,0 +1,7 @@
+CREATE TYPE "WebhookReceiptStatus" AS ENUM ('RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED');
+
+ALTER TABLE "WebhookReceipt"
+  ADD COLUMN "status" "WebhookReceiptStatus" NOT NULL DEFAULT 'RECEIVED',
+  ADD COLUMN "attempts" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "lastError" TEXT,
+  ADD COLUMN "processedAt" TIMESTAMP(3);
