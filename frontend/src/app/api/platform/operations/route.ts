@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { TenantStatus, type Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { getPlatformDomain } from "backend/lib/platform-domain"
@@ -37,8 +38,8 @@ export async function GET(request: NextRequest) {
 	const limit = Math.min(Math.max(Number(request.nextUrl.searchParams.get("limit") || 50), 1), 100)
 
 	try {
-		const tenantWhere: any = { status: { not: "DELETED" } }
-		if (["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED"].includes(status)) tenantWhere.status = status
+		const tenantWhere: Prisma.TenantWhereInput = { status: { not: "DELETED" } }
+		if (["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED"].includes(status)) tenantWhere.status = status as TenantStatus
 		if (search) {
 			tenantWhere.OR = [
 				{ legalName: { contains: search, mode: "insensitive" } },
@@ -171,7 +172,7 @@ export async function PATCH(request: NextRequest) {
 		})
 		await prisma.adminLog.create({ data: { tenantId: tenant.id, adminId: access.session!.user.id, action: verificationAction ? `MERCHANT_${parsed.data.action.toUpperCase()}` : suspended ? "PLATFORM_SUSPENDED_STORE" : "PLATFORM_REACTIVATED_STORE", details: { previousStatus: tenant.status, nextStatus: updated.status, previousVerificationStatus: tenant.verificationStatus, nextVerificationStatus: updated.verificationStatus, notes: parsed.data.notes || null } } }).catch((error) => console.error("Platform action audit failed", error))
 		return NextResponse.json({ tenant: updated })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Platform operation failed", error)
 		return apiErrorResponse(error, "Platform operation failed")
 	}

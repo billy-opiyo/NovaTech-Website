@@ -98,8 +98,8 @@ export default function PlatformOperationsPage() {
 			const result = await response.json()
 			if (!response.ok) throw new Error(result.message || "Platform operation failed")
 			await load()
-		} catch (error: any) {
-			setMessage(error.message || "Platform operation failed")
+		} catch (error: unknown) {
+			setMessage(error instanceof Error ? error.message : "Platform operation failed")
 		} finally {
 			setBusyTenant(null)
 		}

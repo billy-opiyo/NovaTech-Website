@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 		if (!tenant || !store) return NextResponse.json({ message: "Tenant data unavailable" }, { status: 404 })
 		const payload = { format: "novatech-tenant-export", version: 1, exportedAt: new Date().toISOString(), tenant, store, memberships, domains, settingsVersions, categories, products, orders, payments, reviews, coupons, supportTickets, legalAcceptances }
 		return NextResponse.json(payload, { headers: { "Content-Disposition": `attachment; filename="${context.storeSlug}-export.json"`, "Cache-Control": "no-store" } })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Tenant data export unavailable", error)
 		return apiErrorResponse(error, "Tenant data export is unavailable until the database is configured")
 	}

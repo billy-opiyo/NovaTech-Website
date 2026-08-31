@@ -9,8 +9,9 @@ export async function acquireScheduledJobLock(key: string, leaseMilliseconds = 1
 	try {
 		await prisma.scheduledJobLock.create({ data: { key, owner, acquiredAt: now, expiresAt } })
 		return owner
-	} catch (error: any) {
-		if (error?.code !== "P2002") throw error
+	} catch (error: unknown) {
+		const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+		if (code !== "P2002") throw error
 	}
 
 	const reclaimed = await prisma.scheduledJobLock.updateMany({

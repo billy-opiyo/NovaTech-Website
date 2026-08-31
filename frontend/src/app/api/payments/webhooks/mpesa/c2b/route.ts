@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 			status: 200,
 			headers: { "Content-Type": "text/plain" },
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("M-Pesa C2B callback error:", error)
 		return new NextResponse("Error", {
 			status: 500,

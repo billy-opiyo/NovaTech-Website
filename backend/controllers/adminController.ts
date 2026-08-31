@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
-import { MembershipRole } from "@prisma/client"
+import { MembershipRole, Prisma } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
@@ -15,7 +15,7 @@ export async function getAdminLogs(req: NextRequest) {
 		const action = searchParams.get("action") || undefined
 		const adminId = searchParams.get("adminId") || undefined
 
-		const where: any = { tenantId: context.tenantId }
+		const where: Prisma.AdminLogWhereInput = { tenantId: context.tenantId }
 		if (action) where.action = action
 		if (adminId) where.adminId = adminId
 
@@ -51,7 +51,7 @@ export async function getAdminLogs(req: NextRequest) {
 			totalPages: Math.ceil(total / limit),
 			actions: distinctActions.map((a: { action: string }) => a.action),
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Admin logs API error:", error)
 		return apiErrorResponse(error, "Failed to fetch admin logs")
 	}
@@ -85,7 +85,7 @@ export async function getAdminLogStats(req: NextRequest) {
 			todayLogs,
 			mostCommonActions: recentActions,
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Admin log statistics unavailable")
 	}
 }
@@ -111,7 +111,7 @@ export async function recordAdminAction(req: NextRequest) {
 		})
 
 		return NextResponse.json(result, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to record admin action")
 	}
 }

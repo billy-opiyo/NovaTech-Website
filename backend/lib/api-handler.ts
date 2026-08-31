@@ -26,7 +26,7 @@ export function apiErrorResponse(error: unknown, fallback = "Request unavailable
 	return NextResponse.json({ message }, { status })
 }
 
-export function withApiError<T extends (...args: any[]) => Promise<Response>>(handler: T, ...args: Parameters<T>): Promise<Response> {
+export function withApiError<T extends (...args: never[]) => Promise<Response>>(handler: T, ...args: Parameters<T>): Promise<Response> {
 	const request = args[0] as { headers?: Headers; url?: string } | undefined
 	const requestId = getRequestId(request?.headers ? request as { headers: Headers } : undefined)
 	return handler(...args)

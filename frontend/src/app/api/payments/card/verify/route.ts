@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 		const result = await verifyCardPayment(validated.reference, context.tenantId)
 
 		return NextResponse.json(result)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },

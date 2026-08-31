@@ -23,6 +23,24 @@ export class BillingError extends Error {
 const paidSubscriptionStatuses = ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] as const
 const saasBillingProvider = (process.env.NURAVA_SAAS_BILLING_PROVIDER || "mpesa").toLowerCase()
 
+type StripeProviderPayload = {
+	id?: string
+	status?: string
+	metadata?: Record<string, string>
+	customer?: string
+	subscription?: string
+	current_period_start?: unknown
+	current_period_end?: unknown
+	cancel_at_period_end?: boolean
+	hosted_invoice_url?: string
+	invoice_pdf?: string
+	subtotal?: number
+	amount_due?: number
+	amount_paid?: number
+	currency?: string
+	payment_intent?: string
+}
+
 export function isMpesaOnlySaasBilling() {
 	return saasBillingProvider === "mpesa"
 }
@@ -134,7 +152,7 @@ async function ensureStripeCustomer(tenantId: string, ownerUserId: string, email
 function recurringLineItem(name: string, price: number, currency: string, interval: "month" | "year", stripePriceId?: string | null) {
 	return stripePriceId
 		? { price: stripePriceId, quantity: 1 }
-		: { price_data: { currency: currency.toLowerCase(), product_data: { name }, unit_amount: stripeAmount(price, currency), recurring: { interval }, ...(configuredSaasVatRate() > 0 ? { tax_behavior: "inclusive" } : {}) }, quantity: 1 }
+		: { price_data: { currency: currency.toLowerCase(), product_data: { name }, unit_amount: stripeAmount(price, currency), recurring: { interval }, ...(configuredSaasVatRate() > 0 ? { tax_behavior: "inclusive" as const } : {}) }, quantity: 1 }
 }
 
 export async function createStripeCheckoutSession(input: { tenantId: string; ownerUserId: string; email: string; planKey: string; addonKeys?: string[]; successUrl: string; cancelUrl: string }) {
@@ -145,7 +163,7 @@ export async function createStripeCheckoutSession(input: { tenantId: string; own
 	const existing = await prisma.subscription.findFirst({ where: { tenantId: input.tenantId, status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" } })
 	if (existing && existing.planId === plan.id && billing.record.setupFeeStatus !== BillingRecordStatus.PENDING) throw new BillingError("This plan is already active", 409, "PLAN_ALREADY_ACTIVE")
 	const customerId = await ensureStripeCustomer(input.tenantId, input.ownerUserId, input.email)
-	const lineItems: any[] = [recurringLineItem(plan.name, plan.price || 0, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month", plan.stripePriceId)]
+	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [recurringLineItem(plan.name, plan.price || 0, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month", plan.stripePriceId)]
 	for (const addon of addons) lineItems.push(recurringLineItem(addon.name, addon.price, addon.currency, addon.billingInterval === "YEAR" ? "year" : "month", addon.stripePriceId))
 	if (billing.record.setupFeeStatus === BillingRecordStatus.PENDING && billing.record.setupFeeAmount > 0) {
 			lineItems.push({ price_data: { currency: billing.record.currency.toLowerCase(), product_data: { name: "One-time onboarding/setup fee" }, unit_amount: stripeAmount(billing.record.setupFeeAmount, billing.record.currency), ...(configuredSaasVatRate() > 0 ? { tax_behavior: "inclusive" } : {}) }, quantity: 1 })
@@ -184,10 +202,10 @@ export async function changeSubscriptionPlan(input: { tenantId: string; ownerUse
 	if (!plan.stripePriceId) throw new BillingError("The target plan needs a Stripe price ID before an existing subscription can be changed", 409, "PLAN_PRICE_NOT_CONFIGURED")
 	const stripe = getStripeClient()
 	const remote = await stripe.subscriptions.retrieve(current.providerSubscriptionId)
-	const baseItem = (remote.items?.data || [])[0] as any
+	const baseItem = remote.items?.data?.[0]
 	if (!baseItem?.id) throw new BillingError("Stripe subscription items are unavailable", 502, "STRIPE_SUBSCRIPTION_INVALID")
 	const updatedRemote = await stripe.subscriptions.update(current.providerSubscriptionId, { items: [{ id: baseItem.id, price: plan.stripePriceId }], proration_behavior: "create_prorations", metadata: { tenantId: input.tenantId, planId: plan.id, subscriptionId: current.id } })
-	const updated = await prisma.subscription.update({ where: { id: current.id }, data: { planId: plan.id, status: mapStripeSubscriptionStatus(updatedRemote.status), currentPeriodStart: dateFromUnix((updatedRemote as any).current_period_start), currentPeriodEnd: dateFromUnix((updatedRemote as any).current_period_end) } })
+	const updated = await prisma.subscription.update({ where: { id: current.id }, data: { planId: plan.id, status: mapStripeSubscriptionStatus(updatedRemote.status), currentPeriodStart: dateFromUnix("current_period_start" in updatedRemote ? updatedRemote.current_period_start : undefined), currentPeriodEnd: dateFromUnix("current_period_end" in updatedRemote ? updatedRemote.current_period_end : undefined) } })
 	await prisma.tenant.update({ where: { id: input.tenantId }, data: { planId: plan.id } })
 	return { subscriptionId: updated.id, provider: "stripe" as const, changed: true }
 }
@@ -294,7 +312,7 @@ export async function createCustomerPortalSession(tenantId: string, returnUrl: s
 	return getStripeClient().billingPortal.sessions.create({ customer: customer.stripeCustomerId, return_url: returnUrl })
 }
 
-export async function applyStripeSubscriptionEvent(subscriptionObject: Record<string, any>) {
+export async function applyStripeSubscriptionEvent(subscriptionObject: StripeProviderPayload) {
 	const providerId = String(subscriptionObject.id || "")
 	const metadata = (subscriptionObject.metadata || {}) as Record<string, string>
 	const tenantId = metadata.tenantId || undefined
@@ -306,7 +324,7 @@ export async function applyStripeSubscriptionEvent(subscriptionObject: Record<st
 	return updated
 }
 
-export async function applyStripeCheckoutCompleted(sessionObject: Record<string, any>) {
+export async function applyStripeCheckoutCompleted(sessionObject: StripeProviderPayload) {
 	const metadata = (sessionObject.metadata || {}) as Record<string, string>
 	const local = metadata.subscriptionId ? await prisma.subscription.findUnique({ where: { id: metadata.subscriptionId } }) : null
 	if (!local) return null
@@ -315,7 +333,7 @@ export async function applyStripeCheckoutCompleted(sessionObject: Record<string,
 	return local.id
 }
 
-export async function applyStripeInvoiceEvent(invoiceObject: Record<string, any>, paid: boolean, failed = false) {
+export async function applyStripeInvoiceEvent(invoiceObject: StripeProviderPayload, paid: boolean, failed = false) {
 	const providerInvoiceId = String(invoiceObject.id || "")
 	if (!providerInvoiceId) return null
 	const subscriptionId = typeof invoiceObject.subscription === "string" ? invoiceObject.subscription : undefined

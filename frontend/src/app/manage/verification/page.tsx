@@ -44,24 +44,24 @@ export default function MerchantVerificationPage() {
 			if (!response.ok && !["PHONE_VERIFICATION_REQUIRED", "EVIDENCE_REQUIRED"].includes(data.code)) throw new Error(data.message || "Unable to save verification details")
 			setMessage(data.message || "Verification details saved.")
 			await load()
-		} catch (error: any) { setMessage(error.message || "Unable to save verification details") } finally { setBusy(false) }
+		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to save verification details") } finally { setBusy(false) }
 	}
 
 	async function requestPhoneCode() {
 		setBusy(true)
-		try { const response = await fetch("/api/manage/verification/phone", { method: "POST" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to send code"); setMessage(data.message) } catch (error: any) { setMessage(error.message || "Unable to send code") } finally { setBusy(false) }
+		try { const response = await fetch("/api/manage/verification/phone", { method: "POST" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to send code"); setMessage(data.message) } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to send code") } finally { setBusy(false) }
 	}
 
 	async function confirmPhoneCode() {
 		setBusy(true)
-		try { const response = await fetch("/api/manage/verification/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to verify phone"); setMessage(data.message); setCode(""); await load() } catch (error: any) { setMessage(error.message || "Unable to verify phone") } finally { setBusy(false) }
+		try { const response = await fetch("/api/manage/verification/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to verify phone"); setMessage(data.message); setCode(""); await load() } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to verify phone") } finally { setBusy(false) }
 	}
 
 	async function uploadEvidence(event: React.ChangeEvent<HTMLInputElement>) {
 		const file = event.target.files?.[0]
 		if (!file) return
 		setBusy(true)
-		try { const body = new FormData(); body.set("type", evidenceType); body.set("file", file); const response = await fetch("/api/manage/verification/evidence", { method: "POST", body }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to upload document"); setMessage(`${labels[evidenceType]} uploaded for review.`); await load() } catch (error: any) { setMessage(error.message || "Unable to upload document") } finally { setBusy(false); event.target.value = "" }
+		try { const body = new FormData(); body.set("type", evidenceType); body.set("file", file); const response = await fetch("/api/manage/verification/evidence", { method: "POST", body }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to upload document"); setMessage(`${labels[evidenceType]} uploaded for review.`); await load() } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to upload document") } finally { setBusy(false); event.target.value = "" }
 	}
 
 	if (message && !verification) return <div className="glass-card p-6"><p>{message}</p></div>

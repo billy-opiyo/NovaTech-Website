@@ -31,7 +31,7 @@ export default function ManageBillingPage() {
 			if (!response.ok) throw new Error(result.message || "Billing action failed")
 			if (result.url) window.location.assign(result.url)
 			else { setMessage(result.message || "Billing updated"); await load() }
-		} catch (error: any) { setMessage(error.message || "Billing action failed") }
+		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Billing action failed") }
 		finally { setBusy("") }
 	}
 

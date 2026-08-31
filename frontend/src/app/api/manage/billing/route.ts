@@ -50,9 +50,10 @@ export async function GET() {
 			env: process.env.MPESA_ENV === "production" ? "production" : "sandbox",
 		}
 		return NextResponse.json({ ...snapshot, paymentMethod, plans, addons })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Billing status unavailable", error)
-		return NextResponse.json({ message: error instanceof BillingError ? error.message : "Billing status unavailable" }, { status: error?.status || 503 })
+		const status = error instanceof BillingError ? error.status : 503
+		return NextResponse.json({ message: error instanceof BillingError ? error.message : "Billing status unavailable" }, { status })
 	}
 }
 
@@ -84,8 +85,9 @@ export async function POST(request: NextRequest) {
 			case "addon_unsubscribe":
 				return NextResponse.json({ addon: await unsubscribeFromAddon(context.tenantId, parsed.data.addonKey) })
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Billing action failed", error)
-		return NextResponse.json({ message: error instanceof BillingError ? error.message : error?.message || "Billing action failed" }, { status: error?.status || 500 })
+		const status = error instanceof BillingError ? error.status : 500
+		return NextResponse.json({ message: error instanceof BillingError ? error.message : "Billing action failed" }, { status })
 	}
 }

@@ -6,7 +6,7 @@ Audit source of truth: [BUG_AUDIT.md](<C:/Users/Billy/MY WEB PROJECTS/NovaTech W
 
 ## Result
 
-The remaining source-level repair batch is complete. Of 32 recorded findings, 30 are verified and 2 remain open as non-blocking technical debt: broad `any` usage (BUG-028) and unbounded analytics/report aggregation (BUG-030). No Critical or High findings remain in the current register.
+The remaining source-level repair batch is complete. All 32 recorded findings are verified. BUG-028 now has typed provider/API boundaries and BUG-030 now uses tenant-scoped database-side analytics aggregation. No Critical or High findings remain in the current register.
 
 The final production gate is not fully claimable because the configured Neon database is unreachable/uninitialized in this environment, no live provider sandboxes were configured, and authenticated seeded browser workflows could not be exercised. No live migration or destructive database operation was performed.
 
@@ -15,13 +15,13 @@ The final production gate is not fully claimable because the configured Neon dat
 | Measure | Count |
 |---|---:|
 | Total findings recorded | 32 |
-| Fixed and verified | 30 |
-| Remaining | 2 |
+| Fixed and verified | 32 |
+| Remaining | 0 |
 | Critical remaining | 0 |
 | High remaining | 0 |
-| Medium remaining | 1: BUG-030 |
-| Low remaining | 1: BUG-028 |
-| Consecutive post-repair audits with no new findings | 2: cycles 3 and 4 |
+| Medium remaining | 0 |
+| Low remaining | 0 |
+| Consecutive post-repair audits with no new findings | 2: cycles 5 and 6 |
 
 ## Repairs verified
 
@@ -31,13 +31,13 @@ The final production gate is not fully claimable because the configured Neon dat
 - Database migration `0021_tenant_consistency_triggers` rejects cross-tenant references across store, catalog, order, payment, billing, review, cart, wishlist, and enquiry relationships.
 - Variant-aware stock is used in catalog/wishlist/enquiry-facing paths; public discovery media is origin-allowlisted and rendered through optimized image components.
 - API error serialization now uses stable fallback messages across the repaired controller and route families; raw infrastructure error responses were removed from those paths.
-- Customer reporting is bounded and uses database-side aggregates with completed-payment revenue.
+- Customer and analytics reporting use bounded, tenant-scoped database-side aggregates with completed-payment revenue; top-product results are capped at 100.
+- Provider, API, authentication, billing, and reporting boundaries use narrow interfaces, Prisma input types, and `unknown` runtime guards instead of explicit `any` casts.
 - Existing completed repairs include payload bounds, CSV formula neutralization, notification preferences, lifecycle selection, slug routing, quality scripts, and managed Playwright setup.
 
 ## Remaining issues
 
-- BUG-028: broad `any` types remain in legacy provider/UI boundaries and lint still reports 150 warnings. This is maintainability/type-hardening work, not a current compiler failure.
-- BUG-030: analytics category/top-product/region paths still materialize tenant order/item sets in memory; they need SQL aggregation and cursor/export strategy before high-volume tenants.
+No recorded source findings remain open. Lint still reports 79 non-error warnings, primarily legacy UI hook dependencies, unused symbols, image optimization suggestions, and a small presentation-only admin typing backlog.
 
 ## Security findings
 
@@ -49,11 +49,11 @@ Live security gates remain: apply and verify migrations in an isolated Neon data
 
 ## Performance findings
 
-The production build reports a 102 kB shared first-load JavaScript baseline and several legacy `<img>` warnings outside the repaired platform-discovery path. BUG-030 remains for SQL aggregation, indexes, cursor pagination, and deliberate export limits. Webpack cache snapshot warnings occurred but did not fail the build.
+The production build reports a 102 kB shared first-load JavaScript baseline and several legacy `<img>` warnings outside the repaired platform-discovery path. Analytics report aggregation is now database-side and top-product results are deliberately bounded. Webpack cache snapshot warnings occurred but did not fail the build.
 
 ## Architecture findings
 
-The repair strengthens the existing Next.js workspace without creating a parallel architecture: shared file validation, safe API errors, durable verification-delivery fields, atomic storage reservation, explicit order transitions, database tenant-consistency triggers, and bounded reporting were added. Remaining architectural debt is concentrated in legacy boundary types and analytics query strategy.
+The repair strengthens the existing Next.js workspace without creating a parallel architecture: shared file validation, safe API errors, durable verification-delivery fields, atomic storage reservation, explicit order transitions, database tenant-consistency triggers, typed boundaries, and database-side reporting were added. Remaining architectural debt is limited to non-blocking legacy UI warnings.
 
 ## Verification results
 
@@ -61,7 +61,7 @@ The repair strengthens the existing Next.js workspace without creating a paralle
 |---|---|
 | `npm install --ignore-scripts --no-audit --no-fund` | PASS; dependencies up to date |
 | `npx prisma validate --schema backend/prisma/schema.prisma` with placeholder `DATABASE_URL` | PASS; schema syntax valid |
-| `npm run lint` | PASS; 0 errors, 150 warnings; backend build passed |
+| `npm run lint` | PASS; 0 errors, 79 warnings; backend build passed |
 | `npm run type-check` | PASS; frontend TypeScript and backend `tsc` passed |
 | `npm run build` | PASS; Prisma client generated, Next production build passed, 137 routes generated |
 | `npm test` | PASS; 63 passed, 0 failed, 0 skipped |
@@ -73,6 +73,8 @@ The repair strengthens the existing Next.js workspace without creating a paralle
 The managed Playwright configuration now starts/reuses the development server. A prior warm smoke run passed 1 test and skipped 1 provider test as designed. The final managed run reached the application but hung while `/api/products` waited on the unreachable configured Neon endpoint; it was stopped after the environment timeout window. Payment-provider coverage remained skipped because `E2E_PAYMENT_PROVIDER` was not configured.
 
 Homepage/catalog search/checkout received smoke coverage where the database fallback allowed it. Authenticated registration/login/logout, protected dashboard, settings, CRUD, billing, seeded checkout, mobile navigation, live payments, and cross-tenant browser tests remain unverified without a reachable seeded environment.
+
+Two consecutive post-repair source audits (cycles 5 and 6) found no new issues.
 
 ## Confidence assessment
 

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 		const { context } = await access(request)
 		const domains = await prisma.domain.findMany({ where: { tenantId: context.tenantId, storeId: context.storeId }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true }, orderBy: { createdAt: "desc" } })
 		return NextResponse.json({ domains })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Domain settings unavailable")
 	}
 }
@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
 		const verificationToken = `nurava-domain-${randomBytes(18).toString("hex")}`
 		const domain = await prisma.domain.create({ data: { tenantId: context.tenantId, storeId: context.storeId, hostname: parsed.data.hostname, type: DomainType.CUSTOM, verificationToken, verificationStatus: "PENDING" }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true } })
 		return NextResponse.json({ domain, verification: { recordType: "TXT", name: `_nurava-verification.${domain.hostname}`, value: verificationToken, status: "pending_dns_check" } }, { status: 201 })
-	} catch (error: any) {
-		return error?.code === "P2002" ? NextResponse.json({ message: "That domain is already registered." }, { status: 409 }) : apiErrorResponse(error, "Unable to add domain")
+	} catch (error: unknown) {
+		const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+		return code === "P2002" ? NextResponse.json({ message: "That domain is already registered." }, { status: 409 }) : apiErrorResponse(error, "Unable to add domain")
 	}
 }
 
@@ -53,7 +54,7 @@ export async function DELETE(request: NextRequest) {
 		if (!domain) return NextResponse.json({ message: "Custom domain not found" }, { status: 404 })
 		await prisma.domain.delete({ where: { id: domain.id } })
 		return NextResponse.json({ ok: true })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to remove domain")
 	}
 }

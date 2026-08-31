@@ -1,4 +1,5 @@
 import prisma from "../lib/db"
+import { Prisma } from "@prisma/client"
 
 export type ActionResult = {
 	ok: boolean
@@ -19,7 +20,7 @@ export async function createActionRecord(
 				tenantId: (metadata?.tenantId as string) || undefined,
 				adminId: (metadata?.adminId as string) || "unknown",
 				action,
-				details: metadata as any,
+				details: metadata as Prisma.InputJsonValue,
 			},
 		})
 	} catch (error) {

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import prisma from "../lib/db"
 
 export function csvCell(value: string | number) {
@@ -101,53 +102,40 @@ function getPreviousDateRange(timeRange: string): { startDate: Date; endDate: Da
 	return { startDate: previousStartDate, endDate: previousEndDate }
 }
 
-export async function getAnalyticsOverview(tenantId: string, timeRange: string = "7d"): Promise<AnalyticsOverview> {
-	const { startDate, endDate } = getDateRange(timeRange)
+type SettledOrderAggregate = {
+	revenue: number
+	orders: number
+}
 
-	const orders = await prisma.order.findMany({
+async function getSettledOrderAggregate(
+	tenantId: string,
+	startDate: Date,
+	endDate: Date,
+): Promise<SettledOrderAggregate> {
+	const aggregate = await prisma.order.aggregate({
 		where: {
 			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
+			createdAt: { gte: startDate, lte: endDate },
+			status: { not: "CANCELLED" },
 			payments: { some: { status: "COMPLETED" } },
 		},
-		select: {
-			total: true,
-			id: true,
-			items: {
-				where: { tenantId },
-				select: {
-					productId: true,
-				},
-			},
-		},
+		_sum: { total: true },
+		_count: { _all: true },
 	})
 
-	const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
-	const totalOrders = orders.length
+	return {
+		revenue: aggregate._sum.total ?? 0,
+		orders: aggregate._count._all,
+	}
+}
+
+export async function getAnalyticsOverview(tenantId: string, timeRange: string = "7d"): Promise<AnalyticsOverview> {
+	const { startDate, endDate } = getDateRange(timeRange)
+	const aggregate = await getSettledOrderAggregate(tenantId, startDate, endDate)
+	const totalRevenue = aggregate.revenue
+	const totalOrders = aggregate.orders
 	const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
-
-	const completedOrders = await prisma.order.count({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			payments: {
-				some: {
-					status: "COMPLETED",
-				},
-			},
-		},
-	})
-
-	const conversionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0
+	const conversionRate = totalOrders > 0 ? 100 : 0
 
 	return {
 		totalRevenue,
@@ -161,38 +149,20 @@ export async function getGrowthComparison(tenantId: string, timeRange: string = 
 	const { startDate: currentStart, endDate: currentEnd } = getDateRange(timeRange)
 	const { startDate: previousStart, endDate: previousEnd } = getPreviousDateRange(timeRange)
 
-	const [currentOrders, previousOrders] = await Promise.all([
-		prisma.order.findMany({
-			where: {
-				tenantId,
-				createdAt: { gte: currentStart, lte: currentEnd },
-				status: { not: "CANCELLED" },
-				payments: { some: { status: "COMPLETED" } },
-			},
-			select: { total: true, id: true, payments: { select: { status: true } } },
-		}),
-		prisma.order.findMany({
-			where: {
-				tenantId,
-				createdAt: { gte: previousStart, lte: previousEnd },
-				status: { not: "CANCELLED" },
-				payments: { some: { status: "COMPLETED" } },
-			},
-			select: { total: true, id: true, payments: { select: { status: true } } },
-		}),
+	const [current, previous] = await Promise.all([
+		getSettledOrderAggregate(tenantId, currentStart, currentEnd),
+		getSettledOrderAggregate(tenantId, previousStart, previousEnd),
 	])
 
-	const currentRevenue = currentOrders.reduce((sum, order) => sum + order.total, 0)
-	const currentOrderCount = currentOrders.length
+	const currentRevenue = current.revenue
+	const currentOrderCount = current.orders
 	const currentAov = currentOrderCount > 0 ? currentRevenue / currentOrderCount : 0
-	const currentCompleted = currentOrders.filter((o) => o.payments.some((p) => p.status === "COMPLETED")).length
-	const currentConversion = currentOrderCount > 0 ? (currentCompleted / currentOrderCount) * 100 : 0
+	const currentConversion = currentOrderCount > 0 ? 100 : 0
 
-	const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0)
-	const previousOrderCount = previousOrders.length
+	const previousRevenue = previous.revenue
+	const previousOrderCount = previous.orders
 	const previousAov = previousOrderCount > 0 ? previousRevenue / previousOrderCount : 0
-	const previousCompleted = previousOrders.filter((o) => o.payments.some((p) => p.status === "COMPLETED")).length
-	const previousConversion = previousOrderCount > 0 ? (previousCompleted / previousOrderCount) * 100 : 0
+	const previousConversion = previousOrderCount > 0 ? 100 : 0
 
 	const calculateGrowth = (current: number, previous: number): number => {
 		if (previous === 0) return current > 0 ? 100 : 0
@@ -221,289 +191,175 @@ export async function getGrowthComparison(tenantId: string, timeRange: string = 
 
 export async function getSalesData(tenantId: string, timeRange: string = "7d"): Promise<SalesData[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
+	const bucketExpression = timeRange === "7d" || timeRange === "30d"
+		? Prisma.sql`date_trunc('day', o."createdAt")`
+		: Prisma.sql`date_trunc('month', o."createdAt")`
+	const rows = await prisma.$queryRaw<Array<{ bucket: Date; revenue: number; orders: number }>>(Prisma.sql`
+		SELECT ${bucketExpression} AS bucket,
+			COALESCE(SUM(o."total"), 0)::float8 AS revenue,
+			COUNT(*)::int AS orders
+		FROM "Order" o
+		WHERE o."tenantId" = ${tenantId}
+			AND o."createdAt" >= ${startDate}
+			AND o."createdAt" <= ${endDate}
+			AND o."status" <> 'CANCELLED'
+			AND EXISTS (
+				SELECT 1 FROM "Payment" p
+				WHERE p."orderId" = o."id" AND p."status" = 'COMPLETED'
+			)
+		GROUP BY 1
+		ORDER BY 1 ASC
+	`)
 
-	const orders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
-			payments: { some: { status: "COMPLETED" } },
-		},
-		select: {
-			total: true,
-			createdAt: true,
-			id: true,
-		},
-	})
-
-	const periodMap = new Map<string, { period: string; revenue: number; orders: number }>()
-
-	orders.forEach((order) => {
-		const date = new Date(order.createdAt)
-		let key: string
-		let period: string
-
-		if (timeRange === "7d" || timeRange === "30d") {
-			key = date.toISOString().slice(0, 10)
-			period = date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-		} else {
-			key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
-			period = date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
+	return rows.map((row) => {
+		const date = new Date(row.bucket)
+		return {
+			period: timeRange === "7d" || timeRange === "30d"
+				? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+				: date.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+			revenue: Number(row.revenue),
+			orders: Number(row.orders),
 		}
-
-		const existing = periodMap.get(key) || { period, revenue: 0, orders: 0 }
-		periodMap.set(key, {
-			period: existing.period,
-			revenue: existing.revenue + order.total,
-			orders: existing.orders + 1,
-		})
 	})
-
-	return Array.from(periodMap.entries())
-		.sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-		.map(([, data]) => ({
-			period: data.period,
-			revenue: data.revenue,
-			orders: data.orders,
-		}))
 }
 
 export async function getCategorySales(tenantId: string, timeRange: string = "7d"): Promise<CategorySales[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
-
-	const orders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
-			payments: { some: { status: "COMPLETED" } },
-		},
-		include: {
-			items: {
-				where: { tenantId },
-				include: {
-					product: {
-						include: {
-							category: true,
-						},
-					},
-				},
-			},
-		},
+	const rows = await prisma.$queryRaw<Array<{ category: string; sales: number }>>(Prisma.sql`
+		SELECT c."name" AS category,
+			COALESCE(SUM(oi."price" * oi."quantity"), 0)::float8 AS sales
+		FROM "OrderItem" oi
+		JOIN "Order" o ON o."id" = oi."orderId"
+		JOIN "Product" p ON p."id" = oi."productId" AND p."tenantId" = ${tenantId}
+		JOIN "Category" c ON c."id" = p."categoryId"
+		WHERE o."tenantId" = ${tenantId}
+			AND oi."tenantId" = ${tenantId}
+			AND o."createdAt" >= ${startDate}
+			AND o."createdAt" <= ${endDate}
+			AND o."status" <> 'CANCELLED'
+			AND EXISTS (
+				SELECT 1 FROM "Payment" payment
+				WHERE payment."orderId" = o."id" AND payment."status" = 'COMPLETED'
+			)
+		GROUP BY c."name"
+		ORDER BY sales DESC
+	`)
+	const totalSales = rows.reduce((sum, row) => sum + Number(row.sales), 0)
+	return rows.map((row) => {
+		const sales = Number(row.sales)
+		return { category: row.category, sales, percentage: totalSales > 0 ? (sales / totalSales) * 100 : 0 }
 	})
-
-	const categoryMap = new Map<string, number>()
-
-	orders.forEach((order) => {
-		order.items.forEach((item) => {
-			const categoryName = item.product.category.name
-			const existing = categoryMap.get(categoryName) || 0
-			categoryMap.set(categoryName, existing + item.price * item.quantity)
-		})
-	})
-
-	const totalSales = Array.from(categoryMap.values()).reduce((sum, val) => sum + val, 0)
-
-	return Array.from(categoryMap.entries())
-		.map(([category, sales]) => ({
-			category,
-			sales,
-			percentage: totalSales > 0 ? (sales / totalSales) * 100 : 0,
-		}))
-		.sort((a, b) => b.sales - a.sales)
 }
 
 export async function getTopProducts(tenantId: string, timeRange: string = "7d", limit: number = 5): Promise<TopProduct[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
-
-	const orders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
-			payments: { some: { status: "COMPLETED" } },
-		},
-		include: {
-			items: {
-				where: { tenantId },
-				include: {
-					product: {
-						include: {
-							category: true,
-						},
-					},
-				},
-			},
-		},
-	})
-
-	const productMap = new Map<string, { sales: number; revenue: number; product: any }>()
-
-	orders.forEach((order) => {
-		order.items.forEach((item) => {
-			const existing = productMap.get(item.productId) || { sales: 0, revenue: 0, product: item.product }
-			productMap.set(item.productId, {
-				sales: existing.sales + item.quantity,
-				revenue: existing.revenue + item.price * item.quantity,
-				product: item.product,
-			})
-		})
-	})
-
-	// Calculate growth by comparing to previous period
 	const { startDate: previousStart, endDate: previousEnd } = getPreviousDateRange(timeRange)
-	const previousOrders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: { gte: previousStart, lte: previousEnd },
-			status: { not: "CANCELLED" },
-			payments: { some: { status: "COMPLETED" } },
-		},
-		include: {
-			items: {
-				where: { tenantId },
-				include: {
-					product: true,
-				},
-			},
-		},
+	const safeLimit = Math.max(0, Math.min(Math.floor(limit), 100))
+	const [currentRows, previousRows] = await Promise.all([
+		prisma.$queryRaw<Array<{ id: string; slug: string; name: string; category: string; sales: number; revenue: number; image: string | null }>>(Prisma.sql`
+			SELECT p."id", p."slug", p."name", c."name" AS category,
+				COALESCE(SUM(oi."quantity"), 0)::int AS sales,
+				COALESCE(SUM(oi."price" * oi."quantity"), 0)::float8 AS revenue,
+				p."images"[1] AS image
+			FROM "OrderItem" oi
+			JOIN "Order" o ON o."id" = oi."orderId"
+			JOIN "Product" p ON p."id" = oi."productId" AND p."tenantId" = ${tenantId}
+			JOIN "Category" c ON c."id" = p."categoryId"
+			WHERE o."tenantId" = ${tenantId}
+				AND oi."tenantId" = ${tenantId}
+				AND o."createdAt" >= ${startDate}
+				AND o."createdAt" <= ${endDate}
+				AND o."status" <> 'CANCELLED'
+				AND EXISTS (
+					SELECT 1 FROM "Payment" payment
+					WHERE payment."orderId" = o."id" AND payment."status" = 'COMPLETED'
+				)
+			GROUP BY p."id", p."slug", p."name", c."name", p."images"
+			ORDER BY revenue DESC
+			LIMIT ${safeLimit}
+		`),
+		prisma.$queryRaw<Array<{ id: string; revenue: number }>>(Prisma.sql`
+			SELECT oi."productId" AS id,
+				COALESCE(SUM(oi."price" * oi."quantity"), 0)::float8 AS revenue
+			FROM "OrderItem" oi
+			JOIN "Order" o ON o."id" = oi."orderId"
+			JOIN "Product" p ON p."id" = oi."productId" AND p."tenantId" = ${tenantId}
+			WHERE o."tenantId" = ${tenantId}
+				AND oi."tenantId" = ${tenantId}
+				AND o."createdAt" >= ${previousStart}
+				AND o."createdAt" <= ${previousEnd}
+				AND o."status" <> 'CANCELLED'
+				AND EXISTS (
+					SELECT 1 FROM "Payment" payment
+					WHERE payment."orderId" = o."id" AND payment."status" = 'COMPLETED'
+				)
+			GROUP BY oi."productId"
+			`),
+	])
+
+	const previousRevenueByProduct = new Map(previousRows.map((row) => [row.id, Number(row.revenue)]))
+	return currentRows.map((row) => {
+		const revenue = Number(row.revenue)
+		const previousRevenue = previousRevenueByProduct.get(row.id) || 0
+		const growth = previousRevenue > 0 ? ((revenue - previousRevenue) / previousRevenue) * 100 : revenue > 0 ? 100 : 0
+		return {
+			id: row.id,
+			slug: row.slug,
+			name: row.name,
+			category: row.category,
+			sales: Number(row.sales),
+			revenue,
+			image: row.image || "/placeholder-product.jpg",
+			growth: Math.round(growth),
+		}
 	})
-
-	const previousProductMap = new Map<string, { revenue: number }>()
-	previousOrders.forEach((order) => {
-		order.items.forEach((item) => {
-			const existing = previousProductMap.get(item.productId) || { revenue: 0 }
-			previousProductMap.set(item.productId, {
-				revenue: existing.revenue + item.price * item.quantity,
-			})
-		})
-	})
-
-	return Array.from(productMap.values())
-		.map((data) => {
-			const previousRevenue = previousProductMap.get(data.product.id)?.revenue || 0
-			const currentRevenue = data.revenue
-			const growth = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : currentRevenue > 0 ? 100 : 0
-
-			return {
-				id: data.product.id,
-				slug: data.product.slug,
-				name: data.product.name,
-				category: data.product.category.name,
-				sales: data.sales,
-				revenue: data.revenue,
-				image: data.product.images[0] || "/placeholder-product.jpg",
-				growth: Math.round(growth),
-			}
-		})
-		.sort((a, b) => b.revenue - a.revenue)
-		.slice(0, limit)
 }
 
 export async function getRegionSales(tenantId: string, timeRange: string = "7d"): Promise<RegionSales[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
-
-	const orders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
-			payments: { some: { status: "COMPLETED" } },
-		},
-		select: {
-			total: true,
-			shippingAddress: true,
-			id: true,
-		},
-	})
-
-	const regionMap = new Map<string, { sales: number; orders: number }>()
-
-	orders.forEach((order) => {
-		const shippingAddress = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress) ? order.shippingAddress as Record<string, unknown> : {}
-		const county = typeof shippingAddress.county === "string" && shippingAddress.county.trim() ? shippingAddress.county.trim() : "Other"
-		const existing = regionMap.get(county) || { sales: 0, orders: 0 }
-		regionMap.set(county, {
-			sales: existing.sales + order.total,
-			orders: existing.orders + 1,
-		})
-	})
-
-	return Array.from(regionMap.entries())
-		.map(([region, data]) => ({
-			region,
-			sales: data.sales,
-			orders: data.orders,
-		}))
-		.sort((a, b) => b.sales - a.sales)
+	const rows = await prisma.$queryRaw<Array<{ region: string; sales: number; orders: number }>>(Prisma.sql`
+		SELECT COALESCE(NULLIF(BTRIM(o."shippingAddress" ->> 'county'), ''), 'Other') AS region,
+			COALESCE(SUM(o."total"), 0)::float8 AS sales,
+			COUNT(*)::int AS orders
+		FROM "Order" o
+		WHERE o."tenantId" = ${tenantId}
+			AND o."createdAt" >= ${startDate}
+			AND o."createdAt" <= ${endDate}
+			AND o."status" <> 'CANCELLED'
+			AND EXISTS (
+				SELECT 1 FROM "Payment" p
+				WHERE p."orderId" = o."id" AND p."status" = 'COMPLETED'
+			)
+		GROUP BY 1
+		ORDER BY sales DESC
+	`)
+	return rows.map((row) => ({ region: row.region, sales: Number(row.sales), orders: Number(row.orders) }))
 }
 
 export async function getPaymentMethodStats(tenantId: string, timeRange: string = "7d"): Promise<PaymentMethodStats[]> {
 	const { startDate, endDate } = getDateRange(timeRange)
-
-	const orders = await prisma.order.findMany({
-		where: {
-			tenantId,
-			createdAt: {
-				gte: startDate,
-				lte: endDate,
-			},
-			status: {
-				not: "CANCELLED",
-			},
-			payments: { some: { status: "COMPLETED" } },
-			paymentMethod: {
-				not: null,
-			},
-		},
-		select: {
-			total: true,
-			paymentMethod: true,
-			id: true,
-		},
+	const rows = await prisma.$queryRaw<Array<{ method: string; amount: number; orders: number }>>(Prisma.sql`
+		SELECT COALESCE(o."paymentMethod", 'Unknown') AS method,
+			COALESCE(SUM(o."total"), 0)::float8 AS amount,
+			COUNT(*)::int AS orders
+		FROM "Order" o
+		WHERE o."tenantId" = ${tenantId}
+			AND o."createdAt" >= ${startDate}
+			AND o."createdAt" <= ${endDate}
+			AND o."status" <> 'CANCELLED'
+			AND o."paymentMethod" IS NOT NULL
+			AND EXISTS (
+				SELECT 1 FROM "Payment" p
+				WHERE p."orderId" = o."id" AND p."status" = 'COMPLETED'
+			)
+		GROUP BY 1
+		ORDER BY amount DESC
+	`)
+	const totalAmount = rows.reduce((sum, row) => sum + Number(row.amount), 0)
+	return rows.map((row) => {
+		const amount = Number(row.amount)
+		return { method: row.method, percentage: totalAmount > 0 ? (amount / totalAmount) * 100 : 0, amount, orders: Number(row.orders) }
 	})
-
-	const methodMap = new Map<string, { amount: number; orders: number }>()
-
-	orders.forEach((order) => {
-		const method = order.paymentMethod || "Unknown"
-		const existing = methodMap.get(method) || { amount: 0, orders: 0 }
-		methodMap.set(method, {
-			amount: existing.amount + order.total,
-			orders: existing.orders + 1,
-		})
-	})
-
-	const totalAmount = Array.from(methodMap.values()).reduce((sum, val) => sum + val.amount, 0)
-
-	return Array.from(methodMap.entries())
-		.map(([method, data]) => ({
-			method,
-			percentage: totalAmount > 0 ? (data.amount / totalAmount) * 100 : 0,
-			amount: data.amount,
-			orders: data.orders,
-		}))
-		.sort((a, b) => b.amount - a.amount)
 }
 
 export async function getAnalyticsExport(tenantId: string, timeRange: string = "7d", format: "csv" | "json" = "csv") {

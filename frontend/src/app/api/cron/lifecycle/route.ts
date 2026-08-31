@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 		const lifecycle = await runSubscriptionLifecycleSweep(startedAt)
 		const retention = await runTenantRetentionSweep(startedAt)
 		return NextResponse.json({ ok: true, worker: "lifecycle", ranAt: startedAt.toISOString(), lifecycle, retention })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Vercel lifecycle cron failed", error)
 		return NextResponse.json({ ok: false, worker: "lifecycle", message: "Lifecycle processing failed" }, { status: 500 })
 	} finally {

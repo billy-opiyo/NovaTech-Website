@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { Prisma } from "@prisma/client"
 
 const planSchema = z.object({ action: z.literal("plan"), key: z.string().regex(/^[A-Z0-9_-]+$/), name: z.string().min(2).max(80), price: z.number().int().nonnegative().nullable(), currency: z.string().length(3).default("KES"), billingInterval: z.enum(["MONTH", "YEAR"]).nullable(), setupFeeAmount: z.number().int().nonnegative().default(0), transactionFeePercent: z.number().min(0).max(100).default(0), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true), entitlementsJson: z.record(z.unknown()).optional() })
 const addonSchema = z.object({ action: z.literal("addon"), key: z.string().regex(/^[a-z0-9_-]+$/), name: z.string().min(2).max(80), description: z.string().max(500).nullable().optional(), price: z.number().int().positive(), currency: z.string().length(3).default("KES"), billingInterval: z.enum(["MONTH", "YEAR"]).default("MONTH"), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true) })
@@ -45,12 +46,13 @@ export async function POST(request: NextRequest) {
 		const parsed = actionSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid platform billing action", issues: parsed.error.flatten() }, { status: 400 })
 		if (parsed.data.action === "plan") {
-			const plan = await prisma.plan.upsert({ where: { key: parsed.data.key }, update: { name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson: parsed.data.entitlementsJson as any }, create: { key: parsed.data.key, name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson: parsed.data.entitlementsJson as any } })
+			const entitlementsJson = parsed.data.entitlementsJson === undefined ? undefined : parsed.data.entitlementsJson as Prisma.InputJsonValue
+			const plan = await prisma.plan.upsert({ where: { key: parsed.data.key }, update: { name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson }, create: { key: parsed.data.key, name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson } })
 			return NextResponse.json({ plan }, { status: 201 })
 		}
 		const addon = await prisma.addon.upsert({ where: { key: parsed.data.key }, update: { name: parsed.data.name, description: parsed.data.description, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active }, create: { key: parsed.data.key, name: parsed.data.name, description: parsed.data.description, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active } })
 		return NextResponse.json({ addon }, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Platform billing mutation failed", error)
 		return apiErrorResponse(error, "Unable to save billing configuration")
 	}

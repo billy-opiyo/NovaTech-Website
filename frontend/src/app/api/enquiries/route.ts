@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 			select: { id: true, status: true, estimatedTotal: true, createdAt: true },
 		})
 		return NextResponse.json({ enquiry }, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to save this enquiry right now.")
 	}
 }

@@ -11,6 +11,11 @@ import { getLaunchReadiness } from "backend/lib/launch-readiness"
 import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
+function jsonSetting(value: Prisma.JsonValue | undefined): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+	if (value === undefined) return undefined
+	return value === null ? Prisma.JsonNull : value as Prisma.InputJsonValue
+}
+
 export async function POST(request: Request) {
 	const requestId = getRequestId(request)
 	try {
@@ -27,12 +32,12 @@ export async function POST(request: Request) {
 		const currentAcceptance = await getCurrentMerchantLegalAcceptance(context.tenantId, "SELLING")
 		if (!currentAcceptance && body.acceptLegalTerms !== true) return NextResponse.json({ message: "Confirm the current merchant terms, privacy notice, and merchant responsibilities before publishing.", code: "MERCHANT_LEGAL_ACCEPTANCE_REQUIRED" }, { status: 409 })
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })
-		const draft = store.draftSettings as Record<string, any>
+		const draft = store.draftSettings as Prisma.JsonObject
 		const latest = await prisma.storeSettingsVersion.findFirst({ where: { storeId: store.id, tenantId: store.tenantId }, orderBy: { version: "desc" }, select: { version: true } })
 		const nextVersion = (latest?.version || 0) + 1
 		const updated = await prisma.$transaction(async (transaction) => {
 			if (!currentAcceptance) await recordMerchantLegalAcceptance({ tenantId: context.tenantId, acceptedById: session.user.id, context: "SELLING", transaction })
-			const result = await transaction.store.update({ where: { id: store.id }, data: { name: typeof draft.name === "string" ? draft.name : undefined, themeSettings: draft.themePreset ? { preset: draft.themePreset } : undefined, seoSettings: draft.seo, contactSettings: draft.contact, homepageSettings: draft.homepage, commerceSettings: draft.commerce, draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
+			const result = await transaction.store.update({ where: { id: store.id }, data: { name: typeof draft.name === "string" ? draft.name : undefined, themeSettings: draft.themePreset ? { preset: draft.themePreset } : undefined, seoSettings: jsonSetting(draft.seo), contactSettings: jsonSetting(draft.contact), homepageSettings: jsonSetting(draft.homepage), commerceSettings: jsonSetting(draft.commerce), draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
 			await transaction.storeSettingsVersion.create({ data: { tenantId: store.tenantId, storeId: store.id, version: nextVersion, settings: draft, publishedAt: new Date(), publishedBy: session.user.id } })
 			return result
 		})

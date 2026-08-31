@@ -1,5 +1,5 @@
 import prisma from "../../lib/db"
-import { sendOrderConfirmationEmail } from "../../lib/email"
+import { sendOrderConfirmationEmail, shippingAddressEmail } from "../../lib/email"
 import { getStripeClient, isStripeConfigured } from "../../lib/stripeClient"
 import type { CardIntentResult, CardVerifyResult } from "../../types/payments"
 import { cancelPendingOrder } from "../../services/order.service"
@@ -215,7 +215,7 @@ export async function verifyCardPayment(
 								select: { email: true },
 							})
 						)?.email
-					: (updatedOrder.shippingAddress as any)?.email
+					: shippingAddressEmail(updatedOrder.shippingAddress)
 
 				if (email) {
 					await sendOrderConfirmationEmail(email, updatedOrder)

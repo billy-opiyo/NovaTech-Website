@@ -19,6 +19,14 @@ interface SearchSuggestion {
 	price?: number
 }
 
+interface ProductSearchResult {
+	name: string
+	slug: string
+	images?: string[]
+	discountedPrice?: number | null
+	price: number
+}
+
 const popularSearches = [
 	"iPhone 15",
 	"MacBook",
@@ -90,8 +98,8 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 					cache: "no-store",
 				})
 				if (!response.ok) throw new Error("Search failed")
-				const data = await response.json()
-				const products: SearchSuggestion[] = (data.products || []).map((product: any) => ({
+				const data: { products?: ProductSearchResult[] } = await response.json()
+				const products: SearchSuggestion[] = (data.products || []).map((product) => ({
 					type: "product",
 					text: product.name,
 					href: `/products/${product.slug}`,

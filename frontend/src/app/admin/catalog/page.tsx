@@ -19,7 +19,7 @@ export default function CatalogToolsPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Catalog import failed")
 			setResult(data); setMessage(mode === "preview" ? "Preview ready. Review errors before committing." : "Import completed. Valid rows were processed; failed rows were left unchanged.")
-		} catch (error: any) { setMessage(error.message || "Catalog import failed") } finally { setBusy(false) }
+		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Catalog import failed") } finally { setBusy(false) }
 	}
 
 	function downloadTemplate() {

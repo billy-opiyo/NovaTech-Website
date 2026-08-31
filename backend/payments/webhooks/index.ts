@@ -1,6 +1,6 @@
 import prisma from "../../lib/db"
 import Stripe from "stripe"
-import { sendOrderConfirmationEmail } from "../../lib/email"
+import { sendOrderConfirmationEmail, shippingAddressEmail } from "../../lib/email"
 import { getStripeClient, getStripeWebhookSecret } from "../../lib/stripeClient"
 import { isMpesaConfigured, stkQuery } from "../../lib/daraja"
 import type { Prisma } from "@prisma/client"
@@ -102,8 +102,9 @@ export async function handleStripeEvent(
 			try {
 				const created = await prisma.webhookReceipt.create({ data: { provider: "stripe", eventId, status: "PROCESSING", attempts: 1 } })
 				receiptId = created.id
-			} catch (error: any) {
-				if (error?.code !== "P2002") throw error
+			} catch (error: unknown) {
+				const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+				if (code !== "P2002") throw error
 				const concurrent = await prisma.webhookReceipt.findUnique({ where: { provider_eventId: { provider: "stripe", eventId } } })
 				if (concurrent?.status === "PROCESSED" || concurrent?.status === "PROCESSING") return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Duplicate Stripe event acknowledged." }
 				if (!concurrent) throw error
@@ -383,7 +384,7 @@ async function updatePaymentByProviderReference(
 								select: { email: true },
 							})
 						)?.email
-					: (updatedOrder.shippingAddress as any)?.email
+					: shippingAddressEmail(updatedOrder.shippingAddress)
 
 				if (email) {
 					await sendOrderConfirmationEmail(email, updatedOrder)
@@ -422,8 +423,8 @@ export function verifyStripeWebhookSignature(
 		const stripe = getStripeClient()
 		const event = stripe.webhooks.constructEvent(rawBody, signature, secret)
 		return { ok: true, event }
-	} catch (error: any) {
-		return { ok: false, error: error.message }
+	} catch (error: unknown) {
+		return { ok: false, error: error instanceof Error ? error.message : "Invalid Stripe webhook" }
 	}
 }
 

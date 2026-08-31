@@ -66,8 +66,8 @@ export default function SignUpPage() {
 			const verifyUrl = new URLSearchParams({ email: formData.email.trim().toLowerCase() })
 			if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) verifyUrl.set("callbackUrl", callbackUrl)
 			router.push(`/auth/verify-email?${verifyUrl.toString()}`)
-		} catch (err: any) {
-			setError(err.message || "Something went wrong")
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Something went wrong")
 		} finally {
 			setIsLoading(false)
 		}

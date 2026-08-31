@@ -14,7 +14,7 @@ export async function getProducts(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		const result = await productService.getFilteredProducts(searchParams, context.tenantId)
 		return NextResponse.json(result)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Products unavailable")
 	}
 }
@@ -30,7 +30,7 @@ export async function getProductBySlug(req: NextRequest, slug: string) {
 			)
 		}
 		return NextResponse.json(product)
-	} catch (error: any) {
+	} catch (error: unknown) {
 			return apiErrorResponse(error, "Product unavailable")
 	}
 }
@@ -48,7 +48,7 @@ export async function createProduct(req: NextRequest) {
 		const validated = productSchema.parse(body)
 		const product = await productService.createProduct(validated, context.tenantId)
 		return NextResponse.json(product, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to create product")
 	}
 }
@@ -60,7 +60,7 @@ export async function searchProducts(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		const results = await productService.searchProducts(query, context.tenantId)
 		return NextResponse.json(results)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Product search unavailable")
 	}
 }
@@ -76,7 +76,7 @@ export async function updateProduct(req: NextRequest, slug: string) {
 		const product = await productService.updateProduct(slug, validated, context.tenantId)
 		await createActionRecord("UPDATED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json(product)
-	} catch (error: any) { return apiErrorResponse(error, "Unable to update product") }
+	} catch (error: unknown) { return apiErrorResponse(error, "Unable to update product") }
 }
 
 export async function deleteProduct(req: NextRequest, slug: string) {
@@ -88,5 +88,5 @@ export async function deleteProduct(req: NextRequest, slug: string) {
 		const product = await productService.deleteProduct(slug, context.tenantId)
 		await createActionRecord("DELETED_PRODUCT", { adminId: session.user.id, tenantId: context.tenantId, productId: product.id })
 		return NextResponse.json({ ok: true })
-	} catch (error: any) { return apiErrorResponse(error, "Unable to delete product") }
+	} catch (error: unknown) { return apiErrorResponse(error, "Unable to delete product") }
 }

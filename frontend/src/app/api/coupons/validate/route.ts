@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 			code: coupon.code,
 			message: `Coupon applied! You save KES ${discount.toLocaleString()}`,
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to validate coupon")
 	}
 }

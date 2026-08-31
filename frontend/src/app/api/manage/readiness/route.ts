@@ -15,8 +15,9 @@ export async function GET(request: NextRequest) {
 		await requireStorePermission(session.user.id, context.tenantId, "VIEW_WORKSPACE")
 		const readiness = await getLaunchReadiness(context.tenantId, context.storeId)
 		return withRequestId(NextResponse.json(readiness), requestId)
-	} catch (error: any) {
-		logEvent("error", "merchant_readiness_failed", { requestId, route: "/api/manage/readiness" }, { code: error?.code, message: error?.message })
+	} catch (error: unknown) {
+		const details = error && typeof error === "object" ? error as { code?: unknown; message?: unknown } : {}
+		logEvent("error", "merchant_readiness_failed", { requestId, route: "/api/manage/readiness" }, { code: details.code, message: details.message })
 		return withRequestId(apiErrorResponse(error, "Launch readiness unavailable"), requestId)
 	}
 }

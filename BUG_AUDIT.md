@@ -329,9 +329,9 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-025 | Verified | Verification codes are HMAC-hashed and checked timing-safely; delivery recovery is tracked separately as BUG-032. |
 | BUG-026 | Verified | Managed Playwright server lifecycle, warm navigation timeout, and smoke run pass. |
 | BUG-027 | Verified | Root lint/type-check scripts and actual Next ESLint configuration exist; lint passes with 150 warnings. |
-| BUG-028 | Pending | Broad `any` usage remains as lint warnings. |
+| BUG-028 | Verified | Payment/provider/API boundaries now use narrow interfaces, `unknown` guards, Prisma input types, and typed UI/API response contracts; compiler and lint pass with no errors. A small legacy presentation-only admin state backlog still emits explicit lint warnings and is non-blocking. |
 | BUG-029 | Verified | Repository-visible support confirmation copy now uses Nurava Tech. |
-| BUG-030 | Pending | Broad report/list result sets remain. |
+| BUG-030 | Verified | Analytics overview, growth, sales periods, categories, top products, regions, payment methods, and customer reporting now use tenant-scoped database aggregation; top-product output is bounded to 100 rows. |
 | BUG-031 | Verified | Updated direct-merchant assertion; Playwright smoke passes. |
 | BUG-032 | Verified | VerificationToken now records delivery status, attempts, deliveredAt, and bounded delivery errors for register/resend recovery. A full external outbox remains a future scale enhancement. |
 
@@ -435,3 +435,18 @@ This register is the authoritative current status for the findings above. “Ver
 | `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed with exit code 0. |
 | `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped; expected provider/local-DB fallback logs only. |
 | `git diff --check` | PASS | No whitespace errors; only normal Windows line-ending warnings. |
+
+## Recursive audit cycles 5 and 6 — 2026-08-31
+
+- Re-scanned analytics, reporting, billing/provider, API, authentication, upload, tenant, and frontend data-boundary paths after BUG-028 and BUG-030 repairs.
+- Repeated the repository-wide source scan and checked the final diff against both repaired finding descriptions and their consumers.
+- No new source findings were discovered. BUG-028 and BUG-030 are verified; the two consecutive post-repair audits are complete.
+
+### Final regression rerun after cycles 5 and 6 — 2026-08-31
+
+| Check | Result | Evidence |
+|---|---|---|
+| `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed with exit code 0. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors and 79 warnings; remaining warnings are legacy UI hook/unused-symbol warnings and presentation-only admin typing debt. |
+| `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped. |
+| `npm run build` | PASS WITH WARNINGS | Next.js production build completed and generated 137 routes; unavailable Neon and dependency deprecation warnings remain. |

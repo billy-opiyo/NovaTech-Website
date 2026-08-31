@@ -37,7 +37,7 @@ export default function CheckoutPage() {
 			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
 			if (contactMethod === "WHATSAPP") window.open(whatsappHref, "_blank", "noopener,noreferrer")
 			else window.location.href = emailHref
-		} catch (reason: any) { setError(reason.message || "Unable to save enquiry") } finally { setBusy(false) }
+		} catch (reason: unknown) { setError(reason instanceof Error ? reason.message : "Unable to save enquiry") } finally { setBusy(false) }
 	}
 
 	return (

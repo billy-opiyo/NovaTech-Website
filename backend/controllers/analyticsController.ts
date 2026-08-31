@@ -55,7 +55,7 @@ export async function getAnalytics(req: NextRequest) {
 			analyticsLevel: access.advancedAvailable ? "advanced" : "basic",
 			advancedAvailable: access.advancedAvailable,
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Analytics API error:", error)
 		return apiErrorResponse(error, "Failed to fetch analytics data")
 	}
@@ -83,7 +83,7 @@ export async function exportAnalytics(req: NextRequest) {
 				"Content-Disposition": `attachment; filename="analytics-${timeRange}.csv"`,
 			},
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Analytics export unavailable")
 	}
 }

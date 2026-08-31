@@ -52,6 +52,20 @@ interface TopProduct {
 	growth: number
 }
 
+interface RegionSales { region: string; sales: number; orders: number }
+interface PaymentMethodStats { method: string; percentage: number; amount: number; orders: number }
+interface GrowthData { revenueGrowth: number; ordersGrowth: number; aovGrowth: number; conversionGrowth: number }
+interface AnalyticsResponse {
+	overview: { totalRevenue: number; totalOrders: number; averageOrderValue: number; conversionRate: number }
+	growth?: GrowthData
+	salesData: SalesData[]
+	categorySales: Array<Omit<CategorySales, "color">>
+	topProducts: TopProduct[]
+	regionSales: RegionSales[]
+	paymentMethods: PaymentMethodStats[]
+	advancedAvailable?: boolean
+}
+
 const categoryColors: Record<string, string> = {
 	Phones: "bg-blue-500",
 	Laptops: "bg-green-500",
@@ -70,9 +84,9 @@ export default function AdminAnalyticsPage() {
 	const [salesData, setSalesData] = useState<SalesData[]>([])
 	const [categorySales, setCategorySales] = useState<CategorySales[]>([])
 	const [topProducts, setTopProducts] = useState<TopProduct[]>([])
-	const [regionData, setRegionData] = useState<any[]>([])
-	const [paymentMethods, setPaymentMethods] = useState<any[]>([])
-	const [growthData, setGrowthData] = useState<any>(null)
+	const [regionData, setRegionData] = useState<RegionSales[]>([])
+	const [paymentMethods, setPaymentMethods] = useState<PaymentMethodStats[]>([])
+	const [growthData, setGrowthData] = useState<GrowthData | null>(null)
 	const [advancedAvailable, setAdvancedAvailable] = useState(true)
 
 	useEffect(() => {
@@ -89,7 +103,7 @@ export default function AdminAnalyticsPage() {
 				throw new Error("Failed to fetch analytics data")
 			}
 
-			const data = await response.json()
+			const data: AnalyticsResponse = await response.json()
 			setAdvancedAvailable(data.advancedAvailable !== false)
 
 			// Store growth data
@@ -147,7 +161,7 @@ export default function AdminAnalyticsPage() {
 
 			// Transform category sales
 			setCategorySales(
-				data.categorySales.map((cat: any) => ({
+				data.categorySales.map((cat) => ({
 					...cat,
 					color: categoryColors[cat.category] || "bg-gray-500",
 				})),
@@ -161,8 +175,8 @@ export default function AdminAnalyticsPage() {
 
 			// Transform payment methods
 			setPaymentMethods(data.paymentMethods)
-		} catch (err: any) {
-			setError(err.message)
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Unable to load analytics")
 			console.error("Error fetching analytics:", err)
 		} finally {
 			setLoading(false)
@@ -199,7 +213,7 @@ export default function AdminAnalyticsPage() {
 				document.body.removeChild(a)
 				URL.revokeObjectURL(url)
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Error exporting analytics:", err)
 			addToast("Failed to export analytics data", "error")
 		}

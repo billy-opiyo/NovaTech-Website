@@ -43,9 +43,10 @@ export async function POST(request: Request) {
 			return { tenantId: tenant.id, storeId: store.id, slug: store.slug }
 		})
 		return NextResponse.json(result, { status: 201 })
-	} catch (error: any) {
-		if (error?.code === "P2002") return NextResponse.json({ message: "That store slug is already in use" }, { status: 409 })
-		if (error?.code === "PLAN_NOT_FOUND") return NextResponse.json({ message: "The selected plan is unavailable" }, { status: 409 })
+	} catch (error: unknown) {
+		const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+		if (code === "P2002") return NextResponse.json({ message: "That store slug is already in use" }, { status: 409 })
+		if (code === "PLAN_NOT_FOUND") return NextResponse.json({ message: "The selected plan is unavailable" }, { status: 409 })
 		console.error("Store onboarding failed", error)
 		return NextResponse.json({ message: "Unable to create the store" }, { status: 503 })
 	}

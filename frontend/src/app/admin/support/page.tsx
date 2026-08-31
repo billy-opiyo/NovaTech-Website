@@ -97,7 +97,7 @@ export default function AdminSupportPage() {
 
 			const data = await response.json()
 			setTickets(
-				data.tickets.map((t: any) => ({
+				data.tickets.map((t: SupportTicket) => ({
 					...t,
 					createdAt: t.createdAt,
 					updatedAt: t.updatedAt,

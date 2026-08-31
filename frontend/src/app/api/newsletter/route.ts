@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 			{ message: "You are subscribed. You can unsubscribe at any time." },
 			{ status: 201 },
 		)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Invalid email", errors: error.errors },

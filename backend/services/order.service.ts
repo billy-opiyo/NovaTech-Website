@@ -343,7 +343,10 @@ export async function updateOrderStatus(
 		})
 	}
 
-	const shippingPhone = (order.shippingAddress as any)?.phone
+	const shippingAddress = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress)
+		? order.shippingAddress as { phone?: unknown }
+		: {}
+	const shippingPhone = typeof shippingAddress.phone === "string" ? shippingAddress.phone : undefined
 
 	// Send SMS notification if phone number exists
 	if (shippingPhone && order.user?.orderUpdates !== false) {
