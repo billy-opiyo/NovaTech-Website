@@ -1,5 +1,6 @@
 import { Resend } from "resend"
 import { PLATFORM_BRAND_NAME, PLATFORM_HELLO_EMAIL } from "./brand"
+import { escapeHtml } from "./html"
 
 const resend = process.env.RESEND_API_KEY
 	? new Resend(process.env.RESEND_API_KEY)
@@ -36,7 +37,7 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
 	const html = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
       <div style="background: linear-gradient(135deg, #0070f3, #f97316); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-<h1 style="color: white; margin: 0;">${PLATFORM_BRAND_NAME}</h1>
+<h1 style="color: white; margin: 0;">${escapeHtml(PLATFORM_BRAND_NAME)}</h1>
         <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Order Confirmation</p>
       </div>
       <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px;">
@@ -49,7 +50,7 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
 						.map(
 							(item: any) => `
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-              <span>${item.product.name} x${item.quantity}</span>
+							<span>${escapeHtml(item.product?.name || "Product")} x${escapeHtml(item.quantity)}</span>
               <span style="font-weight: 600;">KES ${(item.price * item.quantity).toLocaleString()}</span>
             </div>
           `,
@@ -63,10 +64,10 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
 
         <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #1f2937; margin-top: 0;">Delivery Address</h3>
-          <p style="color: #6b7280; margin: 4px 0;">${order.shippingAddress.fullName}</p>
-          <p style="color: #6b7280; margin: 4px 0;">${order.shippingAddress.phone}</p>
-          <p style="color: #6b7280; margin: 4px 0;">${order.shippingAddress.address}, ${order.shippingAddress.town}</p>
-          <p style="color: #6b7280; margin: 4px 0;">${order.shippingAddress.county}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.fullName)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.phone)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.address)}, ${escapeHtml(order.shippingAddress.town)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.county)}</p>
         </div>
 
         <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}" 

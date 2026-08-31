@@ -8,6 +8,7 @@ import { merchantQuoteSchema } from "backend/validators/merchantEnquiryValidator
 import { createActionRecord } from "backend/actions"
 import { sendEmail } from "backend/lib/email"
 import { randomBytes } from "node:crypto"
+import { escapeHtml } from "backend/lib/html"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			await transaction.merchantEnquiry.update({ where: { id: enquiry.id }, data: { status: "QUOTED", quotedAt: new Date() } })
 			return created
 		})
-		await sendEmail({ to: enquiry.customerEmail, subject: `Quote ${quote.quoteNumber} from your merchant`, html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Merchant quote</h1><p>Hi ${enquiry.customerName},</p><p>Your quote reference is <strong>${quote.quoteNumber}</strong>.</p><p>Subtotal: ${quote.currency} ${subtotal.toLocaleString()}<br>Delivery: ${quote.currency} ${deliveryFee.toLocaleString()}<br><strong>Total: ${quote.currency} ${quote.total.toLocaleString()}</strong></p>${quote.terms ? `<p>${quote.terms}</p>` : ""}<p>Please reply to the merchant directly to accept or discuss this quote.</p></div>`}).catch((error) => console.error("Quote email could not be sent:", error))
+		await sendEmail({ to: enquiry.customerEmail, subject: `Quote ${quote.quoteNumber} from your merchant`, html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Merchant quote</h1><p>Hi ${escapeHtml(enquiry.customerName)},</p><p>Your quote reference is <strong>${escapeHtml(quote.quoteNumber)}</strong>.</p><p>Subtotal: ${escapeHtml(quote.currency)} ${subtotal.toLocaleString()}<br>Delivery: ${escapeHtml(quote.currency)} ${deliveryFee.toLocaleString()}<br><strong>Total: ${escapeHtml(quote.currency)} ${quote.total.toLocaleString()}</strong></p>${quote.terms ? `<p>${escapeHtml(quote.terms)}</p>` : ""}<p>Please reply to the merchant directly to accept or discuss this quote.</p></div>`}).catch((error) => console.error("Quote email could not be sent:", error))
 		await createActionRecord("CREATED_MERCHANT_QUOTE", { tenantId: context.tenantId, adminId: session.user.id, enquiryId: enquiry.id, quoteId: quote.id, quoteNumber }).catch(() => undefined)
 		return NextResponse.json({ quote }, { status: 201 })
 	} catch (error: any) { return NextResponse.json({ message: error.message || "Unable to create quote" }, { status: error.status || 503 }) }

@@ -8,6 +8,7 @@ import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { parsePagination } from "../lib/pagination"
+import { escapeHtml, safeEmailSubject } from "../lib/html"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -147,15 +148,15 @@ export async function submitContact(req: NextRequest) {
 
 		await sendEmail({
 			to: PLATFORM_SUPPORT_EMAIL,
-			subject: `New Support Ticket: ${validated.subject}`,
+			subject: safeEmailSubject(`New Support Ticket: ${validated.subject}`),
 			html: `
 				<h2>New Support Request</h2>
-				<p><strong>Name:</strong> ${validated.name}</p>
-				<p><strong>Email:</strong> ${validated.email}</p>
-				<p><strong>Phone:</strong> ${validated.phone || "N/A"}</p>
-				<p><strong>Order:</strong> ${validated.orderNumber || "N/A"}</p>
-				<p><strong>Subject:</strong> ${validated.subject}</p>
-				<p><strong>Message:</strong> ${validated.message}</p>
+				<p><strong>Name:</strong> ${escapeHtml(validated.name)}</p>
+				<p><strong>Email:</strong> ${escapeHtml(validated.email)}</p>
+				<p><strong>Phone:</strong> ${escapeHtml(validated.phone || "N/A")}</p>
+				<p><strong>Order:</strong> ${escapeHtml(validated.orderNumber || "N/A")}</p>
+				<p><strong>Subject:</strong> ${escapeHtml(validated.subject)}</p>
+				<p><strong>Message:</strong> ${escapeHtml(validated.message)}</p>
 			`,
 		})
 

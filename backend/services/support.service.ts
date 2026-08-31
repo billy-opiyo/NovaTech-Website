@@ -3,6 +3,7 @@ import { sendEmail } from "../lib/email"
 import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { normalizePagination } from "../lib/pagination"
+import { escapeHtml, safeEmailSubject } from "../lib/html"
 
 const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
 
@@ -82,6 +83,7 @@ export async function getTicketById(id: string, tenantId: string) {
 		where: { id, tenantId },
 		include: {
 			replies: {
+				where: { tenantId },
 				orderBy: { createdAt: "asc" },
 			},
 		},
@@ -110,7 +112,7 @@ export async function createTicket(data: SupportTicketData) {
 			status: TicketStatus.OPEN,
 		},
 		include: {
-			replies: true,
+		replies: { where: { tenantId: data.tenantId } },
 		},
 	})
 
@@ -118,18 +120,18 @@ export async function createTicket(data: SupportTicketData) {
 	try {
 		await sendEmail({
 			to: SUPPORT_EMAIL,
-			subject: `New Support Ticket: ${ticket.subject}`,
+			subject: safeEmailSubject(`New Support Ticket: ${ticket.subject}`),
 			html: `
 				<h2>New Support Request</h2>
-				<p><strong>Ticket ID:</strong> ${ticket.id}</p>
-				<p><strong>Name:</strong> ${ticket.customerName}</p>
-				<p><strong>Email:</strong> ${ticket.customerEmail}</p>
-				<p><strong>Phone:</strong> ${ticket.customerPhone || "N/A"}</p>
-				<p><strong>Category:</strong> ${ticket.category}</p>
-				<p><strong>Priority:</strong> ${ticket.priority}</p>
-				${ticket.orderId ? `<p><strong>Order:</strong> ${ticket.orderId}</p>` : ""}
-				<p><strong>Subject:</strong> ${ticket.subject}</p>
-				<p><strong>Message:</strong> ${ticket.description}</p>
+				<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
+				<p><strong>Name:</strong> ${escapeHtml(ticket.customerName)}</p>
+				<p><strong>Email:</strong> ${escapeHtml(ticket.customerEmail)}</p>
+				<p><strong>Phone:</strong> ${escapeHtml(ticket.customerPhone || "N/A")}</p>
+				<p><strong>Category:</strong> ${escapeHtml(ticket.category)}</p>
+				<p><strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>
+				${ticket.orderId ? `<p><strong>Order:</strong> ${escapeHtml(ticket.orderId)}</p>` : ""}
+				<p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
+				<p><strong>Message:</strong> ${escapeHtml(ticket.description)}</p>
 			`,
 		})
 	} catch (emailError) {
@@ -140,13 +142,13 @@ export async function createTicket(data: SupportTicketData) {
 	try {
 		await sendEmail({
 			to: ticket.customerEmail,
-			subject: `We received your request: ${ticket.subject}`,
+			subject: safeEmailSubject(`We received your request: ${ticket.subject}`),
 			html: `
-				<h2>Hello ${ticket.customerName},</h2>
+				<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
 				<p>Thank you for contacting ElectroBuy support. We have received your request and our team will get back to you within 24 hours.</p>
-				<p><strong>Ticket ID:</strong> ${ticket.id}</p>
-				<p><strong>Subject:</strong> ${ticket.subject}</p>
-				<p><strong>Priority:</strong> ${ticket.priority}</p>
+				<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
+				<p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
+				<p><strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>
 				<p>You can reply to this email to provide additional information.</p>
 			`,
 		})
@@ -174,6 +176,7 @@ export async function updateTicket(id: string, tenantId: string, data: UpdateTic
 		},
 		include: {
 			replies: {
+				where: { tenantId },
 				orderBy: { createdAt: "desc" },
 			},
 		},
@@ -192,11 +195,11 @@ export async function updateTicket(id: string, tenantId: string, data: UpdateTic
 
 			await sendEmail({
 				to: ticket.customerEmail,
-				subject: `Support Ticket #${ticket.id.slice(-8).toUpperCase()} status updated`,
+				subject: safeEmailSubject(`Support Ticket #${ticket.id.slice(-8).toUpperCase()} status updated`),
 				html: `
-					<h2>Hello ${ticket.customerName},</h2>
-					<p>Your support ticket regarding <strong>"${ticket.subject}"</strong> has been updated to status: <strong>${statusLabels[data.status] || data.status}</strong>.</p>
-					<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+					<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
+					<p>Your support ticket regarding <strong>"${escapeHtml(ticket.subject)}"</strong> has been updated to status: <strong>${escapeHtml(statusLabels[data.status] || data.status)}</strong>.</p>
+					<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
 					<p>If you have any questions, please reply to this email.</p>
 				`,
 			})
@@ -226,14 +229,14 @@ export async function addTicketReply(ticketId: string, tenantId: string, reply: 
 			if (ticket) {
 				await sendEmail({
 					to: ticket.customerEmail,
-					subject: `New reply on your support ticket #${ticket.id.slice(-8).toUpperCase()}`,
+					subject: safeEmailSubject(`New reply on your support ticket #${ticket.id.slice(-8).toUpperCase()}`),
 					html: `
-						<h2>Hello ${ticket.customerName},</h2>
-						<p>You have a new reply on your support ticket regarding <strong>"${ticket.subject}"</strong>:</p>
+						<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
+						<p>You have a new reply on your support ticket regarding <strong>"${escapeHtml(ticket.subject)}"</strong>:</p>
 						<div style="background: #f9fafb; border-left: 4px solid #0070f3; padding: 16px; margin: 16px 0;">
-							${reply}
+							${escapeHtml(reply)}
 						</div>
-						<p><strong>Ticket ID:</strong> ${ticket.id}</p>
+						<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
 						<p>Reply to this email to continue the conversation.</p>
 					`,
 				})

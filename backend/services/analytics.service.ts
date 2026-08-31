@@ -112,6 +112,7 @@ export async function getAnalyticsOverview(tenantId: string, timeRange: string =
 			total: true,
 			id: true,
 			items: {
+				where: { tenantId },
 				select: {
 					productId: true,
 				},
@@ -229,36 +230,36 @@ export async function getSalesData(tenantId: string, timeRange: string = "7d"): 
 		},
 	})
 
-	const periodMap = new Map<string, { revenue: number; orders: number }>()
+	const periodMap = new Map<string, { period: string; revenue: number; orders: number }>()
 
 	orders.forEach((order) => {
 		const date = new Date(order.createdAt)
+		let key: string
 		let period: string
 
 		if (timeRange === "7d" || timeRange === "30d") {
-			period = date.toLocaleDateString("en-US", { weekday: "short" })
+			key = date.toISOString().slice(0, 10)
+			period = date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 		} else {
+			key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
 			period = date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
 		}
 
-		const existing = periodMap.get(period) || { revenue: 0, orders: 0 }
-		periodMap.set(period, {
+		const existing = periodMap.get(key) || { period, revenue: 0, orders: 0 }
+		periodMap.set(key, {
+			period: existing.period,
 			revenue: existing.revenue + order.total,
 			orders: existing.orders + 1,
 		})
 	})
 
 	return Array.from(periodMap.entries())
-		.map(([period, data]) => ({
-			period,
+		.sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+		.map(([, data]) => ({
+			period: data.period,
 			revenue: data.revenue,
 			orders: data.orders,
 		}))
-		.sort((a, b) => {
-			const dateA = new Date(a.period)
-			const dateB = new Date(b.period)
-			return dateA.getTime() - dateB.getTime()
-		})
 }
 
 export async function getCategorySales(tenantId: string, timeRange: string = "7d"): Promise<CategorySales[]> {
@@ -277,6 +278,7 @@ export async function getCategorySales(tenantId: string, timeRange: string = "7d
 		},
 		include: {
 			items: {
+				where: { tenantId },
 				include: {
 					product: {
 						include: {
@@ -325,6 +327,7 @@ export async function getTopProducts(tenantId: string, timeRange: string = "7d",
 		},
 		include: {
 			items: {
+				where: { tenantId },
 				include: {
 					product: {
 						include: {
@@ -359,6 +362,7 @@ export async function getTopProducts(tenantId: string, timeRange: string = "7d",
 		},
 		include: {
 			items: {
+				where: { tenantId },
 				include: {
 					product: true,
 				},
@@ -420,7 +424,8 @@ export async function getRegionSales(tenantId: string, timeRange: string = "7d")
 	const regionMap = new Map<string, { sales: number; orders: number }>()
 
 	orders.forEach((order) => {
-		const county = (order.shippingAddress as any).county || "Other"
+		const shippingAddress = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress) ? order.shippingAddress as Record<string, unknown> : {}
+		const county = typeof shippingAddress.county === "string" && shippingAddress.county.trim() ? shippingAddress.county.trim() : "Other"
 		const existing = regionMap.get(county) || { sales: 0, orders: 0 }
 		regionMap.set(county, {
 			sales: existing.sales + order.total,

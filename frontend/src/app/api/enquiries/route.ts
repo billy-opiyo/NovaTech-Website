@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 		const session = await auth()
 		const products = await prisma.product.findMany({
 			where: { tenantId: context.tenantId, id: { in: parsed.data.items.map((item) => item.productId) } },
-			select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true, variants: { select: { name: true, value: true, priceModifier: true, stock: true } } },
+			select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true, variants: { where: { tenantId: context.tenantId }, select: { name: true, value: true, priceModifier: true, stock: true } } },
 		})
 		const productById = new Map(products.map((product) => [product.id, product]))
 		if (products.length !== new Set(parsed.data.items.map((item) => item.productId)).size) return NextResponse.json({ message: "One or more selected products are no longer available in this store." }, { status: 409 })

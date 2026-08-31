@@ -86,8 +86,9 @@ export async function getRecommendedForUser(
 			},
 		},
 		include: {
-			items: {
-				include: {
+		items: {
+			where: { tenantId },
+			include: {
 					product: {
 						include: {
 							category: true,
@@ -237,8 +238,9 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 			},
 		},
 		include: {
-			items: {
-				include: {
+		items: {
+			where: { tenantId },
+			include: {
 					product: {
 						include: {
 							category: true,
