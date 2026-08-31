@@ -70,17 +70,24 @@ export async function addCartItem(
 	const maxStock = selectedVariant.stock ?? product.stock
 	if (quantity < 1 || quantity > maxStock) throw new Error("Requested quantity is unavailable")
 
-	const existing = await prisma.cartItem.findFirst({
-		where: { userId, tenantId, productId, variant: variant || null },
-	})
-	const nextQuantity = (existing?.quantity || 0) + quantity
-	if (nextQuantity > maxStock) throw new Error("Requested quantity exceeds available stock")
+	const normalizedVariant = variant?.trim() || null
+	await prisma.$transaction(async (transaction) => {
+		// Serialize the logical cart key until the database uniqueness migration is
+		// applied to existing installations. This prevents concurrent add calls
+		// from both observing an empty cart row.
+		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${tenantId}:${userId}:${productId}:${normalizedVariant || ""}`}))`
+		const existing = await transaction.cartItem.findFirst({
+			where: { userId, tenantId, productId, variant: normalizedVariant },
+		})
+		const nextQuantity = (existing?.quantity || 0) + quantity
+		if (nextQuantity > maxStock) throw new Error("Requested quantity exceeds available stock")
 
-	if (existing) {
-		await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQuantity } })
-	} else {
-		await prisma.cartItem.create({ data: { userId, tenantId, productId, quantity, variant } })
-	}
+		if (existing) {
+			await transaction.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQuantity } })
+		} else {
+			await transaction.cartItem.create({ data: { userId, tenantId, productId, quantity, variant: normalizedVariant } })
+		}
+	})
 
 	return getCart(userId, tenantId)
 }

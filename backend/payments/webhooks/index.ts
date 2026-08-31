@@ -2,7 +2,7 @@ import prisma from "../../lib/db"
 import Stripe from "stripe"
 import { sendOrderConfirmationEmail } from "../../lib/email"
 import { getStripeClient, getStripeWebhookSecret } from "../../lib/stripeClient"
-import { isMpesaConfigured } from "../../lib/daraja"
+import { isMpesaConfigured, stkQuery } from "../../lib/daraja"
 import type { Prisma } from "@prisma/client"
 import type {
 	MpesaStkCallbackPayload,
@@ -11,6 +11,40 @@ import type {
 } from "../../types/payments"
 import { cancelPendingOrder } from "../../services/order.service"
 import { applyStripeCheckoutCompleted, applyStripeInvoiceEvent, applyStripeSubscriptionEvent, markBillingPaymentFromMpesa, recordOrderCommission } from "../../billing/service"
+import { z } from "zod"
+
+const mpesaStkCallbackSchema = z.object({
+	Body: z.object({
+		stkCallback: z.object({
+			MerchantRequestID: z.string().min(1),
+			CheckoutRequestID: z.string().min(1),
+			ResultCode: z.number().int(),
+			ResultDesc: z.string().min(1),
+			CallbackMetadata: z.object({ Item: z.array(z.object({ Name: z.string().min(1), Value: z.union([z.string(), z.number()]).optional() })) }).optional(),
+		}),
+	}),
+})
+
+const mpesaC2bSchema = z.object({
+	TransactionType: z.string().min(1),
+	TransID: z.string().min(1),
+	TransTime: z.string().min(1),
+	TransAmount: z.number().finite().positive(),
+	BusinessShortCode: z.string().min(1),
+	BillRefNumber: z.string().min(1),
+	InvoiceNumber: z.string().min(1).optional(),
+	OrgAccountBalance: z.number().finite().optional(),
+	ThirdPartyTransID: z.string().min(1).optional(),
+	MSISDN: z.string().min(1),
+	FirstName: z.string().min(1),
+	MiddleName: z.string().optional(),
+	LastName: z.string().optional(),
+})
+
+const mpesaQueryResponseSchema = z.object({
+	ResponseCode: z.string(),
+	ResultCode: z.number().int().optional(),
+})
 
 export type WebhookEvent = {
 	provider: string
@@ -56,17 +90,32 @@ export async function handleStripeEvent(
 ): Promise<WebhookResult> {
 	const type = String(payload.type || "unknown")
 	const eventId = String(payload.id || "")
+	let receiptId: string | undefined
 	if (eventId) {
-		try {
-			await prisma.webhookReceipt.create({ data: { provider: "stripe", eventId } })
-		} catch (error: any) {
-			if (error?.code === "P2002") return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Duplicate Stripe event acknowledged." }
-			throw error
+		const existing = await prisma.webhookReceipt.findUnique({ where: { provider_eventId: { provider: "stripe", eventId } } })
+		if (existing?.status === "PROCESSED") return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Duplicate Stripe event acknowledged." }
+		if (existing?.status === "PROCESSING" && Date.now() - existing.receivedAt.getTime() < 5 * 60 * 1000) return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Stripe event is already being processed." }
+		if (existing) {
+			const processing = await prisma.webhookReceipt.update({ where: { id: existing.id }, data: { status: "PROCESSING", attempts: { increment: 1 }, lastError: null } })
+			receiptId = processing.id
+		} else {
+			try {
+				const created = await prisma.webhookReceipt.create({ data: { provider: "stripe", eventId, status: "PROCESSING", attempts: 1 } })
+				receiptId = created.id
+			} catch (error: any) {
+				if (error?.code !== "P2002") throw error
+				const concurrent = await prisma.webhookReceipt.findUnique({ where: { provider_eventId: { provider: "stripe", eventId } } })
+				if (concurrent?.status === "PROCESSED" || concurrent?.status === "PROCESSING") return { ok: true, received: true, provider: "stripe", event: type, receivedAt, message: "Duplicate Stripe event acknowledged." }
+				if (!concurrent) throw error
+				const retry = await prisma.webhookReceipt.update({ where: { id: concurrent.id }, data: { status: "PROCESSING", attempts: { increment: 1 }, lastError: null } })
+				receiptId = retry.id
+			}
 		}
 	}
+	try {
 	const data = payload.data as { object?: Record<string, unknown> } | undefined
 	const paymentIntentId =
-		(data?.object?.id as string) ||
+		(type === "charge.refunded" ? (data?.object?.payment_intent as string) : (data?.object?.id as string)) ||
 		(payload.payment_intent as string) ||
 		""
 
@@ -103,9 +152,10 @@ export async function handleStripeEvent(
 	}
 
 	if (paymentStatus && paymentIntentId) {
-		await updatePaymentByProviderReference(paymentIntentId, paymentStatus)
+		await updatePaymentByProviderReference(paymentIntentId, paymentStatus, {}, "stripe")
 	}
 
+	if (receiptId) await prisma.webhookReceipt.update({ where: { id: receiptId }, data: { status: "PROCESSED", processedAt: new Date(), lastError: null } })
 	return {
 		ok: true,
 		received: true,
@@ -116,13 +166,22 @@ export async function handleStripeEvent(
 			? `Stripe event ${type} processed -> ${paymentStatus}`
 			: `Stripe event ${type} received but no payment status mapping.`,
 	}
+	} catch (error) {
+		if (receiptId) await prisma.webhookReceipt.update({ where: { id: receiptId }, data: { status: "FAILED", lastError: error instanceof Error ? error.message.slice(0, 1000) : "Webhook processing failed" } }).catch(() => undefined)
+		throw error
+	}
 }
 
 export async function handleMpesaStkCallback(
 	payload: MpesaStkCallbackPayload,
+	options: { strictReconciliation?: boolean } = {},
 ): Promise<WebhookResult> {
 	const receivedAt = new Date().toISOString()
-	const stkCallback = payload?.Body?.stkCallback
+	const parsed = mpesaStkCallbackSchema.safeParse(payload)
+	if (!parsed.success) {
+		return { ok: false, received: false, provider: "mpesa", event: "stk-callback", receivedAt, message: "Invalid STK callback payload." }
+	}
+	const stkCallback = parsed.data.Body.stkCallback
 
 	if (!stkCallback) {
 		return {
@@ -138,6 +197,10 @@ export async function handleMpesaStkCallback(
 	const checkoutRequestId = stkCallback.CheckoutRequestID
 	const resultCode = stkCallback.ResultCode
 	const completed = resultCode === 0
+	if (completed && isMpesaConfigured()) {
+		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId }))
+		if (!providerCheck.success || providerCheck.data.ResponseCode !== "0" || providerCheck.data.ResultCode !== 0) return { ok: false, received: false, provider: "mpesa", event: "stk-callback", receivedAt, message: "M-Pesa callback could not be confirmed with the provider." }
+	}
 
 	const metadataItems = stkCallback.CallbackMetadata?.Item || []
 	const mpesaReceiptNumber = metadataItems.find(
@@ -163,6 +226,8 @@ export async function handleMpesaStkCallback(
 				merchantRequestId: stkCallback.MerchantRequestID,
 			},
 		},
+		"mpesa",
+		options.strictReconciliation,
 	)
 
 	return {
@@ -179,8 +244,13 @@ export async function handleMpesaStkCallback(
 
 export async function handleMpesaC2B(
 	payload: MpesaC2BPayload,
+	options: { strictReconciliation?: boolean } = {},
 ): Promise<WebhookResult> {
 	const receivedAt = new Date().toISOString()
+	const parsed = mpesaC2bSchema.safeParse(payload)
+	if (!parsed.success) return { ok: false, received: false, provider: "mpesa", event: "c2b", receivedAt, message: "Invalid C2B callback payload." }
+	payload = parsed.data
+	if (process.env.MPESA_SHORTCODE && payload.BusinessShortCode !== process.env.MPESA_SHORTCODE) return { ok: false, received: false, provider: "mpesa", event: "c2b", receivedAt, message: "C2B callback business shortcode does not match configuration." }
 
 	const reference =
 		payload.BillRefNumber ||
@@ -201,6 +271,8 @@ export async function handleMpesaC2B(
 					transactionType: payload.TransactionType,
 				},
 			},
+			"mpesa",
+			options.strictReconciliation,
 		)
 	}
 
@@ -229,12 +301,15 @@ async function updatePaymentByProviderReference(
 	providerReference: string,
 	status: "COMPLETED" | "FAILED" | "CANCELLED" | "REFUNDED",
 	extra: UpdatePaymentData = {},
+	provider?: "mpesa" | "stripe",
+	throwOnDatabaseError = false,
 ) {
 	if (!providerReference) return null
 
 	try {
 		const payment = await prisma.payment.findFirst({
 			where: {
+				...(provider ? { provider } : {}),
 				OR: [
 					{ providerReference },
 					{ metadata: { path: ["reference"], equals: providerReference } },
@@ -321,12 +396,13 @@ async function updatePaymentByProviderReference(
 
 		return updatedPayment
 	} catch (error) {
-		// Webhook handlers must always acknowledge the provider even if the
-		// local DB lookup/update fails (otherwise providers retry endlessly).
+		// Public M-Pesa routes opt into a retryable response when reconciliation
+		// fails. Legacy callers retain the non-throwing contract for compatibility.
 		console.error(
 			`Webhook DB update failed for ${providerReference}:`,
 			error,
 		)
+		if (throwOnDatabaseError) throw error
 		return null
 	}
 }

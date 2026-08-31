@@ -7,6 +7,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
 import { assertTenantStorageLimit } from "backend/billing/subscription"
+import { hasAllowedFileSignature } from "backend/lib/file-validation"
 
 export async function POST(req: NextRequest) {
 	try {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Validate file type (images only)
-		if (!file.type.startsWith("image/")) {
+		if (!(file.type === "image/jpeg" || file.type === "image/png" || file.type === "image/webp" || file.type === "image/gif")) {
 			return NextResponse.json(
 				{ message: "Only image files are allowed" },
 				{ status: 400 },
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
 		await assertTenantStorageLimit(context.tenantId, file.size)
 
 		const buffer = Buffer.from(await file.arrayBuffer())
+		if (!hasAllowedFileSignature(buffer, file.type === "image/jpeg" ? ["JPEG"] : file.type === "image/png" ? ["PNG"] : file.type === "image/webp" ? ["WEBP"] : ["GIF"])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
 		const key = generateTenantFileKey(context.tenantId, context.storeId, productId, file.name)
 
 		const url = await uploadFile(buffer, key, file.type)

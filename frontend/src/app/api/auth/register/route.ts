@@ -6,6 +6,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import { registerSchema } from "backend/validators/authValidator"
 import crypto from "crypto"
 import { escapeHtml } from "backend/lib/html"
+import { hashEmailVerificationCode } from "backend/lib/email-verification"
 
 function verificationIdentifier(email: string) {
 	return `verify:${email}`
@@ -17,7 +18,7 @@ async function createVerificationCode(email: string) {
 	await prisma.verificationToken.create({
 		data: {
 			identifier: verificationIdentifier(email),
-			token: code,
+			token: hashEmailVerificationCode(code),
 			expires: new Date(Date.now() + 15 * 60 * 1000),
 		},
 	})

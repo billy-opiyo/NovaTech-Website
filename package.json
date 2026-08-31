@@ -9,6 +9,8 @@
 		"dev": "npm --workspace frontend run dev",
 		"dev:open": "start \"\" http://localhost:3000 && npm --workspace frontend run dev",
 		"build": "npm --workspace frontend run build",
+		"lint": "npm --workspace frontend run lint && npm --workspace backend run build",
+		"type-check": "npm --workspace frontend exec tsc -- --noEmit && npm --workspace backend run build",
 		"start": "npm --workspace frontend run start",
 		"test": "node --test --test-concurrency=1 --require ./tests/register.cjs tests/**/*.test.ts",
 		"test:watch": "node --test --test-concurrency=1 --watch --require ./tests/register.cjs tests/**/*.test.ts",

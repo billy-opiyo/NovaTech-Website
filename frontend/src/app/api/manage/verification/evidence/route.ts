@@ -8,6 +8,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { deletePrivateFile, generateVerificationFileKey, uploadPrivateFile } from "backend/lib/storage"
 import { rateLimiter } from "backend/middleware/rateLimiter"
+import { hasAllowedFileSignature, type ValidatedFileKind } from "backend/lib/file-validation"
 
 const evidenceTypes = ["GOVERNMENT_ID", "BUSINESS_REGISTRATION", "KRA_PIN", "LOCATION_PROOF", "MPESA_OWNERSHIP", "OWNER_DECLARATION"] as const
 const evidenceSchema = z.object({ type: z.enum(evidenceTypes) })
@@ -45,11 +46,14 @@ export async function POST(request: NextRequest) {
 		if (!(file instanceof File)) return NextResponse.json({ message: "Choose a verification document." }, { status: 400 })
 		if (!acceptedTypes.has(file.type)) return NextResponse.json({ message: "Use a PDF, JPG, PNG, or WEBP document." }, { status: 400 })
 		if (file.size < 1 || file.size > maximumBytes) return NextResponse.json({ message: "Verification documents must be smaller than 10MB." }, { status: 400 })
+		const fileBuffer = Buffer.from(await file.arrayBuffer())
+		const allowedKind: ValidatedFileKind = file.type === "application/pdf" ? "PDF" : file.type === "image/jpeg" ? "JPEG" : file.type === "image/png" ? "PNG" : "WEBP"
+		if (!hasAllowedFileSignature(fileBuffer, [allowedKind])) return NextResponse.json({ message: "The uploaded document content is invalid." }, { status: 400 })
 		const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: context.tenantId }, select: { id: true } })
 		if (!profile) return NextResponse.json({ message: "Save the merchant verification details first." }, { status: 409 })
 		const evidenceId = crypto.randomUUID()
 		objectKey = generateVerificationFileKey(context.tenantId, evidenceId, file.name)
-		await uploadPrivateFile(Buffer.from(await file.arrayBuffer()), objectKey, file.type)
+		await uploadPrivateFile(fileBuffer, objectKey, file.type)
 		const evidence = await prisma.merchantVerificationEvidence.create({ data: { id: evidenceId, tenantId: context.tenantId, type: parsed.data.type, objectKey, contentType: file.type, sizeBytes: file.size, uploadedById: session.user.id }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, createdAt: true } })
 		return NextResponse.json({ evidence }, { status: 201 })
 	} catch (error: any) {

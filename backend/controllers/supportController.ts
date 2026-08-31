@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import * as supportService from "../services/support.service"
 import { contactSchema, updateTicketSchema, ticketReplySchema } from "../validators/supportValidator"
-import { sendEmail } from "../lib/email"
 import { z } from "zod"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
-import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { parsePagination } from "../lib/pagination"
-import { escapeHtml, safeEmailSubject } from "../lib/html"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -134,6 +131,9 @@ export async function submitContact(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		const body = await req.json()
 		const validated = contactSchema.parse(body)
+		if (validated.website) {
+			return NextResponse.json({ message: "Message sent successfully! We will get back to you within 24 hours." }, { status: 201 })
+		}
 
 		const ticket = await supportService.createTicket({
 			tenantId: context.tenantId,
@@ -144,20 +144,6 @@ export async function submitContact(req: NextRequest) {
 			description: `${validated.message}\n\nOrder: ${validated.orderNumber || "N/A"}`,
 			category: validated.category || "other",
 			priority: "medium",
-		})
-
-		await sendEmail({
-			to: PLATFORM_SUPPORT_EMAIL,
-			subject: safeEmailSubject(`New Support Ticket: ${validated.subject}`),
-			html: `
-				<h2>New Support Request</h2>
-				<p><strong>Name:</strong> ${escapeHtml(validated.name)}</p>
-				<p><strong>Email:</strong> ${escapeHtml(validated.email)}</p>
-				<p><strong>Phone:</strong> ${escapeHtml(validated.phone || "N/A")}</p>
-				<p><strong>Order:</strong> ${escapeHtml(validated.orderNumber || "N/A")}</p>
-				<p><strong>Subject:</strong> ${escapeHtml(validated.subject)}</p>
-				<p><strong>Message:</strong> ${escapeHtml(validated.message)}</p>
-			`,
 		})
 
 		return NextResponse.json(

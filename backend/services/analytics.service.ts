@@ -1,5 +1,11 @@
 import prisma from "../lib/db"
 
+export function csvCell(value: string | number) {
+	const text = String(value)
+	const safe = /^[=+\-@]/.test(text) ? `'${text}` : text
+	return `"${safe.replace(/"/g, '""')}"`
+}
+
 export interface AnalyticsOverview {
 	totalRevenue: number
 	totalOrders: number
@@ -21,6 +27,7 @@ export interface CategorySales {
 
 export interface TopProduct {
 	id: string
+	slug: string
 	name: string
 	category: string
 	sales: number
@@ -107,6 +114,7 @@ export async function getAnalyticsOverview(tenantId: string, timeRange: string =
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		select: {
 			total: true,
@@ -159,6 +167,7 @@ export async function getGrowthComparison(tenantId: string, timeRange: string = 
 				tenantId,
 				createdAt: { gte: currentStart, lte: currentEnd },
 				status: { not: "CANCELLED" },
+				payments: { some: { status: "COMPLETED" } },
 			},
 			select: { total: true, id: true, payments: { select: { status: true } } },
 		}),
@@ -167,6 +176,7 @@ export async function getGrowthComparison(tenantId: string, timeRange: string = 
 				tenantId,
 				createdAt: { gte: previousStart, lte: previousEnd },
 				status: { not: "CANCELLED" },
+				payments: { some: { status: "COMPLETED" } },
 			},
 			select: { total: true, id: true, payments: { select: { status: true } } },
 		}),
@@ -222,6 +232,7 @@ export async function getSalesData(tenantId: string, timeRange: string = "7d"): 
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		select: {
 			total: true,
@@ -275,6 +286,7 @@ export async function getCategorySales(tenantId: string, timeRange: string = "7d
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 			items: {
@@ -324,6 +336,7 @@ export async function getTopProducts(tenantId: string, timeRange: string = "7d",
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 			items: {
@@ -359,6 +372,7 @@ export async function getTopProducts(tenantId: string, timeRange: string = "7d",
 			tenantId,
 			createdAt: { gte: previousStart, lte: previousEnd },
 			status: { not: "CANCELLED" },
+			payments: { some: { status: "COMPLETED" } },
 		},
 		include: {
 			items: {
@@ -388,6 +402,7 @@ export async function getTopProducts(tenantId: string, timeRange: string = "7d",
 
 			return {
 				id: data.product.id,
+				slug: data.product.slug,
 				name: data.product.name,
 				category: data.product.category.name,
 				sales: data.sales,
@@ -413,6 +428,7 @@ export async function getRegionSales(tenantId: string, timeRange: string = "7d")
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 		},
 		select: {
 			total: true,
@@ -455,6 +471,7 @@ export async function getPaymentMethodStats(tenantId: string, timeRange: string 
 			status: {
 				not: "CANCELLED",
 			},
+			payments: { some: { status: "COMPLETED" } },
 			paymentMethod: {
 				not: null,
 			},
@@ -517,56 +534,56 @@ export async function getAnalyticsExport(tenantId: string, timeRange: string = "
 	// CSV format
 	const csvRows: string[] = []
 	csvRows.push("Nurava Tech Analytics Export")
-	csvRows.push(`Time Range: ${timeRange}`)
-	csvRows.push(`Exported At: ${new Date().toISOString()}`)
+	csvRows.push(`${csvCell("Time Range")},${csvCell(timeRange)}`)
+	csvRows.push(`${csvCell("Exported At")},${csvCell(new Date().toISOString())}`)
 	csvRows.push("")
 
 	csvRows.push("OVERVIEW")
-	csvRows.push(`Total Revenue,${overview.totalRevenue}`)
-	csvRows.push(`Total Orders,${overview.totalOrders}`)
-	csvRows.push(`Average Order Value,${Math.round(overview.averageOrderValue)}`)
-	csvRows.push(`Conversion Rate,${overview.conversionRate.toFixed(2)}%`)
+	csvRows.push(`${csvCell("Total Revenue")},${csvCell(overview.totalRevenue)}`)
+	csvRows.push(`${csvCell("Total Orders")},${csvCell(overview.totalOrders)}`)
+	csvRows.push(`${csvCell("Average Order Value")},${csvCell(Math.round(overview.averageOrderValue))}`)
+	csvRows.push(`${csvCell("Conversion Rate")},${csvCell(`${overview.conversionRate.toFixed(2)}%`)}`)
 	csvRows.push("")
 
 	csvRows.push("GROWTH COMPARISON")
-	csvRows.push(`Revenue Growth,${growth.revenueGrowth.toFixed(2)}%`)
-	csvRows.push(`Orders Growth,${growth.ordersGrowth.toFixed(2)}%`)
-	csvRows.push(`AOV Growth,${growth.aovGrowth.toFixed(2)}%`)
-	csvRows.push(`Conversion Growth,${growth.conversionGrowth.toFixed(2)}%`)
+	csvRows.push(`${csvCell("Revenue Growth")},${csvCell(`${growth.revenueGrowth.toFixed(2)}%`)}`)
+	csvRows.push(`${csvCell("Orders Growth")},${csvCell(`${growth.ordersGrowth.toFixed(2)}%`)}`)
+	csvRows.push(`${csvCell("AOV Growth")},${csvCell(`${growth.aovGrowth.toFixed(2)}%`)}`)
+	csvRows.push(`${csvCell("Conversion Growth")},${csvCell(`${growth.conversionGrowth.toFixed(2)}%`)}`)
 	csvRows.push("")
 
 	csvRows.push("SALES DATA")
 	csvRows.push("Period,Revenue,Orders")
 	salesData.forEach((item) => {
-		csvRows.push(`${item.period},${item.revenue},${item.orders}`)
+		csvRows.push([item.period, item.revenue, item.orders].map(csvCell).join(","))
 	})
 	csvRows.push("")
 
 	csvRows.push("CATEGORY SALES")
 	csvRows.push("Category,Sales,Percentage")
 	categorySales.forEach((item) => {
-		csvRows.push(`${item.category},${item.sales},${item.percentage.toFixed(2)}%`)
+		csvRows.push([item.category, item.sales, `${item.percentage.toFixed(2)}%`].map(csvCell).join(","))
 	})
 	csvRows.push("")
 
 	csvRows.push("TOP PRODUCTS")
 	csvRows.push("Name,Category,Sales,Revenue,Growth %")
 	topProducts.forEach((item) => {
-		csvRows.push(`${item.name},${item.category},${item.sales},${item.revenue},${item.growth}%`)
+		csvRows.push([item.name, item.category, item.sales, item.revenue, `${item.growth}%`].map(csvCell).join(","))
 	})
 	csvRows.push("")
 
 	csvRows.push("REGION SALES")
 	csvRows.push("Region,Sales,Orders")
 	regionSales.forEach((item) => {
-		csvRows.push(`${item.region},${item.sales},${item.orders}`)
+		csvRows.push([item.region, item.sales, item.orders].map(csvCell).join(","))
 	})
 	csvRows.push("")
 
 	csvRows.push("PAYMENT METHODS")
 	csvRows.push("Method,Amount,Orders,Percentage")
 	paymentMethods.forEach((item) => {
-		csvRows.push(`${item.method},${item.amount},${item.orders},${item.percentage.toFixed(2)}%`)
+		csvRows.push([item.method, item.amount, item.orders, `${item.percentage.toFixed(2)}%`].map(csvCell).join(","))
 	})
 
 	return csvRows.join("\n")
