@@ -7,6 +7,7 @@ import { requireMembership, requireStorePermission } from "backend/lib/tenant-ac
 import { merchantEnquiryUpdateSchema } from "backend/validators/merchantEnquiryValidator"
 import { createActionRecord } from "backend/actions"
 import { shopperEnquiryDueAt } from "backend/retention/tenant-retention"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 async function access(request: NextRequest, roles: MembershipRole[] = [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT]) {
 	const session = await auth()
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 		})
 		const members = await prisma.membership.findMany({ where: { tenantId: context.tenantId, active: true }, select: { userId: true, role: true, user: { select: { name: true, email: true } } }, orderBy: { createdAt: "asc" } })
 		return NextResponse.json({ enquiries, members })
-	} catch (error: any) { return NextResponse.json({ message: error.message || "Enquiries unavailable" }, { status: error.status || 503 }) }
+	} catch (error: unknown) { return apiErrorResponse(error, "Enquiries unavailable") }
 }
 
 export async function PATCH(request: NextRequest) {
@@ -47,5 +48,5 @@ export async function PATCH(request: NextRequest) {
 		const updated = await prisma.merchantEnquiry.update({ where: { id: existing.id }, data: { ...parsed.data, lastContactedAt: parsed.data.status === "CONTACTED" ? now : undefined, convertedAt: parsed.data.status === "WON" ? now : undefined, ...(closed ? { closedAt: existing.closedAt || now, dataRetentionDueAt: existing.closedAt ? undefined : shopperEnquiryDueAt(now) } : { closedAt: null, dataRetentionDueAt: null }) } })
 		await createActionRecord("UPDATED_MERCHANT_ENQUIRY", { tenantId: context.tenantId, adminId: session.user.id, enquiryId: id, from: existing.status, to: parsed.data.status || existing.status }).catch(() => undefined)
 		return NextResponse.json({ enquiry: updated })
-	} catch (error: any) { return NextResponse.json({ message: error.message || "Unable to update enquiry" }, { status: error.status || 503 }) }
+	} catch (error: unknown) { return apiErrorResponse(error, "Unable to update enquiry") }
 }

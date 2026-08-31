@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function GET(req: NextRequest) {
 	try {
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 						images: true,
 						brand: true,
 						stock: true,
+						variants: { select: { stock: true }, where: { tenantId: context.tenantId } },
 					},
 				},
 			},
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 		return NextResponse.json(wishlist)
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Wishlist unavailable")
 	}
 }
 
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json(wishlistItem, { status: 201 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to update wishlist")
 	}
 }
 
@@ -100,6 +102,6 @@ export async function DELETE(req: NextRequest) {
 
 		return NextResponse.json({ message: "Removed from wishlist" })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to update wishlist")
 	}
 }

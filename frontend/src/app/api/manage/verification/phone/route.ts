@@ -9,6 +9,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { decryptMerchantVerificationDetails, hashMerchantVerificationOtp } from "backend/lib/merchant-verification-secrets"
 import { sendSmsMessage } from "backend/lib/sms"
 import { rateLimiter } from "backend/middleware/rateLimiter"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 async function access() {
 	const session = await auth()
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 		await prisma.merchantVerificationProfile.update({ where: { id: profile.id }, data: { phoneOtpHash: hashMerchantVerificationOtp(code, salt), phoneOtpSalt: salt, phoneOtpExpiresAt: new Date(Date.now() + 10 * 60_000), phoneOtpAttempts: 0, phoneOtpSentAt: new Date() } })
 		return NextResponse.json({ message: "A verification code was sent to the merchant phone.", phoneVerification: "CODE_SENT" })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to send phone verification code" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to send phone verification code")
 	}
 }
 
@@ -57,6 +58,6 @@ export async function PATCH(request: NextRequest) {
 		await prisma.merchantVerificationProfile.update({ where: { id: profile.id }, data: { phoneVerifiedAt: new Date(), phoneOtpHash: null, phoneOtpSalt: null, phoneOtpExpiresAt: null, phoneOtpAttempts: 0 } })
 		return NextResponse.json({ message: "Merchant phone verified.", phoneVerification: "VERIFIED" })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to verify merchant phone" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to verify merchant phone")
 	}
 }

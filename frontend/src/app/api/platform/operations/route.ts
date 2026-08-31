@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { verificationEvidenceDueAt } from "backend/retention/tenant-retention"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const readRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
 const manageRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
@@ -172,6 +173,6 @@ export async function PATCH(request: NextRequest) {
 		return NextResponse.json({ tenant: updated })
 	} catch (error: any) {
 		console.error("Platform operation failed", error)
-		return NextResponse.json({ message: error?.message || "Platform operation failed" }, { status: 500 })
+		return apiErrorResponse(error, "Platform operation failed")
 	}
 }

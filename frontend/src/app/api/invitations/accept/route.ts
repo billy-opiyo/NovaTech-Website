@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { hashInvitationToken } from "backend/lib/invitation-token"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 function tokenFrom(request: NextRequest) {
 	return request.nextUrl.searchParams.get("token")?.trim() || ""
@@ -43,6 +44,6 @@ export async function POST(request: NextRequest) {
 		})
 		return NextResponse.json({ ok: true, tenantId: invitation.tenantId, role: invitation.role, redirectTo: "/manage" })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to accept invitation" }, { status: 503 })
+		return apiErrorResponse(error, "Unable to accept invitation")
 	}
 }

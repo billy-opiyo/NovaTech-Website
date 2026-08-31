@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { getOrderById } from "backend/services/order.service"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	try {
@@ -106,11 +107,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 		})
 	} catch (error: unknown) {
 		console.error("Tracking API error:", error)
-		const message = error instanceof Error ? error.message : "Failed to fetch tracking information"
-		const status = message === "Order not found" ? 404 : message === "Unauthorized" ? 403 : 500
-		return NextResponse.json(
-			{ message: status === 500 ? "Failed to fetch tracking information" : message },
-			{ status },
-		)
+		return apiErrorResponse(error, "Failed to fetch tracking information")
 	}
 }

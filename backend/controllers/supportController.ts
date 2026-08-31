@@ -6,6 +6,7 @@ import { z } from "zod"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
 import { parsePagination } from "../lib/pagination"
+import { apiErrorResponse } from "../lib/api-handler"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -44,10 +45,7 @@ export async function getTickets(req: NextRequest) {
 		return NextResponse.json(result)
 	} catch (error: any) {
 		console.error("Support tickets API error:", error)
-		return NextResponse.json(
-			{ message: "Failed to fetch tickets", error: error.message },
-			{ status: error?.status || 500 },
-		)
+		return apiErrorResponse(error, "Failed to fetch tickets")
 	}
 }
 
@@ -64,10 +62,7 @@ export async function getTicketById(
 		return NextResponse.json(ticket)
 	} catch (error: any) {
 		console.error("Get ticket API error:", error)
-		return NextResponse.json(
-			{ message: error.message || "Failed to fetch ticket", error: error.message },
-			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
-		)
+		return apiErrorResponse(error, "Failed to fetch ticket")
 	}
 }
 
@@ -96,10 +91,7 @@ export async function updateTicket(
 		return NextResponse.json(ticket)
 	} catch (error: any) {
 		console.error("Update ticket API error:", error)
-		return NextResponse.json(
-			{ message: error.message || "Failed to update ticket", error: error.message },
-			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
-		)
+		return apiErrorResponse(error, "Failed to update ticket")
 	}
 }
 
@@ -119,10 +111,7 @@ export async function replyToTicket(
 		return NextResponse.json(reply)
 	} catch (error: any) {
 		console.error("Reply to ticket API error:", error)
-		return NextResponse.json(
-			{ message: error.message || "Failed to add reply", error: error.message },
-			{ status: error?.status || (error.message === "Ticket not found" ? 404 : 500) },
-		)
+		return apiErrorResponse(error, "Failed to add reply")
 	}
 }
 
@@ -161,6 +150,6 @@ export async function submitContact(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: error?.status || 500 })
+		return apiErrorResponse(error, "Unable to send your message")
 	}
 }

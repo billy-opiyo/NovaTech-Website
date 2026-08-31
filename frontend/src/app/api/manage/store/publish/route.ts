@@ -9,6 +9,7 @@ import { merchantVerificationMessage } from "backend/lib/merchant-verification"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { getLaunchReadiness } from "backend/lib/launch-readiness"
 import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(request: Request) {
 	const requestId = getRequestId(request)
@@ -39,8 +40,6 @@ export async function POST(request: Request) {
 		return withRequestId(NextResponse.json({ store: updated, version: nextVersion, requestId }), requestId)
 	} catch (error) {
 		logEvent("error", "store_publish_failed", { requestId, route: "/api/manage/store/publish" }, { message: error })
-		const status = typeof error === "object" && error && "status" in error && Number.isInteger((error as { status?: unknown }).status) ? Number((error as { status: number }).status) : 503
-		const message = status >= 400 && status < 500 && error instanceof Error ? error.message : "Store could not be published"
-		return withRequestId(NextResponse.json({ message, requestId }, { status }), requestId)
+		return withRequestId(apiErrorResponse(error, "Store could not be published"), requestId)
 	}
 }

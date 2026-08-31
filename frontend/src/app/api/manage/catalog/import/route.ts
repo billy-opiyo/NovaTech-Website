@@ -7,6 +7,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { assertTenantProductLimit } from "backend/billing/subscription"
 import { parseCsv, type CatalogCsvRow } from "backend/lib/catalog-csv"
 import { createActionRecord } from "backend/actions"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const MAX_ROWS = 500
 const REQUIRED = ["name", "description", "brand", "sku", "price", "stock", "category", "images"]
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 		const seenSkus = new Set<string>()
 		const valid: any[] = []
 		const errors: Array<{ row: number; message: string }> = []
-		rows.forEach((row, index) => { try { const parsed = parseRow(row, index + 2, categoryMap); if (seenSkus.has(parsed.sku)) throw new Error("duplicate SKU in this file"); seenSkus.add(parsed.sku); valid.push(parsed) } catch (error: any) { errors.push({ row: index + 2, message: error.message || "Invalid row" }) } })
+	rows.forEach((row, index) => { try { const parsed = parseRow(row, index + 2, categoryMap); if (seenSkus.has(parsed.sku)) throw new Error("duplicate SKU in this file"); seenSkus.add(parsed.sku); valid.push(parsed) } catch (error: unknown) { errors.push({ row: index + 2, message: error instanceof Error ? error.message : "Invalid row" }) } })
 		const existing = await prisma.product.findMany({ where: { tenantId: context.tenantId, sku: { in: valid.map((row) => row.sku) } }, select: { id: true, sku: true } })
 		const existingSkus = new Set(existing.map((product) => product.sku))
 		const summary = { rows: rows.length, valid: valid.length, invalid: errors.length, creates: valid.filter((row) => !existingSkus.has(row.sku)).length, updates: valid.filter((row) => existingSkus.has(row.sku)).length }
@@ -75,9 +76,9 @@ export async function POST(request: NextRequest) {
 				const current = await prisma.product.findFirst({ where: { tenantId: context.tenantId, sku: row.sku }, select: { id: true } })
 				if (current) { await prisma.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs } }); updated += 1 }
 				else { await assertTenantProductLimit(context.tenantId); await prisma.product.create({ data: { tenantId: context.tenantId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant: any) => ({ tenantId: context.tenantId, ...variant })) } : undefined } }); created += 1 }
-			} catch (error: any) { errors.push({ row: row.rowNumber, message: error.message || "Database rejected this row" }) }
+			} catch (error: unknown) { errors.push({ row: row.rowNumber, message: error instanceof Error ? error.message : "Database rejected this row" }) }
 		}
 		await createActionRecord("IMPORTED_CATALOG", { tenantId: context.tenantId, adminId: session.user.id, fileName: file.name, rows: rows.length, created, updated, failed: errors.length }).catch(() => undefined)
 		return NextResponse.json({ mode, summary: { ...summary, created, updated, failed: errors.length }, errors })
-	} catch (error: any) { return NextResponse.json({ message: error.message || "Catalog import unavailable" }, { status: error.status || 503 }) }
+	} catch (error: unknown) { return apiErrorResponse(error, "Catalog import unavailable") }
 }

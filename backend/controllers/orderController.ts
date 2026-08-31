@@ -8,6 +8,7 @@ import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireMembership, requireStorePermission } from "../lib/tenant-access"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../lib/commerce-model"
 import { parsePagination } from "../lib/pagination"
+import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -23,7 +24,7 @@ export async function getOrders(req: NextRequest) {
 		const result = await orderService.getOrdersByUserId(session.user.id!, context.tenantId, page, limit)
 		return NextResponse.json(result)
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Orders unavailable")
 	}
 }
 
@@ -69,7 +70,7 @@ export async function createOrder(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to create order")
 	}
 }
 
@@ -100,10 +101,7 @@ export async function getOrderById(
 
 		return NextResponse.json(order)
 	} catch (error: any) {
-		return NextResponse.json(
-			{ message: error.message },
-			{ status: error.message === "Order not found" ? 404 : 500 },
-		)
+		return apiErrorResponse(error, "Order unavailable")
 	}
 }
 
@@ -139,7 +137,7 @@ export async function updateOrderStatus(
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to update order")
 	}
 }
 
@@ -159,7 +157,7 @@ export async function getAllOrders(req: NextRequest) {
 		const result = await orderService.getAllOrders(context.tenantId, page, limit, status)
 		return NextResponse.json(result)
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Orders unavailable")
 	}
 }
 
@@ -175,6 +173,6 @@ export async function getOrderStats(req?: NextRequest) {
 		const stats = await orderService.getOrderStats(context.tenantId)
 		return NextResponse.json(stats)
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Order statistics unavailable")
 	}
 }

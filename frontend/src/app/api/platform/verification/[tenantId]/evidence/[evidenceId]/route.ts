@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { getSignedDownloadUrl } from "backend/lib/storage"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const reviewRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
 
@@ -23,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 		const url = await getSignedDownloadUrl(evidence.objectKey)
 		return NextResponse.json({ downloadUrl: url, status: evidence.status, contentType: evidence.contentType, expiresIn: 300 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Evidence download unavailable" }, { status: 503 })
+		return apiErrorResponse(error, "Evidence download unavailable")
 	}
 }
 
@@ -38,6 +39,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 		if (!evidence.count) return NextResponse.json({ message: "Evidence not found" }, { status: 404 })
 		return NextResponse.json({ status: parsed.data.status })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to review evidence" }, { status: 503 })
+		return apiErrorResponse(error, "Unable to review evidence")
 	}
 }

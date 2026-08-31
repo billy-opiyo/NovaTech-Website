@@ -40,7 +40,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** The verification result uses `response.ResultCode ?? 0`, then considers `0` completed. A response that omits `ResultCode` can therefore become a completed payment. The route then reconciles the matching local payment, billing invoice/subscription, commission, and potentially order state.
 - **Root cause:** Missing/invalid provider fields are defaulted to the success code instead of failing closed and requiring an explicit successful response.
 - **Recommended fix:** Validate the provider response shape, require an explicit success result code and successful response metadata, reject missing/unknown codes, and make reconciliation idempotent with terminal-state guards.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-002 — Public M-Pesa callback processing is not authenticated or strongly validated
 
@@ -156,7 +156,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Quota is checked before the asset row is created, allowing concurrent uploads to exceed the limit. Replacing/removing product/profile images does not consistently delete old object keys and asset rows, causing quota and storage drift.
 - **Root cause:** Quota reservation and object lifecycle are not one atomic durable operation.
 - **Recommended fix:** Reserve bytes transactionally or serialize quota updates, link assets to the owning record, and delete/retire replaced objects with retryable cleanup.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-016 — Tenant consistency is not enforced across several Prisma relations
 
@@ -164,7 +164,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Multiple records carry independent `tenantId` and related-record IDs without composite foreign keys (for example product/category, variant/product, order item/order/product, domain/store, enquiry/quote, and storage/billing relations). Code usually scopes queries correctly, but a bug or direct write can create cross-tenant records that the database permits. Several catalog identifiers are globally unique, unnecessarily coupling tenants.
 - **Root cause:** Tenant ownership is primarily an application convention rather than a database-enforced composite relationship.
 - **Recommended fix:** Add composite tenant-aware keys/FKs where feasible, audit existing data before migration, and preserve explicit tenant predicates in every service query.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-017 — Product dashboard links use IDs while the public route resolves slugs
 
@@ -180,7 +180,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Several UI paths read the base product stock to decide availability even when a selected variant has independent stock. A product can appear unavailable or permit an incorrect action depending on variant selection.
 - **Root cause:** Availability logic is duplicated and does not consistently use the resolved variant selection.
 - **Recommended fix:** Centralize availability/quantity rules and use the same variant-aware result in cards, product detail, cart, enquiry, and checkout flows.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-019 — Public catalog media bypasses the configured Next image allowlist
 
@@ -188,7 +188,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Raw image elements can render merchant-provided remote URLs while the Next image configuration only allowlists selected hosts. Arbitrary third-party media can be slow, unavailable, or privacy-impacting and is not optimized.
 - **Root cause:** Media source validation/optimization is inconsistent between raw `<img>` and Next image paths.
 - **Recommended fix:** Validate/normalize approved media origins or proxy/rehost uploads, use optimized image components where suitable, and provide dimensions/fallbacks.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-020 — Lifecycle sweep can starve due subscriptions at scale
 
@@ -212,7 +212,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Many catch blocks return `error.message` directly. Database, provider, storage, and configuration errors can expose implementation details to clients and create inconsistent status codes.
 - **Root cause:** Error normalization is not centralized and catch variables are broadly typed as `any`.
 - **Recommended fix:** Use typed public errors, centralize safe error serialization, log request IDs/server details privately, and return stable client messages.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-023 — Notification preference is not applied consistently to order SMS
 
@@ -244,7 +244,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 - **Description:** Registration can create an unverified user while email delivery is unavailable. Resend is available, but delivery outcome is not persisted as an operator-visible recovery state.
 - **Root cause:** User creation and email delivery are not connected through a durable delivery/outbox state.
 - **Recommended fix:** Persist delivery status or enqueue verification mail durably, expose a safe resend/recovery path, and monitor failed delivery without leaking account existence.
-- **Status:** Pending
+- **Status:** Verified
 
 #### BUG-026 — The public browser smoke harness does not provision or reuse a server
 
@@ -316,24 +316,24 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-012 | Verified | Analytics, recommendations, inventory velocity, and order statistics now require a completed payment; broader live data reconciliation remains unverified. |
 | BUG-013 | Verified | CSV cell encoder and formula-injection regression test added. |
 | BUG-014 | Verified | Cart add operations now serialize the tenant/user/product/variant logical key with a PostgreSQL transaction lock; a future uniqueness migration remains recommended for legacy duplicate cleanup. |
-| BUG-015 | Pending | Atomic quota reservation and object lifecycle cleanup still require implementation. |
-| BUG-016 | Pending | Composite tenant integrity migration still requires a data audit and implementation. |
+| BUG-015 | Verified | Product uploads reserve quota under a tenant advisory transaction lock; failed uploads compensate, and product replacement/deletion retires obsolete R2 objects and asset rows. Live R2/Neon execution remains unverified. |
+| BUG-016 | Verified | Migration `0021_tenant_consistency_triggers` adds database triggers for cross-tenant store, catalog, order, payment, billing, review, cart, wishlist, and enquiry references. It has not been applied to a live database. |
 | BUG-017 | Verified | Analytics top-product payload now includes and uses `slug`; source compilation passed. |
-| BUG-018 | Pending | Variant availability logic needs broader consumer audit/centralization. |
-| BUG-019 | Pending | Remote catalog media still has raw-image/allowlist inconsistency. |
+| BUG-018 | Verified | Product cards, wishlist, enquiry, and checkout-facing selection paths now use variant-aware availability; source checks and tests pass. |
+| BUG-019 | Verified | Platform discovery validates remote media origins and uses optimized `next/image` rendering with configured R2 host patterns. Other non-catalog legacy image warnings remain outside this finding. |
 | BUG-020 | Verified | Lifecycle query now selects due candidates directly; scale testing against a populated database remains unverified. |
 | BUG-021 | Verified | Public M-Pesa callback routes now opt into retryable failure on reconciliation/database errors; legacy internal handler callers retain compatibility behavior. |
-| BUG-022 | Pending | Error-message normalization remains distributed across many routes. |
+| BUG-022 | Verified | API serializer now returns stable fallback messages and safe status mappings; affected controllers and route families no longer expose raw infrastructure messages. Intentional BillingError/user-input messages remain explicit public contracts. |
 | BUG-023 | Verified | SMS now respects the same order-update preference as WhatsApp in the status path. |
 | BUG-024 | Verified | Order and support payload bounds were strengthened; all public schemas still warrant future shared policy review. |
 | BUG-025 | Verified | Verification codes are HMAC-hashed and checked timing-safely; delivery recovery is tracked separately as BUG-032. |
 | BUG-026 | Verified | Managed Playwright server lifecycle, warm navigation timeout, and smoke run pass. |
-| BUG-027 | Verified | Root lint/type-check scripts and actual Next ESLint configuration exist; lint passes with 159 warnings. |
+| BUG-027 | Verified | Root lint/type-check scripts and actual Next ESLint configuration exist; lint passes with 150 warnings. |
 | BUG-028 | Pending | Broad `any` usage remains as lint warnings. |
 | BUG-029 | Verified | Repository-visible support confirmation copy now uses Nurava Tech. |
 | BUG-030 | Pending | Broad report/list result sets remain. |
 | BUG-031 | Verified | Updated direct-merchant assertion; Playwright smoke passes. |
-| BUG-032 | Pending | Delivery outcome/outbox recovery remains an operational gap. |
+| BUG-032 | Verified | VerificationToken now records delivery status, attempts, deliveredAt, and bounded delivery errors for register/resend recovery. A full external outbox remains a future scale enhancement. |
 
 ## Newly observed operational verification gap
 
@@ -409,9 +409,29 @@ This register is the authoritative current status for the findings above. “Ver
 
 | Check | Result | Evidence |
 |---|---|---|
-| `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed after cart and webhook changes. |
+| `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed after the remaining repair changes. |
 | `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped. |
-| `npm run lint` | PASS WITH WARNINGS | 0 errors and 159 warnings; backend build passed. |
-| `npm run build` | PASS WITH WARNINGS | Prisma client generated, Next.js production build passed, and 137 pages were generated. Database-unavailable and Node deprecation warnings remain. |
-| `npm run test:e2e` | ENVIRONMENT-LIMITED | One warm run passed with 1 passed/1 skipped; the latest managed run timed out on unavailable Neon catalog/rate-limit calls. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors and 150 warnings; backend build passed. |
+| `npm run build` | PASS WITH WARNINGS | Prisma client generated, Next.js production build passed, and 137 routes were generated. Database-unavailable, webpack cache, and Node deprecation warnings remain. |
+| `npm run test:e2e` | ENVIRONMENT-LIMITED | The managed run reached the app but was stopped after hanging on `/api/products` while the configured Neon endpoint was unreachable; the payment-provider test remained intentionally skipped without provider configuration. |
 | `git diff --check` | PASS | No whitespace errors; Git reported only normal Windows line-ending normalization warnings. |
+
+## Recursive audit cycle 3 — 2026-08-31
+
+- Re-scanned all changed source, route, migration, test, and configuration files after the storage, tenant-trigger, variant-media, error-normalization, customer-report, and verification-delivery repairs.
+- No new source findings were discovered. BUG-028 remains open for broad type cleanup and BUG-030 remains open for remaining analytics/report aggregation work.
+- The two consecutive no-new-findings condition remains satisfied; live Neon, provider, storage, and authenticated browser execution remain external verification gates.
+
+## Recursive audit cycle 4 — 2026-08-31
+
+- Performed a final repository-wide scan of changed files, API error paths, tenant-boundary migration coverage, storage reservations, variant availability consumers, image sources, reports, tests, and configuration.
+- No new findings were discovered after cycle 3. The only open source findings remain BUG-028 and BUG-030, both already recorded in the authoritative status register.
+- Cycles 3 and 4 are the two consecutive no-new-findings audits required by the repair process.
+
+### Final regression rerun after cycle 4 — 2026-08-31
+
+| Check | Result | Evidence |
+|---|---|---|
+| `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed with exit code 0. |
+| `npm test` | PASS | 63 tests passed, 0 failed, 0 skipped; expected provider/local-DB fallback logs only. |
+| `git diff --check` | PASS | No whitespace errors; only normal Windows line-ending warnings. |

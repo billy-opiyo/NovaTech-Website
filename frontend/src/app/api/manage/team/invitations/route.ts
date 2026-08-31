@@ -8,6 +8,7 @@ import { createInvitationToken, hashInvitationToken } from "backend/lib/invitati
 import { storeInvitationSchema } from "backend/validators/teamValidator"
 import { assertTenantStaffLimit } from "backend/billing/subscription"
 import { sendEmail } from "backend/lib/email"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 		})
 		return NextResponse.json({ invitations })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Invitations unavailable" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Invitations unavailable")
 	}
 }
 
@@ -58,6 +59,6 @@ export async function POST(request: NextRequest) {
 		}).catch((error) => console.error("Invitation email could not be sent:", error))
 		return NextResponse.json({ invitation, delivery: "email-and-manual-link", inviteLink }, { status: 201 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to create invitation" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to create invitation")
 	}
 }

@@ -4,85 +4,76 @@ Date: 2026-08-31
 Repository: NovaTech Website  
 Audit source of truth: [BUG_AUDIT.md](<C:/Users/Billy/MY WEB PROJECTS/NovaTech Website/BUG_AUDIT.md>)
 
-## Executive result
+## Result
 
-The repository-wide source audit and repair cycle is complete. Two consecutive post-repair source audits found no new findings. The source quality checks pass, and 24 of 32 recorded findings are verified. Eight findings remain open, primarily storage lifecycle, tenant-integrity migration, image rendering, error normalization, type cleanup, large-report scaling, and durable email-delivery recovery.
+The remaining source-level repair batch is complete. Of 32 recorded findings, 30 are verified and 2 remain open as non-blocking technical debt: broad `any` usage (BUG-028) and unbounded analytics/report aggregation (BUG-030). No Critical or High findings remain in the current register.
 
-The final production quality gate is not fully satisfied because the configured Neon database is unavailable/uninitialized in this environment, live authenticated SaaS flows could not be exercised, payment providers were not configured, and the remaining findings are not all verified. No live migration or destructive database operation was performed.
+The final production gate is not fully claimable because the configured Neon database is unreachable/uninitialized in this environment, no live provider sandboxes were configured, and authenticated seeded browser workflows could not be exercised. No live migration or destructive database operation was performed.
 
 ## Issue totals
 
 | Measure | Count |
 |---|---:|
 | Total findings recorded | 32 |
-| Verified remediations | 24 |
-| Pending findings | 8 |
-| New findings in recursive audit 1 | 0 |
-| New findings in recursive audit 2 | 0 |
-| Critical findings remaining | 0 source findings; live payment/tenant verification remains unavailable |
-| High findings remaining | 1: BUG-032 durable verification-delivery recovery |
+| Fixed and verified | 30 |
+| Remaining | 2 |
+| Critical remaining | 0 |
+| High remaining | 0 |
+| Medium remaining | 1: BUG-030 |
+| Low remaining | 1: BUG-028 |
+| Consecutive post-repair audits with no new findings | 2: cycles 3 and 4 |
 
-The complete file-by-file descriptions, roots, recommended fixes, statuses, and evidence are in [BUG_AUDIT.md](<C:/Users/Billy/MY WEB PROJECTS/NovaTech Website/BUG_AUDIT.md>).
+## Repairs verified
 
-## Verified repairs
-
-- Payment status handling now fails closed for incomplete M-Pesa responses, protects completed payments from downgrade, and avoids duplicate order finalization.
-- M-Pesa billing attempts reuse open invoice/payment state under a PostgreSQL advisory transaction lock and compensate reservations when provider initiation fails.
-- Stripe webhook receipts have processing, retry, failure, and processed states.
-- Public M-Pesa callbacks use runtime schemas, shortcode binding, provider re-query where configured, provider-scoped payment lookup, and retryable database failure behavior at the actual callback routes.
-- Email verification now has IP/account rate limiting and keyed, timing-safe code verification.
-- Product and private verification uploads validate magic bytes and sanitize generated extensions.
-- Analytics and operational sales signals require completed payment status, and CSV export neutralizes spreadsheet formulas.
-- Order transitions are explicit; SMS order notifications respect the customer preference.
-- Request bounds were strengthened, product dashboard links use slugs, due lifecycle work is selected directly, and root lint/type-check scripts plus managed Playwright server startup were added.
-- Contact support now has bounded fields, a honeypot, distributed rate limiting, and a single notification owner.
+- Payment, billing, webhook, idempotency, terminal-state, and order-transition protections are in place.
+- Verification codes are keyed-HMAC stored and compared timing-safely; delivery status, attempts, success time, and bounded failure state are persisted.
+- Uploads use magic-byte validation; product upload quota reservations are serialized per tenant, compensated on failure, and obsolete product media assets are cleaned up.
+- Database migration `0021_tenant_consistency_triggers` rejects cross-tenant references across store, catalog, order, payment, billing, review, cart, wishlist, and enquiry relationships.
+- Variant-aware stock is used in catalog/wishlist/enquiry-facing paths; public discovery media is origin-allowlisted and rendered through optimized image components.
+- API error serialization now uses stable fallback messages across the repaired controller and route families; raw infrastructure error responses were removed from those paths.
+- Customer reporting is bounded and uses database-side aggregates with completed-payment revenue.
+- Existing completed repairs include payload bounds, CSV formula neutralization, notification preferences, lifecycle selection, slug routing, quality scripts, and managed Playwright setup.
 
 ## Remaining issues
 
-- BUG-015: upload quota reservation and replacement-object cleanup are not atomic/durable.
-- BUG-016: composite tenant-integrity constraints require a data audit and safe migration.
-- BUG-018: variant availability logic still needs broader consumer centralization.
-- BUG-019: remote catalog media still has raw-image/Next allowlist inconsistency.
-- BUG-022: API error serialization remains distributed and some routes expose internal messages.
-- BUG-028: broad `any` usage remains, reflected in lint warnings.
-- BUG-030: some reports and operational lists still use broad in-memory result sets or fixed limits.
-- BUG-032: verification email delivery outcome is not persisted through a durable outbox/recovery state.
+- BUG-028: broad `any` types remain in legacy provider/UI boundaries and lint still reports 150 warnings. This is maintainability/type-hardening work, not a current compiler failure.
+- BUG-030: analytics category/top-product/region paths still materialize tenant order/item sets in memory; they need SQL aggregation and cursor/export strategy before high-volume tenants.
 
 ## Security findings
 
-Source-level critical payment and tenant-boundary risks identified in the initial audit were remediated and regression-tested. Remaining security-sensitive deployment work includes applying migration `0019_webhook_processing_state`, confirming provider callback/network controls, configuring production secrets, validating object-storage policy, and exercising live tenant-isolation and payment reconciliation tests against an isolated Neon environment.
+No Critical or High source findings remain. The source-level controls cover tenant-aware authorization, payment state transitions, callback validation, rate limiting, file signatures, formula injection, verification-token storage, and safe API error fallbacks.
 
-The audit did not claim a dependency-vulnerability result: `npm audit` could not be launched by the local sandbox helper, so no vulnerability status is inferred.
+Live security gates remain: apply and verify migrations in an isolated Neon database, confirm provider callback authenticity/network policy, configure production secrets, validate R2 bucket policy, and run authenticated cross-tenant attack tests.
+
+`npm audit` was not verified because the local sandbox helper denied launching it; no dependency-vulnerability conclusion is inferred.
 
 ## Performance findings
 
-Next reports a 102 kB shared first-load JavaScript baseline; several pages use unoptimized `<img>` elements. BUG-030 tracks broad report/list queries and should be addressed with SQL aggregation, indexes, cursor pagination, and bounded exports as tenant data grows. Webpack also emitted cache snapshot warnings during local builds, but the build completed successfully.
+The production build reports a 102 kB shared first-load JavaScript baseline and several legacy `<img>` warnings outside the repaired platform-discovery path. BUG-030 remains for SQL aggregation, indexes, cursor pagination, and deliberate export limits. Webpack cache snapshot warnings occurred but did not fail the build.
 
 ## Architecture findings
 
-The project remains a Next.js workspace with backend Prisma services and route-level tenant/permission enforcement. The repair added shared file validation, email-code hashing, explicit order transitions, webhook processing state, root quality scripts, and focused regression tests. The remaining architectural debt is concentrated in distributed error handling, broad boundary types, storage lifecycle ownership, durable notification delivery, and legacy database uniqueness/integrity constraints.
+The repair strengthens the existing Next.js workspace without creating a parallel architecture: shared file validation, safe API errors, durable verification-delivery fields, atomic storage reservation, explicit order transitions, database tenant-consistency triggers, and bounded reporting were added. Remaining architectural debt is concentrated in legacy boundary types and analytics query strategy.
 
-## Automated verification
+## Verification results
 
 | Check | Result |
 |---|---|
 | `npm install --ignore-scripts --no-audit --no-fund` | PASS; dependencies up to date |
-| `npm run lint` | PASS; 0 errors, 159 warnings; backend build included and passed |
+| `npx prisma validate --schema backend/prisma/schema.prisma` with placeholder `DATABASE_URL` | PASS; schema syntax valid |
+| `npm run lint` | PASS; 0 errors, 150 warnings; backend build passed |
 | `npm run type-check` | PASS; frontend TypeScript and backend `tsc` passed |
-| `npm run build` | PASS; Prisma client generated, Next production build completed, 137 pages generated |
+| `npm run build` | PASS; Prisma client generated, Next production build passed, 137 routes generated |
 | `npm test` | PASS; 63 passed, 0 failed, 0 skipped |
-| `git diff --check` | PASS |
-| `npm audit --omit=dev --audit-level=high --json` | Not verified; local sandbox helper denied launch |
-
-Build warnings include unavailable Neon access during static fallback generation, Node `url.parse` deprecation notices, and the lint warnings listed above. They did not change the successful exit status.
+| `git diff --check` | PASS; only normal Windows line-ending warnings |
+| `npm audit` | Not verified; launch denied by local sandbox helper |
 
 ## Playwright results
 
-- Managed server startup is now configured in `playwright.config.ts`.
-- A warm local smoke run passed: 1 test passed and 1 provider test skipped because no provider was configured.
-- The later managed rerun reached the application but was environment-limited: `/api/products` waited on the unavailable Neon endpoint/rate-limit store and timed out. This is not recorded as a UI assertion regression.
-- Authenticated registration/login/logout, protected dashboard, settings, CRUD, billing, seeded checkout, mobile navigation, and live provider workflows remain unverified because no seeded database, credentials, or live provider sandbox was available.
+The managed Playwright configuration now starts/reuses the development server. A prior warm smoke run passed 1 test and skipped 1 provider test as designed. The final managed run reached the application but hung while `/api/products` waited on the unreachable configured Neon endpoint; it was stopped after the environment timeout window. Payment-provider coverage remained skipped because `E2E_PAYMENT_PROVIDER` was not configured.
+
+Homepage/catalog search/checkout received smoke coverage where the database fallback allowed it. Authenticated registration/login/logout, protected dashboard, settings, CRUD, billing, seeded checkout, mobile navigation, live payments, and cross-tenant browser tests remain unverified without a reachable seeded environment.
 
 ## Confidence assessment
 
-Source confidence: medium-high for the audited and tested paths. Operational/live confidence: low until an isolated Neon database is migrated, seeded, reachable, and exercised with configured provider/email/storage integrations. The project is not presented as production-ready solely from the passing build and tests; the remaining findings and environment gates must be closed before launch approval.
+Source confidence: medium-high for the audited and tested paths. Operational/live confidence: low until an isolated Neon database is migrated and seeded, providers/storage/email are configured, and authenticated tenant-isolation and payment-reconciliation tests pass. The repository should not be declared production-ready solely from these source checks.

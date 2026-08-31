@@ -6,8 +6,9 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
-import { assertTenantStorageLimit } from "backend/billing/subscription"
+import { reserveTenantStorageAsset } from "backend/billing/subscription"
 import { hasAllowedFileSignature } from "backend/lib/file-validation"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(req: NextRequest) {
 	try {
@@ -46,26 +47,21 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
-		await assertTenantStorageLimit(context.tenantId, file.size)
-
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!hasAllowedFileSignature(buffer, file.type === "image/jpeg" ? ["JPEG"] : file.type === "image/png" ? ["PNG"] : file.type === "image/webp" ? ["WEBP"] : ["GIF"])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
 		const key = generateTenantFileKey(context.tenantId, context.storeId, productId, file.name)
-
-		const url = await uploadFile(buffer, key, file.type)
+		const asset = await reserveTenantStorageAsset({ tenantId: context.tenantId, storeId: context.storeId, objectKey: key, bytes: file.size, kind: "PRODUCT_IMAGE" })
 		try {
-			await prisma.storageAsset.create({ data: { tenantId: context.tenantId, storeId: context.storeId, objectKey: key, bytes: file.size, kind: "PRODUCT_IMAGE" } })
+			const url = await uploadFile(buffer, key, file.type)
+			return NextResponse.json({ url, key }, { status: 201 })
 		} catch (error) {
+			await prisma.storageAsset.delete({ where: { id: asset.id } }).catch(() => undefined)
 			await deleteFile(key).catch(() => undefined)
 			throw error
 		}
-
-		return NextResponse.json({ url, key }, { status: 201 })
 	} catch (error: any) {
 		console.error("Product image upload error:", error)
-		return NextResponse.json(
-			{ message: error.message || "Upload failed" },
-			{ status: error?.status || (error?.code === "ENTITLEMENT_LIMIT_REACHED" ? 409 : 500) },
-		)
+		if (error?.code === "ENTITLEMENT_LIMIT_REACHED") return NextResponse.json({ message: "Storage quota exceeded" }, { status: 409 })
+		return apiErrorResponse(error, "Upload failed")
 	}
 }

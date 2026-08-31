@@ -7,6 +7,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { normalizePhone } from "backend/lib/daraja"
 import { decryptMerchantVerificationDetails, encryptMerchantVerificationDetails } from "backend/lib/merchant-verification-secrets"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const profileSchema = z.object({
 	businessType: z.enum(["INDIVIDUAL", "REGISTERED_BUSINESS"]),
@@ -42,7 +43,7 @@ export async function GET() {
 		if (!tenant) return NextResponse.json({ message: "Merchant workspace not found" }, { status: 404 })
 		return NextResponse.json({ verification: tenant })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Verification status unavailable" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Verification status unavailable")
 	}
 }
 
@@ -89,6 +90,6 @@ export async function POST(request: Request) {
 		return NextResponse.json({ message: "Verification request submitted for Nurava review.", verification })
 	} catch (error: any) {
 		if (error.message === "Invalid Kenyan phone number format") return NextResponse.json({ message: error.message }, { status: 400 })
-		return NextResponse.json({ message: error.message || "Unable to submit verification" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to submit verification")
 	}
 }

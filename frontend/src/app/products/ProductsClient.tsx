@@ -34,6 +34,8 @@ interface Product {
 	rating?: number
 	reviewCount?: number
 	stock: number
+	variants: { stock: number }[]
+	availableStock: number
 	specs: Record<string, string>
 }
 
@@ -116,6 +118,7 @@ export default function ProductsClient() {
 			.then((response) => {
 				const products = response.products.map((product: any) => ({
 					...product,
+					availableStock: product.variants?.length ? Math.max(...product.variants.map((variant: { stock: number }) => variant.stock)) : product.stock,
 					rating: product.averageRating,
 					reviewCount: product.reviewCount,
 				}))
@@ -638,12 +641,12 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 							SALE
 						</span>
 					)}
-					{product.stock <= 5 && product.stock > 0 && (
+					{product.availableStock <= 5 && product.availableStock > 0 && (
 						<span className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
-							Only {product.stock} left
+						Only {product.availableStock} left
 						</span>
 					)}
-					{product.stock === 0 && (
+					{product.availableStock === 0 && (
 						<div className="absolute inset-0 bg-black/50 flex items-center justify-center">
 							<span className="text-white font-semibold text-lg">
 								Out of Stock

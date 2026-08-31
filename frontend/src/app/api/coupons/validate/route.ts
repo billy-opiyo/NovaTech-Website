@@ -3,6 +3,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { z } from "zod"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const couponValidationSchema = z.object({
 	code: z.string().trim().min(1).max(32),
@@ -71,6 +72,6 @@ export async function POST(req: NextRequest) {
 			message: `Coupon applied! You save KES ${discount.toLocaleString()}`,
 		})
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to validate coupon")
 	}
 }

@@ -8,6 +8,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { customDomainSchema } from "backend/validators/domainValidator"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { assertTenantCustomDomainLimit } from "backend/billing/subscription"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 async function access(request: NextRequest) {
 	const session = await auth()
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 		const domains = await prisma.domain.findMany({ where: { tenantId: context.tenantId, storeId: context.storeId }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true }, orderBy: { createdAt: "desc" } })
 		return NextResponse.json({ domains })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Domain settings unavailable" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Domain settings unavailable")
 	}
 }
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 		const domain = await prisma.domain.create({ data: { tenantId: context.tenantId, storeId: context.storeId, hostname: parsed.data.hostname, type: DomainType.CUSTOM, verificationToken, verificationStatus: "PENDING" }, select: { id: true, hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true, verifiedAt: true, createdAt: true } })
 		return NextResponse.json({ domain, verification: { recordType: "TXT", name: `_nurava-verification.${domain.hostname}`, value: verificationToken, status: "pending_dns_check" } }, { status: 201 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.code === "P2002" ? "That domain is already registered." : error.message || "Unable to add domain" }, { status: error.status || (error.code === "P2002" ? 409 : 503) })
+		return error?.code === "P2002" ? NextResponse.json({ message: "That domain is already registered." }, { status: 409 }) : apiErrorResponse(error, "Unable to add domain")
 	}
 }
 
@@ -53,6 +54,6 @@ export async function DELETE(request: NextRequest) {
 		await prisma.domain.delete({ where: { id: domain.id } })
 		return NextResponse.json({ ok: true })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Unable to remove domain" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to remove domain")
 	}
 }

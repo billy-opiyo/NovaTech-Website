@@ -1,6 +1,7 @@
 import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
 import { assertTenantProductLimit } from "../billing/subscription"
+import { deleteFile } from "../lib/storage"
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
 	const where: Prisma.ProductWhereInput = { tenantId }
@@ -244,18 +245,48 @@ export async function updateProduct(slug: string, data: any, tenantId: string) {
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
 	if (update.stock !== undefined) update.stock = Number(update.stock)
-	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true } })
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
 	if (!product) throw new Error("Product not found")
 	const nextPrice = update.price === undefined ? product.price : Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
 		throw new Error("discountedPrice cannot exceed price")
 	}
-	return prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: { where: { tenantId } } } })
+	const updated = await prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: { where: { tenantId } } } })
+	if (Array.isArray(update.images)) {
+		const publicPrefix = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/$/, "")
+		const retained = new Set(updated.images)
+		const obsoleteKeys = product.images
+			.filter((image) => publicPrefix && image.startsWith(`${publicPrefix}/`) && !retained.has(image))
+			.map((image) => image.slice(publicPrefix.length + 1))
+		for (const objectKey of obsoleteKeys) {
+			try {
+				await deleteFile(objectKey)
+				await prisma.storageAsset.deleteMany({ where: { tenantId, objectKey } })
+			} catch (error) {
+				console.error(`Unable to clean up replaced product asset ${objectKey}`, error)
+			}
+		}
+	}
+	return updated
 }
 
 export async function deleteProduct(slug: string, tenantId: string) {
-	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, orderItems: { select: { id: true }, take: 1 } } })
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, images: true, orderItems: { select: { id: true }, take: 1 } } })
 	if (!product) throw new Error("Product not found")
 	if (product.orderItems.length) throw new Error("Products with order history cannot be deleted; set stock to zero instead")
-	return prisma.product.delete({ where: { id: product.id } })
+	const deleted = await prisma.product.delete({ where: { id: product.id } })
+	const publicPrefix = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/$/, "")
+	if (publicPrefix) {
+		for (const image of product.images) {
+			if (!image.startsWith(`${publicPrefix}/`)) continue
+			const objectKey = image.slice(publicPrefix.length + 1)
+			try {
+				await deleteFile(objectKey)
+				await prisma.storageAsset.deleteMany({ where: { tenantId, objectKey } })
+			} catch (error) {
+				console.error(`Unable to clean up deleted product asset ${objectKey}`, error)
+			}
+		}
+	}
+	return deleted
 }

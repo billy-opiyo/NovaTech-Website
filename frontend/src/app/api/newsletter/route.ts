@@ -3,6 +3,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { z } from "zod"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const newsletterSchema = z.object({
 	email: z.string().email(),
@@ -28,6 +29,6 @@ export async function POST(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to subscribe right now")
 	}
 }

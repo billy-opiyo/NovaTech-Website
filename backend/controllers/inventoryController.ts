@@ -11,6 +11,7 @@ import {
 	updateVariantStock,
 	getStockMovementHistory,
 } from "../services/inventory.service"
+import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getInventory(req: NextRequest) {
 	try {
@@ -71,10 +72,7 @@ export async function getInventory(req: NextRequest) {
 		}
 	} catch (error: any) {
 		console.error("Inventory API error:", error)
-		return NextResponse.json(
-			{ message: "Failed to fetch inventory data", error: error.message },
-			{ status: error?.status || 500 },
-		)
+		return apiErrorResponse(error, "Failed to fetch inventory data")
 	}
 }
 
@@ -107,6 +105,6 @@ export async function updateStock(req: NextRequest) {
 		const product = await updateProductStock(productId, context.tenantId, newStock)
 		return NextResponse.json(product)
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: error?.status || (error.message === "Product not found" || error.message === "Variant not found" ? 404 : 500) })
+		return apiErrorResponse(error, "Unable to update inventory")
 	}
 }

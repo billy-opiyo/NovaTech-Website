@@ -9,6 +9,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { deletePrivateFile, generateVerificationFileKey, uploadPrivateFile } from "backend/lib/storage"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { hasAllowedFileSignature, type ValidatedFileKind } from "backend/lib/file-validation"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const evidenceTypes = ["GOVERNMENT_ID", "BUSINESS_REGISTRATION", "KRA_PIN", "LOCATION_PROOF", "MPESA_OWNERSHIP", "OWNER_DECLARATION"] as const
 const evidenceSchema = z.object({ type: z.enum(evidenceTypes) })
@@ -29,7 +30,7 @@ export async function GET() {
 		const evidence = await prisma.merchantVerificationEvidence.findMany({ where: { tenantId: context.tenantId }, orderBy: { createdAt: "desc" }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, reviewedAt: true, reviewNote: true, createdAt: true } })
 		return NextResponse.json({ evidence })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Verification evidence unavailable" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Verification evidence unavailable")
 	}
 }
 
@@ -58,6 +59,6 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ evidence }, { status: 201 })
 	} catch (error: any) {
 		if (objectKey) await deletePrivateFile(objectKey).catch(() => undefined)
-		return NextResponse.json({ message: error.message || "Unable to upload verification evidence" }, { status: error.status || 503 })
+		return apiErrorResponse(error, "Unable to upload verification evidence")
 	}
 }
