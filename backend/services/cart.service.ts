@@ -41,7 +41,7 @@ function toCartResponse(items: any[], commerceSettings?: unknown) {
 async function findCartItems(userId: string, tenantId: string) {
 	return prisma.cartItem.findMany({
 		where: { userId, tenantId },
-		include: { product: { include: { variants: true } } },
+		include: { product: { include: { variants: { where: { tenantId } } } } },
 		orderBy: { createdAt: "asc" },
 	})
 }
@@ -63,7 +63,7 @@ export async function addCartItem(
 	tenantId: string,
 	variant?: string,
 ) {
-	const product = await prisma.product.findFirst({ where: { id: productId, tenantId }, include: { variants: true } })
+	const product = await prisma.product.findFirst({ where: { id: productId, tenantId }, include: { variants: { where: { tenantId } } } })
 	if (!product) throw new Error("Product not found")
 	const selectedVariant = resolveVariantSelection(product.variants, variant)
 	if (!selectedVariant.valid) throw new Error("The selected product variant is unavailable")
@@ -87,7 +87,7 @@ export async function addCartItem(
 
 export async function updateCartItem(userId: string, itemId: string, quantity: number, tenantId: string) {
 	if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be at least one")
-	const item = await prisma.cartItem.findFirst({ where: { id: itemId, userId, tenantId }, include: { product: { include: { variants: true } } } })
+	const item = await prisma.cartItem.findFirst({ where: { id: itemId, userId, tenantId }, include: { product: { include: { variants: { where: { tenantId } } } } } })
 	if (!item) throw new Error("Cart item not found")
 	const selectedVariant = resolveVariantSelection(item.product.variants, item.variant)
 	if (!selectedVariant.valid || quantity > (selectedVariant.stock ?? item.product.stock)) throw new Error("Requested quantity exceeds available stock")

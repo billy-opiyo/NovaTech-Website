@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/lib/cartContext"
+import { useStoreContext } from "@/lib/store-context"
 import {
 	Minus,
 	Plus,
@@ -34,6 +35,7 @@ export default function CartPage() {
 		savedItems,
 		moveToCart,
 	} = useCart()
+	const store = useStoreContext()
 	const [couponCode, setCouponCode] = useState("")
 	const [couponApplied, setCouponApplied] = useState(false)
 	const [couponDiscount, setCouponDiscount] = useState(0)
@@ -58,7 +60,9 @@ export default function CartPage() {
 		}
 	}
 
-	const finalTotal = total - couponDiscount
+	const freeShippingThreshold = Math.max(0, store.ecommerce.freeShippingThreshold)
+	const qualifiesForFreeShipping = freeShippingThreshold === 0 || subtotal >= freeShippingThreshold
+	const finalTotal = Math.max(0, total - couponDiscount)
 
 	if (items.length === 0 && savedItems.length === 0) {
 		return (
@@ -104,7 +108,7 @@ export default function CartPage() {
 				{/* Cart Items */}
 				<div className="lg:col-span-2 space-y-6">
 					{/* Free Shipping Banner */}
-					{subtotal < 50000 && (
+					{!qualifiesForFreeShipping && (
 						<motion.div
 							initial={{ opacity: 0, height: 0 }}
 							animate={{ opacity: 1, height: "auto" }}
@@ -113,14 +117,14 @@ export default function CartPage() {
 							<Truck className="text-accent flex-shrink-0" size={24} />
 							<div className="flex-1">
 								<p className="font-medium">
-									Add KES {(50000 - subtotal).toLocaleString()} more for free
+									Add KES {(freeShippingThreshold - subtotal).toLocaleString()} more for free
 									shipping!
 								</p>
 								<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
 									<div
 										className="bg-accent h-2 rounded-full transition-all duration-500"
 										style={{
-											width: `${Math.min((subtotal / 50000) * 100, 100)}%`,
+											width: `${Math.min((subtotal / Math.max(freeShippingThreshold, 1)) * 100, 100)}%`,
 										}}
 									/>
 								</div>

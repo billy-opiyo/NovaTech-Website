@@ -5,6 +5,7 @@ import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
 import { PLATFORM_BRAND_NAME } from "../lib/brand"
 import { getTenantEntitlement } from "../billing/subscription"
+import { resolveVariantSelection } from "../lib/product-variant"
 
 export interface CreateOrderData {
 	tenantId: string
@@ -46,30 +47,46 @@ export async function createOrder(data: CreateOrderData) {
 		const products = await Promise.all(
 			data.items.map((item) => tx.product.findFirst({
 				where: { id: item.productId, tenantId: data.tenantId },
-				select: { id: true, stock: true, name: true, price: true, discountedPrice: true },
+				select: {
+					id: true,
+					stock: true,
+					name: true,
+					price: true,
+					discountedPrice: true,
+					variants: { select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
+				},
 			})),
 		)
 		const productById = new Map(products.filter(Boolean).map((product) => [product!.id, product!]))
 		let subtotal = 0
 		const requestedQuantities = new Map<string, number>()
+		const requestedVariantQuantities = new Map<string, number>()
+		const resolvedItems: { productId: string; quantity: number; variant?: string; price: number }[] = []
 		for (const item of data.items) {
-			requestedQuantities.set(item.productId, (requestedQuantities.get(item.productId) || 0) + item.quantity)
-		}
-
-		// Validate stock availability
-		for (const [productId, quantity] of requestedQuantities) {
-			const product = productById.get(productId)
-
+			if (!Number.isInteger(item.quantity) || item.quantity < 1) throw new Error("Order quantities must be positive integers")
+			const product = productById.get(item.productId)
 			if (!product) {
-				throw new Error(`Product not found: ${productId}`)
+				throw new Error(`Product not found: ${item.productId}`)
 			}
-
-			if (product.stock < quantity) {
+			const selectedVariant = resolveVariantSelection(product.variants, item.variant)
+			if (!selectedVariant.valid) throw new Error(`Selected variant is unavailable for ${product.name}`)
+			const unitPrice = (product.discountedPrice ?? product.price) + selectedVariant.priceModifier
+			const availableStock = selectedVariant.stock ?? product.stock
+			if (availableStock < item.quantity) {
 				throw new Error(
-					`Insufficient stock for ${product.name}. Available: ${product.stock}`,
+					`Insufficient stock for ${product.name}. Available: ${availableStock}`,
 				)
 			}
-			subtotal += (product.discountedPrice ?? product.price) * quantity
+			if (selectedVariant.selected.length > 0) {
+				for (const variant of selectedVariant.selected) {
+					if (!variant.id) throw new Error(`Selected variant is unavailable for ${product.name}`)
+					requestedVariantQuantities.set(variant.id, (requestedVariantQuantities.get(variant.id) || 0) + item.quantity)
+				}
+			} else {
+				requestedQuantities.set(item.productId, (requestedQuantities.get(item.productId) || 0) + item.quantity)
+			}
+			resolvedItems.push({ productId: item.productId, quantity: item.quantity, variant: item.variant, price: unitPrice })
+			subtotal += unitPrice * item.quantity
 		}
 
 		let discount = 0
@@ -81,7 +98,7 @@ export async function createOrder(data: CreateOrderData) {
 			}
 			if (coupon.minOrderValue && subtotal < coupon.minOrderValue) throw new Error("Order does not meet the coupon minimum")
 			couponUsedCount = coupon.usedCount
-			discount = coupon.discountPercent ? subtotal * coupon.discountPercent / 100 : (coupon.discountAmount || 0)
+			discount = Math.min(subtotal, Math.max(0, coupon.discountPercent ? subtotal * coupon.discountPercent / 100 : (coupon.discountAmount || 0)))
 		}
 		const store = await tx.store.findFirst({
 			where: { tenantId: data.tenantId },
@@ -100,13 +117,12 @@ export async function createOrder(data: CreateOrderData) {
 		const total = Math.max(0, subtotal - discount + shippingCost)
 
 		// Get product prices for order items
-		const orderItems = data.items.map((item) => {
-				const product = productById.get(item.productId)!
+		const orderItems = resolvedItems.map((item) => {
 				return {
 					tenantId: data.tenantId,
 					productId: item.productId,
 					quantity: item.quantity,
-					price: product.discountedPrice ?? product.price,
+					price: item.price,
 					variant: item.variant,
 				}
 			})
@@ -160,6 +176,15 @@ export async function createOrder(data: CreateOrderData) {
 			})
 			if (updated.count !== 1) {
 				throw new Error("Product stock changed while placing the order. Please review your cart and try again.")
+			}
+		}
+		for (const [variantId, quantity] of requestedVariantQuantities) {
+			const updated = await tx.variant.updateMany({
+				where: { id: variantId, tenantId: data.tenantId, stock: { gte: quantity } },
+				data: { stock: { decrement: quantity } },
+			})
+			if (updated.count !== 1) {
+				throw new Error("Variant stock changed while placing the order. Please review your cart and try again.")
 			}
 		}
 
@@ -432,16 +457,32 @@ export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 	return prisma.$transaction(async (tx) => {
 		const order = await tx.order.findUnique({
 			where: { id: orderId, ...(tenantId ? { tenantId } : {}) },
-			include: { items: true },
+			include: {
+				items: {
+					include: {
+						product: {
+							select: {
+								variants: { select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
+							},
+						},
+					},
+				},
+			},
 		})
 		if (!order || order.status !== "PENDING") return order
 
 		for (const item of order.items) {
-			await tx.product.update({
-				where: { id: item.productId },
-				data: { stock: { increment: item.quantity } },
-			})
+			const selectedVariant = resolveVariantSelection(item.product.variants, item.variant)
+			if (!selectedVariant.valid) throw new Error("Unable to restore stock for an invalid product variant")
+			if (selectedVariant.selected.length > 0) {
+				for (const variant of selectedVariant.selected) {
+					if (!variant.id) throw new Error("Unable to restore stock for an invalid product variant")
+					await tx.variant.updateMany({ where: { id: variant.id, tenantId: order.tenantId }, data: { stock: { increment: item.quantity } } })
+				}
+			} else {
+				await tx.product.updateMany({ where: { id: item.productId, tenantId: order.tenantId }, data: { stock: { increment: item.quantity } } })
+			}
 		}
-		return tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } })
+		return tx.order.update({ where: { id: orderId, ...(tenantId ? { tenantId } : {}) }, data: { status: "CANCELLED" } })
 	})
 }

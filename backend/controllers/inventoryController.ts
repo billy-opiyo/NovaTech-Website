@@ -26,7 +26,8 @@ export async function getInventory(req: NextRequest) {
 			}
 
 			case "low-stock": {
-				const threshold = parseInt(searchParams.get("threshold") || "10", 10)
+			const requestedThreshold = Number(searchParams.get("threshold") || 10)
+			const threshold = Number.isInteger(requestedThreshold) && requestedThreshold >= 0 ? requestedThreshold : 10
 				const products = await getLowStockProducts(context.tenantId, threshold)
 				return NextResponse.json(products)
 			}
@@ -42,7 +43,8 @@ export async function getInventory(req: NextRequest) {
 			}
 
 			case "reorder-suggestions": {
-				const days = parseInt(searchParams.get("days") || "30", 10)
+				const requestedDays = Number(searchParams.get("days") || 30)
+				const days = Number.isInteger(requestedDays) && requestedDays > 0 ? Math.min(requestedDays, 3650) : 30
 				const suggestions = await getReorderSuggestions(context.tenantId, days)
 				return NextResponse.json(suggestions)
 			}
@@ -55,7 +57,8 @@ export async function getInventory(req: NextRequest) {
 						{ status: 400 },
 					)
 				}
-				const limit = parseInt(searchParams.get("limit") || "20", 10)
+				const requestedLimit = Number(searchParams.get("limit") || 20)
+				const limit = Number.isInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 100) : 20
 				const history = await getStockMovementHistory(productId, context.tenantId, limit)
 				return NextResponse.json(history)
 			}
@@ -82,9 +85,9 @@ export async function updateStock(req: NextRequest) {
 		const body = await req.json()
 		const { productId, variantId, newStock } = body
 
-		if (typeof newStock !== "number" || newStock < 0) {
+		if (typeof newStock !== "number" || !Number.isInteger(newStock) || newStock < 0) {
 			return NextResponse.json(
-				{ message: "newStock must be a non-negative number" },
+				{ message: "newStock must be a non-negative integer" },
 				{ status: 400 },
 			)
 		}

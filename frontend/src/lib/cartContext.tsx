@@ -45,40 +45,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
 	const [items, setItems] = useState<CartItem[]>([])
 	const [savedItems, setSavedItems] = useState<CartItem[]>([])
 	const [mounted, setMounted] = useState(false)
+	const cartStorageKey = `cart:${store.storeId}`
+	const savedItemsStorageKey = `savedItems:${store.storeId}`
 
-	// Load cart from localStorage on mount
+	// Keep carts isolated per merchant store. A shared key would carry products
+	// and prices from one storefront into another storefront in the same browser.
 	useEffect(() => {
+		setMounted(false)
+		try {
+			const savedCart = localStorage.getItem(cartStorageKey)
+			const savedLater = localStorage.getItem(savedItemsStorageKey)
+			setItems(savedCart ? JSON.parse(savedCart) : [])
+			setSavedItems(savedLater ? JSON.parse(savedLater) : [])
+		} catch (error) {
+			console.error("Failed to restore store cart:", error)
+			setItems([])
+			setSavedItems([])
+		}
 		setMounted(true)
-		const savedCart = localStorage.getItem("cart")
-		const savedLater = localStorage.getItem("savedItems")
-		if (savedCart) {
-			try {
-				setItems(JSON.parse(savedCart))
-			} catch (e) {
-				console.error("Failed to parse cart:", e)
-			}
-		}
-		if (savedLater) {
-			try {
-				setSavedItems(JSON.parse(savedLater))
-			} catch (e) {
-				console.error("Failed to parse saved items:", e)
-			}
-		}
-	}, [])
+	}, [cartStorageKey, savedItemsStorageKey])
 
 	// Persist cart to localStorage
 	useEffect(() => {
 		if (mounted) {
-			localStorage.setItem("cart", JSON.stringify(items))
+			localStorage.setItem(cartStorageKey, JSON.stringify(items))
 		}
-	}, [items, mounted])
+	}, [cartStorageKey, items, mounted])
 
 	useEffect(() => {
 		if (mounted) {
-			localStorage.setItem("savedItems", JSON.stringify(savedItems))
+			localStorage.setItem(savedItemsStorageKey, JSON.stringify(savedItems))
 		}
-	}, [savedItems, mounted])
+	}, [mounted, savedItems, savedItemsStorageKey])
 
 	const addItem = useCallback((newItem: Omit<CartItem, "id">) => {
 		setItems((prev) => {

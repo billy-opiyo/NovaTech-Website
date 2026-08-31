@@ -19,6 +19,7 @@ import clsx from "clsx"
 import { getProducts } from "@/services/products"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import { getProductImage } from "@/constants/productImages"
 
 // Types
 interface Product {
@@ -620,13 +621,14 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ delay: index * 0.05 }}
 		>
-			<Link
-				href={`/products/${product.slug}`}
-				className="glass-card block group h-full"
-			>
-				<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+			<article className="glass-card relative block h-full overflow-hidden">
+				<Link
+					href={`/products/${product.slug}`}
+					className="group block pb-14"
+				>
+					<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 					<Image
-						src={product.images[0]}
+						src={getProductImage(product.images[0], product.name)}
 						alt={product.name}
 						fill
 						className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -648,17 +650,17 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 							</span>
 						</div>
 					)}
-				</div>
+					</div>
 
-				<p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+					<p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
 					{product.brand}
-				</p>
-				<h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+					</p>
+					<h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
 					{product.name}
-				</h3>
+					</h3>
 
-				<div className="flex items-center gap-1 mb-2">
-					<div className="flex">
+					<div className="flex items-center gap-1 mb-2">
+						<div className="flex">
 						{Array.from({ length: 5 }).map((_, i) => (
 							<Star
 								key={i}
@@ -670,11 +672,11 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 								}
 							/>
 						))}
+						</div>
+						<span className="text-xs text-gray-500">({product.reviewCount})</span>
 					</div>
-					<span className="text-xs text-gray-500">({product.reviewCount})</span>
-				</div>
 
-				<div className="flex items-baseline gap-2">
+					<div className="flex items-baseline gap-2">
 					{product.discountedPrice ? (
 						<>
 							<span className="text-lg font-bold text-primary">
@@ -689,7 +691,8 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 							KES {product.price.toLocaleString()}
 						</span>
 					)}
-				</div>
+					</div>
+					</Link>
 				<div className="absolute bottom-3 left-3 right-3 flex items-center justify-center">
 					<a
 						href={merchantHref}
@@ -701,7 +704,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 						Order on WhatsApp
 					</a>
 				</div>
-			</Link>
+			</article>
 		</motion.div>
 	)
 }
@@ -721,19 +724,20 @@ function ProductListItem({
 			animate={{ opacity: 1, x: 0 }}
 			transition={{ delay: index * 0.05 }}
 		>
-			<Link
-				href={`/products/${product.slug}`}
-				className="glass-card flex gap-6 group"
-			>
-				<div className="relative h-40 w-40 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+			<article className="glass-card relative overflow-hidden">
+				<Link
+					href={`/products/${product.slug}`}
+					className="flex gap-6 pb-14 group"
+				>
+					<div className="relative h-40 w-40 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 					<Image
-						src={product.images[0]}
+						src={getProductImage(product.images[0], product.name)}
 						alt={product.name}
 						fill
 						className="object-cover group-hover:scale-105 transition-transform duration-500"
 					/>
-				</div>
-				<div className="flex-1 flex flex-col justify-between py-2">
+					</div>
+					<div className="flex-1 flex flex-col justify-between py-2">
 					<div>
 						<p className="text-xs text-gray-500 uppercase tracking-wider">
 							{product.brand}
@@ -781,6 +785,8 @@ function ProductListItem({
 							</span>
 						)}
 					</div>
+					</div>
+					</Link>
 					<div className="absolute bottom-2 left-2 right-2 flex items-center justify-center">
 						<a
 							href={merchantHref}
@@ -792,8 +798,7 @@ function ProductListItem({
 							Order on WhatsApp
 						</a>
 					</div>
-				</div>
-			</Link>
+			</article>
 		</motion.div>
 	)
 }
