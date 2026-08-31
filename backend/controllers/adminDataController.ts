@@ -3,6 +3,7 @@ import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
 import { MembershipRole } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
+import { couponCreateSchema, couponUpdateSchema } from "../validators/couponValidator"
 
 export async function getCustomers(req: NextRequest) {
 	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
@@ -26,13 +27,11 @@ export async function getCoupons(req: NextRequest) {
 export async function createCoupon(req: NextRequest) {
 	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
 	try {
-		const body = await req.json()
-		const code = String(body.code || "").trim().toUpperCase()
-		const discountPercent = body.discountPercent == null ? null : Number(body.discountPercent)
-		const discountAmount = body.discountAmount == null ? null : Number(body.discountAmount)
-		if (!/^[A-Z0-9_-]{3,32}$/.test(code) || (discountPercent == null && discountAmount == null) || (discountPercent != null && discountAmount != null) || !body.expiresAt) return NextResponse.json({ message: "Invalid coupon data" }, { status: 400 })
-		const coupon = await prisma.coupon.create({ data: { tenantId: context.tenantId, code, discountPercent, discountAmount, minOrderValue: body.minOrderValue == null ? null : Number(body.minOrderValue), expiresAt: new Date(body.expiresAt), usageLimit: body.usageLimit == null ? null : Number(body.usageLimit), isActive: body.isActive !== false } })
-		await createActionRecord("CREATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id, code })
+		const parsed = couponCreateSchema.safeParse(await req.json().catch(() => null))
+		if (!parsed.success) return NextResponse.json({ message: "Invalid coupon data", issues: parsed.error.flatten() }, { status: 400 })
+		const data = parsed.data
+		const coupon = await prisma.coupon.create({ data: { tenantId: context.tenantId, code: data.code, discountPercent: data.discountPercent ?? null, discountAmount: data.discountAmount ?? null, minOrderValue: data.minOrderValue ?? null, expiresAt: new Date(data.expiresAt), usageLimit: data.usageLimit ?? null, isActive: data.isActive !== false } })
+		await createActionRecord("CREATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id, code: data.code })
 		return NextResponse.json(coupon, { status: 201 })
 	} catch (error: any) { return NextResponse.json({ message: error.code === "P2002" ? "Coupon code already exists" : error.message }, { status: 400 }) }
 }
@@ -40,11 +39,12 @@ export async function createCoupon(req: NextRequest) {
 export async function updateCoupon(req: NextRequest) {
 	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
 	try {
-		const body = await req.json()
-		if (!body.id) return NextResponse.json({ message: "Coupon id is required" }, { status: 400 })
-		const existing = await prisma.coupon.findFirst({ where: { id: body.id, tenantId: context.tenantId }, select: { id: true } })
+		const parsed = couponUpdateSchema.safeParse(await req.json().catch(() => null))
+		if (!parsed.success) return NextResponse.json({ message: "Invalid coupon update", issues: parsed.error.flatten() }, { status: 400 })
+		const data = parsed.data
+		const existing = await prisma.coupon.findFirst({ where: { id: data.id, tenantId: context.tenantId }, select: { id: true } })
 		if (!existing) return NextResponse.json({ message: "Coupon not found" }, { status: 404 })
-		const coupon = await prisma.coupon.update({ where: { id: existing.id }, data: { ...(body.code ? { code: String(body.code).trim().toUpperCase() } : {}), ...(body.isActive === undefined ? {} : { isActive: Boolean(body.isActive) }), ...(body.expiresAt ? { expiresAt: new Date(body.expiresAt) } : {}), ...(body.usageLimit === undefined ? {} : { usageLimit: body.usageLimit == null ? null : Number(body.usageLimit) }) } })
+		const coupon = await prisma.coupon.update({ where: { id: existing.id }, data: { ...(data.code === undefined ? {} : { code: data.code }), ...(data.isActive === undefined ? {} : { isActive: data.isActive }), ...(data.expiresAt === undefined ? {} : { expiresAt: new Date(data.expiresAt) }), ...(data.usageLimit === undefined ? {} : { usageLimit: data.usageLimit }) } })
 		await createActionRecord("UPDATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id })
 		return NextResponse.json(coupon)
 	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }

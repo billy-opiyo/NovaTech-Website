@@ -15,12 +15,12 @@ export async function GET(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		const searchParams = req.nextUrl.searchParams
 		const type = searchParams.get("type") || "trending"
-		const limit = parseInt(searchParams.get("limit") || "12")
+		const parsedLimit = Number(searchParams.get("limit") || 12)
 		const productId = searchParams.get("productId")
 		const userId = searchParams.get("userId")
 
 		// Validate limit
-		const validatedLimit = Math.min(Math.max(limit, 1), 50)
+		const validatedLimit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 12
 
 		switch (type) {
 			case "personalized": {

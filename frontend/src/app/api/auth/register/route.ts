@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { registerSchema } from "backend/validators/authValidator"
 import crypto from "crypto"
+import { escapeHtml } from "backend/lib/html"
 
 function verificationIdentifier(email: string) {
 	return `verify:${email}`
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 			await sendEmail({
 				to: email,
 				subject: "Verify your Nurava Tech email",
-				html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">Nurava Tech</h1><p>Hi ${input.name.trim()},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${code}</p><p>This code expires in 15 minutes.</p><p><a href="${appUrl}/auth/verify-email?email=${encodeURIComponent(email)}">Open verification page</a></p></div>`,
+				html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">Nurava Tech</h1><p>Hi ${escapeHtml(input.name.trim())},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${escapeHtml(code)}</p><p>This code expires in 15 minutes.</p><p><a href="${escapeHtml(appUrl)}/auth/verify-email?email=${encodeURIComponent(email)}">Open verification page</a></p></div>`,
 			})
 		} catch (error) {
 			console.error("Verification email could not be sent:", error)

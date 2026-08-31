@@ -18,25 +18,34 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 	const minPrice = params.get("minPrice")
 	const maxPrice = params.get("maxPrice")
 	if (minPrice || maxPrice) {
+		const parsedMin = minPrice ? Number(minPrice) : undefined
+		const parsedMax = maxPrice ? Number(maxPrice) : undefined
 		where.price = {
-			...(minPrice && { gte: parseFloat(minPrice) }),
-			...(maxPrice && { lte: parseFloat(maxPrice) }),
+			...(parsedMin !== undefined && Number.isFinite(parsedMin) && parsedMin >= 0 ? { gte: parsedMin } : {}),
+			...(parsedMax !== undefined && Number.isFinite(parsedMax) && parsedMax >= 0 ? { lte: parsedMax } : {}),
 		}
 	}
 
 	const search = params.get("q") || params.get("search")
+	const andFilters: Prisma.ProductWhereInput[] = []
 	if (search) {
-		where.OR = [
+		andFilters.push({ OR: [
 			{ name: { contains: search, mode: "insensitive" } },
 			{ brand: { contains: search, mode: "insensitive" } },
 			{ description: { contains: search, mode: "insensitive" } },
 			{ sku: { contains: search, mode: "insensitive" } },
-		]
+		] })
 	}
 
 	if (params.get("inStock") === "true") {
-		where.stock = { gt: 0 }
+		andFilters.push({
+			OR: [
+				{ stock: { gt: 0 } },
+				{ variants: { some: { tenantId, stock: { gt: 0 } } } },
+			],
+		})
 	}
+	if (andFilters.length) where.AND = andFilters
 
 	if (params.get("onSale") === "true") {
 		where.discountedPrice = { not: null }
@@ -81,7 +90,7 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 			where,
 			include: {
 				category: true,
-				variants: true,
+				variants: { where: { tenantId } },
 				reviews: {
 					where: { moderationStatus: "APPROVED" },
 					select: {
@@ -122,7 +131,7 @@ export async function getProductBySlug(slug: string, tenantId: string) {
 		where: { slug, tenantId },
 		include: {
 			category: true,
-			variants: true,
+			variants: { where: { tenantId } },
 			reviews: {
 				where: { moderationStatus: "APPROVED" },
 				include: {
@@ -241,7 +250,7 @@ export async function updateProduct(slug: string, data: any, tenantId: string) {
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
 		throw new Error("discountedPrice cannot exceed price")
 	}
-	return prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: true } })
+	return prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: { where: { tenantId } } } })
 }
 
 export async function deleteProduct(slug: string, tenantId: string) {

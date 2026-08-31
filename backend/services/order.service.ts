@@ -39,7 +39,7 @@ export async function createOrder(data: CreateOrderData) {
 	return prisma.$transaction(async (tx) => {
 		if (!data.items.length) throw new Error("At least one item is required")
 		if (data.idempotencyKey) {
-			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } } })
+			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { where: { tenantId: data.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			if (existing) return existing
 		}
 
@@ -53,7 +53,7 @@ export async function createOrder(data: CreateOrderData) {
 					name: true,
 					price: true,
 					discountedPrice: true,
-					variants: { select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
+					variants: { where: { tenantId: data.tenantId }, select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
 				},
 			})),
 		)
@@ -147,6 +147,7 @@ export async function createOrder(data: CreateOrderData) {
 			},
 			include: {
 				items: {
+					where: { tenantId: data.tenantId },
 					include: {
 						product: {
 							select: {
@@ -215,6 +216,7 @@ export async function getOrdersByUserId(userId: string, tenantId: string, page =
 			where: { userId, tenantId },
 			include: {
 				items: {
+					where: { tenantId },
 					include: {
 						product: {
 							select: {
@@ -246,6 +248,7 @@ export async function getOrderById(orderId: string, tenantId: string, userId?: s
 		where: { id: orderId, tenantId },
 		include: {
 			items: {
+				where: { tenantId },
 				include: {
 					product: {
 						select: {
@@ -295,6 +298,7 @@ export async function updateOrderStatus(
 		},
 		include: {
 			items: {
+				where: { tenantId },
 				include: {
 					product: {
 						select: {
@@ -385,6 +389,7 @@ export async function getAllOrders(tenantId: string, page = 1, limit = 20, statu
 			where,
 			include: {
 				items: {
+					where: { tenantId },
 					include: {
 						product: {
 							select: {
@@ -459,10 +464,11 @@ export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 			where: { id: orderId, ...(tenantId ? { tenantId } : {}) },
 			include: {
 				items: {
+					where: tenantId ? { tenantId } : undefined,
 					include: {
 						product: {
 							select: {
-								variants: { select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
+								variants: { ...(tenantId ? { where: { tenantId } } : {}), select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
 							},
 						},
 					},
