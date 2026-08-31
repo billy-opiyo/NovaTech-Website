@@ -24,7 +24,7 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 		}
 	}
 
-	const search = params.get("q")
+	const search = params.get("q") || params.get("search")
 	if (search) {
 		where.OR = [
 			{ name: { contains: search, mode: "insensitive" } },

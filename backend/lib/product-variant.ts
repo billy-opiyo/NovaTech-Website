@@ -1,4 +1,5 @@
 type VariantLike = {
+	id?: string
 	name: string
 	value: string
 	priceModifier?: number | null
@@ -22,6 +23,9 @@ export function resolveVariantSelection(variants: VariantLike[], selection?: str
 			(!name || variant.name.trim().toLowerCase() === name.toLowerCase()),
 		)
 		if (!match) return { valid: false, selected: [] as VariantLike[], priceModifier: 0, stock: 0 }
+		if (selected.some((variant) => variant.name.trim().toLowerCase() === match.name.trim().toLowerCase())) {
+			return { valid: false, selected: [] as VariantLike[], priceModifier: 0, stock: 0 }
+		}
 		selected.push(match)
 	}
 

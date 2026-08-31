@@ -55,5 +55,5 @@ export async function getProductBySlug(slug: string): Promise<Product> {
 }
 
 export async function searchProducts(q: string): Promise<Product[]> {
-	return apiFetch<Product[]>(`/api/products?search=${encodeURIComponent(q)}`)
+	return apiFetch<Product[]>(`/api/products?q=${encodeURIComponent(q)}`)
 }

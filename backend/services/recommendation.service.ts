@@ -47,6 +47,7 @@ export async function getRecommendedForUser(
 				include: {
 					category: true,
 					reviews: {
+						where: { moderationStatus: "APPROVED" },
 						select: {
 							rating: true,
 						},
@@ -91,6 +92,7 @@ export async function getRecommendedForUser(
 						include: {
 							category: true,
 							reviews: {
+								where: { moderationStatus: "APPROVED" },
 								select: {
 									rating: true,
 								},
@@ -136,6 +138,7 @@ export async function getRecommendedForUser(
 				include: {
 					category: true,
 					reviews: {
+					where: { moderationStatus: "APPROVED" },
 						select: {
 							rating: true,
 						},
@@ -182,6 +185,7 @@ export async function getRecommendedForUser(
 			include: {
 				category: true,
 				reviews: {
+				where: { moderationStatus: "APPROVED" },
 					select: {
 						rating: true,
 					},
@@ -239,6 +243,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 						include: {
 							category: true,
 							reviews: {
+								where: { moderationStatus: "APPROVED" },
 								select: {
 									rating: true,
 								},
@@ -280,6 +285,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 			include: {
 				category: true,
 				reviews: {
+				where: { moderationStatus: "APPROVED" },
 					select: {
 						rating: true,
 					},
@@ -305,6 +311,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 		include: {
 			category: true,
 			reviews: {
+			where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},
@@ -338,6 +345,7 @@ export async function getSimilarProducts(
 		include: {
 			category: true,
 			reviews: {
+			where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},
@@ -369,6 +377,7 @@ export async function getSimilarProducts(
 		include: {
 			category: true,
 			reviews: {
+			where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},
@@ -423,6 +432,7 @@ export async function getFeaturedProducts(tenantId: string, limit: number = 12):
 		include: {
 			category: true,
 			reviews: {
+			where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},
@@ -455,6 +465,7 @@ export async function getNewArrivals(tenantId: string, limit: number = 12): Prom
 		include: {
 			category: true,
 			reviews: {
+			where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},
@@ -489,6 +500,7 @@ export async function getDeals(tenantId: string, limit: number = 12): Promise<Pr
 		include: {
 			category: true,
 			reviews: {
+				where: { moderationStatus: "APPROVED" },
 				select: {
 					rating: true,
 				},

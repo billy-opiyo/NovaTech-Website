@@ -49,7 +49,7 @@ test("product services build the expected catalog requests", async () => {
 	assert.equal(requests[0].url, "/api/products/nova-phone")
 	mockFetch([])
 	await searchProducts("phone case")
-	assert.equal(requests[0].url, "/api/products?search=phone%20case")
+	assert.equal(requests[0].url, "/api/products?q=phone%20case")
 })
 
 test("order services cover reads, creation, status updates, and tracking", async () => {

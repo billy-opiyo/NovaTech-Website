@@ -5,6 +5,7 @@ import { orderSchema, orderStatusSchema } from "../../backend/validators/orderVa
 import { productSchema } from "../../backend/validators/productValidator"
 import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../../backend/validators/reviewValidator"
 import { contactSchema, ticketSchema, updateTicketSchema, ticketReplySchema } from "../../backend/validators/supportValidator"
+import { resolveVariantSelection } from "../../backend/lib/product-variant"
 
 test("auth schemas accept valid credentials and reject malformed input", () => {
 	assert.equal(registerSchema.safeParse({ name: "Ada Lovelace", email: "ada@example.com", password: "Password1" }).success, true)
@@ -31,6 +32,18 @@ test("product schema validates slugs, stock, variants, and image URLs", () => {
 	assert.equal(productSchema.safeParse(product).success, true)
 	assert.equal(productSchema.safeParse({ ...product, slug: "Not Valid" }).success, false)
 	assert.equal(productSchema.safeParse({ ...product, images: ["not-a-url"] }).success, false)
+})
+
+test("variant selection applies variant price and stock without allowing duplicate option groups", () => {
+	const variants = [
+		{ id: "red", name: "Color", value: "Red", priceModifier: 100, stock: 3 },
+		{ id: "128", name: "Storage", value: "128GB", priceModifier: 500, stock: 2 },
+	]
+	const selected = resolveVariantSelection(variants, "Color: Red / Storage: 128GB")
+	assert.equal(selected.valid, true)
+	assert.equal(selected.priceModifier, 600)
+	assert.equal(selected.stock, 2)
+	assert.equal(resolveVariantSelection(variants, "Color: Red / Color: Red").valid, false)
 })
 
 test("review and support schemas enforce required fields and enums", () => {

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { z } from "zod"
+
+const couponValidationSchema = z.object({
+	code: z.string().trim().min(1).max(32),
+	subtotal: z.number().finite().min(0),
+})
 
 export async function POST(req: NextRequest) {
 	const rateLimitResponse = await rateLimiter(req, "coupon-validate")
@@ -9,14 +15,9 @@ export async function POST(req: NextRequest) {
 
 	try {
 		const context = await resolveTenantFromRequest(req)
-		const { code, subtotal } = await req.json()
-
-		if (!code) {
-			return NextResponse.json(
-				{ message: "Coupon code is required" },
-				{ status: 400 },
-			)
-		}
+		const parsed = couponValidationSchema.safeParse(await req.json().catch(() => null))
+		if (!parsed.success) return NextResponse.json({ message: "A valid coupon code and subtotal are required", errors: parsed.error.flatten() }, { status: 400 })
+		const { code, subtotal } = parsed.data
 
 		const coupon = await prisma.coupon.findFirst({ where: { code: code.toUpperCase(), tenantId: context.tenantId } })
 
@@ -59,11 +60,9 @@ export async function POST(req: NextRequest) {
 		}
 
 		let discount = 0
-		if (coupon.discountPercent) {
-			discount = subtotal * (coupon.discountPercent / 100)
-		} else if (coupon.discountAmount) {
-			discount = coupon.discountAmount
-		}
+		if (coupon.discountPercent) discount = subtotal * (coupon.discountPercent / 100)
+		else if (coupon.discountAmount) discount = coupon.discountAmount
+		discount = Math.min(subtotal, Math.max(0, discount))
 
 		return NextResponse.json({
 			valid: true,
