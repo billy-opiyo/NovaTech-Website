@@ -828,8 +828,8 @@ model StoreSettingsVersion {
 model Category {
   id          String     @id @default(cuid())
   tenantId    String?
-  name        String     @unique
-  slug        String     @unique
+  name        String
+  slug        String
   description String?
   imageUrl    String?
   parentId    String?
@@ -839,16 +839,18 @@ model Category {
   tenant      Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, slug])
+  @@unique([tenantId, name])
+  @@unique([tenantId, slug])
 }
 
 model Product {
   id              String   @id @default(cuid())
   tenantId        String?
   name            String
-  slug            String   @unique
+  slug            String
   description     String
   brand           String
-  sku             String   @unique
+  sku             String
   price           Float
   discountedPrice Float?
   stock           Int      @default(0)
@@ -876,6 +878,8 @@ model Product {
   @@index([tenantId, createdAt])
   @@index([tenantId, slug])
   @@index([tenantId, sku])
+  @@unique([tenantId, slug])
+  @@unique([tenantId, sku])
 }
 
 model Variant {
@@ -887,10 +891,11 @@ model Variant {
   value         String // e.g., "Red", "256GB", "16GB"
   priceModifier Float?  @default(0)
   stock         Int     @default(0)
-  sku           String? @unique
+  sku           String?
   tenant        Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, sku])
+  @@unique([tenantId, sku])
 }
 
 // --- Cart & Wishlist ---
@@ -1017,6 +1022,7 @@ model OrderItem {
   quantity  Int
   price     Float
   variant   String?
+  variantIds String[] @default([])
   tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, orderId])

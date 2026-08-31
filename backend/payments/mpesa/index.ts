@@ -246,8 +246,11 @@ export async function verifyMpesaPayment(
 		await prisma.payment.update({ where: { id: payment.id }, data: { status, metadata: { ...(payment.metadata as Record<string, unknown> | undefined), verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } } })
 
 		if (status === "COMPLETED" && payment.orderId && payment.status !== "COMPLETED") {
-			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(tenantId || payment.tenantId ? { tenantId: tenantId || payment.tenantId! } : {}) }, select: { id: true } })
+			const orderTenantId = tenantId || payment.tenantId || undefined
+			const order = await prisma.order.findFirst({ where: { id: payment.orderId, ...(orderTenantId ? { tenantId: orderTenantId } : {}) }, select: { id: true, status: true } })
 			if (!order) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment order is not available in this store." }
+			const claimed = await prisma.order.updateMany({ where: { id: payment.orderId, ...(orderTenantId ? { tenantId: orderTenantId } : {}), status: "PENDING" }, data: { status: "CONFIRMED" } })
+			if (claimed.count !== 1) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment received but the order is no longer pending." }
 			const updatedOrder = await prisma.order.update({
 				where: { id: payment.orderId },
 				data: { status: "CONFIRMED" },

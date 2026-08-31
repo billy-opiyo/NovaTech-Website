@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { uploadFile, generateProfileFileKey } from "backend/lib/storage"
+import { deleteFile, uploadFile, generateProfileFileKey } from "backend/lib/storage"
+import { hasAllowedFileSignature, type ValidatedFileKind } from "backend/lib/file-validation"
 
 const settingsSchema = z.object({
 	name: z.string().trim().min(2).max(100),
@@ -11,11 +12,11 @@ const settingsSchema = z.object({
 	preferredTheme: z.enum(["light", "dark"]),
 })
 
-const profileImageTypes = new Map([
-	["image/jpeg", "jpg"],
-	["image/png", "png"],
-	["image/webp", "webp"],
-	["image/gif", "gif"],
+const profileImageTypes = new Map<string, { extension: string; kind: ValidatedFileKind }>([
+	["image/jpeg", { extension: "jpg", kind: "JPEG" }],
+	["image/png", { extension: "png", kind: "PNG" }],
+	["image/webp", { extension: "webp", kind: "WEBP" }],
+	["image/gif", { extension: "gif", kind: "GIF" }],
 ])
 
 const userSelect = { id: true, name: true, email: true, image: true, emailVerified: true, marketingEmails: true, orderUpdates: true, preferredTheme: true } as const
@@ -33,14 +34,31 @@ export async function POST(request: NextRequest) {
 		const formData = await request.formData()
 		const file = formData.get("file")
 		if (!(file instanceof File)) return NextResponse.json({ message: "Please choose an image." }, { status: 400 })
-		if (!profileImageTypes.has(file.type)) return NextResponse.json({ message: "Use a JPG, PNG, WEBP, or GIF image." }, { status: 400 })
+		const imageType = profileImageTypes.get(file.type)
+		if (!imageType) return NextResponse.json({ message: "Use a JPG, PNG, WEBP, or GIF image." }, { status: 400 })
 		if (file.size > 5 * 1024 * 1024) return NextResponse.json({ message: "Profile images must be 5MB or smaller." }, { status: 400 })
 
-		const extension = profileImageTypes.get(file.type)!
-		const key = generateProfileFileKey(session.user.id, `profile.${extension}`)
-		const url = await uploadFile(Buffer.from(await file.arrayBuffer()), key, file.type)
-		const user = await prisma.user.update({ where: { id: session.user.id }, data: { image: url }, select: userSelect })
-		return NextResponse.json({ user }, { status: 201 })
+		const buffer = Buffer.from(await file.arrayBuffer())
+		if (!hasAllowedFileSignature(buffer, [imageType.kind])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
+
+		const previousUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { image: true } })
+		if (!previousUser) return NextResponse.json({ message: "Account not found." }, { status: 404 })
+		const key = generateProfileFileKey(session.user.id, `profile.${imageType.extension}`)
+		let uploaded = false
+		try {
+			const url = await uploadFile(buffer, key, file.type)
+			uploaded = true
+			const user = await prisma.user.update({ where: { id: session.user.id }, data: { image: url }, select: userSelect })
+			const publicRoot = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.replace(/\/+$/, "")
+			const previousKey = publicRoot && previousUser.image?.startsWith(`${publicRoot}/`)
+				? previousUser.image.slice(publicRoot.length + 1)
+				: null
+			if (previousKey && previousKey !== key) await deleteFile(previousKey).catch((error) => console.error("Previous profile image cleanup failed:", error))
+			return NextResponse.json({ user }, { status: 201 })
+		} catch (error) {
+			if (uploaded) await deleteFile(key).catch(() => undefined)
+			throw error
+		}
 	} catch (error) {
 		console.error("Profile image upload error:", error)
 		return NextResponse.json({ message: "Unable to upload your profile image." }, { status: 500 })
