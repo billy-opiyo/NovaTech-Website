@@ -33,6 +33,13 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 	}
 }
 
+export function emailWasAccepted(result: unknown) {
+	if (!result || typeof result !== "object") return false
+	if ("id" in result && typeof result.id === "string" && result.id.length > 0) return true
+	if ("data" in result && result.data && typeof result.data === "object" && "id" in result.data) return typeof result.data.id === "string" && result.data.id.length > 0
+	return false
+}
+
 export async function sendOrderConfirmationEmail(email: string, order: any) {
 	const html = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">

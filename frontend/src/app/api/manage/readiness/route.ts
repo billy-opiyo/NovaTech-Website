@@ -4,6 +4,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { getLaunchReadiness } from "backend/lib/launch-readiness"
 import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function GET(request: NextRequest) {
 	const requestId = getRequestId(request)
@@ -16,6 +17,6 @@ export async function GET(request: NextRequest) {
 		return withRequestId(NextResponse.json(readiness), requestId)
 	} catch (error: any) {
 		logEvent("error", "merchant_readiness_failed", { requestId, route: "/api/manage/readiness" }, { code: error?.code, message: error?.message })
-		return withRequestId(NextResponse.json({ message: error?.message || "Launch readiness unavailable", requestId }, { status: error?.status || 503 }), requestId)
+		return withRequestId(apiErrorResponse(error, "Launch readiness unavailable"), requestId)
 	}
 }

@@ -13,6 +13,7 @@ import {
 	getGrowthComparison,
 	getAnalyticsExport,
 } from "../services/analytics.service"
+import { apiErrorResponse } from "../lib/api-handler"
 
 async function analyticsAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -56,10 +57,7 @@ export async function getAnalytics(req: NextRequest) {
 		})
 	} catch (error: any) {
 		console.error("Analytics API error:", error)
-		return NextResponse.json(
-			{ message: "Failed to fetch analytics data", error: error.message },
-			{ status: error?.status || 500 },
-		)
+		return apiErrorResponse(error, "Failed to fetch analytics data")
 	}
 }
 
@@ -86,6 +84,6 @@ export async function exportAnalytics(req: NextRequest) {
 			},
 		})
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: error?.status || 500 })
+		return apiErrorResponse(error, "Analytics export unavailable")
 	}
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { decryptMerchantVerificationDetails } from "backend/lib/merchant-verification-secrets"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const reviewRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
 
@@ -22,6 +23,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ten
 		const { sensitiveDetailsCiphertext, ...profile } = tenant.verificationProfile || {}
 		return NextResponse.json({ tenant: { ...tenant, verificationProfile: sensitiveDetailsCiphertext ? { ...profile, details: decryptMerchantVerificationDetails(sensitiveDetailsCiphertext) } : null } })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message || "Verification review unavailable" }, { status: 503 })
+		return apiErrorResponse(error, "Verification review unavailable")
 	}
 }

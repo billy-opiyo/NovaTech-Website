@@ -9,8 +9,20 @@ function metadata(error: unknown): ErrorWithMetadata {
 
 export function apiErrorResponse(error: unknown, fallback = "Request unavailable") {
 	const details = metadata(error)
-	const status = Number.isInteger(details.status) ? details.status as number : details.code === "P2002" ? 409 : details.code === "P2025" ? 404 : 503
-	const message = details.message && (details.status || details.code === "P2002" || details.code === "P2025") ? details.message : fallback
+	const knownMessages: Record<string, number> = {
+		Unauthorized: 401,
+		Forbidden: 403,
+		"Product not found": 404,
+		"Variant not found": 404,
+		"Order not found": 404,
+		"Review not found": 404,
+		"Review not found or unauthorized": 404,
+	}
+	const knownStatus = details.message ? knownMessages[details.message] : undefined
+	const candidateStatus = details.status
+	const explicitStatus = Number.isInteger(candidateStatus) ? Number(candidateStatus) : undefined
+	const status = explicitStatus !== undefined && explicitStatus >= 400 && explicitStatus <= 599 ? explicitStatus : details.code === "P2002" ? 409 : details.code === "P2025" ? 404 : knownStatus || 503
+	const message = knownStatus ? details.message : details.code === "P2002" ? "Request conflicts with existing data" : details.code === "P2025" ? "Requested resource was not found" : fallback
 	return NextResponse.json({ message }, { status })
 }
 

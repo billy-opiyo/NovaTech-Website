@@ -6,6 +6,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import prisma from "backend/lib/db"
 import { markBillingPaymentFromMpesa, recordOrderCommission } from "backend/billing/service"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const mpesaVerifySchema = z.object({
 	reference: z.string().min(3),
@@ -35,6 +36,6 @@ export async function POST(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to verify M-Pesa payment")
 	}
 }

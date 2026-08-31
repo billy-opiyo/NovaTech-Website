@@ -4,6 +4,7 @@ import { createActionRecord } from "../actions"
 import { MembershipRole } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { parsePagination } from "../lib/pagination"
+import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getAdminLogs(req: NextRequest) {
 	try {
@@ -52,10 +53,7 @@ export async function getAdminLogs(req: NextRequest) {
 		})
 	} catch (error: any) {
 		console.error("Admin logs API error:", error)
-		return NextResponse.json(
-			{ message: "Failed to fetch admin logs", error: error.message },
-			{ status: 500 },
-		)
+		return apiErrorResponse(error, "Failed to fetch admin logs")
 	}
 }
 
@@ -88,7 +86,7 @@ export async function getAdminLogStats(req: NextRequest) {
 			mostCommonActions: recentActions,
 		})
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Admin log statistics unavailable")
 	}
 }
 
@@ -114,6 +112,6 @@ export async function recordAdminAction(req: NextRequest) {
 
 		return NextResponse.json(result, { status: 201 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to record admin action")
 	}
 }

@@ -6,6 +6,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(request: Request) {
 	try {
@@ -32,6 +33,6 @@ export async function POST(request: Request) {
 		return NextResponse.json({ store: result, version: nextVersion, rolledBackFrom: version })
 	} catch (error: any) {
 		console.error("Store rollback failed", error)
-		return NextResponse.json({ message: error?.status ? error.message : "Store rollback unavailable" }, { status: error?.status || 503 })
+		return apiErrorResponse(error, "Store rollback unavailable")
 	}
 }

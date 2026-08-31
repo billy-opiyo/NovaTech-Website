@@ -100,3 +100,21 @@ export async function assertTenantStorageLimit(tenantId: string, requestedBytes:
 		throw error
 	}
 }
+
+export async function reserveTenantStorageAsset(input: { tenantId: string; storeId: string; objectKey: string; bytes: number; kind?: string }) {
+	if (!Number.isInteger(input.bytes) || input.bytes < 1) throw new Error("Storage asset size is invalid")
+	const limitValue = await getTenantEntitlement(input.tenantId, "storageGb", 2)
+	const limitGb = typeof limitValue === "number" ? limitValue : 2
+	const limitBytes = limitGb * 1024 * 1024 * 1024
+	return prisma.$transaction(async (transaction) => {
+		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`storage:${input.tenantId}`}))`
+		const usage = await transaction.storageAsset.aggregate({ where: { tenantId: input.tenantId }, _sum: { bytes: true } })
+		const usedBytes = usage._sum.bytes || 0
+		if (usedBytes + input.bytes > limitBytes) {
+			const error = new Error(`This plan includes ${limitGb} GB of storage. Upgrade to add more files.`)
+			Object.assign(error, { code: "ENTITLEMENT_LIMIT_REACHED", metric: "storageGb", limit: limitGb, usage: usedBytes, status: 409 })
+			throw error
+		}
+		return transaction.storageAsset.create({ data: { tenantId: input.tenantId, storeId: input.storeId, objectKey: input.objectKey, bytes: input.bytes, kind: input.kind || "STORE_ASSET" } })
+	})
+}

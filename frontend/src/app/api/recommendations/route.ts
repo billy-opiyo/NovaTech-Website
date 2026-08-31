@@ -9,6 +9,7 @@ import {
 	getNewArrivals,
 	getDeals,
 } from "backend/services/recommendation.service"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function GET(req: NextRequest) {
 	try {
@@ -82,9 +83,6 @@ export async function GET(req: NextRequest) {
 		}
 	} catch (error: any) {
 		console.error("Recommendations API error:", error)
-		return NextResponse.json(
-			{ message: "Failed to fetch recommendations", error: error.message },
-			{ status: error?.status || 500 },
-		)
+		return apiErrorResponse(error, "Failed to fetch recommendations")
 	}
 }

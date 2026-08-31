@@ -4,17 +4,30 @@ import { createActionRecord } from "../actions"
 import { MembershipRole } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { couponCreateSchema, couponUpdateSchema } from "../validators/couponValidator"
+import { apiErrorResponse } from "../lib/api-handler"
+import { parsePagination } from "../lib/pagination"
 
 export async function getCustomers(req: NextRequest) {
 	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
 	const search = req.nextUrl.searchParams.get("search")?.trim()
-	const users = await prisma.user.findMany({
-		where: { role: "CUSTOMER", orders: { some: { tenantId: context.tenantId } }, ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }] } : {}) },
-		select: { id: true, name: true, email: true, image: true, createdAt: true, orders: { where: { tenantId: context.tenantId }, select: { total: true, createdAt: true }, orderBy: { createdAt: "desc" } } },
-		orderBy: { createdAt: "desc" },
+	const { page, limit, skip } = parsePagination(req.nextUrl.searchParams, 100)
+	const settledOrderWhere = { tenantId: context.tenantId, payments: { some: { status: "COMPLETED" as const } } }
+	const customerWhere = { role: "CUSTOMER" as const, orders: { some: { tenantId: context.tenantId } }, ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" as const } }, { email: { contains: search, mode: "insensitive" as const } }] } : {}) }
+	const [users, total, revenue, settledGroups] = await Promise.all([
+		prisma.user.findMany({ where: customerWhere, select: { id: true, name: true, email: true, image: true, createdAt: true }, orderBy: { createdAt: "desc" }, skip, take: limit }),
+		prisma.user.count({ where: customerWhere }),
+		prisma.order.aggregate({ where: settledOrderWhere, _sum: { total: true } }),
+		prisma.order.groupBy({ by: ["userId"], where: { ...settledOrderWhere, userId: { not: null } }, _count: { _all: true }, _sum: { total: true }, _max: { createdAt: true } }),
+	])
+	const settledByUser = new Map(settledGroups.filter((group) => group.userId).map((group) => [group.userId as string, group]))
+	const customers = users.map((user) => {
+		const settled = settledByUser.get(user.id)
+		const totalOrders = settled?._count._all || 0
+		return { ...user, totalOrders, totalSpent: settled?._sum.total || 0, lastOrder: settled?._max.createdAt || null, status: totalOrders >= 10 ? "vip" : totalOrders > 0 ? "active" : "inactive" }
 	})
-	const customers = users.map((user) => ({ ...user, totalOrders: user.orders.length, totalSpent: user.orders.reduce((sum, order) => sum + order.total, 0), lastOrder: user.orders[0]?.createdAt ?? null, status: user.orders.length >= 10 ? "vip" : "active" }))
-	return NextResponse.json({ customers, stats: { total: customers.length, active: customers.filter((c) => c.status === "active").length, vip: customers.filter((c) => c.status === "vip").length, inactive: customers.filter((c) => c.status === "inactive").length, totalRevenue: customers.reduce((sum, c) => sum + c.totalSpent, 0) } })
+	const active = settledGroups.filter((group) => group._count._all > 0 && group._count._all < 10).length
+	const vip = settledGroups.filter((group) => group._count._all >= 10).length
+	return NextResponse.json({ customers, page, totalPages: Math.ceil(total / limit), stats: { total, active, vip, inactive: Math.max(0, total - active - vip), totalRevenue: revenue._sum.total || 0 } })
 }
 
 export async function getCoupons(req: NextRequest) {
@@ -33,7 +46,7 @@ export async function createCoupon(req: NextRequest) {
 		const coupon = await prisma.coupon.create({ data: { tenantId: context.tenantId, code: data.code, discountPercent: data.discountPercent ?? null, discountAmount: data.discountAmount ?? null, minOrderValue: data.minOrderValue ?? null, expiresAt: new Date(data.expiresAt), usageLimit: data.usageLimit ?? null, isActive: data.isActive !== false } })
 		await createActionRecord("CREATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id, code: data.code })
 		return NextResponse.json(coupon, { status: 201 })
-	} catch (error: any) { return NextResponse.json({ message: error.code === "P2002" ? "Coupon code already exists" : error.message }, { status: 400 }) }
+	} catch (error: any) { return error?.code === "P2002" ? NextResponse.json({ message: "Coupon code already exists" }, { status: 409 }) : apiErrorResponse(error, "Unable to create coupon") }
 }
 
 export async function updateCoupon(req: NextRequest) {
@@ -47,7 +60,7 @@ export async function updateCoupon(req: NextRequest) {
 		const coupon = await prisma.coupon.update({ where: { id: existing.id }, data: { ...(data.code === undefined ? {} : { code: data.code }), ...(data.isActive === undefined ? {} : { isActive: data.isActive }), ...(data.expiresAt === undefined ? {} : { expiresAt: new Date(data.expiresAt) }), ...(data.usageLimit === undefined ? {} : { usageLimit: data.usageLimit }) } })
 		await createActionRecord("UPDATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id })
 		return NextResponse.json(coupon)
-	} catch (error: any) { return NextResponse.json({ message: error.message }, { status: 400 }) }
+	} catch (error: any) { return apiErrorResponse(error, "Unable to update coupon") }
 }
 
 export async function deleteCoupon(req: NextRequest) {

@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { merchantEnquirySchema } from "backend/validators/merchantEnquiryValidator"
 import { resolveVariantSelection } from "backend/lib/product-variant"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(request: NextRequest) {
 	const limited = await rateLimiter(request, "merchant-enquiry")
@@ -38,6 +39,6 @@ export async function POST(request: NextRequest) {
 		})
 		return NextResponse.json({ enquiry }, { status: 201 })
 	} catch (error: any) {
-		return NextResponse.json({ message: error?.status ? error.message : "Unable to save this enquiry right now." }, { status: error?.status || 503 })
+		return apiErrorResponse(error, "Unable to save this enquiry right now.")
 	}
 }

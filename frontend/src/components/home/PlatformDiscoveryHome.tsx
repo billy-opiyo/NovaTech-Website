@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowRight, BadgeCheck, MessageCircle, ShieldCheck, Star } from "lucide-react"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 import PlatformHero from "@/components/home/PlatformHero"
@@ -13,11 +14,23 @@ const groupCopy = {
 	NEW_AND_GROWING: { title: "New and growing stores", description: "Published stores with products to discover; review history is still developing." },
 } as const
 
+const approvedImageHosts = new Set(["images.unsplash.com", "images.pexels.com", ...(process.env.NEXT_PUBLIC_R2_PUBLIC_URL ? [new URL(process.env.NEXT_PUBLIC_R2_PUBLIC_URL).hostname] : [])])
+function approvedImageSource(value?: string | null) {
+	if (!value) return null
+	if (value.startsWith("/")) return value
+	try {
+		const url = new URL(value)
+		return url.protocol === "https:" && approvedImageHosts.has(url.hostname) ? value : null
+	} catch {
+		return null
+	}
+}
+
 function StoreCard({ entry }: { entry: DiscoveryEntry }) {
 	return <article className="glass-card navy-glass overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-		<div className="flex items-start gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/80 p-2 dark:bg-white/10"><img src={entry.logoUrl || "/images/NovaTech icon.png"} alt="" className="h-full w-full object-contain" /></div><div className="min-w-0"><h3 className="truncate text-xl font-bold">{entry.name}</h3><p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">{entry.tagline}</p></div></div>
+		<div className="flex items-start gap-4"><div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/80 p-2 dark:bg-white/10"><Image src={approvedImageSource(entry.logoUrl) || "/images/NovaTech icon.png"} alt="" fill sizes="56px" className="object-contain" /></div><div className="min-w-0"><h3 className="truncate text-xl font-bold">{entry.name}</h3><p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">{entry.tagline}</p></div></div>
 		<div className="mt-4 flex flex-wrap gap-3 text-sm"><span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-3 py-1 font-semibold text-yellow-700 dark:text-yellow-300"><Star size={15} className="fill-current" /> {entry.averageRating > 0 ? entry.averageRating.toFixed(1) : "New"}</span><span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-gray-600 dark:text-gray-300"><MessageCircle size={15} /> {entry.reviewCount} approved reviews</span><span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-gray-600 dark:text-gray-300"><BadgeCheck size={15} /> {entry.productCount} products</span></div>
-		{entry.products.length > 0 && <div className="mt-5 grid grid-cols-3 gap-2">{entry.products.map((product) => <Link href={`${entry.href}/products/${product.slug}`} key={product.slug} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-xl border border-white/10 bg-white/40 dark:bg-white/5"><div className="relative h-24 w-full bg-gray-100 dark:bg-gray-900">{product.image ? <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-xs text-gray-500">No image</div>}</div><p className="truncate px-2 py-2 text-xs font-semibold">{product.name}</p></Link>)}</div>}
+		{entry.products.length > 0 && <div className="mt-5 grid grid-cols-3 gap-2">{entry.products.map((product) => { const image = approvedImageSource(product.image); return <Link href={`${entry.href}/products/${product.slug}`} key={product.slug} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-xl border border-white/10 bg-white/40 dark:bg-white/5"><div className="relative h-24 w-full bg-gray-100 dark:bg-gray-900">{image ? <Image src={image} alt={product.name} fill sizes="(max-width: 768px) 33vw, 160px" className="object-cover transition duration-300 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-xs text-gray-500">No image</div>}</div><p className="truncate px-2 py-2 text-xs font-semibold">{product.name}</p></Link> })}</div>}
 		<div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4"><span className="text-xs text-gray-500">{entry.category === "TOP_RATED" ? "Based on approved ratings" : entry.category === "MOST_REVIEWED" ? "Based on approved review volume" : "Review history developing"}</span><a href={entry.href} className="inline-flex items-center gap-2 font-semibold text-primary">Visit store <ArrowRight size={16} /></a></div>
 	</article>
 }

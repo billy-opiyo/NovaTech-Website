@@ -14,15 +14,16 @@ function verificationIdentifier(email: string) {
 
 async function createVerificationCode(email: string) {
 	const code = crypto.randomInt(100000, 1000000).toString()
+	const token = hashEmailVerificationCode(code)
 	await prisma.verificationToken.deleteMany({ where: { identifier: verificationIdentifier(email) } })
 	await prisma.verificationToken.create({
 		data: {
 			identifier: verificationIdentifier(email),
-			token: hashEmailVerificationCode(code),
+			token,
 			expires: new Date(Date.now() + 15 * 60 * 1000),
 		},
 	})
-	return code
+	return { code, token }
 }
 
 export async function POST(req: NextRequest) {
@@ -46,17 +47,20 @@ export async function POST(req: NextRequest) {
 			data: { name: input.name.trim(), email, passwordHash },
 			select: { id: true, name: true, email: true, role: true },
 		})
-		const code = await createVerificationCode(email)
+		const verification = await createVerificationCode(email)
 		const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-		const { sendEmail } = await import("backend/lib/email")
+		const { emailWasAccepted, sendEmail } = await import("backend/lib/email")
 		try {
-			await sendEmail({
+			const delivery = await sendEmail({
 				to: email,
 				subject: "Verify your Nurava Tech email",
-				html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">Nurava Tech</h1><p>Hi ${escapeHtml(input.name.trim())},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${escapeHtml(code)}</p><p>This code expires in 15 minutes.</p><p><a href="${escapeHtml(appUrl)}/auth/verify-email?email=${encodeURIComponent(email)}">Open verification page</a></p></div>`,
+					html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">Nurava Tech</h1><p>Hi ${escapeHtml(input.name.trim())},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${escapeHtml(verification.code)}</p><p>This code expires in 15 minutes.</p><p><a href="${escapeHtml(appUrl)}/auth/verify-email?email=${encodeURIComponent(email)}">Open verification page</a></p></div>`,
 			})
+			if (!emailWasAccepted(delivery)) throw new Error("Verification email provider is not configured")
+			await prisma.verificationToken.update({ where: { token: verification.token }, data: { deliveryStatus: "DELIVERED", deliveryAttempts: { increment: 1 }, deliveredAt: new Date(), deliveryError: null } })
 		} catch (error) {
 			console.error("Verification email could not be sent:", error)
+			await prisma.verificationToken.update({ where: { token: verification.token }, data: { deliveryStatus: "FAILED", deliveryAttempts: { increment: 1 }, deliveryError: error instanceof Error ? error.message.slice(0, 500) : "Email delivery failed" } }).catch(() => undefined)
 		}
 
 		return NextResponse.json({ user, verificationRequired: true }, { status: 201 })

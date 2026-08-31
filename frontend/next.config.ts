@@ -1,6 +1,8 @@
 import path from "path"
 import NextConfig from "next"
 
+const publicR2Host = process.env.NEXT_PUBLIC_R2_PUBLIC_URL ? new URL(process.env.NEXT_PUBLIC_R2_PUBLIC_URL).hostname : null
+
 type WebpackConfig = { externals?: unknown[] }
 
 const nextConfig = {
@@ -27,6 +29,7 @@ const nextConfig = {
 				protocol: "https",
 				hostname: "images.pexels.com",
 			},
+			...(publicR2Host ? [{ protocol: "https" as const, hostname: publicR2Host }] : []),
 		],
 	},
 	async headers() {

@@ -3,6 +3,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { z } from "zod"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 const schema = z.object({ email: z.string().email() })
 
@@ -17,6 +18,6 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ message: "If that address was subscribed, it has been unsubscribed." })
 	} catch (error: any) {
 		if (error instanceof z.ZodError) return NextResponse.json({ message: "Enter a valid email address." }, { status: 400 })
-		return NextResponse.json({ message: error.message || "Unable to update your subscription." }, { status: error?.status || 500 })
+		return apiErrorResponse(error, "Unable to update your subscription.")
 	}
 }

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { LEGACY_PREFERRED_STORE_COOKIE, PREFERRED_STORE_COOKIE } from "@/lib/store-preference"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 function expireLegacyPreference(response: NextResponse) {
 	response.cookies.set(LEGACY_PREFERRED_STORE_COOKIE, "", { path: "/", maxAge: 0 })
@@ -50,6 +51,6 @@ export async function POST(request: Request) {
 		})
 		return expireLegacyPreference(response)
 	} catch (error) {
-		return NextResponse.json({ message: error instanceof Error ? error.message : "Store preference unavailable" }, { status: 503 })
+		return apiErrorResponse(error, "Store preference unavailable")
 	}
 }

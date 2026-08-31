@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
+import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function GET(request: NextRequest) {
 	try {
@@ -33,6 +34,6 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json(payload, { headers: { "Content-Disposition": `attachment; filename="${context.storeSlug}-export.json"`, "Cache-Control": "no-store" } })
 	} catch (error: any) {
 		console.error("Tenant data export unavailable", error)
-		return NextResponse.json({ message: error?.status ? error.message : "Tenant data export is unavailable until the database is configured" }, { status: error?.status || 503 })
+		return apiErrorResponse(error, "Tenant data export is unavailable until the database is configured")
 	}
 }

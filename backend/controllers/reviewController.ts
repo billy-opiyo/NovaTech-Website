@@ -7,6 +7,7 @@ import { findBlockedReviewTerms } from "../constants/reviewModeration"
 import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
 import { parsePagination } from "../lib/pagination"
+import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getReviews(req: NextRequest) {
 	try {
@@ -54,7 +55,7 @@ export async function getReviews(req: NextRequest) {
 			averageRating: total > 0 ? avg._avg.rating : 0,
 		})
 	} catch (error: any) {
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Reviews unavailable")
 	}
 }
 
@@ -123,7 +124,7 @@ export async function createReview(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to create review")
 	}
 }
 
@@ -171,7 +172,7 @@ export async function updateReview(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to update review")
 	}
 }
 
@@ -211,6 +212,6 @@ export async function deleteReview(req: NextRequest) {
 				{ status: 400 },
 			)
 		}
-		return NextResponse.json({ message: error.message }, { status: 500 })
+		return apiErrorResponse(error, "Unable to delete review")
 	}
 }
