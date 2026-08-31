@@ -70,7 +70,7 @@ export async function getInventory(req: NextRequest) {
 					{ status: 400 },
 				)
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Inventory API error:", error)
 		return apiErrorResponse(error, "Failed to fetch inventory data")
 	}
@@ -104,7 +104,7 @@ export async function updateStock(req: NextRequest) {
 
 		const product = await updateProductStock(productId, context.tenantId, newStock)
 		return NextResponse.json(product)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update inventory")
 	}
 }

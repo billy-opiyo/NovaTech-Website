@@ -25,8 +25,8 @@ export function useProducts({ initialQuery = {}, enabled = true }: UseProductsOp
 			setProducts(data.products)
 			setTotal(data.total)
 			setTotalPages(data.totalPages)
-		} catch (err: any) {
-			setError(err.message || "Failed to load products")
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Failed to load products")
 		} finally {
 			setIsLoading(false)
 		}

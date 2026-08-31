@@ -94,8 +94,8 @@ export default function OrderTrackingPage() {
 
 			const data = await response.json()
 			setOrder(data)
-		} catch (err: any) {
-			setError(err.message)
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Unable to load order")
 			console.error("Error fetching tracking data:", err)
 		} finally {
 			setLoading(false)

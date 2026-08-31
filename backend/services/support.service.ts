@@ -4,6 +4,7 @@ import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { normalizePagination } from "../lib/pagination"
 import { escapeHtml, safeEmailSubject } from "../lib/html"
+import type { Prisma } from "@prisma/client"
 
 const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
 
@@ -41,16 +42,16 @@ export async function getAllTickets(filters?: {
 	const limit = pagination.limit
 	const skip = pagination.skip
 
-	const where: any = { tenantId: filters?.tenantId }
+	const where: Prisma.SupportTicketWhereInput = { tenantId: filters?.tenantId }
 
 	if (filters?.status && filters.status !== "All") {
-		where.status = filters.status.toLowerCase().replace(" ", "_")
+		where.status = filters.status.toLowerCase().replace(" ", "_") as TicketStatus
 	}
 	if (filters?.priority && filters.priority !== "All") {
-		where.priority = filters.priority.toLowerCase()
+		where.priority = filters.priority.toLowerCase() as TicketPriority
 	}
 	if (filters?.category && filters.category !== "All") {
-		where.category = filters.category.toLowerCase()
+		where.category = filters.category.toLowerCase() as TicketCategory
 	}
 	if (filters?.search) {
 		where.OR = [

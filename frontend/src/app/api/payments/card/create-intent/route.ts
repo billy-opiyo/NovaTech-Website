@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		return NextResponse.json(result, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },

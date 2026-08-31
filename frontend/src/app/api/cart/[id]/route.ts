@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 		if (!Number.isInteger(quantity)) return NextResponse.json({ message: "Quantity must be an integer" }, { status: 400 })
 		const context = await resolveTenantFromRequest(req)
 		return NextResponse.json(await cartService.updateCartItem(userId, (await params).id, quantity, context.tenantId))
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update cart")
 	}
 }

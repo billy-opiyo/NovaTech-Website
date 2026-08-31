@@ -1,10 +1,15 @@
 import prisma from "../lib/db"
+import type { Prisma } from "@prisma/client"
 import { resolveVariantSelection } from "../lib/product-variant"
 
 const FREE_SHIPPING_THRESHOLD = 50000
 const DEFAULT_SHIPPING_COST = 500
 
-function toCartResponse(items: any[], commerceSettings?: unknown) {
+type CartItemWithProduct = Prisma.CartItemGetPayload<{
+	include: { product: { include: { variants: { where: { tenantId: string } } } } }
+}>
+
+function toCartResponse(items: CartItemWithProduct[], commerceSettings?: unknown) {
 	const mappedItems = items.map((item) => {
 		const selectedVariant = resolveVariantSelection(item.product.variants || [], item.variant)
 		return {

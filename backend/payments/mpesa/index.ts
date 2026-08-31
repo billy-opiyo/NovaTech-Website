@@ -1,7 +1,7 @@
 import prisma from "../../lib/db"
 import { z } from "zod"
 import type { BillingPaymentKind } from "@prisma/client"
-import { sendOrderConfirmationEmail } from "../../lib/email"
+import { sendOrderConfirmationEmail, shippingAddressEmail } from "../../lib/email"
 import {
 	isMpesaConfigured,
 	normalizePhone,
@@ -275,7 +275,7 @@ export async function verifyMpesaPayment(
 								select: { email: true },
 							})
 						)?.email
-					: (updatedOrder.shippingAddress as any)?.email
+					: shippingAddressEmail(updatedOrder.shippingAddress)
 
 				if (email) {
 					await sendOrderConfirmationEmail(email, updatedOrder)

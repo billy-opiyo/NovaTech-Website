@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { MembershipRole } from "@prisma/client"
+import { MembershipRole, MerchantEnquiryStatus } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
@@ -20,10 +20,11 @@ async function access(request: NextRequest, roles: MembershipRole[] = [Membershi
 export async function GET(request: NextRequest) {
 	try {
 		const { context } = await access(request)
-		const status = request.nextUrl.searchParams.get("status") || "ALL"
+		const rawStatus = request.nextUrl.searchParams.get("status") || "ALL"
+		const status = Object.values(MerchantEnquiryStatus).includes(rawStatus as MerchantEnquiryStatus) ? rawStatus as MerchantEnquiryStatus : undefined
 		const search = request.nextUrl.searchParams.get("search")?.trim() || ""
 		const enquiries = await prisma.merchantEnquiry.findMany({
-			where: { tenantId: context.tenantId, ...(status !== "ALL" ? { status: status as any } : {}), ...(search ? { OR: [{ customerName: { contains: search, mode: "insensitive" } }, { customerEmail: { contains: search, mode: "insensitive" } }] } : {}) },
+			where: { tenantId: context.tenantId, ...(status ? { status } : {}), ...(search ? { OR: [{ customerName: { contains: search, mode: "insensitive" } }, { customerEmail: { contains: search, mode: "insensitive" } }] } : {}) },
 			orderBy: { createdAt: "desc" }, take: 200,
 			include: { quotes: { orderBy: { createdAt: "desc" }, take: 5 }, user: { select: { name: true, email: true } } },
 		})

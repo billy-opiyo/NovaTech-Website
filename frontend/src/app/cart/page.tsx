@@ -55,8 +55,8 @@ export default function CartPage() {
 			setCouponApplied(true)
 			setCouponDiscount(result.discount)
 			localStorage.setItem("checkoutCoupon", couponCode.trim().toUpperCase())
-		} catch (error: any) {
-			setCouponError(error.message || "Unable to validate coupon")
+		} catch (error: unknown) {
+			setCouponError(error instanceof Error ? error.message : "Unable to validate coupon")
 		}
 	}
 

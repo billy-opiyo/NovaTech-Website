@@ -43,7 +43,7 @@ export async function getTickets(req: NextRequest) {
 		})
 
 		return NextResponse.json(result)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Support tickets API error:", error)
 		return apiErrorResponse(error, "Failed to fetch tickets")
 	}
@@ -60,7 +60,7 @@ export async function getTicketById(
 		const ticket = await supportService.getTicketById(id, context.tenantId)
 
 		return NextResponse.json(ticket)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Get ticket API error:", error)
 		return apiErrorResponse(error, "Failed to fetch ticket")
 	}
@@ -89,7 +89,7 @@ export async function updateTicket(
 		}
 
 		return NextResponse.json(ticket)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Update ticket API error:", error)
 		return apiErrorResponse(error, "Failed to update ticket")
 	}
@@ -109,7 +109,7 @@ export async function replyToTicket(
 		const reply = await supportService.addTicketReply(id, context.tenantId, validated.reply, true)
 
 		return NextResponse.json(reply)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Reply to ticket API error:", error)
 		return apiErrorResponse(error, "Failed to add reply")
 	}
@@ -143,7 +143,7 @@ export async function submitContact(req: NextRequest) {
 			},
 			{ status: 201 },
 		)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },

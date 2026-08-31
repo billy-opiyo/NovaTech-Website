@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ten
 		if (!tenant) return NextResponse.json({ message: "Merchant not found" }, { status: 404 })
 		const { sensitiveDetailsCiphertext, ...profile } = tenant.verificationProfile || {}
 		return NextResponse.json({ tenant: { ...tenant, verificationProfile: sensitiveDetailsCiphertext ? { ...profile, details: decryptMerchantVerificationDetails(sensitiveDetailsCiphertext) } : null } })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Verification review unavailable")
 	}
 }

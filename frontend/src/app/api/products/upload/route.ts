@@ -59,9 +59,10 @@ export async function POST(req: NextRequest) {
 			await deleteFile(key).catch(() => undefined)
 			throw error
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Product image upload error:", error)
-		if (error?.code === "ENTITLEMENT_LIMIT_REACHED") return NextResponse.json({ message: "Storage quota exceeded" }, { status: 409 })
+		const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+		if (code === "ENTITLEMENT_LIMIT_REACHED") return NextResponse.json({ message: "Storage quota exceeded" }, { status: 409 })
 		return apiErrorResponse(error, "Upload failed")
 	}
 }

@@ -54,7 +54,7 @@ export async function getReviews(req: NextRequest) {
 			totalPages: Math.ceil(total / limit),
 			averageRating: total > 0 ? avg._avg.rating : 0,
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Reviews unavailable")
 	}
 }
@@ -117,7 +117,7 @@ export async function createReview(req: NextRequest) {
 				? "Your review was submitted for admin moderation before publication."
 				: "Your review was submitted and is awaiting admin approval.",
 		}, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },
@@ -165,7 +165,7 @@ export async function updateReview(req: NextRequest) {
 				? "Your edited review was returned to admin moderation before publication."
 				: "Your edited review is awaiting admin approval.",
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },
@@ -196,8 +196,9 @@ export async function deleteReview(req: NextRequest) {
 		if (review.userId !== session.user.id) {
 			try {
 				await requireStorePermission(session.user.id, context.tenantId, "MODERATE_REVIEWS")
-			} catch (error: any) {
-				if (error?.status === 401 || error?.status === 403) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+			} catch (error: unknown) {
+				const status = error && typeof error === "object" && "status" in error ? error.status : undefined
+				if (status === 401 || status === 403) return NextResponse.json({ message: "Forbidden" }, { status: 403 })
 				throw error
 			}
 		}
@@ -205,7 +206,7 @@ export async function deleteReview(req: NextRequest) {
 		await prisma.review.delete({ where: { id: validated.reviewId } })
 
 		return NextResponse.json({ message: "Review deleted" })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },

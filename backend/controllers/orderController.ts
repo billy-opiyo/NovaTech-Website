@@ -23,7 +23,7 @@ export async function getOrders(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		const result = await orderService.getOrdersByUserId(session.user.id!, context.tenantId, page, limit)
 		return NextResponse.json(result)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Orders unavailable")
 	}
 }
@@ -63,7 +63,7 @@ export async function createOrder(req: NextRequest) {
 		}
 
 		return NextResponse.json(order, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },
@@ -100,7 +100,7 @@ export async function getOrderById(
 		}
 
 		return NextResponse.json(order)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Order unavailable")
 	}
 }
@@ -130,7 +130,7 @@ export async function updateOrderStatus(
 		await createActionRecord("UPDATED_ORDER_STATUS", { adminId: session.user.id, tenantId: context.tenantId, orderId: id, status: validated.status })
 
 		return NextResponse.json(order)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ message: "Validation error", errors: error.errors },
@@ -156,7 +156,7 @@ export async function getAllOrders(req: NextRequest) {
 		await requireStorePermission(session.user.id, context.tenantId, "VIEW_ORDERS")
 		const result = await orderService.getAllOrders(context.tenantId, page, limit, status)
 		return NextResponse.json(result)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Orders unavailable")
 	}
 }
@@ -172,7 +172,7 @@ export async function getOrderStats(req?: NextRequest) {
 		await requireStorePermission(session.user.id, context.tenantId, "VIEW_ORDERS")
 		const stats = await orderService.getOrderStats(context.tenantId)
 		return NextResponse.json(stats)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Order statistics unavailable")
 	}
 }

@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 				)
 			}
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Recommendations API error:", error)
 		return apiErrorResponse(error, "Failed to fetch recommendations")
 	}

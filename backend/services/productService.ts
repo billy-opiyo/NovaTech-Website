@@ -2,6 +2,13 @@ import prisma from "../lib/db"
 import { Prisma } from "@prisma/client"
 import { assertTenantProductLimit } from "../billing/subscription"
 import { deleteFile } from "../lib/storage"
+import type { ProductInput } from "../validators/productValidator"
+
+type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sku" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
+		discountedPrice?: number | null
+		warranty?: string | null
+		specs?: Record<string, string> | null
+}
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
 	const where: Prisma.ProductWhereInput = { tenantId }
@@ -198,7 +205,7 @@ export async function searchProducts(query: string, tenantId: string) {
 	return products
 }
 
-export async function createProduct(data: any, tenantId: string) {
+export async function createProduct(data: ProductInput, tenantId: string) {
 	await assertTenantProductLimit(tenantId)
 	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId }, select: { id: true } })
 	if (!category) throw new Error("Category not found")
@@ -221,7 +228,7 @@ export async function createProduct(data: any, tenantId: string) {
 			isNewArrival: data.isNewArrival || false,
 			variants: data.variants
 				? {
-						create: data.variants.map((v: any) => ({
+						create: data.variants.map((v) => ({
 							tenantId,
 							name: v.name,
 							value: v.value,
@@ -239,7 +246,7 @@ export async function createProduct(data: any, tenantId: string) {
 	})
 }
 
-export async function updateProduct(slug: string, data: any, tenantId: string) {
+export async function updateProduct(slug: string, data: ProductUpdateInput, tenantId: string) {
 	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)

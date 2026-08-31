@@ -33,6 +33,25 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 	}
 }
 
+interface OrderConfirmationItem {
+	quantity: number
+	price: number
+	product?: { name?: string | null } | null
+}
+
+interface OrderConfirmation {
+	id: string
+	total: number
+	items: OrderConfirmationItem[]
+	shippingAddress: unknown
+}
+
+export function shippingAddressEmail(address: unknown): string | undefined {
+	if (!address || typeof address !== "object" || Array.isArray(address)) return undefined
+	const value = (address as { email?: unknown }).email
+	return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
 export function emailWasAccepted(result: unknown) {
 	if (!result || typeof result !== "object") return false
 	if ("id" in result && typeof result.id === "string" && result.id.length > 0) return true
@@ -40,7 +59,10 @@ export function emailWasAccepted(result: unknown) {
 	return false
 }
 
-export async function sendOrderConfirmationEmail(email: string, order: any) {
+export async function sendOrderConfirmationEmail(email: string, order: OrderConfirmation) {
+	const address = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress)
+		? order.shippingAddress as Record<string, unknown>
+		: {}
 	const html = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
       <div style="background: linear-gradient(135deg, #0070f3, #f97316); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
@@ -55,7 +77,7 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
           <h3 style="color: #1f2937; margin-top: 0;">Order Summary</h3>
           ${order.items
 						.map(
-							(item: any) => `
+							(item) => `
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
 							<span>${escapeHtml(item.product?.name || "Product")} x${escapeHtml(item.quantity)}</span>
               <span style="font-weight: 600;">KES ${(item.price * item.quantity).toLocaleString()}</span>
@@ -71,10 +93,10 @@ export async function sendOrderConfirmationEmail(email: string, order: any) {
 
         <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #1f2937; margin-top: 0;">Delivery Address</h3>
-		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.fullName)}</p>
-		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.phone)}</p>
-		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.address)}, ${escapeHtml(order.shippingAddress.town)}</p>
-		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(order.shippingAddress.county)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(address.fullName)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(address.phone)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(address.address)}, ${escapeHtml(address.town)}</p>
+		  <p style="color: #6b7280; margin: 4px 0;">${escapeHtml(address.county)}</p>
         </div>
 
         <a href="${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}" 

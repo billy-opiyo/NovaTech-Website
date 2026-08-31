@@ -50,8 +50,8 @@ export async function runSubscriptionLifecycleSweep(now = new Date(), limit = 10
 				if (subscription.tenant.store && ["SUSPENDED", "CANCELLED"].includes(decision.tenantStatus)) await transaction.store.update({ where: { id: subscription.tenant.store.id }, data: { publicationStatus: "SUSPENDED" } })
 			})
 			results.push({ subscriptionId: subscription.id, changed: true })
-		} catch (error: any) {
-			console.error("Subscription lifecycle processing failed", { subscriptionId: subscription.id, message: error.message })
+		} catch (error: unknown) {
+			console.error("Subscription lifecycle processing failed", { subscriptionId: subscription.id, message: error instanceof Error ? error.message : String(error) })
 			results.push({ subscriptionId: subscription.id, changed: false, error: "LIFECYCLE_PROCESSING_FAILED" })
 		}
 	}

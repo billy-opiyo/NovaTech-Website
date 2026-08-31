@@ -27,16 +27,16 @@ interface Product {
 	name: string
 	slug: string
 	price: number
-	discountedPrice?: number
+	discountedPrice?: number | null
 	brand: string
 	images: string[]
-	category: { name: string; slug: string }
+	category?: { name: string; slug: string }
 	rating?: number
 	reviewCount?: number
 	stock: number
-	variants: { stock: number }[]
+	variants?: { stock: number }[]
 	availableStock: number
-	specs: Record<string, string>
+	specs?: Record<string, string>
 }
 
 interface FilterState {
@@ -116,12 +116,16 @@ export default function ProductsClient() {
 			limit: 100,
 		})
 			.then((response) => {
-				const products = response.products.map((product: any) => ({
-					...product,
+				const products = response.products.map((product) => {
+					const productWithMetrics = product as typeof product & { averageRating?: number }
+					return {
+					...productWithMetrics,
 					availableStock: product.variants?.length ? Math.max(...product.variants.map((variant: { stock: number }) => variant.stock)) : product.stock,
-					rating: product.averageRating,
+					rating: productWithMetrics.averageRating ?? product.rating,
 					reviewCount: product.reviewCount,
-				}))
+					specs: {},
+				}
+				})
 				if (filters.sortBy === "rating") products.sort((a, b) => (b.rating || 0) - (a.rating || 0))
 				setFilteredProducts(products)
 			})
@@ -767,7 +771,7 @@ function ProductListItem({
 							</span>
 						</div>
 						<p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-							{Object.entries(product.specs)
+							{Object.entries(product.specs || {})
 								.map(([key, val]) => `${key}: ${val}`)
 								.join(" | ")}
 						</p>

@@ -84,8 +84,8 @@ export async function runTenantRetentionSweep(now = new Date(), limit = 50) {
 	for (const tenant of tenants) {
 		try {
 			results.push(await processTenantRetention(tenant.id, now))
-		} catch (error: any) {
-			console.error("Tenant retention processing failed", { tenantId: tenant.id, message: error.message })
+		} catch (error: unknown) {
+			console.error("Tenant retention processing failed", { tenantId: tenant.id, message: error instanceof Error ? error.message : String(error) })
 			results.push({ tenantId: tenant.id, processed: false, error: "RETENTION_PROCESSING_FAILED" })
 		}
 	}

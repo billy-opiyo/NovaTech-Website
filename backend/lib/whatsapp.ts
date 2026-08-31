@@ -13,7 +13,7 @@ export interface WhatsAppPayload {
 
 export async function sendWhatsAppMessage(message: WhatsAppPayload) {
 	try {
-		let body: any
+		let body: Record<string, unknown>
 
 		if (message.templateName) {
 			body = {
@@ -58,11 +58,14 @@ export async function sendWhatsAppMessage(message: WhatsAppPayload) {
 			body: JSON.stringify(body),
 		})
 
-		const data = await response.json()
+		const data: unknown = await response.json()
 
 		if (!response.ok) {
 			console.error("WhatsApp API error:", data)
-			throw new Error(data.error?.message || "Failed to send WhatsApp message")
+			const errorMessage = data && typeof data === "object" && "error" in data && data.error && typeof data.error === "object" && "message" in data.error && typeof data.error.message === "string"
+				? data.error.message
+				: "Failed to send WhatsApp message"
+			throw new Error(errorMessage)
 		}
 
 		return data

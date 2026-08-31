@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 			await transaction.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } })
 		})
 		return NextResponse.json({ ok: true, tenantId: invitation.tenantId, role: invitation.role, redirectTo: "/manage" })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to accept invitation")
 	}
 }

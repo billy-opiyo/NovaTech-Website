@@ -1,4 +1,6 @@
 import NextAuth from "next-auth"
+import type { User, Session } from "next-auth"
+import type { JWT } from "next-auth/jwt"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcrypt"
@@ -79,7 +81,7 @@ export const authOptions = {
 		}),
 	],
 	callbacks: {
-		async jwt({ token, user }: any) {
+		async jwt({ token, user }: { token: JWT; user?: User }) {
 			if (user) {
 				token.role = user.role
 				token.platformRole = user.platformRole
@@ -87,7 +89,7 @@ export const authOptions = {
 			}
 			return token
 		},
-		async session({ session, token }: any) {
+		async session({ session, token }: { session: Session; token: JWT }) {
 			if (session.user) {
 				session.user.role = token.role as string
 				session.user.platformRole = token.platformRole as string | undefined

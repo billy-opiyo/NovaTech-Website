@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 		if (!evidence) return NextResponse.json({ message: "Evidence not found" }, { status: 404 })
 		const url = await getSignedDownloadUrl(evidence.objectKey)
 		return NextResponse.json({ downloadUrl: url, status: evidence.status, contentType: evidence.contentType, expiresIn: 300 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Evidence download unavailable")
 	}
 }
@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 		const evidence = await prisma.merchantVerificationEvidence.updateMany({ where: { id: evidenceId, tenantId }, data: { status: parsed.data.status, reviewedAt: parsed.data.status === "PENDING" ? null : new Date(), reviewedById: parsed.data.status === "PENDING" ? null : access.session!.user.id, reviewNote: parsed.data.reviewNote || null } })
 		if (!evidence.count) return NextResponse.json({ message: "Evidence not found" }, { status: 404 })
 		return NextResponse.json({ status: parsed.data.status })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to review evidence")
 	}
 }

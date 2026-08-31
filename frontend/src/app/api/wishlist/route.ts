@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 		})
 
 		return NextResponse.json(wishlist)
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Wishlist unavailable")
 	}
 }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 		})
 
 		return NextResponse.json(wishlistItem, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update wishlist")
 	}
 }
@@ -101,7 +101,7 @@ export async function DELETE(req: NextRequest) {
 		await prisma.wishlistItem.deleteMany({ where: { userId: session.user.id, tenantId: context.tenantId, ...(productId ? { productId } : {}) } })
 
 		return NextResponse.json({ message: "Removed from wishlist" })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update wishlist")
 	}
 }

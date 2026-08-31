@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 		const categories = await prisma.category.findMany({ where: { tenantId: context.tenantId }, select: { id: true, name: true, slug: true } })
 		const categoryMap = new Map(categories.flatMap((category) => [[category.name.toLowerCase(), category.id], [category.slug.toLowerCase(), category.id]]))
 		const seenSkus = new Set<string>()
-		const valid: any[] = []
+		const valid: Array<ReturnType<typeof parseRow>> = []
 		const errors: Array<{ row: number; message: string }> = []
 	rows.forEach((row, index) => { try { const parsed = parseRow(row, index + 2, categoryMap); if (seenSkus.has(parsed.sku)) throw new Error("duplicate SKU in this file"); seenSkus.add(parsed.sku); valid.push(parsed) } catch (error: unknown) { errors.push({ row: index + 2, message: error instanceof Error ? error.message : "Invalid row" }) } })
 		const existing = await prisma.product.findMany({ where: { tenantId: context.tenantId, sku: { in: valid.map((row) => row.sku) } }, select: { id: true, sku: true } })
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 			try {
 				const current = await prisma.product.findFirst({ where: { tenantId: context.tenantId, sku: row.sku }, select: { id: true } })
 				if (current) { await prisma.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs } }); updated += 1 }
-				else { await assertTenantProductLimit(context.tenantId); await prisma.product.create({ data: { tenantId: context.tenantId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant: any) => ({ tenantId: context.tenantId, ...variant })) } : undefined } }); created += 1 }
+				else { await assertTenantProductLimit(context.tenantId); await prisma.product.create({ data: { tenantId: context.tenantId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant) => ({ tenantId: context.tenantId, ...variant })) } : undefined } }); created += 1 }
 			} catch (error: unknown) { errors.push({ row: row.rowNumber, message: error instanceof Error ? error.message : "Database rejected this row" }) }
 		}
 		await createActionRecord("IMPORTED_CATALOG", { tenantId: context.tenantId, adminId: session.user.id, fileName: file.name, rows: rows.length, created, updated, failed: errors.length }).catch(() => undefined)

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
-import { MembershipRole } from "@prisma/client"
+import { MembershipRole, OrderStatus, Prisma, ReviewModerationStatus } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { couponCreateSchema, couponUpdateSchema } from "../validators/couponValidator"
 import { apiErrorResponse } from "../lib/api-handler"
 import { parsePagination } from "../lib/pagination"
+
+function errorCode(error: unknown): string | undefined {
+	return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined
+}
 
 export async function getCustomers(req: NextRequest) {
 	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
@@ -46,7 +50,7 @@ export async function createCoupon(req: NextRequest) {
 		const coupon = await prisma.coupon.create({ data: { tenantId: context.tenantId, code: data.code, discountPercent: data.discountPercent ?? null, discountAmount: data.discountAmount ?? null, minOrderValue: data.minOrderValue ?? null, expiresAt: new Date(data.expiresAt), usageLimit: data.usageLimit ?? null, isActive: data.isActive !== false } })
 		await createActionRecord("CREATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id, code: data.code })
 		return NextResponse.json(coupon, { status: 201 })
-	} catch (error: any) { return error?.code === "P2002" ? NextResponse.json({ message: "Coupon code already exists" }, { status: 409 }) : apiErrorResponse(error, "Unable to create coupon") }
+	} catch (error: unknown) { return errorCode(error) === "P2002" ? NextResponse.json({ message: "Coupon code already exists" }, { status: 409 }) : apiErrorResponse(error, "Unable to create coupon") }
 }
 
 export async function updateCoupon(req: NextRequest) {
@@ -60,7 +64,7 @@ export async function updateCoupon(req: NextRequest) {
 		const coupon = await prisma.coupon.update({ where: { id: existing.id }, data: { ...(data.code === undefined ? {} : { code: data.code }), ...(data.isActive === undefined ? {} : { isActive: data.isActive }), ...(data.expiresAt === undefined ? {} : { expiresAt: new Date(data.expiresAt) }), ...(data.usageLimit === undefined ? {} : { usageLimit: data.usageLimit }) } })
 		await createActionRecord("UPDATED_COUPON", { adminId: session.user.id, tenantId: context.tenantId, couponId: coupon.id })
 		return NextResponse.json(coupon)
-	} catch (error: any) { return apiErrorResponse(error, "Unable to update coupon") }
+	} catch (error: unknown) { return apiErrorResponse(error, "Unable to update coupon") }
 }
 
 export async function deleteCoupon(req: NextRequest) {
@@ -76,8 +80,9 @@ export async function deleteCoupon(req: NextRequest) {
 
 export async function getAdminReviews(req: NextRequest) {
 	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
-	const status = req.nextUrl.searchParams.get("status") as any
-	const scoped = { tenantId: context.tenantId, ...(status && status !== "ALL" ? { moderationStatus: status } : {}) }
+	const rawStatus = req.nextUrl.searchParams.get("status")
+	const status = rawStatus && Object.values(ReviewModerationStatus).includes(rawStatus as ReviewModerationStatus) ? rawStatus as ReviewModerationStatus : undefined
+	const scoped: Prisma.ReviewWhereInput = { tenantId: context.tenantId, ...(status ? { moderationStatus: status } : {}) }
 	const reviews = await prisma.review.findMany({ where: scoped, include: { user: { select: { name: true, email: true } }, product: { select: { name: true, slug: true } } }, orderBy: { createdAt: "desc" }, take: 100 })
 	const [total, pending, approved, flagged] = await Promise.all([prisma.review.count({ where: { tenantId: context.tenantId } }), prisma.review.count({ where: { tenantId: context.tenantId, moderationStatus: "PENDING" } }), prisma.review.count({ where: { tenantId: context.tenantId, moderationStatus: "APPROVED" } }), prisma.review.count({ where: { tenantId: context.tenantId, moderationStatus: "FLAGGED" } })])
 	return NextResponse.json({ reviews, stats: { total, pending, approved, flagged } })
@@ -96,9 +101,14 @@ export async function moderateReview(req: NextRequest) {
 
 export async function getDeliveries(req: NextRequest) {
 	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
-	const status = req.nextUrl.searchParams.get("status")
-	const orders = await prisma.order.findMany({ where: { tenantId: context.tenantId, ...(status && status !== "ALL" ? { status: status as any } : {}) }, include: { user: { select: { name: true, email: true } }, items: { select: { quantity: true } } }, orderBy: { createdAt: "desc" }, take: 100 })
-	return NextResponse.json({ deliveries: orders.map((order) => ({ ...order, customer: order.user?.name || (order.shippingAddress as any)?.fullName || "Guest", itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0) })) })
+	const rawStatus = req.nextUrl.searchParams.get("status")
+	const status = rawStatus && Object.values(OrderStatus).includes(rawStatus as OrderStatus) ? rawStatus as OrderStatus : undefined
+	const orders = await prisma.order.findMany({ where: { tenantId: context.tenantId, ...(status && rawStatus !== "ALL" ? { status } : {}) }, include: { user: { select: { name: true, email: true } }, items: { select: { quantity: true } } }, orderBy: { createdAt: "desc" }, take: 100 })
+	return NextResponse.json({ deliveries: orders.map((order) => {
+		const address = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress) ? order.shippingAddress as { fullName?: unknown } : {}
+		const fullName = typeof address.fullName === "string" ? address.fullName : "Guest"
+		return { ...order, customer: order.user?.name || fullName, itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0) }
+	}) })
 }
 
 export async function getSecurity(req: NextRequest) {

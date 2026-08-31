@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 		}
 		const context = await resolveTenantFromRequest(req)
 		return NextResponse.json(await cartService.addCartItem(userId, body.productId, quantity, context.tenantId, body.variant), { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update cart")
 	}
 }

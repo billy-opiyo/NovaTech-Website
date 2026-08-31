@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 			orderBy: { createdAt: "desc" },
 		})
 		return NextResponse.json({ invitations })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Invitations unavailable")
 	}
 }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 			html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Nurava Tech</h1><p>You have been invited to join <strong>${store?.name || "a merchant store"}</strong> as <strong>${invitation.role.replace("STORE_", "").replaceAll("_", " ")}</strong>.</p><p>This invitation expires in seven days and can only be accepted by ${invitation.email}.</p><p><a href="${inviteLink}" style="display:inline-block;background:#0070f3;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Accept invitation</a></p><p>If you were not expecting this invitation, you can ignore this email.</p></div>`,
 		}).catch((error) => console.error("Invitation email could not be sent:", error))
 		return NextResponse.json({ invitation, delivery: "email-and-manual-link", inviteLink }, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to create invitation")
 	}
 }

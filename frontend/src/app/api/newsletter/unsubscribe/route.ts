@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		await prisma.newsletterSubscription.updateMany({ where: { tenantId: context.tenantId, email: email.trim().toLowerCase() }, data: { unsubscribedAt: new Date() } })
 		return NextResponse.json({ message: "If that address was subscribed, it has been unsubscribed." })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof z.ZodError) return NextResponse.json({ message: "Enter a valid email address." }, { status: 400 })
 		return apiErrorResponse(error, "Unable to update your subscription.")
 	}
