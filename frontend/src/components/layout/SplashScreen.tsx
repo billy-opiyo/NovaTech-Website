@@ -16,11 +16,14 @@ const SPLASH_IMAGES = [
 
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
-	const isPlatformHomepage = platformHome && pathname === "/"
-	const isSuperAdminPage = pathname === "/platform" || pathname.startsWith("/platform/")
-	const shouldShowSplash = clientConfig.features.showSplashScreen && (isPlatformHomepage || isSuperAdminPage)
-	const routeScope = isSuperAdminPage ? "platform-admin" : "platform-home"
-	const shownScopes = useRef(new Set<string>())
+	// The splash belongs to the platform homepage's document load only. Keep the
+	// initial pathname stable so navigating to `/` in the client does not replay
+	// it; a real refresh/reload creates a new component instance and shows it.
+	const initialPathname = useRef(pathname)
+	const isInitialPlatformHomepage =
+		platformHome && initialPathname.current === "/" && pathname === "/"
+	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage
+	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
 	const [visible, setVisible] = useState(false)
@@ -29,7 +32,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	useEffect(() => {
 		if (!shouldShowSplash) return
 
-		if (shownScopes.current.has(routeScope)) {
+		if (hasShownSplash.current) {
 			setReadyToReveal(true)
 			setVisible(false)
 			return
@@ -53,7 +56,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			)
 			if (cancelled) return
 
-			shownScopes.current.add(routeScope)
+			hasShownSplash.current = true
 			setProgress(0)
 			setVisible(true)
 			setReadyToReveal(false)
@@ -97,7 +100,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			window.cancelAnimationFrame(frame)
 			if (finishTimer) window.clearTimeout(finishTimer)
 		}
-	}, [routeScope, shouldShowSplash])
+	}, [shouldShowSplash])
 
 	useEffect(() => {
 		if (!visible) return
