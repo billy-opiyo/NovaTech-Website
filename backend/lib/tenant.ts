@@ -56,6 +56,18 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
 	const isLocalSubdomain = hostname.endsWith(".localhost")
 	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}`
+	const requestedStoreSlug = request.headers.get("x-nurava-store-slug")?.trim().toLowerCase() || ""
+	if (requestedStoreSlug && isCanonicalPlatformHost) {
+		const store = await prisma.store.findUnique({
+			where: { slug: requestedStoreSlug },
+			select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } },
+		})
+		if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
+		if (!allowUnpublished && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+		if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
+		if (!allowUnpublished && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+		return { tenantId: store.tenantId, storeId: store.id, storeSlug: store.slug, hostname, publicationStatus: store.publicationStatus }
+	}
 
 	// The canonical platform hosts must win over any stale or misconfigured
 	// Domain row. Otherwise the platform homepage can resolve as a merchant

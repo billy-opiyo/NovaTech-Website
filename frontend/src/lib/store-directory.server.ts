@@ -3,6 +3,7 @@ import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
 import { normalizeHostname } from "backend/lib/tenant"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import { isVercelProjectHostname } from "./platform-store-route"
 
 export type PublishedStoreDirectoryEntry = {
 	id: string
@@ -170,6 +171,7 @@ export async function getStorePublicUrl(slug: string): Promise<string> {
 	if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
 		return `http://${slug}.localhost${port}`
 	}
+	if (isVercelProjectHostname(hostname)) return `https://${hostname}/store/${encodeURIComponent(slug)}`
 
 	const platformDomain = getPlatformDomain()
 	return `https://${slug}.${platformDomain}`
