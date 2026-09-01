@@ -13,7 +13,7 @@ function expireLegacyPreference(response: NextResponse) {
 function localPreviewSlug(host: string | null): string | null {
 	if (!host) return null
 	const hostname = host.trim().toLowerCase().split(":")[0]
-	if (hostname === "localhost" || hostname === "127.0.0.1") return "novatech"
+	if (hostname === "localhost" || hostname === "127.0.0.1") return "nuravatech"
 	if (hostname.endsWith(".localhost")) return hostname.slice(0, -".localhost".length) || null
 	return null
 }

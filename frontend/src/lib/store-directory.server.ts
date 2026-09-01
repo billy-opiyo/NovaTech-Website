@@ -92,7 +92,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 		return [{
 			id: "novatech-store",
 			name: clientConfig.brand.name,
-			slug: "novatech",
+			slug: "nuravatech",
 			logoUrl: clientConfig.brand.logo,
 			tagline: clientConfig.homepage.heroDescription,
 			featuredProduct: null,

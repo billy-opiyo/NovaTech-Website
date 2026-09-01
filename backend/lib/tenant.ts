@@ -105,7 +105,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 
 	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`)
 	const slug = isLocalHost || isCanonicalPlatformHost
-		? "novatech"
+		? "nuravatech"
 		: isLocalSubdomain
 			? hostname.slice(0, -".localhost".length)
 			: isPlatformHost

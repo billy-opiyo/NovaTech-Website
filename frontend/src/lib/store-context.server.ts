@@ -101,7 +101,7 @@ export function fallbackStoreContext(isPlatformHome = false): StoreContext {
 		...clientConfig,
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
-		storeSlug: "novatech",
+		storeSlug: "nuravatech",
 		publicationStatus: "PUBLISHED",
 		isPlatformHome,
 	} as unknown as StoreContext
