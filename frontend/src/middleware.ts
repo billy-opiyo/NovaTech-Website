@@ -24,6 +24,7 @@ export async function middleware(request: NextRequest) {
 	const isAuthRoute = isPathUnder(pathname, "/auth")
 	const isStoreDirectoryRoute = isPathUnder(pathname, "/stores")
 	const explicitPlatformHome = request.nextUrl.searchParams.get("platformHome") === "1"
+	const isPlatformRoot = pathname === "/"
 
 	if (isPlatformHost && pathname.startsWith(PLATFORM_STORE_PREFIX)) {
 		const [, , rawSlug, ...rest] = pathname.split("/")
@@ -38,14 +39,14 @@ export async function middleware(request: NextRequest) {
 		}
 	}
 
-	if (isPlatformHost && explicitPlatformHome) {
+	if (isPlatformHost && (explicitPlatformHome || isPlatformRoot)) {
 		requestHeaders.delete("x-nurava-store-slug")
 		const response = NextResponse.next({ request: { headers: requestHeaders } })
 		response.cookies.delete(PLATFORM_STORE_COOKIE)
 		return response
 	}
 
-	if (isPlatformHost && !isWorkspaceRoute && !isAuthRoute && !isStoreDirectoryRoute) {
+	if (isPlatformHost && !isPlatformRoot && !isWorkspaceRoute && !isAuthRoute && !isStoreDirectoryRoute) {
 		const savedSlug = request.cookies.get(PLATFORM_STORE_COOKIE)?.value?.toLowerCase()
 		if (isValidStoreSlug(savedSlug)) requestHeaders.set("x-nurava-store-slug", savedSlug)
 		else requestHeaders.delete("x-nurava-store-slug")
