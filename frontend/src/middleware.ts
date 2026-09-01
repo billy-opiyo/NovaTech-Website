@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { auth } from "./lib/auth.js"
-import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route.js"
+import { auth } from "./lib/auth"
+import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route"
 
 function isPathUnder(pathname: string, basePath: string) {
 	return pathname === basePath || pathname.startsWith(`${basePath}/`)
