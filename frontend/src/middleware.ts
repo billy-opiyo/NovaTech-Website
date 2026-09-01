@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { auth } from "./src/lib/auth.js"
-import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./src/lib/platform-store-route.js"
+import { auth } from "./lib/auth.js"
+import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route.js"
 
 function isPathUnder(pathname: string, basePath: string) {
 	return pathname === basePath || pathname.startsWith(`${basePath}/`)
@@ -56,39 +56,20 @@ export async function middleware(request: NextRequest) {
 	const isAuthenticated = !!session?.user
 	const userRole = session?.user?.role
 
-	// Check if the route is an admin route
 	const isAdminRoute = isPathUnder(pathname, "/admin")
-	// Handle admin routes
 	if (isAdminRoute) {
-		// Redirect to sign-in if not authenticated
-		if (!isAuthenticated) {
-			return redirectToSignIn(request)
-		}
-
-		// Redirect to home if authenticated but not admin
-		if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
-			return NextResponse.redirect(new URL("/", request.url))
-		}
-
+		if (!isAuthenticated) return redirectToSignIn(request)
+		if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") return NextResponse.redirect(new URL("/", request.url))
 		return NextResponse.next({ request: { headers: requestHeaders } })
 	}
 
 	if (isWorkspaceRoute) {
-		if (!isAuthenticated) {
-			return redirectToSignIn(request)
-		}
+		if (!isAuthenticated) return redirectToSignIn(request)
 		return NextResponse.next({ request: { headers: requestHeaders } })
 	}
 
-	// Handle protected account routes
-	const isProtectedRoute =
-		pathname.startsWith("/account/") ||
-		pathname === "/cart" ||
-		pathname === "/checkout"
-
-	if (isProtectedRoute && !isAuthenticated) {
-		return redirectToSignIn(request)
-	}
+	const isProtectedRoute = pathname.startsWith("/account/") || pathname === "/cart" || pathname === "/checkout"
+	if (isProtectedRoute && !isAuthenticated) return redirectToSignIn(request)
 
 	return NextResponse.next({ request: { headers: requestHeaders } })
 }
