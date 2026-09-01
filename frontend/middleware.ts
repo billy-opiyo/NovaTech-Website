@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { auth } from "./src/lib/auth.js"
-import { isValidStoreSlug, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./src/lib/platform-store-route.js"
+import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./src/lib/platform-store-route.js"
 
 function isPathUnder(pathname: string, basePath: string) {
 	return pathname === basePath || pathname.startsWith(`${basePath}/`)
@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
 	const requestHeaders = new Headers(request.headers)
 	const platformDomain = (process.env.PLATFORM_DOMAIN || "").trim().toLowerCase()
 	const hostname = request.nextUrl.hostname.toLowerCase()
-	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}`
+	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHostname(hostname)
 	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform")
 	const isAuthRoute = isPathUnder(pathname, "/auth")
 	const explicitPlatformHome = request.nextUrl.searchParams.get("platformHome") === "1"
