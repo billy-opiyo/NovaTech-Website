@@ -67,7 +67,7 @@ VALUES
   ('addon-whatsapp', 'whatsapp-notifications', 'WhatsApp notifications', 'Automated order and customer notifications.', 1000, 'KES', 'MONTH', true, CURRENT_TIMESTAMP),
   ('addon-analytics', 'advanced-analytics', 'Advanced analytics', 'Extended reports and operational insights.', 2500, 'KES', 'MONTH', true, CURRENT_TIMESTAMP),
   ('addon-staff', 'extra-staff', 'Extra staff accounts', 'Additional team seats beyond the plan allowance.', 1500, 'KES', 'MONTH', true, CURRENT_TIMESTAMP)
-ON CONFLICT ("key") DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 CREATE TABLE "AddonSubscription" (
   "id" TEXT NOT NULL,
