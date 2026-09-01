@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { auth } from "./lib/auth"
+import { getToken } from "next-auth/jwt"
 import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route"
 
 function isPathUnder(pathname: string, basePath: string) {
@@ -52,9 +52,13 @@ export async function middleware(request: NextRequest) {
 		requestHeaders.delete("x-nurava-store-slug")
 	}
 
-	const session = await auth()
-	const isAuthenticated = !!session?.user
-	const userRole = session?.user?.role
+	const token = await getToken({
+		req: request,
+		secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+		secureCookie: request.nextUrl.protocol === "https:",
+	})
+	const isAuthenticated = !!token
+	const userRole = typeof token?.role === "string" ? token.role : undefined
 
 	const isAdminRoute = isPathUnder(pathname, "/admin")
 	if (isAdminRoute) {
