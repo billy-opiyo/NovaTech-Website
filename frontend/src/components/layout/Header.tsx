@@ -12,9 +12,11 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 
 const platformNavigation = [
-	{ name: "Home", href: "/" },
-	{ name: "Browse Stores", href: "/stores" },
-	{ name: "Plans", href: "/#plans" },
+	// Explicitly select the platform context so a remembered merchant store
+	// cannot turn these links into the merchant homepage.
+	{ name: "Home", href: "/?platformHome=1" },
+	{ name: "Browse Stores", href: "/stores?all=1" },
+	{ name: "Plans", href: "/?platformHome=1#plans" },
 	{ name: "Create Store", href: "/onboarding" },
 ]
 

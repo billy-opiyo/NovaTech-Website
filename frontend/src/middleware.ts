@@ -22,6 +22,7 @@ export async function middleware(request: NextRequest) {
 	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHostname(hostname)
 	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform")
 	const isAuthRoute = isPathUnder(pathname, "/auth")
+	const isStoreDirectoryRoute = isPathUnder(pathname, "/stores")
 	const explicitPlatformHome = request.nextUrl.searchParams.get("platformHome") === "1"
 
 	if (isPlatformHost && pathname.startsWith(PLATFORM_STORE_PREFIX)) {
@@ -44,7 +45,7 @@ export async function middleware(request: NextRequest) {
 		return response
 	}
 
-	if (isPlatformHost && !isWorkspaceRoute && !isAuthRoute) {
+	if (isPlatformHost && !isWorkspaceRoute && !isAuthRoute && !isStoreDirectoryRoute) {
 		const savedSlug = request.cookies.get(PLATFORM_STORE_COOKIE)?.value?.toLowerCase()
 		if (isValidStoreSlug(savedSlug)) requestHeaders.set("x-nurava-store-slug", savedSlug)
 		else requestHeaders.delete("x-nurava-store-slug")
