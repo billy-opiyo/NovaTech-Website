@@ -181,7 +181,7 @@ ALTER TABLE "AdminLog" ADD COLUMN "tenantId" TEXT;
 
 INSERT INTO "Plan" ("id", "key", "name", "price", "active", "updatedAt")
 VALUES ('trial-plan', 'TRIAL', 'Trial', NULL, true, CURRENT_TIMESTAMP)
-ON CONFLICT ("key") DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 INSERT INTO "Tenant" ("id", "legalName", "status", "planId", "trialStartsAt", "updatedAt")
 VALUES ('novatech-tenant', 'NovaTech Store', 'ACTIVE', (SELECT "id" FROM "Plan" WHERE "key" = 'TRIAL'), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -193,7 +193,7 @@ ON CONFLICT ("id") DO NOTHING;
 
 INSERT INTO "Domain" ("id", "tenantId", "storeId", "hostname", "type", "verificationToken", "verificationStatus", "isCanonical", "verifiedAt", "updatedAt")
 VALUES ('novatech-domain', 'novatech-tenant', 'novatech-store', 'novatech.novatechstore.co.ke', 'PLATFORM_SUBDOMAIN', 'seeded-novatech-domain', 'VERIFIED', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT ("hostname") DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 UPDATE "Category" SET "tenantId" = 'novatech-tenant' WHERE "tenantId" IS NULL;
 UPDATE "Product" SET "tenantId" = 'novatech-tenant' WHERE "tenantId" IS NULL;
