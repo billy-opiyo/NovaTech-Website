@@ -81,6 +81,34 @@ export const authOptions = {
 		}),
 	],
 	callbacks: {
+		async signIn({ user, account }: { user: User; account?: { provider?: string } | null }) {
+			if (account?.provider !== "google" || !user.email) return true
+
+			const email = user.email.trim().toLowerCase()
+			const databaseUser = await prisma.user.upsert({
+				where: { email },
+				update: {
+					name: user.name || undefined,
+					image: user.image || undefined,
+					emailVerified: new Date(),
+				},
+				create: {
+					email,
+					name: user.name,
+					image: user.image,
+					emailVerified: new Date(),
+				},
+				select: { id: true, email: true, name: true, image: true, role: true, platformRole: true },
+			})
+
+			user.id = databaseUser.id
+			user.email = databaseUser.email
+			user.name = databaseUser.name
+			user.image = databaseUser.image
+			user.role = databaseUser.role
+			user.platformRole = databaseUser.platformRole || undefined
+			return true
+		},
 		async jwt({ token, user }: { token: JWT; user?: User }) {
 			if (user) {
 				token.role = user.role
