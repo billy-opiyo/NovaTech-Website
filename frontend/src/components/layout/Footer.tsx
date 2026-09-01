@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 import { clientConfig } from "@/config/client.config"
+import { isVercelProjectHostname } from "@/lib/platform-store-route"
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
@@ -80,6 +81,8 @@ export default function Footer() {
 		const hostname = window.location.hostname
 		if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
 			setPlatformHomeHref(`${window.location.protocol}//localhost${window.location.port ? `:${window.location.port}` : ""}`)
+		} else if (isVercelProjectHostname(hostname)) {
+			setPlatformHomeHref(window.location.origin)
 		} else {
 			setPlatformHomeHref(PLATFORM_HOME_URL)
 		}
