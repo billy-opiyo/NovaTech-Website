@@ -15,7 +15,7 @@ const productFields = {
 	stock: z.number().int().min(0),
 	warranty: z.string().optional(),
 	specs: z.record(z.string(), z.string()).optional(),
-	images: z.array(z.string().url()).min(1),
+	images: z.array(z.string().refine((value) => /^https?:\/\//i.test(value) || value.startsWith("/"), "images must be absolute URLs or app-relative paths")).min(1),
 	categoryId: z.string(),
 	isFeatured: z.boolean().optional(),
 	isNewArrival: z.boolean().optional(),
@@ -50,6 +50,7 @@ export const productUpdateSchema = z.object({
 	images: productFields.images.optional(),
 	isFeatured: productFields.isFeatured.optional(),
 	isNewArrival: productFields.isNewArrival.optional(),
+	categoryId: productFields.categoryId.optional(),
 })
 
 export type ProductInput = z.infer<typeof productSchema>
