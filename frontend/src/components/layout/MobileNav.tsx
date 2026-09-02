@@ -7,19 +7,28 @@ import { Home, Search, ShoppingCart, Heart, User } from "lucide-react"
 import clsx from "clsx"
 import { useCart } from "@/lib/cartContext"
 import SearchOverlay from "@/components/search/SearchOverlay"
+import { useSession } from "next-auth/react"
+import AccountAvatar from "@/components/account/AccountAvatar"
 
-const navItems = [
+const baseNavItems = [
 	{ icon: Home, label: "Home", href: "/" },
 	{ icon: Search, label: "Search", href: "#search", isAction: true },
 	{ icon: ShoppingCart, label: "Cart", href: "/cart", showBadge: true },
 	{ icon: Heart, label: "Wishlist", href: "/account/wishlist" },
-	{ icon: User, label: "Account", href: "/account" },
 ]
 
 export default function MobileNav() {
 	const pathname = usePathname()
 	const { itemCount } = useCart()
+	const { data: session, status: sessionStatus } = useSession()
 	const [searchOpen, setSearchOpen] = useState(false)
+	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
+	const accountName = session?.user?.name || session?.user?.email || "Account"
+	const navItems = [...baseNavItems, {
+		icon: User,
+		label: isSignedIn ? "Account" : "Sign in",
+		href: isSignedIn ? "/account" : "/auth/signin?callbackUrl=%2Faccount",
+	}]
 
 	return (
 		<>
@@ -34,8 +43,8 @@ export default function MobileNav() {
 								aria-label="Open search"
 								className="flex flex-col items-center gap-1 py-1 px-3 text-gray-500 hover:text-primary transition"
 							>
-								<item.icon size={22} />
-								<span className="text-xs">{item.label}</span>
+								{item.label === "Account" ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-6 w-6" /> : <item.icon size={22} />}
+								<span className="max-w-20 truncate text-xs">{item.label === "Account" ? accountName : item.label}</span>
 							</button>
 						) : (
 							<Link

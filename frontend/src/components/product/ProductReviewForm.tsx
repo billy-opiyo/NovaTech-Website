@@ -3,9 +3,11 @@
 import Link from "next/link"
 import { useState } from "react"
 import type { FormEvent } from "react"
+import { usePathname } from "next/navigation"
 import { Star } from "lucide-react"
 
 export default function ProductReviewForm({ productId }: { productId: string }) {
+	const pathname = usePathname()
 	const [rating, setRating] = useState(5)
 	const [title, setTitle] = useState("")
 	const [comment, setComment] = useState("")
@@ -57,7 +59,7 @@ export default function ProductReviewForm({ productId }: { productId: string }) 
 				</div>
 				<label className="block text-sm font-medium">Title <span className="font-normal text-gray-500">(optional)</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} className="mt-2 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" placeholder="Summary of your experience" /></label>
 				<label className="block text-sm font-medium">Comment<textarea required minLength={10} maxLength={1000} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 min-h-28 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" placeholder="Tell other customers about this product" /></label>
-				{error && <p className="text-sm text-red-500">{error} {requiresSignIn && <Link href="/auth/signin" className="font-medium underline">Sign in</Link>}</p>}
+				{error && <p className="text-sm text-red-500">{error} {requiresSignIn && <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || "/")}`} className="font-medium underline">Sign in</Link>}</p>}
 				{message && <p className="text-sm text-green-600">{message}</p>}
 				<button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">{submitting ? "Submitting…" : "Submit review"}</button>
 			</form>

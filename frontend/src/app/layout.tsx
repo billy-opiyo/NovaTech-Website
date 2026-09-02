@@ -14,6 +14,7 @@ import { ToastProvider } from "@/components/ui/Toast"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
 import { getStoreContext } from "@/lib/store-context.server"
 import { StoreContextProvider } from "@/lib/store-context"
+import AuthSessionProvider from "@/components/providers/AuthSessionProvider"
 
 export async function generateMetadata(): Promise<Metadata> {
 	const store = await getStoreContext()
@@ -70,6 +71,7 @@ export default async function RootLayout({
 			className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-300"
 			>
 				<StoreContextProvider value={store}>
+				<AuthSessionProvider>
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
@@ -90,6 +92,7 @@ export default async function RootLayout({
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>
+				</AuthSessionProvider>
 				</StoreContextProvider>
 			</body>
 		</html>
