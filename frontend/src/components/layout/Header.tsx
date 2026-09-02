@@ -74,7 +74,18 @@ export default function Header() {
 						>
 							{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
 						</button>
-						{store.isPlatformHome && (isSignedIn ? <Link href="/account" aria-label={`Open ${accountName}'s account`} className="hidden items-center gap-2 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/10 sm:inline-flex"><AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-7 w-7" /><span>Account</span></Link> : <Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 sm:inline-flex">Get started</Link>)}
+						{store.isPlatformHome && (isSignedIn ? <>
+							<Link href="/account" aria-label={`Open ${accountName}'s account`} title={accountName} className="inline-flex items-center justify-center rounded-full p-1.5 text-white transition hover:bg-white/10 sm:hidden">
+								<AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-7 w-7" />
+							</Link>
+							<Link href="/account" aria-label={`Open ${accountName}'s account`} title={accountName} className="hidden items-center gap-2 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary/10 sm:inline-flex">
+								<AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-7 w-7" />
+								<span className="max-w-36 truncate text-left leading-tight">{accountName}</span>
+							</Link>
+						</> : <>
+							<Link href={platformAccountHref} aria-label="Sign in" className="inline-flex items-center justify-center rounded-full p-2 text-white transition hover:bg-white/10 sm:hidden"><User size={20} /></Link>
+							<Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 sm:inline-flex">Get started</Link>
+						</>)}
 						{!store.isPlatformHome && <>
 							<SearchOverlay />
 							<NotificationCenter />
