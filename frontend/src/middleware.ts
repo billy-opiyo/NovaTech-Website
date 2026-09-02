@@ -6,10 +6,13 @@ function isPathUnder(pathname: string, basePath: string) {
 	return pathname === basePath || pathname.startsWith(`${basePath}/`)
 }
 
-function redirectToSignIn(request: NextRequest) {
+function redirectToSignIn(request: NextRequest, portal?: "admin" | "manage" | "platform", unauthorized = false) {
 	const signInUrl = new URL("/auth/signin", request.url)
 	const callbackUrl = `${request.nextUrl.pathname}${request.nextUrl.search}`
 	signInUrl.searchParams.set("callbackUrl", callbackUrl)
+	signInUrl.searchParams.set("gate", "1")
+	if (portal) signInUrl.searchParams.set("portal", portal)
+	if (unauthorized) signInUrl.searchParams.set("reason", "unauthorized")
 	return NextResponse.redirect(signInUrl)
 }
 
@@ -27,13 +30,13 @@ export async function middleware(request: NextRequest) {
 	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform")
 
 	if (isAdminRoute) {
-		if (!isAuthenticated) return redirectToSignIn(request)
-		if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") return NextResponse.redirect(new URL("/", request.url))
+		if (!isAuthenticated) return redirectToSignIn(request, "admin")
+		if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") return redirectToSignIn(request, "admin", true)
 		return NextResponse.next()
 	}
 
 	if (isWorkspaceRoute) {
-		if (!isAuthenticated) return redirectToSignIn(request)
+		if (!isAuthenticated) return redirectToSignIn(request, pathname.startsWith("/platform") ? "platform" : "manage")
 		return NextResponse.next()
 	}
 

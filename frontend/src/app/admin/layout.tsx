@@ -29,6 +29,7 @@ import {
 	Download,
 	ClipboardList,
 	ClipboardCheck,
+	LoaderCircle,
 } from "lucide-react"
 import clsx from "clsx"
 
@@ -85,7 +86,6 @@ export default function AdminLayout({
 	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-	const sidebarLinksForPath = sidebarLinks(basePath)
 
 	return (
 		<div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
@@ -177,6 +177,17 @@ function SidebarContent({
 	collapsed?: boolean
 	onClose?: () => void
 }) {
+	const [signingOut, setSigningOut] = useState(false)
+
+	async function handleSignOut() {
+		setSigningOut(true)
+		try {
+			await signOut({ callbackUrl: "/" })
+		} catch {
+			setSigningOut(false)
+		}
+	}
+
 	return (
 		<div className="flex flex-col h-full">
 			<div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -235,11 +246,13 @@ function SidebarContent({
 			<div className="p-4 border-t border-gray-200 dark:border-gray-700">
 				<button
 					type="button"
-					onClick={() => signOut({ callbackUrl: "/" })}
+					disabled={signingOut}
+					aria-busy={signingOut}
+					onClick={() => void handleSignOut()}
 					className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition w-full"
 				>
-					<LogOut size={20} />
-					{!collapsed && <span className="text-sm font-medium">Sign Out</span>}
+					{signingOut ? <LoaderCircle size={20} className="animate-spin" aria-hidden="true" /> : <LogOut size={20} aria-hidden="true" />}
+					{!collapsed && <span className="text-sm font-medium">{signingOut ? "Signing out…" : "Sign Out"}</span>}
 				</button>
 			</div>
 		</div>

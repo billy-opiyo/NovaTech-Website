@@ -5,10 +5,16 @@ import { motion } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check } from "lucide-react"
+import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check, LoaderCircle } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
+
+function withLoginSuccess(url: string) {
+	const target = new URL(url, "http://nurava-auth.local")
+	target.searchParams.set("login", "success")
+	return `${target.pathname}${target.search}${target.hash}`
+}
 
 export default function SignUpPage() {
 	const router = useRouter()
@@ -17,11 +23,18 @@ export default function SignUpPage() {
 	const [error, setError] = useState("")
 	const [signInHref, setSignInHref] = useState("/auth/signin")
 	const [showPassword, setShowPassword] = useState(false)
+	const [isGate, setIsGate] = useState(false)
 
 	useEffect(() => {
-		const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl")
-		if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-			setSignInHref(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`)
+		const params = new URLSearchParams(window.location.search)
+		const callbackUrl = params.get("callbackUrl")
+		setIsGate(params.get("gate") === "1")
+		if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") && !callbackUrl.includes("\\")) {
+			const signInParams = new URLSearchParams({ callbackUrl })
+			if (params.get("gate") === "1") signInParams.set("gate", "1")
+			if (params.get("portal")) signInParams.set("portal", params.get("portal") as string)
+			if (params.get("reason")) signInParams.set("reason", params.get("reason") as string)
+			setSignInHref(`/auth/signin?${signInParams.toString()}`)
 		}
 	}, [])
 	const [formData, setFormData] = useState({
@@ -56,6 +69,10 @@ export default function SignUpPage() {
 					name: formData.name,
 					email: formData.email,
 					password: formData.password,
+					callbackUrl: (() => {
+						const value = new URLSearchParams(window.location.search).get("callbackUrl")
+						return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined
+					})(),
 				}),
 			})
 
@@ -64,9 +81,13 @@ export default function SignUpPage() {
 				throw new Error(data.message || "Registration failed")
 			}
 
-			const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl")
+			const params = new URLSearchParams(window.location.search)
+			const callbackUrl = params.get("callbackUrl")
 			const verifyUrl = new URLSearchParams({ email: formData.email.trim().toLowerCase() })
-			if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) verifyUrl.set("callbackUrl", callbackUrl)
+			if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") && !callbackUrl.includes("\\")) verifyUrl.set("callbackUrl", callbackUrl)
+			if (params.get("gate") === "1") verifyUrl.set("gate", "1")
+			if (params.get("portal")) verifyUrl.set("portal", params.get("portal") as string)
+			if (params.get("reason")) verifyUrl.set("reason", params.get("reason") as string)
 			router.push(`/auth/verify-email?${verifyUrl.toString()}`)
 		} catch (err: unknown) {
 			setError(err instanceof Error ? err.message : "Something went wrong")
@@ -84,20 +105,20 @@ export default function SignUpPage() {
 		setError("")
 		setIsLoading(true)
 		const requestedCallbackUrl = new URLSearchParams(window.location.search).get("callbackUrl") || "/"
-		const callbackUrl = requestedCallbackUrl.startsWith("/") && !requestedCallbackUrl.startsWith("//")
+		const callbackUrl = requestedCallbackUrl.startsWith("/") && !requestedCallbackUrl.startsWith("//") && !requestedCallbackUrl.includes("\\")
 			? requestedCallbackUrl
 			: "/"
-		await signIn("google", { callbackUrl })
+		await signIn("google", { callbackUrl: withLoginSuccess(callbackUrl) })
 	}
 
 	return (
-		<div className="min-h-[70vh] flex items-center justify-center">
+		<div className={isGate ? "fixed inset-0 z-[90] flex min-h-screen items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" : "min-h-[70vh] flex items-center justify-center"} role={isGate ? "dialog" : undefined} aria-modal={isGate ? "true" : undefined} aria-label={isGate ? "Authentication required" : undefined}>
 			<motion.div
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				className="w-full max-w-md"
 			>
-				<div className="glass-card relative p-8">
+				<div className={`glass-card relative p-8 ${isGate ? "max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl" : ""}`}>
 					<AuthCloseButton />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
@@ -117,8 +138,8 @@ export default function SignUpPage() {
 						disabled={isLoading}
 						className="w-full mb-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50"
 					>
-						<FcGoogle size={20} aria-hidden="true" />
-						<span className="font-medium">Continue with Google</span>
+						{isLoading ? <LoaderCircle size={20} className="animate-spin" aria-hidden="true" /> : <FcGoogle size={20} aria-hidden="true" />}
+						<span className="font-medium">{isLoading ? "Creating account…" : "Continue with Google"}</span>
 					</button>
 
 					<div className="relative my-6">

@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { CheckCircle2, Info, X, XCircle } from "lucide-react"
 
 export const TOAST_DURATION = 4000
@@ -21,6 +22,7 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
 	const [toasts, setToasts] = useState<Toast[]>([])
+	const pathname = usePathname()
 
 	const dismissToast = useCallback((id: number) => {
 		setToasts((current) => current.filter((toast) => toast.id !== id))
@@ -31,13 +33,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 		setToasts((current) => [...current, { id, message, tone }].slice(-3))
 	}, [])
 
+	useEffect(() => {
+		const url = new URL(window.location.href)
+		if (url.searchParams.get("login") !== "success") return
+		addToast("Login successful", "success")
+		url.searchParams.delete("login")
+		window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`)
+	}, [addToast, pathname])
+
 	return (
 		<ToastContext.Provider value={{ addToast }}>
 			{children}
 			<div
 				aria-live="polite"
 				aria-atomic="true"
-				className="pointer-events-none fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] flex max-h-[calc(100dvh-1.5rem)] flex-col items-stretch gap-3 overflow-y-auto sm:left-auto sm:right-4 sm:w-96"
+				className="pointer-events-none fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[100] flex max-h-[calc(100dvh-1.5rem)] w-auto max-w-[calc(100vw-1.5rem)] flex-col items-stretch gap-3 overflow-y-auto sm:left-auto sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)]"
 			>
 				{toasts.map((toast) => (
 					<ToastItem key={toast.id} toast={toast} onDismiss={dismissToast} />
