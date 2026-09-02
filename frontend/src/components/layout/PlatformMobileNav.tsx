@@ -3,10 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { CreditCard, Home, PlusCircle, Store } from "lucide-react"
+import { CreditCard, Home, LogIn, PlusCircle, Store } from "lucide-react"
 import clsx from "clsx"
+import { useSession } from "next-auth/react"
+import AccountAvatar from "@/components/account/AccountAvatar"
 
-const navItems = [
+const baseNavItems = [
 	{ icon: Home, label: "Home", href: "/" },
 	{ icon: Store, label: "Browse Stores", href: "/stores?all=1", match: "/stores" },
 	{ icon: CreditCard, label: "Plans", href: "/#plans" },
@@ -15,7 +17,16 @@ const navItems = [
 
 export default function PlatformMobileNav() {
 	const pathname = usePathname()
+	const { data: session, status: sessionStatus } = useSession()
 	const [hash, setHash] = useState("")
+	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
+	const accountName = session?.user?.name || session?.user?.email || "Account"
+	const navItems = [...baseNavItems, {
+		icon: LogIn,
+		label: isSignedIn ? "Account" : "Sign in",
+		href: isSignedIn ? "/account" : "/auth/signin?callbackUrl=%2Faccount",
+		match: isSignedIn ? "/account" : "/auth/signin",
+	}]
 
 	useEffect(() => {
 		const updateHash = () => setHash(window.location.hash)
@@ -49,8 +60,8 @@ export default function PlatformMobileNav() {
 									isActive ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-primary/5 hover:text-primary dark:text-slate-300",
 								)}
 							>
-								<Icon size={21} strokeWidth={2.2} aria-hidden="true" />
-								<span>{label}</span>
+								{label === "Account" ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-6 w-6" /> : <Icon size={21} strokeWidth={2.2} aria-hidden="true" />}
+								<span className="max-w-full truncate px-1">{label === "Account" ? accountName : label}</span>
 							</Link>
 						)
 					})}

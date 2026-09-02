@@ -125,6 +125,16 @@ export const authOptions = {
 			}
 			return session
 		},
+		async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+			if (url.startsWith("/")) return `${baseUrl}${url}`
+			try {
+				const target = new URL(url)
+				if (target.origin === baseUrl) return url
+			} catch {
+				// Fall through to the safe platform home for malformed URLs.
+			}
+			return baseUrl
+		},
 	},
 	pages: {
 		signIn: "/auth/signin",

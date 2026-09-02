@@ -10,6 +10,8 @@ import { Moon, Sun, ShoppingCart, Menu, X, User } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
+import { useSession } from "next-auth/react"
+import AccountAvatar from "@/components/account/AccountAvatar"
 
 const platformNavigation = [
 	{ name: "Home", href: "/?platformHome=1" },
@@ -22,8 +24,12 @@ export default function Header() {
 	const { theme, toggleTheme } = useTheme()
 	const { itemCount } = useCart()
 	const store = useStoreContext()
+	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = store.isPlatformHome ? "/?platformHome=1" : "/"
+	const platformAccountHref = "/auth/signin?callbackUrl=%2Faccount"
+	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
+	const accountName = session?.user?.name || session?.user?.email || "Account"
 
 	return (
 		<header className="site-header sticky top-0 z-[60] glass navy-glass backdrop-blur-lg border-b border-white/10">
@@ -68,6 +74,7 @@ export default function Header() {
 						>
 							{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
 						</button>
+						{store.isPlatformHome && (isSignedIn ? <Link href="/account" aria-label={`Open ${accountName}'s account`} className="hidden items-center gap-2 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/10 sm:inline-flex"><AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-7 w-7" /><span>Account</span></Link> : <Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 sm:inline-flex">Get started</Link>)}
 						{!store.isPlatformHome && <>
 							<SearchOverlay />
 							<NotificationCenter />
