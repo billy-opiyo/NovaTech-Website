@@ -54,10 +54,12 @@ export default function MobileNav() {
 									"flex flex-col items-center gap-1 py-1 px-3 relative transition",
 									isActive
 										? "text-primary"
-										: "text-gray-500 hover:text-primary",
+										: item.label === "Account"
+											? "text-gray-700 hover:text-primary dark:text-white"
+											: "text-gray-500 hover:text-primary",
 								)}
 							>
-								<item.icon size={22} />
+								{item.label === "Account" ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-6 w-6" /> : <item.icon size={22} />}
 								{item.showBadge && itemCount > 0 && (
 									<span className="absolute -top-1 right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
 										{itemCount}
