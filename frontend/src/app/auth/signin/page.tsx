@@ -69,8 +69,7 @@ function SignInForm() {
 				return
 			}
 
-			router.push(withLoginSuccess(callbackUrl))
-			router.refresh()
+			router.replace(withLoginSuccess(callbackUrl))
 		} catch {
 			setError("Something went wrong. Please try again.")
 			setIsLoading(false)
