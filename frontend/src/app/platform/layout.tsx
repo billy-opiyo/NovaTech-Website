@@ -6,7 +6,7 @@ export const metadata = {
 }
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
-	await requirePlatformSession()
+	const session = await requirePlatformSession()
 	return (
 		<div className="min-h-screen bg-gray-50 p-6 text-gray-900 dark:bg-dark-bg dark:text-white">
 			<header className="mx-auto mb-8 flex max-w-6xl flex-wrap items-center justify-between gap-4">
@@ -18,6 +18,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 					<Link href="/platform">Overview</Link>
 					<Link href="/platform/operations">Operations</Link>
 					<Link href="/platform/billing">Billing</Link>
+					{session.user.role === "SUPERADMIN" && <Link href="/platform/access">Platform access</Link>}
 				</nav>
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>

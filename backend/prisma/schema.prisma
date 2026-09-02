@@ -34,6 +34,7 @@ model User {
   supportTickets               SupportTicket[]
   notifications                Notification[]
   adminLogs                    AdminLog[]
+  platformInvitationsSent     PlatformInvitation[] @relation("PlatformInvitationInviter")
   loginEvents                  LoginEvent[]
   memberships                  Membership[]
   merchantEnquiries            MerchantEnquiry[]
@@ -437,6 +438,21 @@ model Invitation {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, email])
+}
+
+model PlatformInvitation {
+  id          String       @id @default(cuid())
+  email       String
+  role        PlatformRole
+  tokenHash   String       @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  createdAt   DateTime     @default(now())
+
+  invitedBy User @relation("PlatformInvitationInviter", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  @@index([email, acceptedAt])
 }
 
 model MerchantEnquiry {

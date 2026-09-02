@@ -1,6 +1,8 @@
 import Link from "next/link"
+import { requirePlatformSession } from "@/lib/tenant-auth"
 
-export default function PlatformPage() {
+export default async function PlatformPage() {
+	const session = await requirePlatformSession()
 	return (
 		<div className="space-y-6">
 			<div>
@@ -16,6 +18,10 @@ export default function PlatformPage() {
 					<h3 className="font-semibold">Plans and billing</h3>
 					<p className="mt-2 text-sm text-gray-500">Plan, entitlement, and subscription monitoring.</p>
 				</Link>
+				{session.user.role === "SUPERADMIN" && <Link href="/platform/access" className="glass-card block p-6">
+					<h3 className="font-semibold">Platform access</h3>
+					<p className="mt-2 text-sm text-gray-500">Invite and manage trusted platform operators.</p>
+				</Link>}
 			</div>
 			<p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">Live control-plane metrics are unavailable until a configured database and billing provider are connected. No placeholder tenant or revenue data is shown.</p>
 		</div>
