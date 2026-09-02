@@ -12,9 +12,9 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 
 const platformNavigation = [
-	{ name: "Home", href: "/" },
-	{ name: "Browse Stores", href: "/stores" },
-	{ name: "Plans", href: "/#plans" },
+	{ name: "Home", href: "/?platformHome=1" },
+	{ name: "Browse Stores", href: "/stores?all=1" },
+	{ name: "Plans", href: "/?platformHome=1#plans" },
 	{ name: "Create Store", href: "/onboarding" },
 ]
 
@@ -23,13 +23,14 @@ export default function Header() {
 	const { itemCount } = useCart()
 	const store = useStoreContext()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+	const homeHref = store.isPlatformHome ? "/?platformHome=1" : "/"
 
 	return (
 		<header className="site-header sticky top-0 z-[60] glass navy-glass backdrop-blur-lg border-b border-white/10">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
-					<Link href="/" className="flex shrink-0 items-center gap-2">
+					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							<Image
 										src={theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo}

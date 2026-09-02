@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { THEME_PRESETS } from "@/config/theme-presets"
+import ConfirmDialog from "@/components/ui/ConfirmDialog"
 
 type Draft = {
 	name?: string
@@ -32,6 +33,7 @@ export default function StoreDesignPage() {
 	const [localPreview, setLocalPreview] = useState(false)
 	const [versions, setVersions] = useState<Version[]>([])
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
+	const [rollbackVersion, setRollbackVersion] = useState<number | null>(null)
 
 	const preset = useMemo(
 		() => Object.values(THEME_PRESETS).find((item) => item.id === draft.themePreset) || Object.values(THEME_PRESETS)[0],
@@ -134,6 +136,20 @@ export default function StoreDesignPage() {
 
 	return (
 		<div className="space-y-6">
+			<ConfirmDialog
+				open={rollbackVersion !== null}
+				title="Restore this published version?"
+				description={rollbackVersion === null ? "" : `Version ${rollbackVersion} will be copied into a new published version. Your current version remains recoverable.`}
+				confirmLabel="Restore version"
+				busy={busy}
+				onCancel={() => { if (!busy) setRollbackVersion(null) }}
+				onConfirm={() => {
+					if (rollbackVersion === null) return
+					const version = rollbackVersion
+					setRollbackVersion(null)
+					void rollback(version)
+				}}
+			/>
 			<div>
 				<h1 className="text-3xl font-bold">Store design</h1>
 				<p className="mt-1 text-gray-500">Edit approved branding and content, preview the result, then publish a version when the store backend is available.</p>
@@ -173,7 +189,7 @@ export default function StoreDesignPage() {
 					{message && <p className="text-sm text-green-600">{message}</p>}
 					<label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={acceptLegalTerms} onChange={(event) => setAcceptLegalTerms(event.target.checked)} className="mt-1" /><span>Before publishing, I confirm that I have reviewed the current <a href="/terms" target="_blank" rel="noreferrer" className="text-primary underline">merchant terms</a> and <a href="/privacy-policy" target="_blank" rel="noreferrer" className="text-primary underline">privacy notice</a>, and understand that the merchant is responsible for its store sales, customers, delivery, refunds, taxes, and warranties.</span></label>
 					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={save} className="btn-primary">{busy ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy || localPreview || !acceptLegalTerms} onClick={publish} className="rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">Publish draft</button></div>
-					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy || localPreview} onClick={() => void rollback(item.version)} className="rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">Restore</button></div>)}</div></div>}
+					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy || localPreview} onClick={() => setRollbackVersion(item.version)} className="rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">Restore</button></div>)}</div></div>}
 				</section>
 
 				<section aria-label="Storefront preview" className="overflow-hidden rounded-2xl border shadow-xl" style={{ backgroundColor: preset.light.background, color: preset.light.text, fontFamily: preset.fontBody }}>

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
+import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
 
@@ -73,6 +75,21 @@ export default function SignUpPage() {
 		}
 	}
 
+	const handleGoogleSignUp = async () => {
+		if (!formData.acceptedTerms) {
+			setError("Please agree to the Terms and Conditions and Privacy Policy first")
+			return
+		}
+
+		setError("")
+		setIsLoading(true)
+		const requestedCallbackUrl = new URLSearchParams(window.location.search).get("callbackUrl") || "/"
+		const callbackUrl = requestedCallbackUrl.startsWith("/") && !requestedCallbackUrl.startsWith("//")
+			? requestedCallbackUrl
+			: "/"
+		await signIn("google", { callbackUrl })
+	}
+
 	return (
 		<div className="min-h-[70vh] flex items-center justify-center">
 			<motion.div
@@ -93,6 +110,27 @@ export default function SignUpPage() {
 							{error}
 						</div>
 					)}
+
+					<button
+						type="button"
+						onClick={handleGoogleSignUp}
+						disabled={isLoading}
+						className="w-full mb-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50"
+					>
+						<FcGoogle size={20} aria-hidden="true" />
+						<span className="font-medium">Continue with Google</span>
+					</button>
+
+					<div className="relative my-6">
+						<div className="absolute inset-0 flex items-center">
+							<div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+						</div>
+						<div className="relative flex justify-center text-sm">
+							<span className="px-4 bg-white dark:bg-dark-surface text-gray-500">
+								or create with email
+							</span>
+						</div>
+					</div>
 
 					<form onSubmit={handleSignUp} className="space-y-4">
 						<div>

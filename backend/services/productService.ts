@@ -8,6 +8,7 @@ type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sk
 		discountedPrice?: number | null
 		warranty?: string | null
 		specs?: Record<string, string> | null
+		categoryId?: string
 }
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
@@ -247,13 +248,18 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 }
 
 export async function updateProduct(slug: string, data: ProductUpdateInput, tenantId: string) {
-	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival"]
+	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "categoryId"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
 	if (update.stock !== undefined) update.stock = Number(update.stock)
 	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
 	if (!product) throw new Error("Product not found")
+	if (update.categoryId !== undefined) {
+		if (typeof update.categoryId !== "string") throw new Error("Invalid category")
+		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId }, select: { id: true } })
+		if (!category) throw new Error("Category not found")
+	}
 	const nextPrice = update.price === undefined ? product.price : Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
 		throw new Error("discountedPrice cannot exceed price")

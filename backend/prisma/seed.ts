@@ -63,8 +63,8 @@ async function main() {
 	})
 	await prisma.store.upsert({
 		where: { id: "novatech-store" },
-		update: { tenantId: tenant.id, publicationStatus: "PUBLISHED" },
-		create: { id: "novatech-store", tenantId: tenant.id, name: "Nurava Tech", slug: "novatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
+		update: { tenantId: tenant.id, name: "Nurava Tech", slug: "nuravatech", publicationStatus: "PUBLISHED" },
+		create: { id: "novatech-store", tenantId: tenant.id, name: "Nurava Tech", slug: "nuravatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
 	})
 	await prisma.membership.upsert({
 		where: { tenantId_userId: { tenantId: tenant.id, userId: admin.id } },

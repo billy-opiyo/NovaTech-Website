@@ -22,7 +22,8 @@ function isPlatformHost(value: string | null): boolean {
 
 export async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
-	const platformHome = isPlatformHost(requestHeaders.get("host"))
+	const requestedStoreSlug = requestHeaders.get("x-nurava-store-slug")?.trim().toLowerCase() || ""
+	const platformHome = isPlatformHost(requestHeaders.get("host")) && !requestedStoreSlug
 	if (platformHome) {
 		// Platform discovery is independent of any merchant domain mapping. Keep
 		// the root host on platform defaults; the homepage loads its store
@@ -100,7 +101,7 @@ export function fallbackStoreContext(isPlatformHome = false): StoreContext {
 		...clientConfig,
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
-		storeSlug: "novatech",
+		storeSlug: "nuravatech",
 		publicationStatus: "PUBLISHED",
 		isPlatformHome,
 	} as unknown as StoreContext

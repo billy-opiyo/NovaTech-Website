@@ -7,7 +7,6 @@ import Footer from "@/components/layout/Footer"
 import MobileNav from "@/components/layout/MobileNav"
 import PlatformMobileNav from "@/components/layout/PlatformMobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
-import SessionResume from "@/components/layout/SessionResume"
 import PlatformHashScroll from "@/components/layout/PlatformHashScroll"
 import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
 import SplashScreen from "@/components/layout/SplashScreen"
@@ -74,7 +73,6 @@ export default async function RootLayout({
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
-							<SessionResume isPlatformHome={store.isPlatformHome} />
 							{store.isPlatformHome && <PlatformHashScroll />}
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							<SplashScreen platformHome={store.isPlatformHome}>

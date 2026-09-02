@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { getProductImage } from "@/constants/productImages"
+import { useStoreContext } from "@/lib/store-context"
 
 interface TopProduct {
 	id: string
@@ -21,6 +22,7 @@ export default function TopProducts() {
 	const [state, setState] = useState<"loading" | "ready" | "error">("loading")
 	const pathname = usePathname()
 	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
+	const { storeSlug } = useStoreContext()
 
 	useEffect(() => {
 		fetch("/api/analytics?timeRange=30d")
@@ -38,7 +40,7 @@ export default function TopProducts() {
 			{state === "loading" && <p className="py-8 text-center text-sm text-gray-500">Loading products…</p>}
 			{state === "error" && <p className="py-8 text-center text-sm text-red-500">Unable to load top products.</p>}
 			{state === "ready" && !products.length && <p className="py-8 text-center text-sm text-gray-500">No product sales recorded yet.</p>}
-			{state === "ready" && products.length > 0 && <div className="space-y-4">{products.map((product) => <div key={product.id} className="flex items-center gap-4"><div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700"><Image src={getProductImage(product.image, product.name)} alt={product.name} fill className="object-cover" /></div><div className="min-w-0 flex-1"><Link href={`/products/${product.slug}`} className="block truncate text-sm font-medium hover:text-primary">{product.name}</Link><p className="mt-1 text-xs text-gray-500">{product.sales} sold</p><p className="mt-1 text-sm font-semibold text-green-600">KES {product.revenue.toLocaleString()}</p></div></div>)}</div>}
+			{state === "ready" && products.length > 0 && <div className="space-y-4">{products.map((product) => <div key={product.id} className="flex items-center gap-4"><div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700"><Image src={getProductImage(product.image, product.name)} alt={product.name} fill className="object-cover" /></div><div className="min-w-0 flex-1"><Link href={`/store/${storeSlug}/products/${product.slug}`} className="block truncate text-sm font-medium hover:text-primary">{product.name}</Link><p className="mt-1 text-xs text-gray-500">{product.sales} sold</p><p className="mt-1 text-sm font-semibold text-green-600">KES {product.revenue.toLocaleString()}</p></div></div>)}</div>}
 			<Link href={`${basePath}/products`} className="mt-4 block w-full rounded-lg border border-gray-300 px-4 py-2 text-center text-sm transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">View All Products</Link>
 		</motion.div>
 	)

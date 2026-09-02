@@ -4,6 +4,7 @@ import prisma from "backend/lib/db"
 import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/storeValidator"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
+import { DEFAULT_STORE_CATEGORIES } from "backend/lib/default-categories"
 
 export async function GET() {
 	const session = await auth()
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt, trialEndsAt } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
+			await transaction.category.createMany({ data: DEFAULT_STORE_CATEGORIES.map((category) => ({ tenantId: tenant.id, ...category })) })
 			await recordMerchantLegalAcceptance({ tenantId: tenant.id, acceptedById: session.user.id, context: "TRIAL_START", transaction })
 			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: "TRIALING", trialStartsAt, trialEndsAt } })
 			await transaction.billingCustomer.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id } })

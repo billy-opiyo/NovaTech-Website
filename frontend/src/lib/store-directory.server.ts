@@ -91,7 +91,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 		return [{
 			id: "novatech-store",
 			name: clientConfig.brand.name,
-			slug: "novatech",
+			slug: "nuravatech",
 			logoUrl: clientConfig.brand.logo,
 			tagline: clientConfig.homepage.heroDescription,
 			featuredProduct: null,
@@ -170,7 +170,6 @@ export async function getStorePublicUrl(slug: string): Promise<string> {
 	if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
 		return `http://${slug}.localhost${port}`
 	}
-
 	const platformDomain = getPlatformDomain()
 	return `https://${slug}.${platformDomain}`
 }

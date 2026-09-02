@@ -44,17 +44,17 @@ test("canonical platform hosts bypass merchant domain mappings", async () => {
 			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE", verificationStatus: "APPROVED" } },
 		}
 	}
-	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "novatech" ? {
+	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "nuravatech" ? {
 		id: "platform-store",
 		tenantId: "platform-tenant",
-		slug: "novatech",
+		slug: "nuravatech",
 		publicationStatus: "PUBLISHED",
 			tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null
 	try {
 		for (const hostname of ["nuravatech.com:3000", "www.nuravatech.com:3000"]) {
 			const context = await resolveTenantFromRequest({ headers: new Headers({ host: hostname }) })
-			assert.equal(context.storeSlug, "novatech")
+			assert.equal(context.storeSlug, "nuravatech")
 			assert.equal(context.tenantId, "platform-tenant")
 		}
 		assert.equal(domainLookups, 0)
