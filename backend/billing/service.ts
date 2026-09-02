@@ -127,7 +127,15 @@ export async function getBillingSnapshot(tenantId: string) {
 	const usage = await prisma.usageCounter.findMany({ where: { tenantId, periodStart: { lte: now }, periodEnd: { gt: now } }, orderBy: { metric: "asc" }, select: { metric: true, value: true, periodStart: true, periodEnd: true } })
 	const activeAddons = tenant.subscriptions[0]?.addonSubscriptions.filter((item) => ["ACTIVE", "PAST_DUE"].includes(item.status)) || []
 	const pendingAddons = tenant.subscriptions[0]?.addonSubscriptions.filter((item) => item.status === "INCOMPLETE") || []
-	return { tenant, subscription: tenant.subscriptions[0] || null, activeAddons, pendingAddons, usage }
+	return {
+		tenant,
+		subscription: tenant.subscriptions[0] || null,
+		activeAddons,
+		pendingAddons,
+		invoices: tenant.invoices,
+		payments: tenant.payments,
+		usage,
+	}
 }
 
 async function getPlanAndAddons(planKey: string, addonKeys: string[]) {

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { AnimatePresence, motion } from "framer-motion"
-import { AlertCircle, Bell, CheckCheck, Package, Tag, Truck, X } from "lucide-react"
+import { AlertCircle, Bell, Package, Tag, Truck, X } from "lucide-react"
 import clsx from "clsx"
+import { TOAST_DURATION } from "@/components/ui/Toast"
 
 type Notification = {
 	id: string
@@ -51,6 +52,12 @@ export default function NotificationCenter() {
 			})
 	}, [isOpen, loaded])
 
+	useEffect(() => {
+		if (!isOpen) return
+		const timeout = window.setTimeout(() => setIsOpen(false), TOAST_DURATION)
+		return () => window.clearTimeout(timeout)
+	}, [isOpen])
+
 	async function markRead(id?: string) {
 		const response = await fetch("/api/account/notifications", {
 			method: "PATCH",
@@ -82,7 +89,7 @@ export default function NotificationCenter() {
 			<AnimatePresence>
 				{isOpen && <>
 					<motion.button type="button" aria-label="Close notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 cursor-default" onClick={() => setIsOpen(false)} />
-					<motion.div initial={{ opacity: 0, y: -10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.97 }} className="fixed inset-x-3 top-[max(4.5rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden glass-card sm:left-auto sm:right-4 sm:w-96">
+					<motion.div initial={{ opacity: 0, y: -10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.97 }} className="fixed inset-x-3 top-[max(4.5rem,calc(env(safe-area-inset-top)+4rem))] z-50 flex max-h-[calc(100dvh-5.5rem)] w-auto max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden glass-card sm:left-auto sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)]">
 						<div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700"><h2 className="font-semibold">Notifications</h2><div className="flex items-center gap-2">{unreadCount > 0 && <button type="button" onClick={() => markRead()} className="text-xs text-primary hover:underline">Mark all read</button>}<button type="button" aria-label="Close notifications" onClick={() => setIsOpen(false)} className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700"><X size={16} /></button></div></div>
 						<div className="min-h-0 flex-1 overflow-y-auto">
 							{loading && <p className="p-10 text-center text-sm text-gray-500">Loading notifications…</p>}

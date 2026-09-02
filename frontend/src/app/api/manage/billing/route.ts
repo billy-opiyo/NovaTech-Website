@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
-import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
 import {

@@ -7,24 +7,39 @@ import { requireMembership } from "backend/lib/tenant-access"
 
 const platformRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
 
+function redirectToAuthGate(reason: "manage" | "platform", callbackUrl: string): never {
+	const params = new URLSearchParams({ callbackUrl, gate: "1", portal: reason, reason: "unauthorized" })
+	redirect(`/auth/signin?${params.toString()}`)
+}
+
 export async function requireStoreSession(roles?: MembershipRole[]) {
 	const session = await auth()
-	if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/manage")
+	const requestHeaders = await headers()
+	const callbackUrl = requestHeaders.get("x-nurava-request-path") || "/manage"
+	if (!session?.user?.id) redirectToAuthGate("manage", callbackUrl)
+
+	let context
+	try {
+		context = await resolveTenantFromRequest({ headers: requestHeaders }, { allowUnpublished: true })
+	} catch {
+		redirect("/?tenantAccess=unavailable")
+	}
 
 	try {
-		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		const membership = await requireMembership(session.user.id, context.tenantId, roles)
 		return { session, context, membership }
 	} catch {
-		redirect("/?tenantAccess=unavailable")
+		redirectToAuthGate("manage", callbackUrl)
 	}
 }
 
 export async function requirePlatformSession() {
 	const session = await auth()
-	if (!session?.user?.id) redirect("/auth/signin?callbackUrl=/platform")
+	const requestHeaders = await headers()
+	const callbackUrl = requestHeaders.get("x-nurava-request-path") || "/platform"
+	if (!session?.user?.id) redirectToAuthGate("platform", callbackUrl)
 	if (!platformRoles.has(session.user.platformRole || "") && session.user.role !== "SUPERADMIN") {
-		redirect("/")
+		redirectToAuthGate("platform", callbackUrl)
 	}
 	return session
 }
