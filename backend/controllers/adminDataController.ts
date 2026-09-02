@@ -6,6 +6,7 @@ import { requireStoreAccess } from "../lib/store-access"
 import { couponCreateSchema, couponUpdateSchema } from "../validators/couponValidator"
 import { apiErrorResponse } from "../lib/api-handler"
 import { parsePagination } from "../lib/pagination"
+import { adminReviewDeleteSchema, adminReviewUpdateSchema } from "../validators/reviewValidator"
 
 function errorCode(error: unknown): string | undefined {
 	return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : undefined
@@ -90,13 +91,33 @@ export async function getAdminReviews(req: NextRequest) {
 
 export async function moderateReview(req: NextRequest) {
 	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
-	const body = await req.json()
+	const body = await req.json().catch(() => null)
+	if (body?.action === "edit") {
+		const parsed = adminReviewUpdateSchema.safeParse(body)
+		if (!parsed.success) return NextResponse.json({ message: "Invalid review edit", issues: parsed.error.flatten() }, { status: 400 })
+		const existing = await prisma.review.findFirst({ where: { id: parsed.data.id, tenantId: context.tenantId }, select: { id: true } })
+		if (!existing) return NextResponse.json({ message: "Review not found" }, { status: 404 })
+		const review = await prisma.review.update({ where: { id: existing.id }, data: { rating: parsed.data.rating, title: parsed.data.title ?? null, comment: parsed.data.comment, moderationStatus: "PENDING" } })
+		await createActionRecord("EDITED_REVIEW", { adminId: session.user.id, tenantId: context.tenantId, reviewId: review.id, moderationStatus: "PENDING" })
+		return NextResponse.json({ ...review, message: "Review corrected and returned to pending approval" })
+	}
 	if (!body.id || !["PENDING", "APPROVED", "REJECTED", "FLAGGED"].includes(body.moderationStatus)) return NextResponse.json({ message: "Invalid moderation request" }, { status: 400 })
 	const existing = await prisma.review.findFirst({ where: { id: body.id, tenantId: context.tenantId }, select: { id: true } })
 	if (!existing) return NextResponse.json({ message: "Review not found" }, { status: 404 })
 	const review = await prisma.review.update({ where: { id: existing.id }, data: { moderationStatus: body.moderationStatus } })
 	await createActionRecord("MODERATED_REVIEW", { adminId: session.user.id, tenantId: context.tenantId, reviewId: review.id, status: body.moderationStatus })
 	return NextResponse.json(review)
+}
+
+export async function deleteAdminReview(req: NextRequest) {
+	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const parsed = adminReviewDeleteSchema.safeParse(await req.json().catch(() => null))
+	if (!parsed.success) return NextResponse.json({ message: "Invalid review delete request" }, { status: 400 })
+	const existing = await prisma.review.findFirst({ where: { id: parsed.data.id, tenantId: context.tenantId }, select: { id: true } })
+	if (!existing) return NextResponse.json({ message: "Review not found" }, { status: 404 })
+	await prisma.review.delete({ where: { id: existing.id } })
+	await createActionRecord("DELETED_REVIEW", { adminId: session.user.id, tenantId: context.tenantId, reviewId: existing.id })
+	return NextResponse.json({ ok: true, message: "Review deleted" })
 }
 
 export async function getDeliveries(req: NextRequest) {

@@ -1,11 +1,103 @@
 "use client"
-import { useEffect, useState } from "react"
+
+import { useCallback, useEffect, useState } from "react"
+import { Star } from "lucide-react"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+
+type Review = {
+	id: string
+	product?: { name: string } | null
+	user: { name?: string | null; email: string }
+	rating: number
+	title?: string | null
+	comment?: string | null
+	moderationStatus: string
+}
+
+type ReviewData = {
+	reviews: Review[]
+	stats: { total?: number; pending?: number; approved?: number; flagged?: number }
+}
+
+type EditReview = {
+	id: string
+	rating: number
+	title: string
+	comment: string
+}
+
 export default function AdminReviewsPage() {
-	const [status, setStatus] = useState("ALL"); const [data, setData] = useState<any>({ reviews: [], stats: {} }); const [error, setError] = useState("")
-	const [reviewToReject, setReviewToReject] = useState<{ id: string; productName: string } | null>(null)
-	const load = () => fetch(`/api/admin/reviews?status=${status}`, { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject(new Error("Unable to load reviews"))).then(setData).catch((e) => setError(e.message))
-	useEffect(() => { load() }, [status])
-	const moderate = async (id: string, moderationStatus: string) => { const response = await fetch("/api/admin/reviews", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, moderationStatus }) }); if (!response.ok) setError("Unable to update review"); else load() }
-	return <div className="space-y-6"><ConfirmDialog open={Boolean(reviewToReject)} title="Reject this review?" description={reviewToReject ? `The review for ${reviewToReject.productName} will be hidden from customers.` : ""} confirmLabel="Reject review" onCancel={() => setReviewToReject(null)} onConfirm={() => { if (!reviewToReject) return; const review = reviewToReject; setReviewToReject(null); void moderate(review.id, "REJECTED") }} /><div><h1 className="text-3xl font-bold">Review moderation</h1><p className="mt-1 text-gray-500">Approve, flag, or reject customer reviews before publication.</p></div>{error && <p className="text-sm text-red-500">{error}</p>}<div className="grid gap-4 sm:grid-cols-4">{[["Total",data.stats.total], ["Pending",data.stats.pending], ["Approved",data.stats.approved], ["Flagged",data.stats.flagged]].map(([label,value]) => <div key={label as string} className="glass-card p-4"><p className="text-2xl font-bold">{value ?? "—"}</p><p className="text-sm text-gray-500">{label}</p></div>)}</div><div className="flex gap-2">{["ALL","PENDING","APPROVED","FLAGGED","REJECTED"].map((item) => <button key={item} onClick={() => setStatus(item)} className={`rounded-lg px-3 py-2 text-xs ${status === item ? "bg-primary text-white" : "border"}`}>{item}</button>)}</div><div className="glass-card overflow-x-auto"><table className="w-full min-w-[800px]"><thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Product</th><th className="p-4">Customer</th><th className="p-4">Rating</th><th className="p-4">Comment</th><th className="p-4">Status</th><th className="p-4">Actions</th></tr></thead><tbody>{data.reviews.map((review: any) => { const reviewTarget = review.product?.name || "Store"; return <tr key={review.id} className="border-b last:border-0"><td className="p-4">{reviewTarget}{!review.product && <span className="ml-2 text-xs text-gray-500">(homepage)</span>}</td><td className="p-4"><p>{review.user.name || "—"}</p><p className="text-xs text-gray-500">{review.user.email}</p></td><td className="p-4">{review.rating}/5</td><td className="max-w-xs p-4 text-sm">{review.comment || "—"}</td><td className="p-4 text-xs">{review.moderationStatus}</td><td className="p-4"><div className="flex gap-2"><button onClick={() => moderate(review.id, "APPROVED")} className="rounded border px-2 py-1 text-xs text-green-600">Approve</button><button onClick={() => moderate(review.id, "FLAGGED")} className="rounded border px-2 py-1 text-xs text-orange-600">Flag</button><button onClick={() => setReviewToReject({ id: review.id, productName: reviewTarget })} className="rounded border px-2 py-1 text-xs text-red-600">Reject</button></div></td></tr> })}</tbody></table>{!data.reviews.length && <p className="p-10 text-center text-gray-500">No reviews in this queue.</p>}</div></div>
+	const [status, setStatus] = useState("ALL")
+	const [data, setData] = useState<ReviewData>({ reviews: [], stats: {} })
+	const [error, setError] = useState("")
+	const [editReview, setEditReview] = useState<EditReview | null>(null)
+	const [reviewToReject, setReviewToReject] = useState<{ id: string; target: string } | null>(null)
+	const [reviewToDelete, setReviewToDelete] = useState<{ id: string; target: string } | null>(null)
+	const [busy, setBusy] = useState(false)
+
+	const load = useCallback(async () => {
+		setError("")
+		try {
+			const response = await fetch(`/api/admin/reviews?status=${status}`, { cache: "no-store" })
+			if (!response.ok) throw new Error("Unable to load reviews")
+			setData(await response.json())
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to load reviews")
+		}
+	}, [status])
+
+	useEffect(() => { void load() }, [load])
+
+	async function moderate(id: string, moderationStatus: string) {
+		setBusy(true)
+		try {
+			const response = await fetch("/api/admin/reviews", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, moderationStatus }) })
+			if (!response.ok) throw new Error("Unable to update review")
+			await load()
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to update review")
+		} finally { setBusy(false) }
+	}
+
+	async function saveEdit(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		if (!editReview) return
+		setBusy(true)
+		try {
+			const response = await fetch("/api/admin/reviews", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "edit", ...editReview, title: editReview.title.trim() || null, comment: editReview.comment.trim() }) })
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(result.message || "Unable to save review")
+			setEditReview(null)
+			await load()
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to save review")
+		} finally { setBusy(false) }
+	}
+
+	async function deleteReview() {
+		if (!reviewToDelete) return
+		setBusy(true)
+		try {
+			const response = await fetch("/api/admin/reviews", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: reviewToDelete.id }) })
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(result.message || "Unable to delete review")
+			setReviewToDelete(null)
+			await load()
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to delete review")
+		} finally { setBusy(false) }
+	}
+
+	return (
+		<div className="space-y-6">
+			<ConfirmDialog open={Boolean(reviewToReject)} title="Reject this review?" description={reviewToReject ? `The review for ${reviewToReject.target} will be hidden from customers.` : ""} confirmLabel="Reject review" busy={busy} onCancel={() => setReviewToReject(null)} onConfirm={() => { if (!reviewToReject) return; const review = reviewToReject; setReviewToReject(null); void moderate(review.id, "REJECTED") }} />
+			<ConfirmDialog open={Boolean(reviewToDelete)} title="Delete this review?" description={reviewToDelete ? `This permanently removes the review for ${reviewToDelete.target}.` : ""} confirmLabel="Delete review" busy={busy} onCancel={() => setReviewToDelete(null)} onConfirm={() => void deleteReview()} />
+			<div><h1 className="text-3xl font-bold">Review moderation</h1><p className="mt-1 text-gray-500">Correct, approve, flag, reject, or delete customer reviews before publication.</p></div>
+			{error && <p className="text-sm text-red-500">{error}</p>}
+			{editReview && <form onSubmit={saveEdit} className="glass-card space-y-4 p-6"><div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Edit review</h2><button type="button" onClick={() => setEditReview(null)} className="text-sm text-gray-500 underline">Cancel</button></div><div><span className="block text-sm font-medium">Rating</span><div className="mt-2 flex gap-1" role="radiogroup" aria-label="Review rating">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} role="radio" aria-checked={editReview.rating === value} aria-label={`${value} star${value === 1 ? "" : "s"}`} onClick={() => setEditReview({ ...editReview, rating: value })}><Star size={22} className={value <= editReview.rating ? "fill-yellow-500 text-yellow-500" : "text-gray-300 dark:text-gray-600"} /></button>)}</div></div><label className="block text-sm font-medium">Title <span className="font-normal text-gray-500">(optional)</span><input value={editReview.title} onChange={(event) => setEditReview({ ...editReview, title: event.target.value })} maxLength={200} className="mt-2 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" /></label><label className="block text-sm font-medium">Comment<textarea required minLength={10} maxLength={1000} value={editReview.comment} onChange={(event) => setEditReview({ ...editReview, comment: event.target.value })} className="mt-2 min-h-28 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" /></label><button type="submit" disabled={busy} className="btn-primary disabled:opacity-50">{busy ? "Saving…" : "Save correction"}</button><p className="text-xs text-gray-500">Saving a correction returns the review to pending approval.</p></form>}
+			<div className="grid gap-4 sm:grid-cols-4">{[["Total", data.stats.total], ["Pending", data.stats.pending], ["Approved", data.stats.approved], ["Flagged", data.stats.flagged]].map(([label, value]) => <div key={label as string} className="glass-card p-4"><p className="text-2xl font-bold">{value ?? "—"}</p><p className="text-sm text-gray-500">{label}</p></div>)}</div>
+			<div className="flex flex-wrap gap-2">{["ALL", "PENDING", "APPROVED", "FLAGGED", "REJECTED"].map((item) => <button key={item} onClick={() => setStatus(item)} className={`rounded-lg px-3 py-2 text-xs ${status === item ? "bg-primary text-white" : "border"}`}>{item}</button>)}</div>
+			<div className="glass-card overflow-x-auto"><table className="w-full min-w-[1050px]"><thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Product</th><th className="p-4">Customer</th><th className="p-4">Rating</th><th className="p-4">Review</th><th className="p-4">Status</th><th className="p-4">Actions</th></tr></thead><tbody>{data.reviews.map((review) => { const target = review.product?.name || "Store homepage"; return <tr key={review.id} className="border-b align-top last:border-0"><td className="p-4">{target}{!review.product && <span className="ml-2 text-xs text-gray-500">(homepage)</span>}</td><td className="p-4"><p>{review.user.name || "—"}</p><p className="text-xs text-gray-500">{review.user.email}</p></td><td className="p-4">{review.rating}/5</td><td className="max-w-xs p-4 text-sm"><p className="font-medium">{review.title || "—"}</p><p>{review.comment || "—"}</p></td><td className="p-4 text-xs">{review.moderationStatus}</td><td className="p-4"><div className="flex flex-wrap gap-2"><button disabled={busy} onClick={() => setEditReview({ id: review.id, rating: review.rating, title: review.title || "", comment: review.comment || "" })} className="rounded border px-2 py-1 text-xs">Edit</button><button disabled={busy} onClick={() => void moderate(review.id, "APPROVED")} className="rounded border px-2 py-1 text-xs text-green-600">Approve</button><button disabled={busy} onClick={() => void moderate(review.id, "FLAGGED")} className="rounded border px-2 py-1 text-xs text-orange-600">Flag</button><button disabled={busy} onClick={() => setReviewToReject({ id: review.id, target })} className="rounded border px-2 py-1 text-xs text-red-600">Reject</button><button disabled={busy} onClick={() => setReviewToDelete({ id: review.id, target })} className="rounded border px-2 py-1 text-xs text-red-700">Delete</button></div></td></tr> })}</tbody></table>{!data.reviews.length && <p className="p-10 text-center text-gray-500">No reviews in this queue.</p>}</div>
+		</div>
+	)
 }
