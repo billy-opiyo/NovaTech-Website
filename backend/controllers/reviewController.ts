@@ -23,7 +23,7 @@ export async function getReviews(req: NextRequest) {
 			)
 		}
 
-		const approvedWhere = { productId, tenantId: context.tenantId, moderationStatus: "APPROVED" as const }
+		const approvedWhere = { productId: productId || null, tenantId: context.tenantId, moderationStatus: "APPROVED" as const }
 		const [reviews, total] = await Promise.all([
 			prisma.review.findMany({
 				where: approvedWhere,
@@ -70,14 +70,16 @@ export async function createReview(req: NextRequest) {
 		const validated = reviewSchema.parse(body)
 		const userId = session.user.id
 		const context = await resolveTenantFromRequest(req)
-		const product = await prisma.product.findFirst({ where: { id: validated.productId, tenantId: context.tenantId }, select: { id: true } })
-		if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 })
+		if (validated.productId) {
+			const product = await prisma.product.findFirst({ where: { id: validated.productId, tenantId: context.tenantId }, select: { id: true } })
+			if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 })
+		}
 
 		if (!userId) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
 
-		const hasPurchased = await prisma.orderItem.findFirst({
+		const hasPurchased = validated.productId ? await prisma.orderItem.findFirst({
 			where: {
 				tenantId: context.tenantId,
 				productId: validated.productId,
@@ -86,14 +88,14 @@ export async function createReview(req: NextRequest) {
 					status: "DELIVERED",
 				},
 			},
-		})
+		}) : null
 		const blockedTerms = findBlockedReviewTerms(validated.title, validated.comment)
 
 		const review = await prisma.review.create({
 			data: {
 				tenantId: context.tenantId,
 				userId,
-				productId: validated.productId,
+				productId: validated.productId || null,
 				rating: validated.rating,
 				title: validated.title,
 				comment: validated.comment,
