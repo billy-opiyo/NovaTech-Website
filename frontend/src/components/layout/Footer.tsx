@@ -6,6 +6,7 @@ import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 import { clientConfig } from "@/config/client.config"
 import { isVercelProjectHostname } from "@/lib/platform-store-route"
+import { getWhatsAppChatHref } from "@/lib/merchant-contact"
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
@@ -30,11 +31,11 @@ const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 	},
 	{
 		label: "WhatsApp",
-		href: `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`,
+		href: getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage),
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	},
-]
+].filter((link) => Boolean(link.href))
 
 const shopperServiceLinks = [
 	{ label: "Contact Us", href: "/contact" },

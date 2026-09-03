@@ -6,6 +6,7 @@ import { productSchema } from "../../backend/validators/productValidator"
 import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../../backend/validators/reviewValidator"
 import { contactSchema, ticketSchema, updateTicketSchema, ticketReplySchema } from "../../backend/validators/supportValidator"
 import { resolveVariantSelection } from "../../backend/lib/product-variant"
+import { storeSettingsPatchSchema } from "../../backend/validators/storeSettingsValidator"
 
 test("auth schemas accept valid credentials and reject malformed input", () => {
 	assert.equal(registerSchema.safeParse({ name: "Ada Lovelace", email: "ada@example.com", password: "Password1" }).success, true)
@@ -56,4 +57,11 @@ test("review and support schemas enforce required fields and enums", () => {
 	assert.equal(updateTicketSchema.safeParse({ status: "resolved", priority: "urgent" }).success, true)
 	assert.equal(ticketReplySchema.safeParse({ reply: "Thanks" }).success, true)
 	assert.equal(ticketReplySchema.safeParse({ reply: "" }).success, false)
+})
+
+test("store settings accept secure social links and reject unsafe links", () => {
+	const valid = storeSettingsPatchSchema.safeParse({ contact: { whatsappNumber: "254700123456", social: { facebook: "https://facebook.com/nurava", instagram: "", tiktok: "https://tiktok.com/@nurava" } } })
+	assert.equal(valid.success, true)
+	assert.equal(storeSettingsPatchSchema.safeParse({ contact: { social: { facebook: "http://facebook.com/nurava" } } }).success, false)
+	assert.equal(storeSettingsPatchSchema.safeParse({ contact: { social: { facebook: "javascript:alert(1)" } } }).success, false)
 })

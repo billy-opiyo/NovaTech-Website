@@ -5,6 +5,7 @@ import { getProducts, getProductBySlug, searchProducts } from "../../frontend/sr
 import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from "../../frontend/src/services/orders"
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
+import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -98,4 +99,11 @@ test("support services cover list, stats, ticket mutation, replies, and contact"
 		assert.equal(requests[0].url, url)
 		assert.equal(requests[0].init?.method, method)
 	}
+})
+
+test("merchant WhatsApp links normalize customer contact numbers", () => {
+	assert.equal(normalizeWhatsAppNumber("+254 700 123 456"), "254700123456")
+	assert.equal(getWhatsAppChatHref("+254 700 123 456", "Hello"), "https://wa.me/254700123456?text=Hello")
+	assert.match(getMerchantWhatsAppHref({ number: "+254 700 123 456", storeName: "Nurava Tech", items: [] }), /^https:\/\/wa\.me\/254700123456\?text=/)
+	assert.equal(getWhatsAppChatHref("", "Hello"), "")
 })

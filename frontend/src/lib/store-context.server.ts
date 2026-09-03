@@ -58,6 +58,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const theme = record(store.themeSettings)
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
+		const socialSettings = record(contact.social)
 		const homepage = record(store.homepageSettings)
 		const commerce = record(store.commerceSettings)
 		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : clientConfig.contact.phoneDisplay
@@ -83,6 +84,12 @@ export async function getStoreContext(): Promise<StoreContext> {
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
 			contact: { ...clientConfig.contact, ...contact, phoneDisplay, phoneHref: `tel:${phoneDisplay.replace(/[^\d+]/g, "")}`, email, emailHref: `mailto:${email}`, addressLine, cityCountry, mapLink, mapEmbedUrl },
+			social: {
+				...clientConfig.social,
+				facebook: typeof socialSettings.facebook === "string" ? socialSettings.facebook : clientConfig.social.facebook,
+				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : clientConfig.social.instagram,
+				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : clientConfig.social.tiktok,
+			},
 			homepage: { ...clientConfig.homepage, ...homepage },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
