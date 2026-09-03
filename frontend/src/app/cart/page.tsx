@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
-import { getStoreRouteHref } from "@/lib/store-home"
+	import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function CartPage() {
 	const {

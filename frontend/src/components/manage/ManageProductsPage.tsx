@@ -169,7 +169,7 @@ export default function ManageProductsPage() {
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
 				urls.push(body.url)
 			}
-			setDraft((current) => ({ ...current, images: urls.join("\n") })); setNotice("Gallery upload complete. Save the product to publish the new images."); addToast("Product images uploaded successfully.", "success")
+			updateDraft("images", urls.join("\n")); setNotice("Gallery upload complete. Save the product to publish the new images."); addToast("Product images uploaded successfully.", "success")
 		} catch (reason) {
 			const message = reason instanceof Error ? reason.message : "Gallery upload failed"
 			setError(message)

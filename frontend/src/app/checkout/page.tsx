@@ -7,7 +7,7 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { useToast } from "@/components/ui/Toast"
-import { getStoreRouteHref } from "@/lib/store-home"
+	import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function CheckoutPage() {
 	const { items, subtotal } = useCart()

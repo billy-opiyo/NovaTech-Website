@@ -10,7 +10,7 @@ import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
 import { useToast } from "@/components/ui/Toast"
-import { getStoreHomeHref } from "@/lib/store-home"
+	import { getStoreHomeHref } from "@/lib/store-home"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")

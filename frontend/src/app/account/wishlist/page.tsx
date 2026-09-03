@@ -8,8 +8,8 @@ import { getProductImage } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
-import { useStoreContext } from "@/lib/store-context"
-import { getStoreRouteHref } from "@/lib/store-home"
+	import { useStoreContext } from "@/lib/store-context"
+	import { getStoreRouteHref } from "@/lib/store-home"
 
 type WishlistItem = {
 	id: string
