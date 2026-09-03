@@ -26,7 +26,9 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
-	const [visible, setVisible] = useState(false)
+	// Render the splash on the first server paint. Keeping this true initially
+	// prevents the theme background from flashing before the client hydrates.
+	const [visible, setVisible] = useState(true)
 	const [readyToReveal, setReadyToReveal] = useState(false)
 
 	useEffect(() => {
@@ -42,20 +44,17 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 		let finishTimer: number | undefined
 		let frame = 0
 
-		const preloadSplashImages = async () => {
-			await Promise.all(
-				SPLASH_IMAGES.map(
-					(src) =>
-						new Promise<void>((resolve) => {
-							const image = new Image()
-							image.onload = () => resolve()
-							image.onerror = () => resolve()
-							image.src = src
-						}),
-				),
-			)
-			if (cancelled) return
+		const warmActiveSplashImage = () => {
+			const isLight = !document.documentElement.classList.contains("dark")
+			const isDesktop = window.matchMedia("(min-width: 1200px)").matches
+			const imageIndex = isLight ? (isDesktop ? 3 : 2) : isDesktop ? 1 : 0
+			const image = new Image()
+			image.decoding = "async"
+			image.src = SPLASH_IMAGES[imageIndex]
+		}
 
+		const startSplash = () => {
+			if (cancelled) return
 			hasShownSplash.current = true
 			setProgress(0)
 			setVisible(true)
@@ -79,21 +78,10 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			}, SPLASH_DURATION + POST_LOAD_DELAY)
 		}
 
-		const bootSplash = () => {
-			void preloadSplashImages()
-		}
-
-		if (document.readyState === "complete") {
-			bootSplash()
-		} else {
-			window.addEventListener("load", bootSplash, { once: true })
-			return () => {
-				cancelled = true
-				window.removeEventListener("load", bootSplash)
-				window.cancelAnimationFrame(frame)
-				if (finishTimer) window.clearTimeout(finishTimer)
-			}
-		}
+		// Start the visual immediately. The browser will continue loading the
+		// active artwork without holding the splash behind a blank background.
+		warmActiveSplashImage()
+		startSplash()
 
 		return () => {
 			cancelled = true
@@ -131,7 +119,6 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 
 	if (!shouldShowSplash) return <>{children}</>
 	if (!readyToReveal) {
-		if (!visible) return null
 		return (
 			<div
 				className="splash-screen"

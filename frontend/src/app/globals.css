@@ -334,8 +334,9 @@ body.splash-pending {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  opacity: 0;
-  animation: splash-fade-in 500ms ease-out 120ms forwards;
+	  /* This is server-rendered on the initial platform-home paint, so there is
+     no transparent interval exposing the navy body background. */
+	  opacity: 1;
   background-color: rgb(var(--color-bg-dark));
   background-image:
     linear-gradient(180deg, rgb(4 11 24 / 0.28), rgb(4 11 24 / 0.62)),
