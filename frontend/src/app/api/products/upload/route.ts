@@ -8,6 +8,7 @@ import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
 import { reserveTenantStorageAsset } from "backend/billing/subscription"
 import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES } from "backend/lib/file-validation"
+import { ImageOptimizationTooLargeError, optimizeProductImage } from "backend/lib/image-optimization"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(req: NextRequest) {
@@ -43,10 +44,11 @@ export async function POST(req: NextRequest) {
 
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!hasAllowedFileSignature(buffer, file.type === "image/jpeg" ? ["JPEG"] : file.type === "image/png" ? ["PNG"] : file.type === "image/webp" ? ["WEBP"] : ["GIF"])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
-		const key = generateTenantFileKey(context.tenantId, context.storeId, productId, file.name)
-		const asset = await reserveTenantStorageAsset({ tenantId: context.tenantId, storeId: context.storeId, objectKey: key, bytes: file.size, kind: "PRODUCT_IMAGE" })
+		const optimizedBuffer = await optimizeProductImage(buffer)
+		const key = generateTenantFileKey(context.tenantId, context.storeId, productId, "product.webp")
+		const asset = await reserveTenantStorageAsset({ tenantId: context.tenantId, storeId: context.storeId, objectKey: key, bytes: optimizedBuffer.length, kind: "PRODUCT_IMAGE" })
 		try {
-			const url = await uploadFile(buffer, key, file.type)
+			const url = await uploadFile(optimizedBuffer, key, "image/webp")
 			return NextResponse.json({ url, key }, { status: 201 })
 		} catch (error) {
 			await prisma.storageAsset.delete({ where: { id: asset.id } }).catch(() => undefined)
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
 		}
 	} catch (error: unknown) {
 		console.error("Product image upload error:", error)
+		if (error instanceof ImageOptimizationTooLargeError) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })
 		const code = error && typeof error === "object" && "code" in error ? error.code : undefined
 		if (code === "ENTITLEMENT_LIMIT_REACHED") return NextResponse.json({ message: "Storage quota exceeded" }, { status: 409 })
 		return apiErrorResponse(error, "Upload failed")

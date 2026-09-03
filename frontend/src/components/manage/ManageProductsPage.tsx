@@ -6,7 +6,7 @@ import { ImagePlus, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-reac
 import { useStoreContext } from "@/lib/store-context"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
-import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
+import { optimizeImageForUpload } from "@/lib/image-upload"
 
 type Category = { id: string; name: string; slug: string }
 type Product = {
@@ -157,15 +157,12 @@ export default function ManageProductsPage() {
 	const uploadGallery = async (files: FileList | null) => {
 		if (!files || !editing) return
 		const selectedFiles = Array.from(files)
-		if (selectedFiles.some(isImageTooLarge)) {
-			setError(IMAGE_TOO_LARGE_MESSAGE)
-			addToast(IMAGE_TOO_LARGE_MESSAGE, "error")
-			return
-		}
-		setUploading(true); setError(""); setNotice("")
+		setUploading(true); setError(""); setNotice("Optimizing product images…")
 		try {
 			const urls = parseLines(draft.images)
-			for (const file of selectedFiles) {
+			const optimizedFiles: File[] = []
+			for (const file of selectedFiles) optimizedFiles.push(await optimizeImageForUpload(file))
+			for (const file of optimizedFiles) {
 				const formData = new FormData(); formData.append("file", file); formData.append("productId", editing.id)
 				const response = await fetch("/api/products/upload", { method: "POST", body: formData }); const body = await response.json()
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
