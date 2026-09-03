@@ -1,5 +1,8 @@
 export type ValidatedFileKind = "PDF" | "JPEG" | "PNG" | "WEBP" | "GIF"
 
+export const MAX_IMAGE_UPLOAD_BYTES = 1024 * 1024
+export const IMAGE_TOO_LARGE_MESSAGE = "The uploaded image is more that 1MB please compress it or upload an image that is less than 1MB"
+
 const signatures: Record<ValidatedFileKind, (bytes: Uint8Array) => boolean> = {
 	PDF: (bytes) => String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-",
 	JPEG: (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,

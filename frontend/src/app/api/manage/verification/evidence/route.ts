@@ -8,7 +8,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { deletePrivateFile, generateVerificationFileKey, uploadPrivateFile } from "backend/lib/storage"
 import { rateLimiter } from "backend/middleware/rateLimiter"
-import { hasAllowedFileSignature, type ValidatedFileKind } from "backend/lib/file-validation"
+import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES, type ValidatedFileKind } from "backend/lib/file-validation"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
 const evidenceTypes = ["GOVERNMENT_ID", "BUSINESS_REGISTRATION", "KRA_PIN", "LOCATION_PROOF", "MPESA_OWNERSHIP", "OWNER_DECLARATION"] as const
@@ -46,7 +46,10 @@ export async function POST(request: NextRequest) {
 		const file = formData.get("file")
 		if (!(file instanceof File)) return NextResponse.json({ message: "Choose a verification document." }, { status: 400 })
 		if (!acceptedTypes.has(file.type)) return NextResponse.json({ message: "Use a PDF, JPG, PNG, or WEBP document." }, { status: 400 })
-		if (file.size < 1 || file.size > maximumBytes) return NextResponse.json({ message: "Verification documents must be smaller than 10MB." }, { status: 400 })
+		const isImage = file.type.startsWith("image/")
+		if (file.size < 1) return NextResponse.json({ message: "Choose a verification document." }, { status: 400 })
+		if (isImage && file.size > MAX_IMAGE_UPLOAD_BYTES) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })
+		if (!isImage && file.size > maximumBytes) return NextResponse.json({ message: "Verification documents must be smaller than 10MB." }, { status: 400 })
 		const fileBuffer = Buffer.from(await file.arrayBuffer())
 		const allowedKind: ValidatedFileKind = file.type === "application/pdf" ? "PDF" : file.type === "image/jpeg" ? "JPEG" : file.type === "image/png" ? "PNG" : "WEBP"
 		if (!hasAllowedFileSignature(fileBuffer, [allowedKind])) return NextResponse.json({ message: "The uploaded document content is invalid." }, { status: 400 })

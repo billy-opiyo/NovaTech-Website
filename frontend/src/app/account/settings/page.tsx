@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { CheckCircle2, Palette, Save, Bell, Megaphone, Camera, Upload } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
+import { useToast } from "@/components/ui/Toast"
+import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
 
 type Settings = {
 	name: string
@@ -19,6 +21,7 @@ const defaults: Settings = { name: "", email: "", image: null, emailVerified: nu
 
 export default function AccountSettingsPage() {
 	const { theme, setTheme } = useTheme()
+	const { addToast } = useToast()
 	const [settings, setSettings] = useState<Settings>(defaults)
 	const [loading, setLoading] = useState(true)
 	const [saving, setSaving] = useState(false)
@@ -54,6 +57,12 @@ export default function AccountSettingsPage() {
 	async function uploadProfileImage(event: React.ChangeEvent<HTMLInputElement>) {
 		const file = event.target.files?.[0]
 		if (!file) return
+		if (isImageTooLarge(file)) {
+			setError(IMAGE_TOO_LARGE_MESSAGE)
+			addToast(IMAGE_TOO_LARGE_MESSAGE, "error")
+			event.target.value = ""
+			return
+		}
 		setUploading(true); setMessage(""); setError("")
 		const body = new FormData()
 		body.append("file", file)
@@ -64,7 +73,9 @@ export default function AccountSettingsPage() {
 			setSettings((current) => ({ ...current, ...data.user }))
 			setMessage("Your profile picture has been updated.")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to upload your profile image.")
+			const message = reason instanceof Error ? reason.message : "Unable to upload your profile image."
+			setError(message)
+			addToast(message, "error")
 		} finally {
 			setUploading(false)
 			event.target.value = ""
@@ -82,7 +93,7 @@ export default function AccountSettingsPage() {
 					<div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/20 text-primary">
 						{settings.image ? <img src={settings.image} alt="Your profile" className="h-full w-full object-cover" /> : <Camera size={38} />}
 					</div>
-					<div><p className="font-medium">Profile picture</p><p className="mt-1 text-sm text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 5MB.</p><label className="btn-primary mt-3 inline-flex cursor-pointer items-center gap-2"><Upload size={16} />{uploading ? "Uploading…" : "Choose image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={uploadProfileImage} disabled={uploading} className="sr-only" /></label></div>
+					<div><p className="font-medium">Profile picture</p><p className="mt-1 text-sm text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB.</p><label className="btn-primary mt-3 inline-flex cursor-pointer items-center gap-2"><Upload size={16} />{uploading ? "Uploading…" : "Choose image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={uploadProfileImage} disabled={uploading} className="sr-only" /></label></div>
 				</div>
 				<div className="grid gap-5 sm:grid-cols-2"><label className="block text-sm font-medium">Full name<input required minLength={2} value={settings.name} onChange={(event) => update("name", event.target.value)} className="mt-2 w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-primary" /></label><div><span className="block text-sm font-medium">Email address</span><p className="mt-2 rounded-lg bg-black/5 px-4 py-3 text-gray-500 dark:bg-white/5">{settings.email}</p><p className="mt-2 text-xs text-green-600">{settings.emailVerified ? "Email verified" : "Email not verified"}</p></div></div>
 				<div className="mt-5"><p className="mb-2 text-sm font-medium">Theme</p><div className="flex flex-wrap gap-3">{(["light", "dark"] as const).map((option) => <button type="button" key={option} onClick={() => update("preferredTheme", option)} className={`rounded-lg border px-4 py-2 text-sm capitalize transition ${settings.preferredTheme === option || (!settings.preferredTheme && theme === option) ? "border-primary bg-primary text-white" : "border-gray-300 dark:border-gray-600 hover:border-primary"}`}>{option}</button>)}</div></div>

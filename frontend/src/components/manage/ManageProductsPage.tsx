@@ -5,6 +5,8 @@ import Link from "next/link"
 import { ImagePlus, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react"
 import { useStoreContext } from "@/lib/store-context"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
+import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
 
 type Category = { id: string; name: string; slug: string }
 type Product = {
@@ -69,6 +71,7 @@ function parseSpecs(value: string) {
 
 export default function ManageProductsPage() {
 	const { storeSlug } = useStoreContext()
+	const { addToast } = useToast()
 	const [products, setProducts] = useState<Product[]>([])
 	const [categories, setCategories] = useState<Category[]>([])
 	const [query, setQuery] = useState("")
@@ -153,17 +156,26 @@ export default function ManageProductsPage() {
 
 	const uploadGallery = async (files: FileList | null) => {
 		if (!files || !editing) return
+		const selectedFiles = Array.from(files)
+		if (selectedFiles.some(isImageTooLarge)) {
+			setError(IMAGE_TOO_LARGE_MESSAGE)
+			addToast(IMAGE_TOO_LARGE_MESSAGE, "error")
+			return
+		}
 		setUploading(true); setError(""); setNotice("")
 		try {
 			const urls = parseLines(draft.images)
-			for (const file of Array.from(files)) {
+			for (const file of selectedFiles) {
 				const formData = new FormData(); formData.append("file", file); formData.append("productId", editing.id)
 				const response = await fetch("/api/products/upload", { method: "POST", body: formData }); const body = await response.json()
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
 				urls.push(body.url)
 			}
 			updateDraft("images", urls.join("\n")); setNotice("Gallery upload complete. Save the product to publish the new images.")
-		} catch (reason) { setError(reason instanceof Error ? reason.message : "Gallery upload failed")
+		} catch (reason) {
+			const message = reason instanceof Error ? reason.message : "Gallery upload failed"
+			setError(message)
+			addToast(message, "error")
 		} finally { setUploading(false) }
 	}
 

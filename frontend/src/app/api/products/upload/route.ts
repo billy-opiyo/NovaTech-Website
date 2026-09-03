@@ -7,7 +7,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { MembershipRole } from "@prisma/client"
 import prisma from "backend/lib/db"
 import { reserveTenantStorageAsset } from "backend/billing/subscription"
-import { hasAllowedFileSignature } from "backend/lib/file-validation"
+import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES } from "backend/lib/file-validation"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
 export async function POST(req: NextRequest) {
@@ -39,13 +39,7 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
-		// Validate file size (max 5MB)
-		if (file.size > 5 * 1024 * 1024) {
-			return NextResponse.json(
-				{ message: "File too large. Maximum size is 5MB." },
-				{ status: 400 },
-			)
-		}
+		if (file.size > MAX_IMAGE_UPLOAD_BYTES) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })
 
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!hasAllowedFileSignature(buffer, file.type === "image/jpeg" ? ["JPEG"] : file.type === "image/png" ? ["PNG"] : file.type === "image/webp" ? ["WEBP"] : ["GIF"])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
