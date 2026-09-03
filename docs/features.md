@@ -7,7 +7,7 @@
 | **Platform Homepage** | The platform root is a store-discovery experience with social-proof groups for top-rated, most-reviewed, and new/growing stores. It shows approved review ratings, review volume, product counts, catalogue image previews, and store links. |
 | **Merchant Store Homepage** | Each resolved merchant host keeps its own hero, shop-by-category grid, featured products carousel, customer testimonials, newsletter, contact details, and map sections. |
 | **Store Directory** | Public `/stores` directory for approved, published stores with featured product context, links to each store host, and an explicit browse-all option for returning shoppers. `Browse Stores` and platform discovery controls stay outside individual merchant navigation. |
-| **Store Host Routing** | Local previews support `{store-slug}.localhost`; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
+| **Store Host Routing** | Local previews support `{store-slug}.localhost`; staging/preview Vercel project hosts and explicit `/store/{slug}` paths preserve platform/store context; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
 | **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
@@ -38,6 +38,7 @@
 | **Password Recovery** | Forgot-password email flow and token-based password reset page.|
 | **Session Protection** | `getServerSession()` helper used across API routes for protected endpoints.|
 | **Account Loading and Route Guards** | Loading states for account screens and middleware protection for authenticated account routes.|
+| **Account Identity and Session Continuity** | Authenticated navigation shows the user's avatar when available or a capitalized name initial as fallback. Account menus expose Account and Sign out, and sign-out returns to the current platform/store context instead of replaying the platform splash. |
 
 ## 🎨 Client Customization and Shared UX
 
@@ -45,9 +46,13 @@
 |---------|-------------|
 | **Client Configuration and Store Context** | `frontend/src/config/client.config.ts` remains the safe code fallback for branding, contact details, navigation, SEO, homepage content, commerce defaults, social links, and feature flags. Published store settings are resolved through the active `StoreContext`. |
 | **Theme Presets** | Reusable visual systems in `frontend/src/config/theme-presets.ts`, selected through `themePreset` without recoding individual pages. |
-| **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 5 MB, with generated profile storage keys and R2-backed storage. |
-| **Branded Splash and Loading UI** | Responsive gradient wordmark, animated splash progress, and accessible loading status messaging on the platform homepage and protected platform control plane only; merchant storefront and admin routes open without the splash. |
-| **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, and `aria-live` announcements. |
+| **Profile Images** | Account settings support JPG, PNG, WEBP, and GIF uploads up to 1 MB, with generated profile storage keys and R2-backed storage. |
+| **Image Optimization and Limits** | Image uploads are limited to 1 MB across supported upload surfaces; product images are compressed to WebP in the browser/server pipeline when possible, while verification PDFs use a separate 10 MB limit. |
+| **Branded Splash and Loading UI** | The platform homepage renders the responsive gradient splash immediately to avoid a blank navy flash; the splash and route loading UI remain limited to the platform homepage/control plane, while merchant storefront and admin routes open without it. |
+| **Shared Notifications** | Toast notifications with success, error, and informational states, dismissal controls, `aria-live` announcements, a maximum visible set, viewport-safe sizing, and automatic dismissal after four seconds. |
+| **Action Feedback** | Important asynchronous actions use loading spinners/disabled states and completion or failure notifications, including authentication, uploads, saves, deletes, invitations, and other protected mutations. |
+| **Onboarding Merchant Guide** | The platform homepage includes nine preview-only instructional cards that mirror the merchant store-creation path. Cards support timed advance, previous/next controls, pagination, touch swipes on smaller screens, light/dark preview alignment, and a final-step-only Create Store CTA. |
+| **Platform Access Invitations** | Super Admins can invite `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and `PLATFORM_ANALYST` operators through `/platform/access`; links are invited-email-bound, one-time, and expire after seven days. |
 | **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Create Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava Tech Homepage` return link. |
 
 ## 👑 Admin Panel
@@ -65,7 +70,7 @@
 | **Admin Orders Page** | Order management table with status tracking.|
 | **Admin Analytics** | Growth comparison calculations (period-over-period), CSV/JSON export functionality, real-time growth data in metric cards.|
 | **Admin Customers Page** | Customer listing with filters and details.|
-| **Admin Reviews Page** | Reviews moderation with filters and status updates.|
+| **Admin Reviews Page** | Reviews moderation with filters and status updates, plus controlled admin edit and delete operations.|
 | **Admin Coupons Page** | Coupon management with creation, editing, and deletion.|
 | **Admin Inventory Page** | Stock management with low-stock detection, alerts, and reorder suggestions.|
 | **Admin Deliveries Page** | Delivery tracking and management.|
@@ -111,7 +116,9 @@
 | `/api/health` | GET | Database-aware health response with safe application state and request correlation ID. |
 | `/api/newsletter` | POST | Requires explicit consent and stores a tenant-scoped newsletter subscription. |
 | `/api/newsletter/unsubscribe` | POST | Removes promotional newsletter consent for the current store without revealing whether an address was previously subscribed. |
-| `/api/products/upload` | POST | Admin product image upload to Cloudflare R2 (images only, 5MB max). |
+| `/api/products/upload` | POST | Admin product image upload to Cloudflare R2; product images are optimized to WebP when possible and remain limited to 1 MB after validation. |
+| `/api/platform/access/invitations` | GET, POST | Super Admin-only platform operator listing and seven-day invitation creation. |
+| `/api/platform/access/accept` | GET, POST | Preview and atomically accept a platform invitation for the invited email. |
 | `/api/auth/[...nextauth]` | GET, POST | NextAuth handlers. |
 | `/api/billing/plans` | GET | Lists active database-backed SaaS plans and add-ons. |
 | `/api/manage/billing` | GET, POST | Tenant-scoped merchant billing reads and owner/admin billing actions. |

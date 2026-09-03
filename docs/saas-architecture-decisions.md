@@ -22,6 +22,33 @@ This document records implementation defaults for the first controlled beta. It 
 - Merchant verification details are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`; identity, tax, location, and settlement documents are uploaded only to `R2_PRIVATE_BUCKET_NAME` and are opened through short-lived reviewer URLs. Public product storage is not used for verification evidence.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
 
+## Current staging implementation alignment (2026-09-03)
+
+The following source-level behavior is now part of the `saas-staging` baseline:
+
+- Staging and preview Vercel project hosts (`*.vercel.app`) are recognized as
+  platform hosts. Explicit `/store/{slug}` paths carry merchant context, and
+  the platform root does not reuse a stale merchant-store selection. Canonical
+  merchant subdomains still require external DNS/SSL and deployment routing.
+- The platform homepage includes a nine-step, preview-only Onboarding Merchant
+  Guide that mirrors the real store setup path. It supports timed advance,
+  pagination, previous/next controls, touch swipes, light/dark preview
+  alignment, and exposes Create Store only on the final step.
+- Platform access is Super Admin controlled. Invitations support
+  `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and `PLATFORM_ANALYST`, are tied to the
+  invited email, expire after seven days, and can be accepted once. Reserved
+  platform-owner/Super Admin access is not granted by this flow. The source
+  schema change is recorded by migration `0026_platform_access_invitations`.
+- Images are limited to 1 MB across upload surfaces. Product images use
+  browser/server WebP optimization when possible; verification PDFs retain a
+  separate 10 MB limit. Oversized images are refused with an actionable
+  compression/size message.
+- Review moderation includes controlled admin edit and delete operations, and
+  shared async actions expose loading feedback and four-second, viewport-safe
+  toast notifications. The platform splash renders immediately on the initial
+  platform-home load to avoid an intentional blank navy interval and does not
+  replay on merchant storefront or admin routes.
+
 ## Shopper discovery and storefront behavior
 
 - `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.

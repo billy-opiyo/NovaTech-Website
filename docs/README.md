@@ -31,6 +31,7 @@ The current implementation also includes the following production hardening work
 - Added coupon creation, activation/deactivation, deletion, review moderation, delivery status updates, support replies, and product price/stock editing.
 - Added Prisma migration history under `backend/prisma/migrations/`, including the initial schema and webhook receipt support.
 - Added indexes and constraints for payment references, order idempotency keys, review moderation, login events, and distributed rate-limit buckets.
+- Added migration `0026_platform_access_invitations` for Super Admin-managed platform operator invitations and one-time acceptance records.
 - Replaced process-local rate limiting with PostgreSQL-backed rate-limit buckets for multi-instance deployments.
 - Added historical checkout idempotency, payment request reuse, and webhook receipt deduplication for Stripe and M-Pesa compatibility flows; new shopper order/payment creation is disabled in merchant-direct mode.
 - Added database-backed SaaS billing with Starter/Business/Enterprise plans, setup-fee records, subscriptions, invoices, add-ons, provider payments, and commission transactions.
@@ -54,14 +55,17 @@ The latest UI implementation updates include:
 - Improved responsive behavior across the header, mobile navigation, footer, homepage sections, floating actions, product details, and search overlay for small and large screens.
 - Added accessibility refinements including clearer control labels, keyboard-friendly interactions, focus states, live toast notifications, and improved semantic status messaging.
 - Added account loading states and corrected the account middleware guard so authenticated account pages resolve consistently.
-- Added profile image upload support in account settings, including storage-key generation, supported image formats, a 5 MB limit, and saved light/dark theme preferences.
-- Refreshed the branded splash screen with a responsive gradient wordmark, animated progress treatment, and faster loading feedback.
+- Added consistent authenticated account controls: profile avatars are shown when available, otherwise the user's capitalized initial is used; account menus provide Account and Sign out while preserving the current platform/store destination.
+- Added profile image upload support in account settings, including storage-key generation, supported image formats, a 1 MB limit, and saved light/dark theme preferences.
+- Added shared one-megabyte image validation, browser/server WebP optimization for product images, and a separate 10 MB limit for verification PDFs.
+- Refreshed the branded splash screen with immediate rendering, a responsive gradient wordmark, animated progress treatment, and no intentional blank navy interval; it remains limited to the platform home/control-plane experience.
 - Added public email verification and password reset flows, plus searchable public legal pages for privacy, cookies, and terms.
 - Added SEO metadata and image-host preconnect configuration, and improved navbar text truncation and shared notification behavior.
 - Added the shopper `/stores` directory, published-store filtering, featured-product context, per-store host links, and a browse-all escape hatch.
 - Preserved the shared homepage structure for every store while resolving branding, homepage content, contact details, and map links from the active `StoreContext`.
 - Added authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie as a returning-browser fallback. This preference is not an authorization mechanism.
 - Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
+- Added staging/preview Vercel project-host recognition and explicit `/store/{slug}` routing so merchant context remains distinct from the platform root. Custom subdomain DNS/SSL reachability remains a deployment concern.
 - Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
 - Restructured the platform root homepage around social-proof store discovery, with approved ratings, review volume, product counts, catalogue image previews, and top-rated/most-reviewed/new-and-growing store groups.
 - Kept merchant homepage shopping sections and action controls on individual store hosts, and added a `Nurava Tech Homepage` footer link for returning to platform discovery.
@@ -69,6 +73,10 @@ The latest UI implementation updates include:
 - Restricted the branded splash to the platform homepage and protected `/platform` control plane; individual store routes and legacy `/admin` routes do not show it.
 - Platform footer support, FAQ, privacy, and terms surfaces target merchants. Individual store hosts retain shopper support links and shopper-facing policy variants.
 - Added platform-only `Home`, `Browse Stores`, and `Create Store` links to the desktop and mobile top navigation; merchant storefront navigation remains store-specific.
+- Added the nine-step, preview-only `Onboarding Merchant Guide` below `New and growing stores`. It mirrors the real store-creation stages, supports pagination, timed advance, previous/next controls, touch swipes on smaller screens, theme-matched previews, and a final-step-only `Create Store` CTA.
+- Added Super Admin platform-access invitations with `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and `PLATFORM_ANALYST` roles, invited-email matching, one-time acceptance, and seven-day expiry.
+- Added social-link validation and normalized WhatsApp destinations in store settings, plus loading feedback and four-second viewport-safe toast notifications for important asynchronous actions.
+- Extended review moderation with controlled admin edit and delete operations while preserving approval status and public approved-review filtering.
 
 ## Production verification
 
@@ -203,6 +211,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
 | Platform operations | Platform role | [Open](http://localhost:3000/platform/operations) | [Open](https://nuravatech.com/platform/operations) |
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
+| Platform access | Super Admin | [Open](http://localhost:3000/platform/access) | [Open](https://nuravatech.com/platform/access) |
 | Merchant enquiries and quotes | Store membership; quote creation owner/admin | `http://{store-slug}.localhost:3000/manage/enquiries` | `https://{merchant-host}/manage/enquiries` |
 | Catalog import/export | Store owner/admin/manager/editor | `http://{store-slug}.localhost:3000/manage/catalog` | `https://{merchant-host}/manage/catalog` |
 | Launch readiness | Store membership; read-only checklist | `http://{store-slug}.localhost:3000/manage/readiness` | `https://{merchant-host}/manage/readiness` |

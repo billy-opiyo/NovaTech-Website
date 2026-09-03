@@ -1,7 +1,7 @@
 # Nurava Tech Future Updates
 
 **Purpose:** implementation guide for advanced features and operational hardening  
-**Repository baseline:** 22 August 2026  
+**Repository baseline:** 3 September 2026
 **Related reference:** [User Manual.md](User%20Manual.md)
 
 This roadmap contains recommended future work for efficiency, productivity,
@@ -24,6 +24,14 @@ source and documented in [User Manual.md](User%20Manual.md):
 - Explicit marketing consent, tenant-scoped newsletter subscriptions, and an
   unsubscribe flow.
 - Host-aware returns/refunds wording and a real support-ticket contact form.
+- One-megabyte image validation across upload surfaces, with browser/server
+  WebP optimization for product images and a separate 10 MB verification-PDF
+  limit.
+- Platform access invitations for `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and
+  `PLATFORM_ANALYST`, with invited-email matching, one-time acceptance, and
+  seven-day expiry (migration `0026_platform_access_invitations`).
+- The responsive, preview-only nine-step Onboarding Merchant Guide, including
+  touch navigation and a final-step-only Create Store CTA.
 
 The three immediate productivity features selected for this release are now
 implemented:

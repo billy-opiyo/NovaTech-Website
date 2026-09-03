@@ -3,7 +3,7 @@
 **Product:** Nurava Tech hosted multi-store electronics platform  
 **Primary domain:** https://nuravatech.com  
 **Market defaults:** Kenya, English, en-KE, KES, Africa/Nairobi  
-**Repository audit:** 22 August 2026
+**Repository audit:** 3 September 2026
 
 This manual describes how the application works for shoppers, merchants,
 platform operators, and developers. It is based on the current source, Prisma
@@ -50,6 +50,8 @@ or request body.
 - Platform hosts: nuravatech.com, www.nuravatech.com, and local
   localhost/127.0.0.1.
 - Local merchant preview: {store-slug}.localhost.
+- Staging/preview Vercel project hosts: *.vercel.app hosts are treated as
+  platform hosts, while explicit /store/{slug} paths retain merchant context.
 - Production platform subdomain: {store-slug}.nuravatech.com when DNS and
   deployment routing are configured.
 - Custom domain: a recorded, DNS-verified store hostname.
@@ -103,6 +105,12 @@ their custom domain followed by `/manage`). Nurava platform operators use
 Both workspaces redirect signed-out visitors to `/auth/signin` and preserve
 the requested destination after successful sign-in.
 
+Platform access is separately controlled. Super Admins can invite
+PLATFORM_ADMIN, PLATFORM_SUPPORT, or PLATFORM_ANALYST operators from
+`/platform/access`. Invitations are bound to the invited email, expire after
+seven days, and can be accepted only once. PLATFORM_OWNER/Super Admin access
+remains reserved and is not granted through the ordinary invitation form.
+
 ## 4. Shopper guide
 
 ### Platform discovery and merchant storefronts
@@ -115,6 +123,14 @@ does not prove that a live merchant record exists.
 
 /stores is the browse-all directory. Browse Stores belongs to platform
 navigation and is not inserted into an individual merchant's navigation.
+
+Below the New and growing stores section, the platform homepage includes the
+preview-only **Onboarding Merchant Guide**. Its nine instructional cards mirror
+the real store-creation stages from merchant account creation through operating
+the store. The sequence can auto-advance, move with previous/next controls or
+pagination, and be swiped on smaller screens. The page previews follow the
+global light/dark theme. Only the final card displays the Create Store CTA; the
+other cards are visual guidance and do not open protected setup pages.
 
 On a merchant host, the homepage provides the merchant hero, category grid,
 featured products, testimonials, newsletter, contacts, phone/email/WhatsApp
@@ -176,8 +192,17 @@ Signed-in account pages are:
 - /account/settings — profile, theme, notification preferences, and profile
   image upload.
 
-Profile uploads accept JPG, PNG, WEBP, and GIF up to 5 MB and use generated
-storage keys.
+Profile uploads accept JPG, PNG, WEBP, and GIF up to 1 MB and use generated
+storage keys. Product images are compressed to WebP in the browser/server
+pipeline when possible, but the server still enforces the 1 MB image limit. If
+an image cannot be reduced below the limit, the upload is refused with the
+one-megabyte guidance message.
+
+Authenticated navigation shows the saved profile avatar when available, or a
+capitalized initial from the user's name when no avatar exists. The account
+menu provides Account and Sign out. Signing out preserves the current
+platform/store context and does not send the user through the platform splash
+again.
 
 Authentication pages are /auth/signup, /auth/signin, /auth/verify-email,
 /auth/forgot-password, /auth/reset-password, and /auth/accept-invitation.
@@ -231,7 +256,7 @@ host-based; a first-class multi-store switcher is a future update.
 | Team access | Invite staff, email/copy one-time acceptance links, and inspect pending invitations |
 | Enquiries and quotes | Track shopper handoffs, update lead state, save notes, and create/email merchant quotes |
 | Catalog tools | Preview and commit tenant-scoped CSV imports, update products by SKU, and export the current catalog |
-| Reviews | Approve, reject, flag, and moderate reviews |
+| Reviews | Approve, reject, flag, edit, delete, and moderate reviews |
 | Deliveries | Monitor delivery-oriented order records |
 | Support | Manage tickets, replies, status, priority, category, and messages |
 | Settings | Store/account configuration |
@@ -252,8 +277,9 @@ storage, RAM, or another option and have their own SKU, stock, and price
 modifier.
 
 Product input is Zod-validated. Protected image upload accepts image files up
-to 5 MB and stores them in R2. Products with order history should not be
-deleted; preserve them and set stock to zero where appropriate.
+to 1 MB, optimizes product images to WebP when possible, and stores them in R2.
+Images that remain over 1 MB are refused. Products with order history should
+not be deleted; preserve them and set stock to zero where appropriate.
 
 Inventory provides stock value, low-stock/out-of-stock lists, warning/critical
 alerts, reorder suggestions based on sales velocity, product/variant updates,
@@ -267,7 +293,9 @@ tracking number. Delivery execution remains the merchant's responsibility.
 
 Reviews are signed-in submissions with 1–5 rating, title/comment/photos, and
 server-detected verified-purchase state. Moderation statuses are PENDING,
-APPROVED, REJECTED, and FLAGGED. Public discovery should use approved reviews.
+APPROVED, REJECTED, and FLAGGED. Authorized admins can edit review text or
+metadata for syntax/clarity corrections and delete reviews when required;
+public discovery should use approved reviews.
 
 Coupons support a code, percentage or fixed discount, minimum order value,
 expiry, usage limit, used count, and active flag. Validation checks the
@@ -307,11 +335,11 @@ responses. Merchant email verification is required first. A six-digit phone OTP
 is sent through the configured SMS provider; it expires after 10 minutes,
 requests are rate-limited, and incorrect attempts are capped.
 
-Evidence accepts PDF, JPG, PNG, and WEBP files up to 10 MB in a separate private
-R2 bucket. Required evidence is government ID, location proof, M-Pesa
-ownership, business registration or owner declaration, and KRA PIN when
-applicable. Completion enters PENDING_REVIEW. Platform approval is required
-before public selling or publication.
+Evidence accepts PDF files up to 10 MB and JPG, PNG, or WEBP images up to 1 MB
+in a separate private R2 bucket. Required evidence is government ID, location
+proof, M-Pesa ownership, business registration or owner declaration, and KRA
+PIN when applicable. Completion enters PENDING_REVIEW. Platform approval is
+required before public selling or publication.
 
 ### Domains
 
@@ -340,6 +368,22 @@ the one-time link for controlled manual delivery. The recipient opens
 account with the invited email. New accounts must complete email verification
 before acceptance. The token is hashed, expires after seven days, cannot be
 reused, and atomically activates the membership.
+
+### Platform access
+
+Super Admins use `/platform/access` to invite platform operators. The form
+supports PLATFORM_ADMIN, PLATFORM_SUPPORT, and PLATFORM_ANALYST. The page
+shows current platform access and pending invitations, and provides a
+one-time, invited-email-bound acceptance flow. Invitations expire after seven
+days; platform owner/Super Admin access is reserved.
+
+### Interaction feedback
+
+Important asynchronous actions show a disabled/loading state with a spinner
+while work is in progress. Success, error, and informational outcomes use the
+shared live toast system. Toasts are constrained to the active viewport, show
+no more than the configured visible set, and automatically disappear after
+four seconds.
 
 ### Enquiries and quotes
 
@@ -438,6 +482,8 @@ Platform roles and SUPERADMIN can access:
 - /platform/tenants — tenant listing surface; and
 - /platform/billing — plans, add-ons, subscriptions, customers, paid revenue,
   invoices, failed SaaS payments, and historical commission visibility.
+- /platform/access — Super Admin-only platform operator invitations, current
+  access, and pending invitation management.
 
 Review actions include request verification, approve, and reject. Approval is
 blocked until profile, phone, and required approved evidence are complete.
@@ -476,7 +522,7 @@ Browser pages call the Next.js App Router handlers under frontend/src/app/api,
 which use Prisma-backed controllers/services.
 
 **Public/shopper:** /api/products, /api/products/{slug}, /api/enquiries,
-/api/products/upload, /api/recommendations, /api/reviews, /api/wishlist,
+/api/recommendations, /api/reviews, /api/wishlist,
 /api/cart, /api/cart/{id}, /api/orders, /api/orders/{id},
 /api/orders/{id}/tracking, /api/coupons/validate, /api/contact,
 /api/newsletter, /api/newsletter/unsubscribe, /api/store-preference, /api/account/addresses,
@@ -497,10 +543,14 @@ which use Prisma-backed controllers/services.
 /api/manage/catalog/import, /api/manage/catalog/export, /api/analytics,
 /api/analytics/export, /api/manage/readiness, and /api/inventory.
 
+Product image upload is a protected merchant/admin operation at
+`/api/products/upload`; it is listed separately from public shopper endpoints.
+
 **Admin/platform:** /api/admin/customers, /api/admin/orders,
 /api/admin/deliveries, /api/admin/deliveries/{id}, /api/admin/coupons,
 /api/admin/reviews, /api/admin/security, /api/admin/logs,
 /api/platform/billing, /api/platform/operations,
+/api/platform/access/invitations, /api/platform/access/accept,
 /api/platform/verification/{tenantId}, /api/billing/plans, and /api/health.
 
 **Payments:** /api/payments/webhooks/stripe,
