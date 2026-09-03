@@ -8,6 +8,8 @@ import { useParams } from "next/navigation"
 import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
 import NotFoundState from "@/components/content/NotFoundState"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 const categoryData: Record<
 	string,
@@ -333,6 +335,7 @@ const categoryData: Record<
 
 export default function CategoryPage() {
 	const { slug } = useParams<{ slug: string }>()
+	const store = useStoreContext()
 	const category = categoryData[slug] || {
 		title: "Category",
 		description: "Browse products in this category.",
@@ -357,7 +360,7 @@ export default function CategoryPage() {
 					{category.description}
 				</p>
 				<Link
-					href={`/products?category=${slug}`}
+					href={getStoreRouteHref(store, `/products?category=${slug}`)}
 					className="btn-primary inline-flex items-center gap-2"
 				>
 					Browse All <ArrowRight size={18} />
@@ -375,7 +378,7 @@ export default function CategoryPage() {
 						transition={{ delay: i * 0.1 }}
 					>
 						<Link
-							href={`/products?category=${slug}&subcategory=${sub.slug}`}
+						href={getStoreRouteHref(store, `/products?category=${slug}&subcategory=${sub.slug}`)}
 							className="glass-card block group overflow-hidden"
 						>
 							<div className="relative h-52 w-full rounded-xl overflow-hidden mb-4">
@@ -399,7 +402,7 @@ export default function CategoryPage() {
 				<div className="flex justify-between items-center mb-8">
 					<h2 className="text-2xl font-bold">Trending in {category.title}</h2>
 					<Link
-						href={`/products?category=${slug}&sortBy=rating`}
+						href={getStoreRouteHref(store, `/products?category=${slug}&sortBy=rating`)}
 						className="text-primary hover:underline flex items-center gap-1"
 					>
 						View All <ArrowRight size={16} />
@@ -409,7 +412,7 @@ export default function CategoryPage() {
 					{trendingProducts.map((product) => (
 						<Link
 							key={product.id}
-							href={product.href}
+						href={getStoreRouteHref(store, product.href)}
 							className="glass-card block group"
 						>
 							<div className="relative h-40 w-full rounded-xl overflow-hidden mb-4">

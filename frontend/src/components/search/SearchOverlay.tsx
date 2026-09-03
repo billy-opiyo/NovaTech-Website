@@ -9,6 +9,8 @@ import Link from "next/link"
 import clsx from "clsx"
 import { getProductImage } from "@/constants/productImages"
 import { publicPages } from "@/constants/publicPages"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 interface SearchSuggestion {
 	type: "product" | "page" | "category" | "brand" | "recent"
@@ -46,6 +48,7 @@ interface SearchOverlayProps {
 
 export default function SearchOverlay({ open, onOpenChange, showTrigger = true }: SearchOverlayProps = {}) {
 	const router = useRouter()
+	const store = useStoreContext()
 	const [internalOpen, setInternalOpen] = useState(false)
 	const [query, setQuery] = useState("")
 	const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
@@ -88,7 +91,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 		const pageSuggestions: SearchSuggestion[] = publicPages
 			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)
-			.map((page) => ({ type: "page", text: page.text, href: page.href, description: page.description }))
+			.map((page) => ({ type: "page", text: page.text, href: getStoreRouteHref(store, page.href), description: page.description }))
 
 		const controller = new AbortController()
 		const loadSuggestions = async () => {
@@ -102,7 +105,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 				const products: SearchSuggestion[] = (data.products || []).map((product) => ({
 					type: "product",
 					text: product.name,
-					href: `/products/${product.slug}`,
+					href: getStoreRouteHref(store, `/products/${product.slug}`),
 					image: product.images?.[0],
 					price: product.discountedPrice ?? product.price,
 				}))
@@ -116,7 +119,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			window.clearTimeout(debounce)
 			controller.abort()
 		}
-	}, [query])
+	}, [query, store])
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "ArrowDown") {
@@ -130,7 +133,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 				router.push(suggestions[selectedIndex].href)
 				setOpen(false)
 			} else if (query) {
-				router.push(`/products?q=${encodeURIComponent(query)}`)
+				router.push(getStoreRouteHref(store, `/products?q=${encodeURIComponent(query)}`))
 				setOpen(false)
 			}
 		}
@@ -272,7 +275,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 											{popularSearches.map((search) => (
 												<Link
 													key={search}
-													href={`/products?q=${encodeURIComponent(search)}`}
+									href={getStoreRouteHref(store, `/products?q=${encodeURIComponent(search)}`)}
 													onClick={() => setOpen(false)}
 													className="px-3 py-1.5 text-sm rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:text-primary transition"
 												>

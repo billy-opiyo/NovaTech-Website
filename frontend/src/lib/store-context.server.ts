@@ -4,6 +4,7 @@ import { resolveTenantFromRequest, TenantResolutionError } from "backend/lib/ten
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { clientConfig } from "@/config/client.config"
 import type { StoreContext } from "./store-context.types"
+import { isVercelProjectHostname } from "./platform-store-route"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
@@ -17,7 +18,7 @@ function isPlatformHost(value: string | null): boolean {
 	if (!value) return false
 	const hostname = value.trim().toLowerCase().split(":")[0]
 	const platformDomain = getPlatformDomain()
-	return isLocalPreviewHost(value) || hostname === platformDomain || hostname === `www.${platformDomain}`
+	return isLocalPreviewHost(value) || isVercelProjectHostname(hostname) || hostname === platformDomain || hostname === `www.${platformDomain}`
 }
 
 export async function getStoreContext(): Promise<StoreContext> {
@@ -78,6 +79,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			tenantId: store.tenantId,
 			storeId: store.id,
 			storeSlug: store.slug,
+			storePathPrefix: isPlatformHost(requestHeaders.get("host")) ? `/store/${encodeURIComponent(store.slug)}` : "",
 			publicationStatus: store.publicationStatus,
 			brand: { ...clientConfig.brand, name: store.name, ...(store.logoUrl ? { logo: store.logoUrl } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
@@ -109,6 +111,7 @@ export function fallbackStoreContext(isPlatformHome = false): StoreContext {
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",
+		storePathPrefix: isPlatformHome ? "" : "/store/nuravatech",
 		publicationStatus: "PUBLISHED",
 		isPlatformHome,
 	} as unknown as StoreContext

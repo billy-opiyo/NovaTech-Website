@@ -19,6 +19,7 @@ import clsx from "clsx"
 import { getProducts } from "@/services/products"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import { getStoreRouteHref } from "@/lib/store-home"
 import { getProductImage } from "@/constants/productImages"
 
 // Types
@@ -630,7 +631,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 		>
 			<article className="glass-card relative block h-full overflow-hidden">
 				<Link
-					href={`/products/${product.slug}`}
+					href={getStoreRouteHref(store, `/products/${product.slug}`)}
 					className="group block pb-14"
 				>
 					<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -733,7 +734,7 @@ function ProductListItem({
 		>
 			<article className="glass-card relative overflow-hidden">
 				<Link
-					href={`/products/${product.slug}`}
+					href={getStoreRouteHref(store, `/products/${product.slug}`)}
 					className="flex gap-6 pb-14 group"
 				>
 					<div className="relative h-40 w-40 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">

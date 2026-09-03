@@ -24,22 +24,20 @@ export async function middleware(request: NextRequest) {
 	const platformDomain = (process.env.PLATFORM_DOMAIN || "").trim().toLowerCase()
 	const hostname = request.nextUrl.hostname.toLowerCase()
 	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHostname(hostname)
-	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform")
-	const isAuthRoute = isPathUnder(pathname, "/auth")
-	const isStoreDirectoryRoute = isPathUnder(pathname, "/stores")
+	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform") || isPathUnder(pathname, "/admin")
 	const explicitPlatformHome = request.nextUrl.searchParams.get("platformHome") === "1"
 	const isPlatformRoot = pathname === "/"
 
+	let rewriteUrl: URL | null = null
+	let explicitStoreSlug: string | null = null
 	if (isPlatformHost && pathname.startsWith(PLATFORM_STORE_PREFIX)) {
 		const [, , rawSlug, ...rest] = pathname.split("/")
 		const slug = rawSlug?.toLowerCase()
 		if (isValidStoreSlug(slug)) {
-			const rewriteUrl = request.nextUrl.clone()
+			rewriteUrl = request.nextUrl.clone()
 			rewriteUrl.pathname = rest.length ? `/${rest.join("/")}` : "/"
+			explicitStoreSlug = slug
 			requestHeaders.set("x-nurava-store-slug", slug)
-			const response = NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
-			response.cookies.set(PLATFORM_STORE_COOKIE, slug, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * 30 })
-			return response
 		}
 	}
 
@@ -50,18 +48,41 @@ export async function middleware(request: NextRequest) {
 		return response
 	}
 
-	if (isPlatformHost && isPathUnder(pathname, "/manage")) {
+	if (rewriteUrl) {
+		// Keep the explicit store slug attached to the rewritten request.
+	} else if (isPlatformHost && isPathUnder(pathname, "/manage")) {
 		const requestedStoreSlug = request.nextUrl.searchParams.get("store")?.trim().toLowerCase()
 		const savedSlug = request.cookies.get(PLATFORM_STORE_COOKIE)?.value?.toLowerCase()
 		const selectedSlug = isValidStoreSlug(requestedStoreSlug) ? requestedStoreSlug : savedSlug
 		if (isValidStoreSlug(selectedSlug)) requestHeaders.set("x-nurava-store-slug", selectedSlug)
 		else requestHeaders.delete("x-nurava-store-slug")
-	} else if (isPlatformHost && !isPlatformRoot && !isWorkspaceRoute && !isAuthRoute && !isStoreDirectoryRoute) {
-		const savedSlug = request.cookies.get(PLATFORM_STORE_COOKIE)?.value?.toLowerCase()
-		if (isValidStoreSlug(savedSlug)) requestHeaders.set("x-nurava-store-slug", savedSlug)
-		else requestHeaders.delete("x-nurava-store-slug")
 	} else {
 		requestHeaders.delete("x-nurava-store-slug")
+	}
+
+	const respond = () => {
+		const response = rewriteUrl
+			? NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
+			: NextResponse.next({ request: { headers: requestHeaders } })
+		if (explicitStoreSlug) {
+			response.cookies.set(PLATFORM_STORE_COOKIE, explicitStoreSlug, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * 30 })
+		}
+		return response
+	}
+
+	// Merchant catalogue and checkout routes must always carry an explicit
+	// store prefix on the shared platform host. This prevents a stale cookie or
+	// the default tenant from rendering merchant content at platform URLs.
+	const isUnscopedMerchantRoute = pathname === "/products"
+		|| pathname.startsWith("/products/")
+		|| pathname === "/category"
+		|| pathname.startsWith("/category/")
+		|| pathname === "/deals"
+		|| pathname.startsWith("/deals/")
+		|| pathname === "/cart"
+		|| pathname === "/checkout"
+	if (isPlatformHost && !rewriteUrl && isUnscopedMerchantRoute) {
+		return NextResponse.redirect(new URL("/stores?all=1", request.url))
 	}
 
 	const token = await getToken({
@@ -72,22 +93,23 @@ export async function middleware(request: NextRequest) {
 	const isAuthenticated = !!token
 	const userRole = typeof token?.role === "string" ? token.role : undefined
 
-	const isAdminRoute = isPathUnder(pathname, "/admin")
+	const effectivePathname = rewriteUrl?.pathname || pathname
+	const isAdminRoute = isPathUnder(effectivePathname, "/admin")
 	if (isAdminRoute) {
 		if (!isAuthenticated) return redirectToSignIn(request, "admin")
 		if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") return redirectToSignIn(request, "admin", true)
-		return NextResponse.next({ request: { headers: requestHeaders } })
+		return respond()
 	}
 
 	if (isWorkspaceRoute) {
 		if (!isAuthenticated) return redirectToSignIn(request, pathname.startsWith("/platform") ? "platform" : "manage")
-		return NextResponse.next({ request: { headers: requestHeaders } })
+		return respond()
 	}
 
-	const isProtectedRoute = pathname.startsWith("/account/") || pathname === "/cart" || pathname === "/checkout"
+	const isProtectedRoute = effectivePathname.startsWith("/account/") || effectivePathname === "/account" || effectivePathname === "/cart" || effectivePathname === "/checkout"
 	if (isProtectedRoute && !isAuthenticated) return redirectToSignIn(request)
 
-	return NextResponse.next({ request: { headers: requestHeaders } })
+	return respond()
 }
 
 export const config = {

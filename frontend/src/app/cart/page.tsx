@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function CartPage() {
 	const {
@@ -85,7 +86,7 @@ export default function CartPage() {
 					latest deals and find something you love!
 				</p>
 				<Link
-					href="/products"
+					href={getStoreRouteHref(store, "/products")}
 					className="btn-primary inline-flex items-center gap-2"
 				>
 					<ShoppingBag size={18} /> Start Shopping
@@ -98,7 +99,7 @@ export default function CartPage() {
 		<div>
 			<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 sm:mb-8">
 				<Link
-					href="/products"
+					href={getStoreRouteHref(store, "/products")}
 					className="flex items-center gap-1 text-gray-500 hover:text-primary transition text-sm sm:text-base"
 				>
 					<ArrowLeft size={18} /> Continue Shopping
@@ -150,7 +151,7 @@ export default function CartPage() {
 								<div className="flex flex-col gap-4 sm:flex-row md:gap-6">
 									{/* Product Image */}
 									<Link
-										href={`/products/${item.slug}`}
+										href={getStoreRouteHref(store, `/products/${item.slug}`)}
 										className="relative h-24 w-full sm:w-24 md:h-32 md:w-32 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
 									>
 										<Image
@@ -169,7 +170,7 @@ export default function CartPage() {
 													{item.brand}
 												</p>
 												<Link
-													href={`/products/${item.slug}`}
+												href={getStoreRouteHref(store, `/products/${item.slug}`)}
 													className="font-semibold hover:text-primary transition line-clamp-1"
 												>
 													{item.name}
@@ -373,7 +374,7 @@ export default function CartPage() {
 
 						{/* Merchant handoff */}
 						<Link
-							href="/checkout"
+							href={getStoreRouteHref(store, "/checkout")}
 							className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-lg"
 						>
 							Contact Merchant <ChevronRight size={20} />

@@ -9,6 +9,8 @@ import { useCart } from "@/lib/cartContext"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import { useSession } from "next-auth/react"
 import AccountAvatar from "@/components/account/AccountAvatar"
+import { getStoreRouteHref } from "@/lib/store-home"
+import { useStoreContext } from "@/lib/store-context"
 
 const baseNavItems = [
 	{ icon: Home, label: "Home", href: "/" },
@@ -21,6 +23,7 @@ export default function MobileNav() {
 	const pathname = usePathname()
 	const { itemCount } = useCart()
 	const { data: session, status: sessionStatus } = useSession()
+	const store = useStoreContext()
 	const [searchOpen, setSearchOpen] = useState(false)
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
 	const accountName = session?.user?.name || session?.user?.email || "Account"
@@ -28,7 +31,7 @@ export default function MobileNav() {
 		icon: User,
 		label: isSignedIn ? "Account" : "Sign in",
 		href: isSignedIn ? "/account" : "/auth/signin?callbackUrl=%2Faccount",
-	}]
+	}].map((item) => item.isAction ? item : { ...item, href: getStoreRouteHref(store, item.href) })
 
 	return (
 		<>

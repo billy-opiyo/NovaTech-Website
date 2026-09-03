@@ -6,6 +6,7 @@ import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from ".
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
+import { getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -99,6 +100,15 @@ test("support services cover list, stats, ticket mutation, replies, and contact"
 		assert.equal(requests[0].url, url)
 		assert.equal(requests[0].init?.method, method)
 	}
+})
+
+test("store navigation keeps merchant routes inside the active storefront", () => {
+	const merchant = { isPlatformHome: false, storePathPrefix: "/store/demo", storeSlug: "demo" }
+	const platform = { isPlatformHome: true, storePathPrefix: "", storeSlug: "nuravatech" }
+	assert.equal(getStoreHomeHref(merchant), "/store/demo")
+	assert.equal(getStoreRouteHref(merchant, "/category/phones"), "/store/demo/category/phones")
+	assert.equal(getStoreRouteHref(merchant, "/store/demo/products"), "/store/demo/products")
+	assert.equal(getStoreRouteHref(platform, "/stores?all=1"), "/stores?all=1")
 })
 
 test("merchant WhatsApp links normalize customer contact numbers", () => {

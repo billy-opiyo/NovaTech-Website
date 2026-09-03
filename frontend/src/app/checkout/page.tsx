@@ -7,6 +7,7 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { useToast } from "@/components/ui/Toast"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function CheckoutPage() {
 	const { items, subtotal } = useCart()
@@ -22,7 +23,7 @@ export default function CheckoutPage() {
 	const [busyMethod, setBusyMethod] = useState<"WHATSAPP" | "EMAIL" | null>(null)
 
 	if (items.length === 0) {
-		return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-3xl font-bold">No products selected</h1><p className="mt-3 text-gray-500">Choose a product first, then contact the store directly.</p><Link href="/products" className="btn-primary mt-8 inline-flex">Browse products</Link></div>
+		return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-3xl font-bold">No products selected</h1><p className="mt-3 text-gray-500">Choose a product first, then contact the store directly.</p><Link href={getStoreRouteHref(store, "/products")} className="btn-primary mt-8 inline-flex">Browse products</Link></div>
 	}
 
 	const inquiryItems = items.map((item) => ({ name: item.name, quantity: item.quantity, variant: item.variant, price: item.price * item.quantity }))
@@ -46,7 +47,7 @@ export default function CheckoutPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-8 py-8">
-			<Link href="/cart" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary"><ArrowLeft size={18} /> Back to selection</Link>
+			<Link href={getStoreRouteHref(store, "/cart")} className="inline-flex items-center gap-2 text-gray-500 hover:text-primary"><ArrowLeft size={18} /> Back to selection</Link>
 			<div className="glass-card p-6 text-center sm:p-10">
 				<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary"><Store size={30} /></div>
 				<h1 className="mt-5 text-3xl font-bold">Contact the store to continue</h1>

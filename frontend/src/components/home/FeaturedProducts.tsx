@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function FeaturedProducts() {
 	const store = useStoreContext()
@@ -14,7 +15,7 @@ export default function FeaturedProducts() {
 			<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8">
 				<h2 className="text-2xl sm:text-3xl font-bold">Featured Products</h2>
 				<Link
-					href="/products"
+					href={getStoreRouteHref(store, "/products")}
 					className="text-primary hover:underline flex items-center gap-1"
 				>
 					View All <ArrowRight size={16} />
@@ -29,7 +30,7 @@ export default function FeaturedProducts() {
 						viewport={{ once: true }}
 						transition={{ delay: i * 0.1 }}
 					>
-						<Link href={`/products/${product.id}`} className="glass-card navy-glass block group">
+						<Link href={getStoreRouteHref(store, `/products/${product.id}`)} className="glass-card navy-glass block group">
 							<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden">
 								<Image
 									src={getProductImage(product.image, product.name)}
