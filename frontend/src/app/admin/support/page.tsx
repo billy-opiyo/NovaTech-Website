@@ -16,6 +16,7 @@ import {
 	Phone,
 	Users,
 	Send,
+	Loader2,
 	Package,
 	UserCheck,
 } from "lucide-react"
@@ -74,6 +75,9 @@ export default function AdminSupportPage() {
 	})
 	const [loading, setLoading] = useState(true)
 	const [replyText, setReplyText] = useState("")
+	const [updatingTicket, setUpdatingTicket] = useState(false)
+	const [replying, setReplying] = useState(false)
+	const [exporting, setExporting] = useState(false)
 
 	useEffect(() => {
 		fetchTickets()
@@ -129,6 +133,7 @@ export default function AdminSupportPage() {
 	}
 
 	const handleStatusChange = async (ticketId: string, newStatus: string) => {
+		setUpdatingTicket(true)
 		try {
 			const response = await fetch(`/api/support/tickets/${ticketId}`, {
 				method: "PATCH",
@@ -146,12 +151,13 @@ export default function AdminSupportPage() {
 			}
 		} catch (err) {
 			console.error("Error updating ticket status:", err)
-		}
+		} finally { setUpdatingTicket(false) }
 	}
 
 	const handleSendReply = async () => {
 		if (!replyText.trim() || !selectedTicket) return
 
+		setReplying(true)
 		try {
 			const response = await fetch(`/api/support/tickets/${selectedTicket.id}`, {
 				method: "POST",
@@ -171,10 +177,11 @@ export default function AdminSupportPage() {
 			}
 		} catch (err) {
 			console.error("Error sending reply:", err)
-		}
+		} finally { setReplying(false) }
 	}
 
 	const handleExport = async () => {
+		setExporting(true)
 		try {
 			const response = await fetch("/api/analytics/export?timeRange=30d&format=csv")
 			if (response.ok) {
@@ -190,7 +197,7 @@ export default function AdminSupportPage() {
 			}
 		} catch (err) {
 			console.error("Error exporting tickets:", err)
-		}
+		} finally { setExporting(false) }
 	}
 
 	const filteredTickets = tickets
@@ -261,9 +268,10 @@ export default function AdminSupportPage() {
 				<div className="flex gap-3">
 					<button
 						onClick={handleExport}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+						disabled={exporting}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-50"
 					>
-						<Download size={18} /> Export
+						{exporting ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Download size={18} />} {exporting ? "Exporting…" : "Export"}
 					</button>
 				</div>
 			</div>
@@ -481,17 +489,18 @@ export default function AdminSupportPage() {
 									<div>
 										<div className="flex items-start justify-between mb-2">
 											<h3 className="font-semibold text-lg">{selectedTicket.subject}</h3>
-											<select
-												value={selectedTicket.status}
-												onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}
-												className="form-select text-sm"
-											>
+							<select
+								value={selectedTicket.status}
+								onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}
+								disabled={updatingTicket}
+								className="form-select text-sm"
+							>
 												<option value="open">Open</option>
 												<option value="in_progress">In Progress</option>
 												<option value="waiting_customer">Waiting Customer</option>
 												<option value="resolved">Resolved</option>
 												<option value="closed">Closed</option>
-											</select>
+							</select>{updatingTicket && <Loader2 size={15} className="ml-2 inline animate-spin" aria-hidden="true" />}
 										</div>
 										<p className="text-xs text-gray-500">
 											{selectedTicket.id} • Created {new Date(selectedTicket.createdAt).toLocaleDateString()} • Last updated {new Date(selectedTicket.updatedAt).toLocaleDateString()}
@@ -611,13 +620,13 @@ export default function AdminSupportPage() {
 											className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
 											rows={4}
 										/>
-										<button
-											onClick={handleSendReply}
-											disabled={!replyText.trim()}
-											className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition disabled:opacity-50"
-										>
-											<Send size={16} />
-											Send Reply
+						<button
+							onClick={handleSendReply}
+							disabled={!replyText.trim() || replying}
+							className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition disabled:opacity-50"
+						>
+							{replying ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Send size={16} />}
+							{replying ? "Sending…" : "Send Reply"}
 										</button>
 									</div>
 
