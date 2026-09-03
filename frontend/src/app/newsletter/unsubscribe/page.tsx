@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useToast } from "@/components/ui/Toast"
 
 export default function NewsletterUnsubscribePage() {
 	const [email, setEmail] = useState("")
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
 	const [saving, setSaving] = useState(false)
+	const { addToast } = useToast()
 
 	async function submit(event: React.FormEvent) {
 		event.preventDefault()
@@ -17,9 +19,12 @@ export default function NewsletterUnsubscribePage() {
 			const data = await response.json()
 			if (!response.ok) throw new Error(data.message || "Unable to update your subscription.")
 			setMessage(data.message)
+			addToast(data.message || "You have been unsubscribed successfully.", "success")
 			setEmail("")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to update your subscription.")
+			const message = reason instanceof Error ? reason.message : "Unable to update your subscription."
+			setError(message)
+			addToast(message, "error")
 		} finally { setSaving(false) }
 	}
 

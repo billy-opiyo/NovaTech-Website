@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
 
 type Domain = { id: string; hostname: string; type: string; verificationStatus: string; sslStatus: string | null; isCanonical: boolean; verifiedAt: string | null }
 
@@ -13,6 +14,7 @@ export default function DomainsPage() {
 	const [error, setError] = useState("")
 	const [domainToRemove, setDomainToRemove] = useState<Domain | null>(null)
 	const [removing, setRemoving] = useState(false)
+	const { addToast } = useToast()
 
 	async function load() {
 		const response = await fetch("/api/manage/domains", { cache: "no-store" })
@@ -24,8 +26,8 @@ export default function DomainsPage() {
 		event.preventDefault(); setMessage(""); setError(""); setRecord(null)
 		const response = await fetch("/api/manage/domains", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hostname }) })
 		const data = await response.json().catch(() => ({}))
-		if (!response.ok) setError(data.message || "Unable to add domain")
-		else { setMessage("Domain added. DNS verification is still required."); setRecord(data.verification); setHostname(""); await load() }
+		if (!response.ok) { const message = data.message || "Unable to add domain"; setError(message); addToast(message, "error") }
+		else { setMessage("Domain added. DNS verification is still required."); addToast("Domain added successfully. DNS verification is still required.", "success"); setRecord(data.verification); setHostname(""); await load() }
 	}
 
 	async function removeDomain() {
@@ -34,8 +36,8 @@ export default function DomainsPage() {
 		try {
 			const response = await fetch(`/api/manage/domains?id=${encodeURIComponent(domainToRemove.id)}`, { method: "DELETE" })
 			if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || "Unable to remove domain")
-			setMessage("Custom domain removed."); setDomainToRemove(null); await load()
-		} catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to remove domain")
+			setMessage("Custom domain removed."); addToast("Custom domain removed successfully.", "success"); setDomainToRemove(null); await load()
+		} catch (reason) { const message = reason instanceof Error ? reason.message : "Unable to remove domain"; setError(message); addToast(message, "error")
 		} finally { setRemoving(false) }
 	}
 

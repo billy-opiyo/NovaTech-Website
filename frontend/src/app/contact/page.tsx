@@ -20,6 +20,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
+import { useToast } from "@/components/ui/Toast"
 
 interface FAQ {
 	question: string
@@ -114,6 +115,7 @@ const merchantFaqs: FAQ[] = [
 
 export default function ContactPage() {
 	const store = useStoreContext()
+	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
 	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
 	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
@@ -157,10 +159,13 @@ export default function ContactPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to send your message.")
 			setFormStatus("sent")
+			addToast("Your message was sent successfully.", "success")
 			setFormData({ name: "", email: "", phone: "", subject: "", message: "", orderNumber: "", website: "" })
 		} catch (error) {
 			setFormStatus("error")
-			setFormError(error instanceof Error ? error.message : "Unable to send your message.")
+			const message = error instanceof Error ? error.message : "Unable to send your message."
+			setFormError(message)
+			addToast(message, "error")
 		}
 	}
 

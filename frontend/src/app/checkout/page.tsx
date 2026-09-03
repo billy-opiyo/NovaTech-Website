@@ -6,10 +6,12 @@ import { useState } from "react"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import { useToast } from "@/components/ui/Toast"
 
 export default function CheckoutPage() {
 	const { items, subtotal } = useCart()
 	const store = useStoreContext()
+	const { addToast } = useToast()
 	const [customerName, setCustomerName] = useState("")
 	const [customerEmail, setCustomerEmail] = useState("")
 	const [customerPhone, setCustomerPhone] = useState("")
@@ -36,9 +38,10 @@ export default function CheckoutPage() {
 			const response = await fetch("/api/enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerName, customerEmail, customerPhone, message, contactMethod, consent, items: enquiryItems }) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
+			addToast("Your enquiry was sent successfully. The merchant will follow up shortly.", "success")
 			if (contactMethod === "WHATSAPP") window.open(whatsappHref, "_blank", "noopener,noreferrer")
 			else window.location.href = emailHref
-		} catch (reason: unknown) { setError(reason instanceof Error ? reason.message : "Unable to save enquiry") } finally { setBusy(false); setBusyMethod(null) }
+		} catch (reason: unknown) { const message = reason instanceof Error ? reason.message : "Unable to save enquiry"; setError(message); addToast(message, "error") } finally { setBusy(false); setBusyMethod(null) }
 	}
 
 	return (

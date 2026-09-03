@@ -20,6 +20,7 @@ import {
 	ChevronRight,
 } from "lucide-react"
 import clsx from "clsx"
+import { useToast } from "@/components/ui/Toast"
 
 export default function CartPage() {
 	const {
@@ -36,6 +37,7 @@ export default function CartPage() {
 		moveToCart,
 	} = useCart()
 	const store = useStoreContext()
+	const { addToast } = useToast()
 	const [couponCode, setCouponCode] = useState("")
 	const [couponApplied, setCouponApplied] = useState(false)
 	const [couponDiscount, setCouponDiscount] = useState(0)
@@ -55,8 +57,11 @@ export default function CartPage() {
 			setCouponApplied(true)
 			setCouponDiscount(result.discount)
 			localStorage.setItem("checkoutCoupon", couponCode.trim().toUpperCase())
+			addToast("Coupon applied successfully.", "success")
 		} catch (error: unknown) {
-			setCouponError(error instanceof Error ? error.message : "Unable to validate coupon")
+			const message = error instanceof Error ? error.message : "Unable to validate coupon"
+			setCouponError(message)
+			addToast(message, "error")
 		}
 	}
 

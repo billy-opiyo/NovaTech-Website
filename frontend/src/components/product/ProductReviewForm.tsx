@@ -5,9 +5,11 @@ import { useState } from "react"
 import type { FormEvent } from "react"
 import { usePathname } from "next/navigation"
 import { Star } from "lucide-react"
+import { useToast } from "@/components/ui/Toast"
 
 export default function ProductReviewForm({ productId }: { productId: string }) {
 	const pathname = usePathname()
+	const { addToast } = useToast()
 	const [rating, setRating] = useState(5)
 	const [title, setTitle] = useState("")
 	const [comment, setComment] = useState("")
@@ -33,14 +35,18 @@ export default function ProductReviewForm({ productId }: { productId: string }) 
 			if (response.status === 401) {
 				setError("Please sign in before submitting a review.")
 				setRequiresSignIn(true)
+				addToast("Please sign in before submitting a review.", "error")
 				return
 			}
 			if (!response.ok) throw new Error(data.message || "Unable to submit review")
 			setMessage(data.message || "Your review is awaiting admin approval.")
+			addToast("Review submitted and awaiting admin approval.", "success")
 			setTitle("")
 			setComment("")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to submit review")
+			const message = reason instanceof Error ? reason.message : "Unable to submit review"
+			setError(message)
+			addToast(message, "error")
 		} finally {
 			setSubmitting(false)
 		}

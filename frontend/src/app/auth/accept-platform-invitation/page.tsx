@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { CheckCircle2, ShieldCheck } from "lucide-react"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
+import { useToast } from "@/components/ui/Toast"
 
 type Preview = { email: string; role: string; expiresAt: string }
 
@@ -16,6 +17,7 @@ function humanizeRole(role: string) {
 function AcceptPlatformInvitationForm() {
 	const params = useSearchParams()
 	const router = useRouter()
+	const { addToast } = useToast()
 	const token = params.get("token") || ""
 	const callbackUrl = `/auth/accept-platform-invitation?token=${encodeURIComponent(token)}`
 	const { data: session, status, update } = useSession()
@@ -35,8 +37,9 @@ function AcceptPlatformInvitationForm() {
 		setBusy(true); setMessage("")
 		const response = await fetch("/api/platform/access/accept", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) })
 		const data = await response.json().catch(() => ({}))
-		if (!response.ok) { setMessage(data.message || "Unable to accept platform invitation"); setBusy(false); return }
+		if (!response.ok) { setMessage(data.message || "Unable to accept platform invitation"); addToast(data.message || "Unable to accept platform invitation", "error"); setBusy(false); return }
 		await update()
+		addToast("Platform access granted successfully", "success")
 		router.replace(data.redirectTo || "/platform")
 	}
 

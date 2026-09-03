@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useToast } from "@/components/ui/Toast"
 
 type Evidence = { id: string; type: string; status: string; contentType: string; sizeBytes: number; reviewedAt: string | null; reviewNote: string | null; createdAt: string }
 type ReviewData = { tenant: { id: string; legalName: string | null; status: string; verificationStatus: string; verificationSubmittedAt: string | null; verificationReviewedAt: string | null; verificationNotes: string | null; verificationProfile: { businessType: string; taxStatus: string; locationType: string; settlementAccountType: string; phoneVerifiedAt: string | null; updatedAt: string; details: Record<string, string> } | null; verificationEvidence: Evidence[] } }
@@ -16,6 +17,7 @@ export default function VerificationReviewPage() {
 	const [data, setData] = useState<ReviewData | null>(null)
 	const [message, setMessage] = useState("Loading verification review…")
 	const [busy, setBusy] = useState<string | null>(null)
+	const { addToast } = useToast()
 
 	async function load() {
 		const response = await fetch(`/api/platform/verification/${tenantId}`, { cache: "no-store" })
@@ -29,7 +31,7 @@ export default function VerificationReviewPage() {
 
 	async function reviewEvidence(evidenceId: string, status: string) {
 		setBusy(evidenceId)
-		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to review evidence"); await load() } catch (error: any) { setMessage(error.message || "Unable to review evidence") } finally { setBusy(null) }
+		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to review evidence"); await load(); addToast(`Evidence ${status.toLowerCase()} successfully.`, "success") } catch (error: any) { const message = error.message || "Unable to review evidence"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
 	}
 
 	async function downloadEvidence(evidenceId: string) {
@@ -39,7 +41,7 @@ export default function VerificationReviewPage() {
 
 	async function changeTenant(action: "approve_verification" | "reject_verification") {
 		setBusy(action)
-		try { const response = await fetch("/api/platform/operations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, tenantId }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to update merchant status"); await load() } catch (error: any) { setMessage(error.message || "Unable to update merchant status") } finally { setBusy(null) }
+		try { const response = await fetch("/api/platform/operations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, tenantId }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to update merchant status"); await load(); addToast("Merchant status updated successfully.", "success") } catch (error: any) { const message = error.message || "Unable to update merchant status"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
 	}
 
 	if (!data) return <div className="glass-card p-6"><p>{message}</p></div>

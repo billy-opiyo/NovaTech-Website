@@ -49,8 +49,8 @@ export default function AccountSettingsPage() {
 		event.preventDefault(); setSaving(true); setMessage(""); setError("")
 		const response = await fetch("/api/account/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: settings.name, marketingEmails: settings.marketingEmails, orderUpdates: settings.orderUpdates, preferredTheme: settings.preferredTheme }) })
 		const data = await response.json()
-		if (!response.ok) setError(data.message || "Unable to save your settings.")
-		else { setSettings({ ...defaults, ...data.user }); setTheme(data.user.preferredTheme); setMessage("Your preferences have been saved.") }
+		if (!response.ok) { const message = data.message || "Unable to save your settings."; setError(message); addToast(message, "error") }
+		else { setSettings({ ...defaults, ...data.user }); setTheme(data.user.preferredTheme); setMessage("Your preferences have been saved."); addToast("Your preferences have been saved.", "success") }
 		setSaving(false)
 	}
 
@@ -72,6 +72,7 @@ export default function AccountSettingsPage() {
 			if (!response.ok) throw new Error(data.message || "Unable to upload your profile image.")
 			setSettings((current) => ({ ...current, ...data.user }))
 			setMessage("Your profile picture has been updated.")
+			addToast("Profile picture uploaded successfully.", "success")
 		} catch (reason) {
 			const message = reason instanceof Error ? reason.message : "Unable to upload your profile image."
 			setError(message)

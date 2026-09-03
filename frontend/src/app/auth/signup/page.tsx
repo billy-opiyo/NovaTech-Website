@@ -9,6 +9,7 @@ import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check, LoaderCircle } from 
 import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
+import { useToast } from "@/components/ui/Toast"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")
@@ -19,6 +20,7 @@ function withLoginSuccess(url: string) {
 export default function SignUpPage() {
 	const router = useRouter()
 	const store = useStoreContext()
+	const { addToast } = useToast()
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState("")
 	const [signInHref, setSignInHref] = useState("/auth/signin")
@@ -88,9 +90,12 @@ export default function SignUpPage() {
 			if (params.get("gate") === "1") verifyUrl.set("gate", "1")
 			if (params.get("portal")) verifyUrl.set("portal", params.get("portal") as string)
 			if (params.get("reason")) verifyUrl.set("reason", params.get("reason") as string)
+			addToast("Account created successfully. Check your email for the verification code.", "success")
 			router.push(`/auth/verify-email?${verifyUrl.toString()}`)
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "Something went wrong")
+			const message = err instanceof Error ? err.message : "Something went wrong"
+			setError(message)
+			addToast(message, "error")
 		} finally {
 			setIsLoading(false)
 		}

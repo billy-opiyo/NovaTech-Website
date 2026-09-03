@@ -2,12 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/Toast"
 
 type ExistingStore = { name: string; slug: string; publicationStatus: string }
 type PlanOption = { key: string; name: string; price: number | null; currency: string; billingInterval: string | null; setupFeeAmount: number }
 
 export default function OnboardingPage() {
 	const router = useRouter()
+	const { addToast } = useToast()
 	const [name, setName] = useState("")
 	const [slug, setSlug] = useState("")
 	const [stores, setStores] = useState<ExistingStore[]>([])
@@ -46,8 +48,8 @@ export default function OnboardingPage() {
 			setSaving(false)
 			return
 		}
-		if (!response.ok) setError(data.message || "Unable to create store")
-		else router.push(`/manage?store=${data.slug}`)
+		if (!response.ok) { setError(data.message || "Unable to create store"); addToast(data.message || "Unable to create store", "error") }
+		else { addToast("Store created successfully", "success"); router.push(`/manage?store=${data.slug}`) }
 		setSaving(false)
 	}
 

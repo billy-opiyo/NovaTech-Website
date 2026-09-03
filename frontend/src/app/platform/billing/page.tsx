@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useEffect, useState } from "react"
+import { useToast } from "@/components/ui/Toast"
 
 type Plan = {
 	id: string
@@ -30,6 +31,7 @@ export default function PlatformBillingPage() {
 	const [setupFeeAmount, setSetupFeeAmount] = useState("0")
 	const [billingInterval, setBillingInterval] = useState<"MONTH" | "YEAR">("MONTH")
 	const [active, setActive] = useState(true)
+	const { addToast } = useToast()
 
 	async function load() {
 		const response = await fetch("/api/platform/billing", { cache: "no-store" })
@@ -68,8 +70,9 @@ export default function PlatformBillingPage() {
 			body: JSON.stringify({ action: "plan", key: key.toUpperCase(), name, price: price === "" ? null : Number(price), currency: "KES", billingInterval: price === "" ? null : billingInterval, setupFeeAmount: Number(setupFeeAmount), transactionFeePercent: 0, active }),
 		})
 		const result = await response.json()
-		if (!response.ok) { setMessage(result.message || "Unable to save plan"); return }
+	if (!response.ok) { const message = result.message || "Unable to save plan"; setMessage(message); addToast(message, "error"); return }
 		setMessage("Plan saved")
+		addToast("Plan saved successfully.", "success")
 		clearForm()
 		await load()
 	}

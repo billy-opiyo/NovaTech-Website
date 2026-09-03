@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
 
 type Draft = {
 	name?: string
@@ -35,6 +36,7 @@ export default function StoreDesignPage() {
 	const [versions, setVersions] = useState<Version[]>([])
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
 	const [rollbackVersion, setRollbackVersion] = useState<number | null>(null)
+	const { addToast } = useToast()
 
 	const preset = useMemo(
 		() => Object.values(THEME_PRESETS).find((item) => item.id === draft.themePreset) || Object.values(THEME_PRESETS)[0],
@@ -81,9 +83,11 @@ export default function StoreDesignPage() {
 			if (!response.ok) throw new Error(data.message || "Unable to roll back")
 			setLocalPreview(false)
 			setMessage(`Version ${version} restored as published version ${data.version}.`)
+			addToast(`Version ${version} restored successfully.`, "success")
 			setVersions((current) => [{ version: data.version, publishedAt: new Date().toISOString(), createdAt: new Date().toISOString() }, ...current])
 		} catch (rollbackError) {
-			setError(rollbackError instanceof Error ? rollbackError.message : "Rollback requires the database and store-owner access.")
+			const message = rollbackError instanceof Error ? rollbackError.message : "Rollback requires the database and store-owner access."
+			setError(message); addToast(message, "error")
 		}
 		setBusy(false)
 	}
@@ -108,9 +112,11 @@ export default function StoreDesignPage() {
 			setDraft(data.draftSettings)
 			setLocalPreview(false)
 			setMessage("Draft saved to the store. It is not public until published.")
+			addToast("Store draft saved successfully.", "success")
 		} catch {
 			setLocalPreview(true)
 			setMessage("Draft saved locally for preview. Database persistence is unavailable.")
+			addToast("Draft saved locally. Database persistence is unavailable.", "info")
 		}
 		setBusy(false)
 	}
@@ -125,8 +131,10 @@ export default function StoreDesignPage() {
 			if (!response.ok) throw new Error(data.message || "Unable to publish")
 			setLocalPreview(false)
 			setMessage(`Published settings version ${data.version}.`)
+			addToast("Store draft published successfully.", "success")
 		} catch {
-			setError("Publication requires the database and authorized store membership. The local preview remains unchanged.")
+			const message = "Publication requires the database and authorized store membership. The local preview remains unchanged."
+			setError(message); addToast(message, "error")
 		}
 		setBusy(false)
 	}

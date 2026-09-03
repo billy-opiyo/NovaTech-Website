@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, Star } from "lucide-react"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
 
 type Review = {
 	id: string
@@ -35,6 +36,7 @@ export default function AdminReviewsPage() {
 	const [reviewToDelete, setReviewToDelete] = useState<{ id: string; target: string } | null>(null)
 	const [busy, setBusy] = useState(false)
 	const [busyReviewId, setBusyReviewId] = useState<string | null>(null)
+	const { addToast } = useToast()
 
 	const load = useCallback(async () => {
 		setError("")
@@ -55,8 +57,11 @@ export default function AdminReviewsPage() {
 			const response = await fetch("/api/admin/reviews", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, moderationStatus }) })
 			if (!response.ok) throw new Error("Unable to update review")
 			await load()
+			addToast(`Review ${moderationStatus.toLowerCase()} successfully.`, "success")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to update review")
+			const message = reason instanceof Error ? reason.message : "Unable to update review"
+			setError(message)
+			addToast(message, "error")
 		} finally { setBusy(false); setBusyReviewId(null) }
 	}
 
@@ -70,8 +75,11 @@ export default function AdminReviewsPage() {
 			if (!response.ok) throw new Error(result.message || "Unable to save review")
 			setEditReview(null)
 			await load()
+			addToast("Review correction saved and returned to pending approval.", "success")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to save review")
+			const message = reason instanceof Error ? reason.message : "Unable to save review"
+			setError(message)
+			addToast(message, "error")
 		} finally { setBusy(false) }
 	}
 
@@ -84,8 +92,11 @@ export default function AdminReviewsPage() {
 			if (!response.ok) throw new Error(result.message || "Unable to delete review")
 			setReviewToDelete(null)
 			await load()
+			addToast("Review deleted successfully.", "success")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to delete review")
+			const message = reason instanceof Error ? reason.message : "Unable to delete review"
+			setError(message)
+			addToast(message, "error")
 		} finally { setBusy(false) }
 	}
 

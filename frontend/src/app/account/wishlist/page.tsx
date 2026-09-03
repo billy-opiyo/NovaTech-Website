@@ -7,6 +7,7 @@ import { ArrowLeft, Heart, Share2, ShoppingCart, Star, Trash2 } from "lucide-rea
 import { getProductImage } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
 
 type WishlistItem = {
 	id: string
@@ -16,6 +17,7 @@ type WishlistItem = {
 }
 
 export default function WishlistPage() {
+	const { addToast } = useToast()
 	const [items, setItems] = useState<WishlistItem[]>([])
 	const [sortBy, setSortBy] = useState("recent")
 	const [error, setError] = useState("")
@@ -31,10 +33,10 @@ export default function WishlistPage() {
 	useEffect(() => { load().catch((reason) => setError(reason.message)) }, [])
 
 	const sorted = useMemo(() => [...items].sort((a, b) => sortBy === "price-asc" ? (a.product.discountedPrice ?? a.product.price) - (b.product.discountedPrice ?? b.product.price) : sortBy === "price-desc" ? (b.product.discountedPrice ?? b.product.price) - (a.product.discountedPrice ?? a.product.price) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [items, sortBy])
-	async function remove() { if (!itemToRemove) return; await fetch("/api/wishlist", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: itemToRemove.productId }) }); setItems((current) => current.filter((item) => item.productId !== itemToRemove.productId)); setItemToRemove(null) }
-	async function clear() { if (!clearRequested) return; await fetch("/api/wishlist", { method: "DELETE" }); setItems([]); setClearRequested(false) }
+	async function remove() { if (!itemToRemove) return; try { const response = await fetch("/api/wishlist", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: itemToRemove.productId }) }); if (!response.ok) throw new Error("Unable to remove wishlist item"); setItems((current) => current.filter((item) => item.productId !== itemToRemove.productId)); setItemToRemove(null); addToast("Removed from wishlist", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to remove wishlist item", "error") } }
+	async function clear() { if (!clearRequested) return; try { const response = await fetch("/api/wishlist", { method: "DELETE" }); if (!response.ok) throw new Error("Unable to clear wishlist"); setItems([]); setClearRequested(false); addToast("Wishlist cleared successfully", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to clear wishlist", "error") } }
 	function availableStock(product: WishlistItem["product"]) { return product.variants.length ? Math.max(...product.variants.map((variant) => variant.stock)) : product.stock }
-	function addToCart(item: WishlistItem) { const product = item.product; addItem({ productId: product.id, name: product.name, brand: product.brand, image: product.images[0] || "/placeholder-product.jpg", price: product.discountedPrice ?? product.price, quantity: 1, maxStock: availableStock(product), slug: product.slug }) }
+	function addToCart(item: WishlistItem) { const product = item.product; addItem({ productId: product.id, name: product.name, brand: product.brand, image: product.images[0] || "/placeholder-product.jpg", price: product.discountedPrice ?? product.price, quantity: 1, maxStock: availableStock(product), slug: product.slug }); addToast("Added to cart", "success") }
 	async function shareProduct(product: WishlistItem["product"]) {
 		const url = `${window.location.origin}/products/${product.slug}`
 		if (navigator.share) {

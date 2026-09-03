@@ -119,8 +119,8 @@ export default function ManageProductsPage() {
 			if (!response.ok) throw new Error(body.message || "Unable to create category")
 			setCategories((current) => [...current, body.category].sort((a: Category, b: Category) => a.name.localeCompare(b.name)))
 			setDraft((current) => ({ ...current, categoryId: body.category.id }))
-			setCategoryName(""); setNotice("Category created")
-		} catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create category")
+			setCategoryName(""); setNotice("Category created"); addToast("Category created successfully.", "success")
+		} catch (reason) { const message = reason instanceof Error ? reason.message : "Unable to create category"; setError(message); addToast(message, "error")
 		} finally { setCategoryBusy(false) }
 	}
 
@@ -149,8 +149,9 @@ export default function ManageProductsPage() {
 			if (!response.ok) throw new Error(body.message || "Unable to save product")
 			await load()
 			if (!editing) { setEditing(body); setDraft(draftFromProduct(body)); }
-			setNotice(editing ? "Product updated" : "Product created. You can now upload its gallery images.")
-		} catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save product")
+			const message = editing ? "Product updated successfully." : "Product created successfully. You can now upload its gallery images."
+			setNotice(message); addToast(message, "success")
+		} catch (reason) { const message = reason instanceof Error ? reason.message : "Unable to save product"; setError(message); addToast(message, "error")
 		} finally { setSaving(false) }
 	}
 
@@ -168,7 +169,7 @@ export default function ManageProductsPage() {
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
 				urls.push(body.url)
 			}
-			updateDraft("images", urls.join("\n")); setNotice("Gallery upload complete. Save the product to publish the new images.")
+			updateDraft("images", urls.join("\n")); setNotice("Gallery upload complete. Save the product to publish the new images."); addToast("Product images uploaded successfully.", "success")
 		} catch (reason) {
 			const message = reason instanceof Error ? reason.message : "Gallery upload failed"
 			setError(message)
@@ -182,9 +183,9 @@ export default function ManageProductsPage() {
 		try {
 			const response = await fetch(`/api/products/${productToDelete.slug}`, { method: "DELETE" }); const body = await response.json()
 			if (!response.ok) throw new Error(body.message || "Unable to delete product")
-			setProducts((items) => items.filter((item) => item.id !== productToDelete.id)); setNotice("Product deleted"); setProductToDelete(null)
+			setProducts((items) => items.filter((item) => item.id !== productToDelete.id)); setNotice("Product deleted"); addToast("Product deleted successfully.", "success"); setProductToDelete(null)
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to delete product")
+			const message = reason instanceof Error ? reason.message : "Unable to delete product"; setError(message); addToast(message, "error")
 		} finally { setDeleting(false) }
 	}
 

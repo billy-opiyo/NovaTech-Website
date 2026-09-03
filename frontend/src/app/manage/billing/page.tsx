@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
+import { useToast } from "@/components/ui/Toast"
 
 type Plan = { id: string; key: string; name: string; price: number | null; currency: string; billingInterval: string | null; setupFeeAmount: number; transactionFeePercent: number }
 type Addon = { id: string; key: string; name: string; description?: string | null; price: number; currency: string; billingInterval: string }
@@ -17,6 +18,7 @@ export default function ManageBillingPage() {
 	const [phone, setPhone] = useState("")
 	const [busy, setBusy] = useState("")
 	const [confirmCancel, setConfirmCancel] = useState(false)
+	const { addToast } = useToast()
 
 	async function load() {
 		const response = await fetch("/api/manage/billing", { cache: "no-store" })
@@ -32,9 +34,9 @@ export default function ManageBillingPage() {
 			const response = await fetch("/api/manage/billing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: actionName, ...body }) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Billing action failed")
-			if (result.url) window.location.assign(result.url)
-			else { setMessage(result.message || "Billing updated"); await load() }
-		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Billing action failed") }
+			if (result.url) { addToast(result.message || "Payment request created successfully.", "success"); window.location.assign(result.url) }
+			else { const message = result.message || "Billing updated successfully."; setMessage(message); addToast(message, "success"); await load() }
+		} catch (error: unknown) { const message = error instanceof Error ? error.message : "Billing action failed"; setMessage(message); addToast(message, "error") }
 		finally { setBusy("") }
 	}
 

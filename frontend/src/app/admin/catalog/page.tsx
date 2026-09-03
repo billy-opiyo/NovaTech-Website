@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useToast } from "@/components/ui/Toast"
 
 type Result = { mode: string; summary: Record<string, number>; errors?: Array<{ row: number; message: string }> }
 
 export default function CatalogToolsPage() {
+	const { addToast } = useToast()
 	const [file, setFile] = useState<File | null>(null)
 	const [result, setResult] = useState<Result | null>(null)
 	const [message, setMessage] = useState("")
@@ -19,8 +21,8 @@ export default function CatalogToolsPage() {
 			const response = await fetch("/api/manage/catalog/import", { method: "POST", body })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Catalog import failed")
-			setResult(data); setMessage(mode === "preview" ? "Preview ready. Review errors before committing." : "Import completed. Valid rows were processed; failed rows were left unchanged.")
-		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Catalog import failed") } finally { setBusy(false) }
+			setResult(data); setMessage(mode === "preview" ? "Preview ready. Review errors before committing." : "Import completed. Valid rows were processed; failed rows were left unchanged."); addToast(mode === "preview" ? "Catalog preview ready" : "Catalog import completed successfully", "success")
+		} catch (error: unknown) { const text = error instanceof Error ? error.message : "Catalog import failed"; setMessage(text); addToast(text, "error") } finally { setBusy(false) }
 	}
 
 	function downloadTemplate() {

@@ -21,6 +21,7 @@ import {
 	UserCheck,
 } from "lucide-react"
 import clsx from "clsx"
+import { useToast } from "@/components/ui/Toast"
 
 interface SupportTicket {
 	id: string
@@ -58,6 +59,7 @@ const priorityFilters = ["All", "Urgent", "High", "Medium", "Low"]
 const categoryFilters = ["All", "Technical", "Billing", "Shipping", "Product", "Other"]
 
 export default function AdminSupportPage() {
+	const { addToast } = useToast()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [statusFilter, setStatusFilter] = useState("All")
 	const [priorityFilter, setPriorityFilter] = useState("All")
@@ -148,9 +150,13 @@ export default function AdminSupportPage() {
 				if (selectedTicket?.id === ticketId) {
 					setSelectedTicket({ ...selectedTicket, status: newStatus })
 				}
+				addToast("Ticket status updated successfully", "success")
+			} else {
+				addToast("Unable to update ticket status", "error")
 			}
 		} catch (err) {
 			console.error("Error updating ticket status:", err)
+			addToast("Unable to update ticket status", "error")
 		} finally { setUpdatingTicket(false) }
 	}
 
@@ -174,9 +180,13 @@ export default function AdminSupportPage() {
 					})
 				}
 				setReplyText("")
+				addToast("Reply sent successfully", "success")
+			} else {
+				addToast("Unable to send reply", "error")
 			}
 		} catch (err) {
 			console.error("Error sending reply:", err)
+			addToast("Unable to send reply", "error")
 		} finally { setReplying(false) }
 	}
 
@@ -194,9 +204,13 @@ export default function AdminSupportPage() {
 				a.click()
 				document.body.removeChild(a)
 				URL.revokeObjectURL(url)
+				addToast("Support export downloaded", "success")
+			} else {
+				addToast("Unable to export support tickets", "error")
 			}
 		} catch (err) {
 			console.error("Error exporting tickets:", err)
+			addToast("Unable to export support tickets", "error")
 		} finally { setExporting(false) }
 	}
 
