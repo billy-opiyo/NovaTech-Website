@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 
 const SPLASH_DURATION = 5000
@@ -16,13 +16,18 @@ const SPLASH_IMAGES = [
 
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
+	const searchParams = useSearchParams()
 	// The splash belongs to the platform homepage's document load only. Keep the
 	// initial pathname stable so navigating to `/` in the client does not replay
 	// it; a real refresh/reload creates a new component instance and shows it.
 	const initialPathname = useRef(pathname)
 	const isInitialPlatformHomepage =
 		platformHome && initialPathname.current === "/" && pathname === "/"
-	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage
+	// Authentication callbacks can perform a full document navigation back to
+	// the platform homepage (especially OAuth). The user is already returning
+	// to the page they started from, so do not replay the platform splash.
+	const isLoginReturn = searchParams.get("login") === "success"
+	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage && !isLoginReturn
 	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
@@ -91,7 +96,10 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	}, [shouldShowSplash])
 
 	useEffect(() => {
-		if (!visible) return
+		// `visible` starts true so the initial platform document can render the
+		// splash immediately. It must never lock scrolling on merchant routes,
+		// auth pages, or after a login return where no splash is shown.
+		if (!shouldShowSplash || !visible) return
 
 		const html = document.documentElement
 		const body = document.body
@@ -115,7 +123,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			body.style.overflow = previousBodyOverflow
 			body.style.touchAction = previousBodyTouchAction
 		}
-	}, [visible])
+	}, [shouldShowSplash, visible])
 
 	if (!shouldShowSplash) return <>{children}</>
 	if (!readyToReveal) {
