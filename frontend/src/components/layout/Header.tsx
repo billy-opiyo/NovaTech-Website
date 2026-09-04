@@ -177,7 +177,7 @@ function StoreAccountMenu({
 	}
 
 	return (
-		<div ref={menuRef} className="relative">
+		<div ref={menuRef} className="relative z-[80]">
 			<button
 				type="button"
 				onClick={() => setOpen((current) => !current)}
@@ -185,16 +185,13 @@ function StoreAccountMenu({
 				aria-haspopup="menu"
 				aria-label={isSignedIn ? `Open ${accountName}'s account menu` : "Open sign in menu"}
 				title={isSignedIn ? accountName : "Sign in"}
-				className="inline-flex items-center gap-2 rounded-lg border border-primary/40 px-2 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:px-3"
+				className="inline-flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-lg border border-primary/40 px-1.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:min-w-[4.25rem] sm:px-2"
 			>
-				<span className={`flex items-center ${isSignedIn ? "flex-row gap-2" : "flex-col gap-0.5"}`}>
-					<AccountAvatar name={name} email={email} image={image} className="h-8 w-8" />
-					<span className="max-w-32 truncate text-[10px] leading-tight sm:max-w-36 sm:text-sm">{isSignedIn ? accountName : "Sign in"}</span>
-				</span>
-				<ChevronDown size={15} aria-hidden="true" className="hidden sm:block" />
+				{isSignedIn ? <AccountAvatar name={name} email={email} image={image} className="h-8 w-8" /> : <User size={20} aria-hidden="true" />}
+				<span className="max-w-28 truncate text-[10px] leading-tight sm:max-w-36 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
 			</button>
 			{open && (
-				<div role="menu" className="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-52 rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
 					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-gray-100 dark:hover:bg-gray-800">
 						<UserRound size={17} aria-hidden="true" />
 						Account
