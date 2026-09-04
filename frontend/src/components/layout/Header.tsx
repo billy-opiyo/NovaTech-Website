@@ -89,7 +89,7 @@ export default function Header() {
 							<SearchOverlay />
 							<NotificationCenter />
 							<Link href={getStoreRouteHref(store, "/cart")} aria-label="Open shopping cart" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{itemCount}</span>}</Link>
-							<Link href={getStoreRouteHref(store, "/account")} aria-label={`Open ${accountName}'s account`} title={isSignedIn ? accountName : "Account"} className="rounded-full p-1.5 text-gray-700 transition hover:bg-gray-200 dark:text-white dark:hover:bg-gray-700">{isSignedIn ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-8 w-8" /> : <User size={20} />}</Link>
+							<StoreAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} store={store} isSignedIn={isSignedIn} />
 						</>}
 
 						{/* Mobile menu toggle */}
@@ -128,6 +128,87 @@ export default function Header() {
 				)}
 			</AnimatePresence>
 		</header>
+	)
+}
+
+function StoreAccountMenu({
+	name,
+	email,
+	image,
+	accountName,
+	store,
+	isSignedIn,
+}: {
+	name?: string | null
+	email?: string | null
+	image?: string | null
+	accountName: string
+	store: ReturnType<typeof useStoreContext>
+	isSignedIn: boolean
+}) {
+	const [open, setOpen] = useState(false)
+	const [signingOut, setSigningOut] = useState(false)
+	const menuRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		if (!open) return
+		const closeOnOutsideClick = (event: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false)
+		}
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setOpen(false)
+		}
+		document.addEventListener("mousedown", closeOnOutsideClick)
+		document.addEventListener("keydown", closeOnEscape)
+		return () => {
+			document.removeEventListener("mousedown", closeOnOutsideClick)
+			document.removeEventListener("keydown", closeOnEscape)
+		}
+	}, [open])
+
+	async function handleSignOut() {
+		setSigningOut(true)
+		try {
+			await signOut({ redirect: false })
+			setOpen(false)
+		} catch {
+			setSigningOut(false)
+		}
+	}
+
+	return (
+		<div ref={menuRef} className="relative">
+			<button
+				type="button"
+				onClick={() => setOpen((current) => !current)}
+				aria-expanded={open}
+				aria-haspopup="menu"
+				aria-label={isSignedIn ? `Open ${accountName}'s account menu` : "Open sign in menu"}
+				title={isSignedIn ? accountName : "Sign in"}
+				className="inline-flex items-center gap-2 rounded-lg border border-primary/40 px-2 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:px-3"
+			>
+				<span className={`flex items-center ${isSignedIn ? "flex-row gap-2" : "flex-col gap-0.5"}`}>
+					<AccountAvatar name={name} email={email} image={image} className="h-8 w-8" />
+					<span className="max-w-32 truncate text-[10px] leading-tight sm:max-w-36 sm:text-sm">{isSignedIn ? accountName : "Sign in"}</span>
+				</span>
+				<ChevronDown size={15} aria-hidden="true" className="hidden sm:block" />
+			</button>
+			{open && (
+				<div role="menu" className="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-52 rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-gray-100 dark:hover:bg-gray-800">
+						<UserRound size={17} aria-hidden="true" />
+						Account
+					</Link>
+					{isSignedIn ? <button type="button" role="menuitem" disabled={signingOut} onClick={() => void handleSignOut()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30">
+						{signingOut ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <LogOut size={17} aria-hidden="true" />}
+						{signingOut ? "Signing out…" : "Sign out"}
+					</button> : <Link href={getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(getStoreRouteHref(store, "/"))}`)} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-primary transition hover:bg-primary/10">
+						<User size={17} aria-hidden="true" />
+						Sign in
+					</Link>}
+				</div>
+			)}
+		</div>
 	)
 }
 

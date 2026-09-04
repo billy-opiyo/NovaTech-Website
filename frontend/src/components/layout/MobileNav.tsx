@@ -3,12 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, ShoppingCart, Heart, User } from "lucide-react"
+import { Home, Search, ShoppingCart, Heart } from "lucide-react"
 import clsx from "clsx"
 import { useCart } from "@/lib/cartContext"
 import SearchOverlay from "@/components/search/SearchOverlay"
-import { useSession } from "next-auth/react"
-import AccountAvatar from "@/components/account/AccountAvatar"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { useStoreContext } from "@/lib/store-context"
 
@@ -22,16 +20,9 @@ const baseNavItems = [
 export default function MobileNav() {
 	const pathname = usePathname()
 	const { itemCount } = useCart()
-	const { data: session, status: sessionStatus } = useSession()
 	const store = useStoreContext()
 	const [searchOpen, setSearchOpen] = useState(false)
-	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
-	const accountName = session?.user?.name || session?.user?.email || "Account"
-	const navItems = [...baseNavItems, {
-		icon: User,
-		label: isSignedIn ? "Account" : "Sign in",
-		href: isSignedIn ? "/account" : "/auth/signin?callbackUrl=%2Faccount",
-	}].map((item) => item.isAction ? item : { ...item, href: getStoreRouteHref(store, item.href) })
+	const navItems = baseNavItems.map((item) => item.isAction ? item : { ...item, href: getStoreRouteHref(store, item.href) })
 
 	return (
 		<>
@@ -46,23 +37,21 @@ export default function MobileNav() {
 								aria-label="Open search"
 								className="flex flex-col items-center gap-1 py-1 px-3 text-gray-500 hover:text-primary transition"
 							>
-								{item.label === "Account" ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-6 w-6" /> : <item.icon size={22} />}
-								<span className="max-w-20 truncate text-xs">{item.label === "Account" ? accountName : item.label}</span>
+								<item.icon size={22} />
+								<span className="max-w-20 truncate text-xs">{item.label}</span>
 							</button>
 						) : (
 							<Link
 								key={item.href}
 								href={item.href}
-								className={clsx(
-									"flex flex-col items-center gap-1 py-1 px-3 relative transition",
-									isActive
-										? "text-primary"
-										: item.label === "Account"
-											? "text-gray-700 hover:text-primary dark:text-white"
+									className={clsx(
+										"flex flex-col items-center gap-1 py-1 px-3 relative transition",
+										isActive
+											? "text-primary"
 											: "text-gray-500 hover:text-primary",
-								)}
+									)}
 							>
-								{item.label === "Account" ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-6 w-6" /> : <item.icon size={22} />}
+								<item.icon size={22} />
 								{item.showBadge && itemCount > 0 && (
 									<span className="absolute -top-1 right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
 										{itemCount}
