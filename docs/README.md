@@ -65,7 +65,7 @@ The latest UI implementation updates include:
 - Preserved the shared homepage structure for every store while resolving branding, homepage content, contact details, and map links from the active `StoreContext`.
 - Added authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie as a returning-browser fallback. This preference is not an authorization mechanism.
 - Added local `{store-slug}.localhost` resolution. Production subdomain links and DNS/SSL still require deployment configuration and verification.
-- Added explicit `/store/{slug}` routing on the configured platform host so merchant context remains distinct from the platform root. Custom subdomain DNS/SSL reachability remains a deployment concern.
+- Added staging/preview Vercel project-host recognition and explicit `/store/{slug}` routing so merchant context remains distinct from the platform root. Custom subdomain DNS/SSL reachability remains a deployment concern.
 - Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
 - Restructured the platform root homepage around social-proof store discovery, with approved ratings, review volume, product counts, catalogue image previews, and top-rated/most-reviewed/new-and-growing store groups.
 - Kept merchant homepage shopping sections and action controls on individual store hosts, and added a `Nurava Tech Homepage` footer link for returning to platform discovery.

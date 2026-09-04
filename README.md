@@ -538,7 +538,7 @@ npm run dev:open
   - RESTful API at `/api/recommendations` with multiple recommendation types
 - ✔️ **Merchant onboarding guidance** — Nine responsive visual preview cards mirror the store-creation path, with touch navigation on smaller screens, light/dark preview alignment, and a Create Store CTA only on the final step
 - ✔️ **Platform access management** — Super Admins can invite platform operators with explicit roles, invited-email matching, seven-day expiry, one-time acceptance, and server-side authorization
-- ✔️ **Store-aware routing** — The configured platform host and explicit `/store/{slug}` paths resolve platform and merchant contexts without reusing stale store navigation on the platform home
+- ✔️ **Store-aware staging routing** — Platform/Vercel project hosts and explicit `/store/{slug}` paths resolve platform and merchant contexts without reusing stale store navigation on the platform home
 - ✔️ **Store settings and feedback** — Validated social links and normalized WhatsApp destinations, four-second viewport-safe toasts, and loading states for important asynchronous actions
 - ✔️ **Image handling** — One-megabyte image validation across upload surfaces plus browser/server WebP optimization for product images
 - ✔️ **Review moderation** — Admin review workflows support status moderation together with controlled edit and delete operations

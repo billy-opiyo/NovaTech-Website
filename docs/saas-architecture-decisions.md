@@ -22,14 +22,14 @@ This document records implementation defaults for the first controlled beta. It 
 - Merchant verification details are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`; identity, tax, location, and settlement documents are uploaded only to `R2_PRIVATE_BUCKET_NAME` and are opened through short-lived reviewer URLs. Public product storage is not used for verification evidence.
 - The server-resolved store context is authoritative. A tenant/store ID supplied by a browser request is never used to widen access.
 
-## Current implementation alignment (2026-09-03)
+## Current staging implementation alignment (2026-09-03)
 
-The following source-level behavior is now part of the production branch baseline:
+The following source-level behavior is now part of the `saas-staging` baseline:
 
-- The configured platform host supports explicit `/store/{slug}` paths that
-  carry merchant context, and the platform root does not reuse a stale
-  merchant-store selection. Canonical merchant subdomains still require
-  external DNS/SSL and deployment routing.
+- Staging and preview Vercel project hosts (`*.vercel.app`) are recognized as
+  platform hosts. Explicit `/store/{slug}` paths carry merchant context, and
+  the platform root does not reuse a stale merchant-store selection. Canonical
+  merchant subdomains still require external DNS/SSL and deployment routing.
 - The platform homepage includes a nine-step, preview-only Onboarding Merchant
   Guide that mirrors the real store setup path. It supports timed advance,
   pagination, previous/next controls, touch swipes, light/dark preview

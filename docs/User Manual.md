@@ -50,8 +50,8 @@ or request body.
 - Platform hosts: nuravatech.com, www.nuravatech.com, and local
   localhost/127.0.0.1.
 - Local merchant preview: {store-slug}.localhost.
-- The configured platform host supports explicit /store/{slug} paths so a
-  merchant context remains separate from the platform root.
+- Staging/preview Vercel project hosts: *.vercel.app hosts are treated as
+  platform hosts, while explicit /store/{slug} paths retain merchant context.
 - Production platform subdomain: {store-slug}.nuravatech.com when DNS and
   deployment routing are configured.
 - Custom domain: a recorded, DNS-verified store hostname.
