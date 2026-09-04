@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import NotificationCenter from "@/components/notifications/NotificationCenter"
-import { ChevronDown, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
+import { LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
@@ -185,10 +185,10 @@ function StoreAccountMenu({
 				aria-haspopup="menu"
 				aria-label={isSignedIn ? `Open ${accountName}'s account menu` : "Open sign in menu"}
 				title={isSignedIn ? accountName : "Sign in"}
-				className="inline-flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-lg border border-primary/40 px-1.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:min-w-[4.25rem] sm:px-2"
+				className="inline-flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-0.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:min-w-[4rem] sm:px-1.5 sm:py-1"
 			>
 				{isSignedIn ? <AccountAvatar name={name} email={email} image={image} className="h-8 w-8" /> : <User size={20} aria-hidden="true" />}
-				<span className="max-w-28 truncate text-[10px] leading-tight sm:max-w-36 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
+				<span className="max-w-16 truncate text-[9px] leading-tight sm:max-w-28 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
 			</button>
 			{open && (
 				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
@@ -261,10 +261,10 @@ function PlatformAccountMenu({
 				aria-haspopup="menu"
 				aria-label={`Open ${accountName}'s account menu`}
 				title={accountName}
-				className={`inline-flex items-center justify-center gap-2 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white ${mobile ? "rounded-full p-1.5" : ""}`}
+				className={`inline-flex items-center justify-center gap-2 rounded-lg px-1.5 py-1 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white ${mobile ? "rounded-full p-1" : ""}`}
 			>
 				<AccountAvatar name={name} email={email} image={image} className={mobile ? "h-7 w-7" : "h-7 w-7"} />
-				{!mobile && <><span className="max-w-36 truncate text-left leading-tight text-gray-700 dark:text-white">{accountName}</span><ChevronDown size={16} aria-hidden="true" /></>}
+				{!mobile && <span className="max-w-36 truncate text-left leading-tight text-gray-700 dark:text-white">{accountName}</span>}
 			</button>
 			{open && (
 				<div role="menu" className="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-52 rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white">
