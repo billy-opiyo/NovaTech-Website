@@ -25,6 +25,7 @@ export const platformSiteSettingsPatchSchema = z.object({
 		phoneDisplay: optionalText(40),
 		email: z.string().trim().email().max(160).optional(),
 		whatsappNumber: z.string().trim().regex(/^\d{10,15}$/).optional(),
+		whatsappFloatingMessage: optionalText(240),
 		whatsappMessage: optionalText(240),
 		addressLine: optionalText(160),
 		cityCountry: optionalText(120),

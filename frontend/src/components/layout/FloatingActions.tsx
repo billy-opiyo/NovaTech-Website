@@ -11,8 +11,8 @@ export default function FloatingActions() {
 	const pathname = usePathname()
 	const store = useStoreContext()
 	const [showToTop, setShowToTop] = useState(false)
-	const isControlPlanePage = pathname.startsWith("/admin") || pathname.startsWith("/manage") || pathname.startsWith("/platform")
-	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage)
+	const isControlPlanePage = pathname.startsWith("/admin") || pathname.startsWith("/manage") || pathname.startsWith("/platform") || /\/(admin|manage)(\/|$)/.test(pathname)
+	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappFloatingMessage)
 
 	useEffect(() => {
 		const handleScroll = () => {

@@ -27,6 +27,9 @@ export const clientConfig = {
 		email: "support@nuravatech.com",
 		emailHref: "mailto:support@nuravatech.com",
 		whatsappNumber: "254740470381",
+		// Storefront floating/social message. Platform defaults are supplied by
+		// platform-site-settings.ts; this fallback is for merchant storefronts.
+		whatsappFloatingMessage: "Hello Nurava Tech, I need help with my order.",
 		whatsappMessage: "Hello Nurava Tech, I need help with my order.",
 		addressLine: "Kimathi Street, CBD",
 		cityCountry: "Nairobi, Kenya",

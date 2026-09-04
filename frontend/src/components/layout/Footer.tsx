@@ -48,7 +48,7 @@ const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 	},
 	...((store.features.showWhatsAppContact as boolean) === false ? [] : [{
 		label: "WhatsApp",
-		href: getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage),
+		href: getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappFloatingMessage),
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	}]),
