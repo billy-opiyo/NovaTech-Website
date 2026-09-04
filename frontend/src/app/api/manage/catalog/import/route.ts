@@ -43,7 +43,7 @@ function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string,
 			if (variants.some((variant) => !variant.name || !variant.value || (variant.priceModifier !== undefined && !Number.isFinite(variant.priceModifier)) || (variant.stock !== undefined && (!Number.isInteger(variant.stock) || variant.stock < 0)))) throw new Error()
 		} catch { throw new Error("variants must be a valid JSON array with non-negative stock") }
 	}
-	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price, discountedPrice, stock, warranty: row.warranty?.trim() || null, categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), specs, variants }
+	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price, discountedPrice, stock, warranty: row.warranty?.trim() || null, categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), isTrending: bool(row.isTrending || ""), specs, variants }
 }
 
 export async function POST(request: NextRequest) {
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
 		for (const row of valid) {
 			try {
 				const current = await prisma.product.findFirst({ where: { tenantId: context.tenantId, sku: row.sku }, select: { id: true } })
-				if (current) { await prisma.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs } }); updated += 1 }
-				else { await assertTenantProductLimit(context.tenantId); await prisma.product.create({ data: { tenantId: context.tenantId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant) => ({ tenantId: context.tenantId, ...variant })) } : undefined } }); created += 1 }
+				if (current) { await prisma.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending, specs: row.specs } }); updated += 1 }
+				else { await assertTenantProductLimit(context.tenantId); await prisma.product.create({ data: { tenantId: context.tenantId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant) => ({ tenantId: context.tenantId, ...variant })) } : undefined } }); created += 1 }
 			} catch (error: unknown) { errors.push({ row: row.rowNumber, message: error instanceof Error ? error.message : "Database rejected this row" }) }
 		}
 		await createActionRecord("IMPORTED_CATALOG", { tenantId: context.tenantId, adminId: session.user.id, fileName: file.name, rows: rows.length, created, updated, failed: errors.length }).catch(() => undefined)

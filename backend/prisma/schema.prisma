@@ -881,8 +881,9 @@ model Product {
   price           Float
   discountedPrice Float?
   stock           Int      @default(0)
-  isFeatured      Boolean  @default(false)
-  isNewArrival    Boolean  @default(false)
+    isFeatured      Boolean  @default(false)
+    isNewArrival    Boolean  @default(false)
+    isTrending      Boolean  @default(false)
   warranty        String?
   weight          Float?
   dimensions      String?
@@ -904,7 +905,8 @@ model Product {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, slug])
-  @@index([tenantId, sku])
+    @@index([tenantId, sku])
+    @@index([tenantId, isTrending])
   @@unique([tenantId, slug])
   @@unique([tenantId, sku])
 }

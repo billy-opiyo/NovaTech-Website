@@ -68,6 +68,10 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 		where.isNewArrival = true
 	}
 
+	if (params.get("trending") === "true") {
+		where.isTrending = true
+	}
+
 	let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: "desc" }
 	const sortBy = params.get("sortBy")
 	switch (sortBy) {
@@ -227,6 +231,7 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 			categoryId: data.categoryId,
 			isFeatured: data.isFeatured || false,
 			isNewArrival: data.isNewArrival || false,
+			isTrending: data.isTrending || false,
 			variants: data.variants
 				? {
 						create: data.variants.map((v) => ({
@@ -248,7 +253,7 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 }
 
 export async function updateProduct(slug: string, data: ProductUpdateInput, tenantId: string) {
-	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "categoryId"]
+	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "isTrending", "categoryId"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)

@@ -30,51 +30,52 @@ import {
 	ClipboardList,
 	ClipboardCheck,
 	LoaderCircle,
+	Home,
 } from "lucide-react"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
-import { getStoreHomeHref } from "@/lib/store-home"
+import { getStoreHomeHref, getStoreRouteHref } from "@/lib/store-home"
 
-const sidebarLinks = (basePath: string) => [
+const sidebarLinks = (basePath: string, store: ReturnType<typeof useStoreContext>) => [
 	{
 		section: "Main",
 		items: [
-			{ icon: LayoutDashboard, label: "Dashboard", href: `${basePath}/dashboard` },
-			{ icon: BarChart3, label: "Analytics", href: `${basePath}/analytics` },
+			{ icon: LayoutDashboard, label: "Dashboard", href: getStoreRouteHref(store, `${basePath}/dashboard`), activeHref: `${basePath}/dashboard` },
+			{ icon: BarChart3, label: "Analytics", href: getStoreRouteHref(store, `${basePath}/analytics`), activeHref: `${basePath}/analytics` },
 		],
 	},
 	{
 		section: "Management",
 		items: [
-			{ icon: Package, label: "Products", href: `${basePath}/products` },
-			{ icon: Download, label: "Catalog import/export", href: `${basePath}/catalog` },
-			{ icon: ClipboardList, label: "Enquiries & quotes", href: `${basePath}/enquiries` },
-			{ icon: ShoppingCart, label: "Orders", href: `${basePath}/orders` },
-		{ icon: Users, label: "Customers", href: `${basePath}/customers` },
-			{ icon: UsersRound, label: "Team access", href: `${basePath}/team` },
-			{ icon: Star, label: "Reviews", href: `${basePath}/reviews` },
-			{ icon: Truck, label: "Deliveries", href: `${basePath}/deliveries` },
+			{ icon: Package, label: "Products", href: getStoreRouteHref(store, `${basePath}/products`), activeHref: `${basePath}/products` },
+			{ icon: Download, label: "Catalog import/export", href: getStoreRouteHref(store, `${basePath}/catalog`), activeHref: `${basePath}/catalog` },
+			{ icon: ClipboardList, label: "Enquiries & quotes", href: getStoreRouteHref(store, `${basePath}/enquiries`), activeHref: `${basePath}/enquiries` },
+			{ icon: ShoppingCart, label: "Orders", href: getStoreRouteHref(store, `${basePath}/orders`), activeHref: `${basePath}/orders` },
+			{ icon: Users, label: "Customers", href: getStoreRouteHref(store, `${basePath}/customers`), activeHref: `${basePath}/customers` },
+			{ icon: UsersRound, label: "Team access", href: getStoreRouteHref(store, `${basePath}/team`), activeHref: `${basePath}/team` },
+			{ icon: Star, label: "Reviews", href: getStoreRouteHref(store, `${basePath}/reviews`), activeHref: `${basePath}/reviews` },
+			{ icon: Truck, label: "Deliveries", href: getStoreRouteHref(store, `${basePath}/deliveries`), activeHref: `${basePath}/deliveries` },
 		],
 	},
 	{
 		section: "Support",
 		items: [
-			{ icon: Ticket, label: "Support Tickets", href: `${basePath}/support` },
-			{ icon: MessageSquare, label: "Messages", href: `${basePath}/messages` },
+			{ icon: Ticket, label: "Support Tickets", href: getStoreRouteHref(store, `${basePath}/support`), activeHref: `${basePath}/support` },
+			{ icon: MessageSquare, label: "Messages", href: getStoreRouteHref(store, `${basePath}/messages`), activeHref: `${basePath}/messages` },
 		],
 	},
 	{
 		section: "System",
 		items: [
-		{ icon: Settings, label: "Settings", href: `${basePath}/settings` },
-			{ icon: Palette, label: "Store design", href: `${basePath}/design` },
-		{ icon: Globe2, label: "Domains", href: `${basePath}/domains` },
-			{ icon: ClipboardCheck, label: "Launch readiness", href: `${basePath}/readiness` },
-			{ icon: CreditCard, label: "Subscription", href: `${basePath}/billing` },
-			{ icon: ShieldCheck, label: "Verification", href: `${basePath}/verification` },
-			{ icon: Download, label: "Data export", href: `${basePath}/data-export` },
-			{ icon: Shield, label: "Security", href: `${basePath}/security` },
-			{ icon: Activity, label: "Activity Log", href: `${basePath}/activity` },
+			{ icon: Settings, label: "Settings", href: getStoreRouteHref(store, `${basePath}/settings`), activeHref: `${basePath}/settings` },
+			{ icon: Palette, label: "Store design", href: getStoreRouteHref(store, `${basePath}/design`), activeHref: `${basePath}/design` },
+			{ icon: Globe2, label: "Domains", href: getStoreRouteHref(store, `${basePath}/domains`), activeHref: `${basePath}/domains` },
+			{ icon: ClipboardCheck, label: "Launch readiness", href: getStoreRouteHref(store, `${basePath}/readiness`), activeHref: `${basePath}/readiness` },
+			{ icon: CreditCard, label: "Subscription", href: getStoreRouteHref(store, `${basePath}/billing`), activeHref: `${basePath}/billing` },
+			{ icon: ShieldCheck, label: "Verification", href: getStoreRouteHref(store, `${basePath}/verification`), activeHref: `${basePath}/verification` },
+			{ icon: Download, label: "Data export", href: getStoreRouteHref(store, `${basePath}/data-export`), activeHref: `${basePath}/data-export` },
+			{ icon: Shield, label: "Security", href: getStoreRouteHref(store, `${basePath}/security`), activeHref: `${basePath}/security` },
+			{ icon: Activity, label: "Activity Log", href: getStoreRouteHref(store, `${basePath}/activity`), activeHref: `${basePath}/activity` },
 		],
 	},
 ]
@@ -85,7 +86,7 @@ export default function AdminLayout({
 	children: React.ReactNode
 }) {
 	const pathname = usePathname()
-	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
+	const basePath = pathname.includes("/manage") ? "/manage" : "/admin"
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
@@ -180,6 +181,7 @@ function SidebarContent({
 	onClose?: () => void
 }) {
 	const store = useStoreContext()
+	const activePathname = pathname.includes(basePath) ? pathname.slice(pathname.indexOf(basePath)) : pathname
 	const [signingOut, setSigningOut] = useState(false)
 
 	async function handleSignOut() {
@@ -194,7 +196,7 @@ function SidebarContent({
 	return (
 		<div className="flex flex-col h-full">
 			<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-				<Link href={`${basePath}/dashboard`} className="flex items-center gap-3">
+				<Link href={getStoreRouteHref(store, `${basePath}/dashboard`)} className="flex items-center gap-3">
 					<Zap className="text-primary flex-shrink-0" size={28} />
 					{!collapsed && (
 						<span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -205,7 +207,18 @@ function SidebarContent({
 			</div>
 
 			<nav className="flex-1 overflow-y-auto p-4">
-					{sidebarLinks(basePath).map((section) => (
+				<div className="mb-6">
+					<Link
+						href={getStoreHomeHref(store)}
+						onClick={onClose}
+						title={`${store.brand.name || store.storeSlug} Home`}
+						className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-gray-600 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+					>
+						<Home size={20} className="flex-shrink-0" />
+						{!collapsed && <span className="text-sm font-medium">{store.brand.name || store.storeSlug} Home</span>}
+					</Link>
+				</div>
+				{sidebarLinks(basePath, store).map((section) => (
 					<div key={section.section} className="mb-6">
 						{!collapsed && (
 							<p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
@@ -214,7 +227,7 @@ function SidebarContent({
 						)}
 						<div className="space-y-1">
 							{section.items.map((item) => {
-								const isActive = pathname === item.href
+								const isActive = activePathname === item.activeHref
 								return (
 									<Link
 										key={item.href}

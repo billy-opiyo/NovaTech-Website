@@ -48,6 +48,7 @@ interface FilterState {
 	sortBy: "price-asc" | "price-desc" | "newest" | "rating"
 	inStock: boolean
 	onSale: boolean
+	trending: boolean
 }
 
 const brands = [
@@ -91,6 +92,7 @@ export default function ProductsClient() {
 		sortBy: initialSort === "rating" ? "rating" : initialSort === "price-asc" || initialSort === "price-desc" ? initialSort : "newest",
 		inStock: false,
 		onSale: false,
+		trending: searchParams.get("trending") === "true",
 	})
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 	const [isLoading, setIsLoading] = useState(false)
@@ -101,7 +103,7 @@ export default function ProductsClient() {
 		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
 		setSearchQuery(nextSearch)
-		setFilters((current) => ({ ...current, category: searchParams.get("category") || "", sortBy: nextSortBy }))
+		setFilters((current) => ({ ...current, category: searchParams.get("category") || "", sortBy: nextSortBy, trending: searchParams.get("trending") === "true" }))
 	}, [searchParamsKey])
 
 	const applyFilters = useCallback(() => {
@@ -114,6 +116,7 @@ export default function ProductsClient() {
 			maxPrice: filters.priceRange[1] < 200000 ? filters.priceRange[1] : undefined,
 			inStock: filters.inStock ? "true" : undefined,
 			onSale: filters.onSale ? "true" : undefined,
+			trending: filters.trending ? true : undefined,
 			sortBy: filters.sortBy,
 			limit: 100,
 		})
@@ -156,6 +159,7 @@ export default function ProductsClient() {
 			sortBy: "newest",
 			inStock: false,
 			onSale: false,
+			trending: false,
 		})
 		setSearchQuery("")
 	}
@@ -165,6 +169,7 @@ export default function ProductsClient() {
 		(filters.category ? 1 : 0) +
 		(filters.inStock ? 1 : 0) +
 		(filters.onSale ? 1 : 0) +
+		(filters.trending ? 1 : 0) +
 		(filters.priceRange[0] > 0 || filters.priceRange[1] < 200000 ? 1 : 0)
 
 	return (
