@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { FaFacebookF, FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa"
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 import { clientConfig } from "@/config/client.config"
 import { isVercelProjectHostname } from "@/lib/platform-store-route"
@@ -31,11 +31,29 @@ const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
 		color: "bg-black hover:bg-neutral-800",
 	},
 	{
+		label: "LinkedIn",
+		href: store.social.linkedin,
+		icon: FaLinkedinIn,
+		color: "bg-sky-700 hover:bg-sky-800",
+	},
+	{
+		label: "YouTube",
+		href: store.social.youtube,
+		icon: FaYoutube,
+		color: "bg-red-600 hover:bg-red-700",
+	},
+	{
+		label: "X",
+		href: store.social.x,
+		icon: FaTwitter,
+		color: "bg-black hover:bg-neutral-800",
+	},
+	...((store.features.showWhatsAppContact as boolean) === false ? [] : [{
 		label: "WhatsApp",
 		href: getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage),
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
-	},
+	}]),
 ].filter((link) => Boolean(link.href))
 
 const shopperServiceLinks = [
@@ -96,7 +114,7 @@ export default function Footer() {
 				<div className="mx-auto max-w-xs lg:mx-0">
 					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						{store.brand.tagline}. Discover independent stores and contact merchants directly.
+						{store.isPlatformHome && store.site.footerDescription ? store.site.footerDescription : `${store.brand.tagline}. Discover independent stores and contact merchants directly.`}
 					</p>
 				</div>
 
@@ -131,9 +149,10 @@ export default function Footer() {
 				</div>
 
 				<div className="mx-auto lg:mx-0">
-					<h4 className="font-semibold mb-3">Stay Connected</h4>
-					<div className="flex justify-center gap-3 lg:justify-start">
-						{socialLinks(store).map(({ label, href, icon: Icon, color }) => (
+					{(store.features.showSocialLinks as boolean) !== false && <>
+						<h4 className="font-semibold mb-3">Stay Connected</h4>
+						<div className="flex justify-center gap-3 lg:justify-start">
+							{socialLinks(store).map(({ label, href, icon: Icon, color }) => (
 							<Link
 								key={label}
 								href={href}
@@ -144,8 +163,9 @@ export default function Footer() {
 							>
 								<Icon size={24} />
 							</Link>
-						))}
-					</div>
+							))}
+						</div>
+					</>}
 					<p className="text-xs mt-4 text-gray-500">
 						© {year} {store.brand.name}. All rights reserved.
 					</p>

@@ -11,7 +11,7 @@ export default function FloatingActions() {
 	const pathname = usePathname()
 	const store = useStoreContext()
 	const [showToTop, setShowToTop] = useState(false)
-	const isAdminPage = pathname.startsWith("/admin")
+	const isControlPlanePage = pathname.startsWith("/admin") || pathname.startsWith("/manage") || pathname.startsWith("/platform")
 	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage)
 
 	useEffect(() => {
@@ -30,7 +30,7 @@ export default function FloatingActions() {
 
 	return (
 		<>
-			{!isAdminPage && store.features.showWhatsAppButton && whatsappHref && <Link
+			{!isControlPlanePage && store.features.showWhatsAppButton && whatsappHref && <Link
 				href={whatsappHref}
 				target="_blank"
 				rel="noreferrer"

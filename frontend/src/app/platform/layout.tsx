@@ -18,7 +18,10 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 					<Link href="/platform">Overview</Link>
 					<Link href="/platform/operations">Operations</Link>
 					<Link href="/platform/billing">Billing</Link>
-					{session.user.role === "SUPERADMIN" && <Link href="/platform/access">Platform access</Link>}
+					{session.user.role === "SUPERADMIN" && <>
+						<Link href="/platform/access">Platform access</Link>
+						<Link href="/platform/settings">Site settings</Link>
+					</>}
 				</nav>
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>

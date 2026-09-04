@@ -3,10 +3,23 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { clientConfig } from "@/config/client.config"
+import { platformSiteSettingsPatchSchema } from "backend/validators/platformSiteSettingsValidator"
 import type { StoreContext } from "./store-context.types"
+import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
 import { isVercelProjectHostname } from "./platform-store-route"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+
+async function getPublishedPlatformSettings(): Promise<PlatformSiteSettings> {
+	try {
+		const settings = await prisma.platformSiteSettings.findUnique({ where: { id: "platform" }, select: { publishedSettings: true } })
+		const parsed = platformSiteSettingsPatchSchema.safeParse(settings?.publishedSettings ?? {})
+		return parsed.success ? parsed.data : {}
+	} catch (error) {
+		console.error("Platform site settings unavailable; using configured defaults", error)
+		return {}
+	}
+}
 
 function isLocalPreviewHost(value: string | null): boolean {
 	if (!value) return false
@@ -29,7 +42,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		// Platform discovery is independent of any merchant domain mapping. Keep
 		// the root host on platform defaults; the homepage loads its store
 		// directory separately and never inherits a merchant storefront context.
-		return fallbackStoreContext(true)
+		return fallbackStoreContext(true, await getPublishedPlatformSettings())
 	}
 
 	try {
@@ -105,9 +118,21 @@ export async function getStoreContext(): Promise<StoreContext> {
 	}
 }
 
-export function fallbackStoreContext(isPlatformHome = false): StoreContext {
+export function fallbackStoreContext(isPlatformHome = false, platformSettings: PlatformSiteSettings = {}): StoreContext {
+	const mergedPlatformSettings = mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), platformSettings)
+	const platformContact = { ...clientConfig.contact, ...mergedPlatformSettings.contact }
+	const platformPhone = platformContact.phoneDisplay || clientConfig.contact.phoneDisplay
+	const platformEmail = platformContact.email || clientConfig.contact.email
 	return {
 		...clientConfig,
+		...(isPlatformHome ? {
+			brand: { ...clientConfig.brand, ...mergedPlatformSettings.brand },
+			site: { ...clientConfig.site, ...mergedPlatformSettings.site },
+			contact: { ...platformContact, phoneDisplay: platformPhone, phoneHref: `tel:${platformPhone.replace(/[^\d+]/g, "")}`, email: platformEmail, emailHref: `mailto:${platformEmail}` },
+			social: { ...clientConfig.social, ...mergedPlatformSettings.social },
+			seo: { ...clientConfig.seo, ...mergedPlatformSettings.seo },
+			features: { ...clientConfig.features, ...mergedPlatformSettings.features },
+		} : {}),
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",
