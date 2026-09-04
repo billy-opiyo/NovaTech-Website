@@ -13,6 +13,9 @@ import type { ProductRecommendation } from "backend/services/recommendation.serv
 
 export default function MerchantHomePage({ featuredProducts }: { featuredProducts: ProductRecommendation[] }) {
 	const store = useStoreContext()
+	const hasPhone = Boolean(store.contact.phoneDisplay && store.contact.phoneHref)
+	const hasEmail = Boolean(store.contact.email && store.contact.emailHref)
+	const hasLocation = Boolean(store.contact.addressLine || store.contact.cityCountry || store.contact.mapEmbedUrl || store.contact.mapLink)
 	return (
 		<div className="space-y-24">
 			<HeroBanner />
@@ -26,20 +29,20 @@ export default function MerchantHomePage({ featuredProducts }: { featuredProduct
 						<div>
 							<h2 className="mb-6 text-2xl font-bold">Get in Touch</h2>
 							<div className="mb-8 space-y-4">
-								<div className="flex items-start gap-3"><Phone className="mt-1 text-primary" size={20} /><div><p className="font-medium">Call Us</p><p className="text-gray-600">{store.contact.businessHours}</p><a href={store.contact.phoneHref} className="text-primary transition-colors hover:underline">{store.contact.phoneDisplay}</a></div></div>
-								<div className="flex items-start gap-3"><Mail className="mt-1 text-primary" size={20} /><div><p className="font-medium">Email Us</p><p className="text-gray-600">{store.contact.responseTime}</p><a href={store.contact.emailHref} className="text-primary transition-colors hover:underline">{store.contact.email}</a></div></div>
+								{hasPhone && <div className="flex items-start gap-3"><Phone className="mt-1 text-primary" size={20} /><div><p className="font-medium">Call Us</p>{store.contact.businessHours && <p className="text-gray-600">{store.contact.businessHours}</p>}<a href={store.contact.phoneHref} className="text-primary transition-colors hover:underline">{store.contact.phoneDisplay}</a></div></div>}
+								{hasEmail && <div className="flex items-start gap-3"><Mail className="mt-1 text-primary" size={20} /><div><p className="font-medium">Email Us</p>{store.contact.responseTime && <p className="text-gray-600">{store.contact.responseTime}</p>}<a href={store.contact.emailHref} className="text-primary transition-colors hover:underline">{store.contact.email}</a></div></div>}
 							</div>
-							<div><h3 className="mb-3 font-semibold">Location</h3><div className="flex items-start gap-3"><MapPin className="mt-1 text-primary" size={20} /><div><p className="font-medium">Visit Our Store</p><p className="text-gray-600">{store.contact.addressLine}</p><p className="text-primary">{store.contact.cityCountry}</p></div></div></div>
+							{hasLocation && <div><h3 className="mb-3 font-semibold">Location</h3><div className="flex items-start gap-3"><MapPin className="mt-1 text-primary" size={20} /><div><p className="font-medium">Visit Our Store</p>{store.contact.addressLine && <p className="text-gray-600">{store.contact.addressLine}</p>}{store.contact.cityCountry && <p className="text-primary">{store.contact.cityCountry}</p>}</div></div></div>}
 							<div className="mt-6"><h3 className="mb-3 font-semibold">Quick Links</h3><div className="flex flex-col gap-3"><Link href={getStoreRouteHref(store, "/contact")} className="text-primary transition-colors hover:underline">Contact Form</Link><Link href={getStoreRouteHref(store, "/products?category=phones")} className="text-primary transition-colors hover:underline">View Products</Link></div></div>
 						</div>
 						<div className="space-y-6"><h2 className="text-2xl font-bold">Send Us a Message</h2><Link href={getStoreRouteHref(store, "/contact")} className="btn-primary flex w-full items-center justify-center gap-2 py-3"><Send size={18} /> Message Us</Link></div>
 					</div>
 				</div>
 
-				<div className="glass-card overflow-hidden p-0">
-					<div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between md:p-8"><div className="flex items-start gap-3"><MapPin className="mt-1 shrink-0 text-primary" size={22} /><div><h2 className="text-2xl font-bold">Visit Us</h2><p className="mt-1 text-gray-600">{store.contact.addressLine}</p><p className="text-primary">{store.contact.cityCountry}</p></div></div><a href={store.contact.mapLink} target="_blank" rel="noreferrer" className="text-primary hover:underline">Open in Google Maps</a></div>
-					<div className="home-map-viewport h-72 w-full sm:h-80"><iframe src={store.contact.mapEmbedUrl} title={`${store.brand.name} location on Google Maps`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="home-map-frame h-full w-full border-0" /></div>
-				</div>
+				{hasLocation && <div className="glass-card overflow-hidden p-0">
+					<div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between md:p-8"><div className="flex items-start gap-3"><MapPin className="mt-1 shrink-0 text-primary" size={22} /><div><h2 className="text-2xl font-bold">Visit Us</h2>{store.contact.addressLine && <p className="mt-1 text-gray-600">{store.contact.addressLine}</p>}{store.contact.cityCountry && <p className="text-primary">{store.contact.cityCountry}</p>}</div></div>{store.contact.mapLink && <a href={store.contact.mapLink} target="_blank" rel="noreferrer" className="text-primary hover:underline">Open in Google Maps</a>}</div>
+					{store.contact.mapEmbedUrl && <div className="home-map-viewport h-72 w-full sm:h-80"><iframe src={store.contact.mapEmbedUrl} title={`${store.brand.name} location on Google Maps`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="home-map-frame h-full w-full border-0" /></div>}
+				</div>}
 			</div>
 		</div>
 	)
