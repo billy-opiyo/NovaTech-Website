@@ -31,6 +31,8 @@ export default function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
+	const logoSource = theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo
+	const isRemoteLogo = logoSource.startsWith("https://")
 	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
 	const accountName = session?.user?.name || session?.user?.email || "Account"
@@ -42,13 +44,7 @@ export default function Header() {
 					{/* Logo */}
 					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-							<Image
-										src={theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo}
-										alt={store.brand.logoAlt}
-								fill
-								sizes="(max-width: 640px) 40px, 44px"
-								className="object-contain"
-							/>
+									{isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />}
 						</div>
 						<span
 							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}

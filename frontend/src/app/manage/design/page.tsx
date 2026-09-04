@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast"
 
 type Draft = {
 	name?: string
+	logoUrl?: string
 	themePreset?: string
 	seo?: { description?: string }
 	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string }
@@ -54,6 +55,7 @@ export default function StoreDesignPage() {
 					const savedDraft = store.draftSettings || {}
 					setDraft({
 						name: store.name,
+						logoUrl: store.logoUrl || "",
 						themePreset: store.themeSettings?.preset,
 						...savedDraft,
 						seo: { ...store.seoSettings, ...savedDraft.seo },
@@ -168,6 +170,7 @@ export default function StoreDesignPage() {
 				<section className="glass-card space-y-5 p-6">
 					{localPreview && <p className="rounded-lg border border-amber-300/50 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Local preview mode: changes are stored only in this browser until database access is restored.</p>}
 					<label className="block"><span className="text-sm font-medium">Store name</span><input value={draft.name || ""} onChange={(event) => updateDraft({ name: event.target.value })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<label className="block"><span className="text-sm font-medium">Store logo URL or app path</span><input type="text" value={draft.logoUrl || ""} onChange={(event) => updateDraft({ logoUrl: event.target.value })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="/images/your-logo.png or https://..." /><span className="mt-1 block text-xs text-gray-500">Use an HTTPS image URL or an app-relative path. It applies only to this storefront after publishing.</span></label>
 					<div>
 						<p className="text-sm font-medium">Theme preset</p>
 						<div className="mt-2 grid gap-2 sm:grid-cols-2">{Object.values(THEME_PRESETS).map((item) => <button type="button" key={item.id} onClick={() => updateDraft({ themePreset: item.id })} className={`rounded-lg border p-3 text-left ${draft.themePreset === item.id ? "border-primary ring-2 ring-primary/20" : ""}`}><span className="font-medium">{item.name}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></button>)}</div>

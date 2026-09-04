@@ -13,6 +13,7 @@ export interface ProductRecommendation {
 	rating: number
 	reviewCount: number
 	stock: number
+	hasVariants?: boolean
 	reason?: string
 }
 
@@ -559,5 +560,6 @@ function formatProduct(product: {
 		stock: product.variants?.length
 			? Math.max(0, ...product.variants.map((variant) => variant.stock))
 			: product.stock,
+		hasVariants: Boolean(product.variants?.length),
 	}
 }
