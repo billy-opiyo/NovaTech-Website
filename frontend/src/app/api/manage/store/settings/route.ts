@@ -19,7 +19,7 @@ export async function GET() {
 	try {
 		const access = await storeAccess()
 		if ("response" in access) return access.response
-		const store = await prisma.store.findFirst({ where: { id: access.context.storeId, tenantId: access.context.tenantId }, select: { id: true, tenantId: true, name: true, slug: true, publicationStatus: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, draftSettings: true } })
+		const store = await prisma.store.findFirst({ where: { id: access.context.storeId, tenantId: access.context.tenantId }, select: { id: true, tenantId: true, name: true, logoUrl: true, slug: true, publicationStatus: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, draftSettings: true } })
 		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
 		const versions = await prisma.storeSettingsVersion.findMany({ where: { tenantId: access.context.tenantId, storeId: access.context.storeId }, select: { version: true, publishedAt: true, publishedBy: true, createdAt: true }, orderBy: { version: "desc" }, take: 20 })
 		return NextResponse.json({ store, versions })

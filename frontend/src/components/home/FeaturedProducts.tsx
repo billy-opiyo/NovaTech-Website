@@ -7,8 +7,11 @@ import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import ProductActions from "@/components/product/ProductActions"
+import type { ProductRecommendation } from "backend/services/recommendation.service"
 
-export default function FeaturedProducts() {
+export default function FeaturedProducts({ products }: { products: ProductRecommendation[] }) {
 	const store = useStoreContext()
 	return (
 		<section>
@@ -22,7 +25,7 @@ export default function FeaturedProducts() {
 				</Link>
 			</div>
 			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-				{store.homepage.featuredProducts.map((product, i) => (
+				{products.length === 0 ? <p className="glass-card p-6 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">No featured products yet. Products marked as featured by the merchant will appear here.</p> : products.map((product, i) => (
 					<motion.div
 						key={product.id}
 						initial={{ opacity: 0, scale: 0.9 }}
@@ -30,10 +33,11 @@ export default function FeaturedProducts() {
 						viewport={{ once: true }}
 						transition={{ delay: i * 0.1 }}
 					>
-						<Link href={getStoreRouteHref(store, `/products/${product.id}`)} className="glass-card navy-glass block group">
+						<article className="glass-card navy-glass relative block overflow-hidden">
+						<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group block pb-28">
 							<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden">
 								<Image
-									src={getProductImage(product.image, product.name)}
+									src={getProductImage(product.images[0], product.name)}
 									alt={product.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -61,6 +65,10 @@ export default function FeaturedProducts() {
 								)}
 							</div>
 						</Link>
+						<div className="absolute inset-x-3 bottom-3">
+							<ProductActions productId={product.id} name={product.name} brand={product.brand} image={product.images[0]} price={product.discountedPrice ?? product.price} stock={product.stock} slug={product.slug} hasVariants={product.hasVariants} merchantHref={getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })} />
+						</div>
+						</article>
 					</motion.div>
 				))}
 			</div>

@@ -21,6 +21,7 @@ import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getProductImage } from "@/constants/productImages"
+import ProductActions from "@/components/product/ProductActions"
 
 // Types
 interface Product {
@@ -632,7 +633,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 			<article className="glass-card relative block h-full overflow-hidden">
 				<Link
 					href={getStoreRouteHref(store, `/products/${product.slug}`)}
-					className="group block pb-14"
+					className="group block pb-24"
 				>
 					<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 					<Image
@@ -701,16 +702,8 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 					)}
 					</div>
 					</Link>
-				<div className="absolute bottom-3 left-3 right-3 flex items-center justify-center">
-					<a
-						href={merchantHref}
-						target="_blank"
-						rel="noreferrer"
-						className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"
-						aria-label="Order on WhatsApp"
-					>
-						Order on WhatsApp
-					</a>
+				<div className="absolute bottom-3 left-3 right-3">
+					<ProductActions productId={product.id} name={product.name} brand={product.brand} image={product.images[0]} price={product.discountedPrice ?? product.price} stock={product.availableStock} slug={product.slug} hasVariants={Boolean(product.variants?.length)} merchantHref={merchantHref} />
 				</div>
 			</article>
 		</motion.div>
@@ -735,7 +728,7 @@ function ProductListItem({
 			<article className="glass-card relative overflow-hidden">
 				<Link
 					href={getStoreRouteHref(store, `/products/${product.slug}`)}
-					className="flex gap-6 pb-14 group"
+					className="flex flex-col gap-4 pb-24 group sm:flex-row sm:gap-6"
 				>
 					<div className="relative h-40 w-40 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 					<Image
@@ -795,16 +788,8 @@ function ProductListItem({
 					</div>
 					</div>
 					</Link>
-					<div className="absolute bottom-2 left-2 right-2 flex items-center justify-center">
-						<a
-							href={merchantHref}
-							target="_blank"
-							rel="noreferrer"
-							className="flex items-center justify-center w-full h-10 rounded-lg bg-[#1e8e3e] text-white text-sm font-medium hover:bg-[#25D366] transition-colors"
-							aria-label="Order on WhatsApp"
-						>
-							Order on WhatsApp
-						</a>
+					<div className="absolute bottom-2 left-2 right-2">
+						<ProductActions productId={product.id} name={product.name} brand={product.brand} image={product.images[0]} price={product.discountedPrice ?? product.price} stock={product.availableStock} slug={product.slug} hasVariants={Boolean(product.variants?.length)} merchantHref={merchantHref} />
 					</div>
 			</article>
 		</motion.div>

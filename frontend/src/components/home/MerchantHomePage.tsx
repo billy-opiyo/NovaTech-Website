@@ -9,14 +9,15 @@ import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import type { ProductRecommendation } from "backend/services/recommendation.service"
 
-export default function MerchantHomePage() {
+export default function MerchantHomePage({ featuredProducts }: { featuredProducts: ProductRecommendation[] }) {
 	const store = useStoreContext()
 	return (
 		<div className="space-y-24">
 			<HeroBanner />
 			<CategoryGrid />
-			<FeaturedProducts />
+			<FeaturedProducts products={featuredProducts} />
 			<Testimonials />
 			{store.features.showNewsletter && <Newsletter />}
 			<div className="mb-16 space-y-8">

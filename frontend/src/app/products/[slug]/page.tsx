@@ -1,17 +1,20 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { AlertCircle, ChevronLeft, ChevronRight, MessageCircle, Minus, Plus, Star } from "lucide-react"
+import { useParams, usePathname, useRouter } from "next/navigation"
+import { AlertCircle, ChevronLeft, ChevronRight, Heart, LoaderCircle, MessageCircle, Minus, Plus, ShoppingCart, Star } from "lucide-react"
+import { useSession } from "next-auth/react"
 import { getProductImage } from "@/constants/productImages"
 import NotFoundState from "@/components/content/NotFoundState"
 import Recommendations from "@/components/product/Recommendations"
 import ProductReviewForm from "@/components/product/ProductReviewForm"
+import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { useToast } from "@/components/ui/Toast"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -46,11 +49,18 @@ type Product = {
 export default function ProductDetailPage() {
 	const { slug } = useParams<{ slug: string }>()
 	const store = useStoreContext()
+	const { data: session } = useSession()
+	const { addItem } = useCart()
+	const { addToast } = useToast()
+	const router = useRouter()
+	const pathname = usePathname()
 	const [product, setProduct] = useState<Product | null>(null)
 	const [error, setError] = useState("")
 	const [selectedImage, setSelectedImage] = useState(0)
 	const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
 	const [quantity, setQuantity] = useState(1)
+	const [isInWishlist, setIsInWishlist] = useState(false)
+	const [wishlistBusy, setWishlistBusy] = useState(false)
 
 	useEffect(() => {
 		if (!slug) return
@@ -63,6 +73,18 @@ export default function ProductDetailPage() {
 			.then((data) => setProduct(data))
 			.catch((reason) => setError(reason.message || "Unable to load product"))
 	}, [slug])
+
+	useEffect(() => {
+		if (!session?.user?.id || !product?.id) return
+		let cancelled = false
+		fetch("/api/wishlist", { cache: "no-store" })
+			.then((response) => response.ok ? response.json() : [])
+			.then((items: { productId: string }[]) => {
+				if (!cancelled) setIsInWishlist(items.some((item) => item.productId === product.id))
+			})
+			.catch(() => undefined)
+		return () => { cancelled = true }
+	}, [product?.id, session?.user?.id])
 
 	if (error) return <NotFoundState title="Product not found" description="We could not find that product. It may have been removed or the link may be out of date." />
 	if (!product) return <div className="mx-auto max-w-7xl py-20 text-center text-gray-500">Loading product…</div>
@@ -83,6 +105,38 @@ export default function ProductDetailPage() {
 		.reduce((stock, variant) => Math.min(stock, variant.stock), product.variants.length > 0 && !hasCompleteVariantSelection ? 0 : product.stock)
 
 	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: loadedProduct.name, quantity, variant: Object.values(selectedVariants).join(" / ") || undefined, price: currentPrice }] })
+
+	function addToCart() {
+		if (loadedProduct.variants.length > 0 && !hasCompleteVariantSelection) {
+			addToast("Select the product options first.", "error")
+			return
+		}
+		if (selectedStock < 1) {
+			addToast("This product is currently out of stock.", "error")
+			return
+		}
+		addItem({ productId: loadedProduct.id, name: loadedProduct.name, brand: loadedProduct.brand, image: getProductImage(loadedProduct.images[0], loadedProduct.name), price: currentPrice, quantity, maxStock: selectedStock, slug: loadedProduct.slug, variant: Object.values(selectedVariants).join(" / ") || undefined })
+		addToast(`${loadedProduct.name} added to cart.`, "success")
+	}
+
+	async function toggleWishlist() {
+		if (!session?.user) {
+			router.push(getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(pathname || getStoreRouteHref(store, `/products/${loadedProduct.slug}`))}`))
+			return
+		}
+		setWishlistBusy(true)
+		try {
+			const response = await fetch("/api/wishlist", { method: isInWishlist ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: loadedProduct.id }) })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to update wishlist")
+			setIsInWishlist((current) => !current)
+			addToast(isInWishlist ? "Removed from wishlist." : "Added to wishlist.", "success")
+		} catch (reason) {
+			addToast(reason instanceof Error ? reason.message : "Unable to update wishlist", "error")
+		} finally {
+			setWishlistBusy(false)
+		}
+	}
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-10 py-6">
@@ -116,7 +170,7 @@ export default function ProductDetailPage() {
 
 					{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} disabled={variant.stock < 1} onClick={() => setSelectedVariants({ ...selectedVariants, [name]: variant.value })} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}
 
-					<div className="flex items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><a href={merchantOrderHref} target="_blank" rel="noreferrer" aria-disabled={selectedStock < 1} className={`btn-primary flex flex-1 items-center justify-center gap-2 ${selectedStock < 1 ? "pointer-events-none opacity-50" : ""}`}><MessageCircle size={18} />{product.variants.length > 0 && !hasCompleteVariantSelection ? "Select options" : "Contact seller"}</a></div>
+					<div className="flex flex-wrap items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button type="button" onClick={addToCart} disabled={selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection)} className="btn-primary inline-flex flex-1 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"><ShoppingCart size={18} />{product.variants.length > 0 && !hasCompleteVariantSelection ? "Select options" : "Add to cart"}</button><button type="button" onClick={() => void toggleWishlist()} disabled={wishlistBusy} aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} className="inline-flex items-center justify-center rounded-lg border p-3 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"><LoaderCircle size={18} className={wishlistBusy ? "animate-spin" : "hidden"} aria-hidden="true" /><Heart size={18} className={`${wishlistBusy ? "hidden" : ""} ${isInWishlist ? "fill-current" : ""}`} aria-hidden="true" /></button><a href={merchantOrderHref} target="_blank" rel="noreferrer" aria-disabled={selectedStock < 1} className={`inline-flex items-center justify-center gap-2 rounded-lg bg-[#1e8e3e] px-4 py-3 font-semibold text-white transition hover:bg-[#25D366] ${selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection) ? "pointer-events-none opacity-50" : ""}`}><MessageCircle size={18} />Order via WhatsApp</a></div>
 					<p className="text-xs text-gray-500">Nurava Tech connects you with this independent store. The merchant confirms availability, delivery, payment, refunds, and warranty directly.</p>
 					<p className="text-gray-600 dark:text-gray-300">{product.description}</p>
 				</div>
