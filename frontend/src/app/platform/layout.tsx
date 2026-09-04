@@ -8,8 +8,8 @@ export const metadata = {
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
 	const session = await requirePlatformSession()
 	return (
-		<div className="min-h-screen bg-gray-50 p-6 text-gray-900 dark:bg-dark-bg dark:text-white">
-			<header className="mx-auto mb-8 flex max-w-6xl flex-wrap items-center justify-between gap-4">
+		<div className="min-h-screen bg-gray-50 p-3 text-gray-900 sm:p-4 lg:p-6 dark:bg-dark-bg dark:text-white">
+			<header className="mx-auto mb-6 flex max-w-6xl min-w-0 flex-col items-start gap-4 lg:mb-8 lg:flex-row lg:items-center lg:justify-between">
 				<div>
 					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nurava Tech platform</p>
 					<h1 className="text-2xl font-bold">Control plane</h1>
