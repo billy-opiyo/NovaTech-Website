@@ -10,6 +10,7 @@ import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
 import { useToast } from "@/components/ui/Toast"
+import { getStoreHomeHref } from "@/lib/store-home"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")
@@ -124,7 +125,7 @@ export default function SignUpPage() {
 				className="w-full max-w-md"
 			>
 				<div className={`glass-card relative p-8 ${isGate ? "max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl" : ""}`}>
-					<AuthCloseButton />
+					<AuthCloseButton fallback={getStoreHomeHref(store)} skipHistory />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
 						<p className="text-gray-500">Join {store.brand.name} for exclusive deals</p>
