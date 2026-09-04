@@ -8,6 +8,8 @@ import Link from "next/link"
 import { Mail, Lock, AlertCircle, Eye, EyeOff, LoaderCircle } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreHomeHref } from "@/lib/store-home"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")
@@ -18,6 +20,7 @@ function withLoginSuccess(url: string) {
 function SignInForm() {
 	const router = useRouter()
 	const searchParams = useSearchParams()
+	const store = useStoreContext()
 	const requestedCallbackUrl = searchParams.get("callbackUrl") || "/"
 	const callbackUrl = requestedCallbackUrl.startsWith("/") && !requestedCallbackUrl.startsWith("//") && !requestedCallbackUrl.includes("\\")
 		? requestedCallbackUrl
@@ -89,7 +92,7 @@ function SignInForm() {
 				className="w-full max-w-md"
 			>
 				<div className={`glass-card relative p-8 ${gate ? "max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl" : ""}`}>
-					<AuthCloseButton fallback="/" skipHistory label="Close sign-in dialog" />
+					<AuthCloseButton fallback={getStoreHomeHref(store)} skipHistory label="Close sign-in dialog" />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
 						<p className="text-gray-500">Sign in to your account to continue</p>
