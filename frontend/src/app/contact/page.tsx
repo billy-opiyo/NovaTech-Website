@@ -118,6 +118,8 @@ export default function ContactPage() {
 	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
 	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
+	const showContactCards = store.features.showContactCards as boolean
+	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
 	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
 	const [formData, setFormData] = useState({
 		name: "",
@@ -184,7 +186,7 @@ export default function ContactPage() {
 				</p>
 			</motion.div>
 
-			<div className="grid md:grid-cols-3 gap-6 mb-16">
+			{showContactCards !== false && <div className="grid md:grid-cols-3 gap-6 mb-16">
 				{[
 					{
 						icon: Phone,
@@ -210,7 +212,7 @@ export default function ContactPage() {
 						href: whatsappHref,
 						color: "bg-green-600",
 					},
-				].map((card, index) => (
+				].filter((card) => card.title !== "WhatsApp" || showWhatsAppContact !== false).map((card, index) => (
 					<motion.div
 						key={card.title}
 						initial={{ opacity: 0, y: 20 }}
@@ -243,7 +245,7 @@ export default function ContactPage() {
 						</a>
 					</motion.div>
 				))}
-			</div>
+			</div>}
 
 			<div className="grid lg:grid-cols-2 gap-12">
 				<motion.div
@@ -504,18 +506,18 @@ export default function ContactPage() {
 						<MapPin className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">{isPlatformHome ? "Platform Support" : "Visit Our Store"}</h3>
 						<p className="text-sm text-gray-500">
-							{isPlatformHome ? "Merchant support and platform operations" : "Kimathi Street, CBD"}
+							{isPlatformHome ? "Merchant support and platform operations" : store.contact.addressLine}
 							<br />
-							Nairobi, Kenya
+							{store.contact.cityCountry}
 						</p>
 					</div>
 					<div className="text-center">
 						<Clock className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">Business Hours</h3>
 						<p className="text-sm text-gray-500">
-							{isPlatformHome ? "Merchant support: Monday - Saturday" : "Monday - Saturday: 8AM - 6PM"}
+							{isPlatformHome ? store.contact.businessHours : store.contact.businessHours}
 							<br />
-							{isPlatformHome ? "Response within 24 hours" : "Sunday: 10AM - 4PM"}
+							{store.contact.responseTime}
 						</p>
 					</div>
 					<div className="text-center">

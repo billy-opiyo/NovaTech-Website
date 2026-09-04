@@ -20,10 +20,10 @@ import AuthSessionProvider from "@/components/providers/AuthSessionProvider"
 export async function generateMetadata(): Promise<Metadata> {
 	const store = await getStoreContext()
 	return {
-		title: { default: store.brand.name, template: `%s | ${store.brand.name}` },
+		title: { default: store.seo.title || store.brand.name, template: `%s | ${store.brand.name}` },
 		description: store.seo.description,
 		keywords: store.seo.keywords,
-		openGraph: { type: "website", locale: store.site.locale, url: store.site.url, siteName: store.brand.name, title: store.brand.name, description: store.seo.description },
+		openGraph: { type: "website", locale: store.site.locale, url: store.site.url, siteName: store.brand.name, title: store.seo.title || store.brand.name, description: store.seo.description, ...(store.seo.ogImage ? { images: [store.seo.ogImage] } : {}) },
 	}
 }
 
@@ -88,7 +88,7 @@ export default async function RootLayout({
 									<Footer />
 									{store.isPlatformHome && <PlatformMobileNav />}
 									{!store.isPlatformHome && <MobileNav />}
-									{!store.isPlatformHome && <FloatingActions />}
+									<FloatingActions />
 								</>
 							</SplashScreen>
 						</CartProvider>

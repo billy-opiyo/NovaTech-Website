@@ -19,13 +19,14 @@ export const clientConfig = {
 		language: "en",
 		country: "Kenya",
 		currency: "KES",
+		footerDescription: "A trusted technology marketplace connecting shoppers with independent Kenyan stores.",
 	},
 	contact: {
 		phoneDisplay: "+254 700 123 456",
 		phoneHref: "tel:+254700123456",
 		email: "support@nuravatech.com",
 		emailHref: "mailto:support@nuravatech.com",
-		whatsappNumber: "254700000000",
+		whatsappNumber: "254740470381",
 		whatsappMessage: "Hello Nurava Tech, I need help with my order.",
 		addressLine: "Kimathi Street, CBD",
 		cityCountry: "Nairobi, Kenya",
@@ -35,8 +36,10 @@ export const clientConfig = {
 		mapLink: "https://www.google.com/maps/search/?api=1&query=Kimathi+Street,+CBD,+Nairobi,+Kenya",
 	},
 	seo: {
+		title: "",
 		description: "Shop genuine phones, laptops, and accessories with warranty and fast delivery across Kenya.",
 		keywords: "electronics, Kenya, phones, laptops, accessories, M-Pesa, online shopping",
+		ogImage: "",
 	},
 	// Change this value to one of the IDs in theme-presets.ts for another visual system.
 	themePreset: "nova-blue-orange" as ThemePresetId,
@@ -51,6 +54,9 @@ export const clientConfig = {
 		facebook: "https://facebook.com",
 		instagram: "https://instagram.com",
 		tiktok: "https://tiktok.com",
+		linkedin: "",
+		youtube: "",
+		x: "",
 	},
 	homepage: {
 		heroTitle: "Upgrade Your Tech",
@@ -87,6 +93,9 @@ export const clientConfig = {
 	features: {
 		showSplashScreen: true,
 		showWhatsAppButton: true,
+		showWhatsAppContact: true,
+		showSocialLinks: true,
+		showContactCards: true,
 		showNewsletter: true,
 	},
 } as const

@@ -22,6 +22,10 @@ export default async function PlatformPage() {
 					<h3 className="font-semibold">Platform access</h3>
 					<p className="mt-2 text-sm text-gray-500">Invite and manage trusted platform operators.</p>
 				</Link>}
+				{session.user.role === "SUPERADMIN" && <Link href="/platform/settings" className="glass-card block p-6">
+					<h3 className="font-semibold">Platform site settings</h3>
+					<p className="mt-2 text-sm text-gray-500">Update platform branding, contact details, social links, visibility, and SEO.</p>
+				</Link>}
 			</div>
 			<p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">Live control-plane metrics are unavailable until a configured database and billing provider are connected. No placeholder tenant or revenue data is shown.</p>
 		</div>
