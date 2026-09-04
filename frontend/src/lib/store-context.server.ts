@@ -107,10 +107,16 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const cityCountry = typeof contact.cityCountry === "string" ? contact.cityCountry : merchantContactDefaults.cityCountry
 		const locationQuery = [addressLine, cityCountry].filter(Boolean).join(", ")
 		const customLocation = contact.addressLine !== undefined || contact.cityCountry !== undefined
-		const mapLink = customLocation && locationQuery
+		const configuredMapLink = typeof contact.mapLink === "string" ? contact.mapLink : null
+		const configuredMapEmbedUrl = typeof contact.mapEmbedUrl === "string" ? contact.mapEmbedUrl : null
+		const mapLink = configuredMapLink !== null
+			? configuredMapLink
+			: customLocation && locationQuery
 			? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationQuery)}`
 			: merchantContactDefaults.mapLink
-		const mapEmbedUrl = customLocation && locationQuery
+		const mapEmbedUrl = configuredMapEmbedUrl !== null
+			? configuredMapEmbedUrl
+			: customLocation && locationQuery
 			? `https://www.google.com/maps?q=${encodeURIComponent(locationQuery)}&output=embed`
 			: merchantContactDefaults.mapEmbedUrl
 		const whatsappFloatingMessage = typeof contact.whatsappFloatingMessage === "string"

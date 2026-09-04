@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
+import { optimizeImageForUpload } from "@/lib/image-upload"
 
 type Draft = {
 	name?: string
@@ -12,7 +13,7 @@ type Draft = {
 	themePreset?: string
 	seo?: { description?: string }
 	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string }
-	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
+	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; mapLink?: string; mapEmbedUrl?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
 	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
@@ -33,6 +34,7 @@ export default function StoreDesignPage() {
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
 	const [busy, setBusy] = useState(false)
+	const [uploadingLogo, setUploadingLogo] = useState(false)
 	const [localPreview, setLocalPreview] = useState(false)
 	const [versions, setVersions] = useState<Version[]>([])
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
@@ -99,6 +101,30 @@ export default function StoreDesignPage() {
 			window.localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(draft))
 		} catch {
 			// The editor remains usable if browser storage is disabled.
+		}
+	}
+
+	async function uploadLogo(file: File | undefined) {
+		if (!file) return
+		setUploadingLogo(true)
+		setMessage("")
+		setError("")
+		try {
+			const optimized = await optimizeImageForUpload(file)
+			const body = new FormData()
+			body.set("file", optimized)
+			const response = await fetch("/api/manage/store/logo", { method: "POST", body })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to upload store logo")
+			setDraft((current) => ({ ...current, logoUrl: data.url }))
+			setMessage("Store logo uploaded. Save the draft, then publish it to make it live.")
+			addToast("Store logo uploaded successfully.", "success")
+		} catch (reason) {
+			const text = reason instanceof Error ? reason.message : "Unable to upload store logo"
+			setError(text)
+			addToast(text, "error")
+		} finally {
+			setUploadingLogo(false)
 		}
 	}
 
@@ -170,7 +196,7 @@ export default function StoreDesignPage() {
 				<section className="glass-card space-y-5 p-6">
 					{localPreview && <p className="rounded-lg border border-amber-300/50 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Local preview mode: changes are stored only in this browser until database access is restored.</p>}
 					<label className="block"><span className="text-sm font-medium">Store name</span><input value={draft.name || ""} onChange={(event) => updateDraft({ name: event.target.value })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
-					<label className="block"><span className="text-sm font-medium">Store logo URL or app path</span><input type="text" value={draft.logoUrl || ""} onChange={(event) => updateDraft({ logoUrl: event.target.value })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="/images/your-logo.png or https://..." /><span className="mt-1 block text-xs text-gray-500">Use an HTTPS image URL or an app-relative path. It applies only to this storefront after publishing.</span></label>
+					<div className="block"><span className="text-sm font-medium">Store logo</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingLogo ? "cursor-wait opacity-60" : ""}`}>{uploadingLogo ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingLogo ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingLogo} onChange={(event) => { void uploadLogo(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{draft.logoUrl && <img src={draft.logoUrl} alt="Current store logo" className="h-12 w-12 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB. Save the draft, then publish it to make the logo live on this storefront.</span></div>
 					<div>
 						<p className="text-sm font-medium">Theme preset</p>
 						<div className="mt-2 grid gap-2 sm:grid-cols-2">{Object.values(THEME_PRESETS).map((item) => <button type="button" key={item.id} onClick={() => updateDraft({ themePreset: item.id })} className={`rounded-lg border p-3 text-left ${draft.themePreset === item.id ? "border-primary ring-2 ring-primary/20" : ""}`}><span className="font-medium">{item.name}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></button>)}</div>
@@ -188,6 +214,8 @@ export default function StoreDesignPage() {
 							<label className="block"><span className="text-sm font-medium">Business hours</span><input value={draft.contact?.businessHours || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, businessHours: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Mon - Sat, 8AM - 6PM" /></label>
 							<label className="block"><span className="text-sm font-medium">Address</span><input value={draft.contact?.addressLine || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, addressLine: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Street and building" /></label>
 							<label className="block"><span className="text-sm font-medium">City and country</span><input value={draft.contact?.cityCountry || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, cityCountry: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Nairobi, Kenya" /></label>
+							<label className="block"><span className="text-sm font-medium">Google Maps link URL</span><input type="url" value={draft.contact?.mapLink || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, mapLink: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="https://www.google.com/maps/..." /><span className="mt-1 block text-xs text-gray-500">Used by the Open in Google Maps link.</span></label>
+							<label className="block"><span className="text-sm font-medium">Google Maps embed URL</span><input type="url" value={draft.contact?.mapEmbedUrl || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, mapEmbedUrl: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="https://www.google.com/maps/embed?..." /><span className="mt-1 block text-xs text-gray-500">Used to display the map inside the Visit Us section.</span></label>
 							<label className="block sm:col-span-2"><span className="text-sm font-medium">Response time</span><input value={draft.contact?.responseTime || ""} onChange={(event) => updateDraft({ contact: { ...draft.contact, responseTime: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="We reply within 24 hours" /></label>
 						</div>
 						<div className="mt-5 border-t pt-5">

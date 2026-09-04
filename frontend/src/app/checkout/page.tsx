@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, Loader2, Mail, MessageCircle, Store } from "lucide-react"
+import { ArrowLeft, Loader2, Mail, Store } from "lucide-react"
+import { FaWhatsapp } from "react-icons/fa"
 import { useState } from "react"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
@@ -59,7 +60,7 @@ export default function CheckoutPage() {
 					<p className="mt-3 text-xs text-gray-500">The merchant confirms the final price, delivery cost, taxes, and payment terms.</p>
 				</div>
 				<div className="mt-8 space-y-3 text-left"><h2 className="font-semibold">Your contact details</h2><div className="grid gap-3 sm:grid-cols-2"><input required value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" className="rounded-lg border bg-transparent px-3 py-3"/><input required type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} placeholder="Email address" className="rounded-lg border bg-transparent px-3 py-3"/></div><input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone number (optional)" className="w-full rounded-lg border bg-transparent px-3 py-3"/><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Message to the merchant (optional)" rows={3} className="w-full rounded-lg border bg-transparent px-3 py-3"/><label className="flex items-start gap-2 text-sm text-gray-500"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 accent-primary"/><span>I agree that this store may use my details to respond to this enquiry.</span></label>{error && <p className="text-sm text-red-600">{error}</p>}</div>
-				<div className="mt-5 grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy} onClick={() => continueToMerchant("WHATSAPP")} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">{busyMethod === "WHATSAPP" ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <MessageCircle size={18} />} {busyMethod === "WHATSAPP" ? "Saving…" : "Message on WhatsApp"}</button><button type="button" disabled={busy} onClick={() => continueToMerchant("EMAIL")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50">{busyMethod === "EMAIL" ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Mail size={18} />} {busyMethod === "EMAIL" ? "Saving…" : "Email the store"}</button></div>
+				<div className="mt-5 grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy} onClick={() => continueToMerchant("WHATSAPP")} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">{busyMethod === "WHATSAPP" ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <FaWhatsapp size={18} />} {busyMethod === "WHATSAPP" ? "Saving…" : "Message on WhatsApp"}</button><button type="button" disabled={busy} onClick={() => continueToMerchant("EMAIL")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50">{busyMethod === "EMAIL" ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Mail size={18} />} {busyMethod === "EMAIL" ? "Saving…" : "Email the store"}</button></div>
 				<p className="mt-5 text-xs text-gray-500">You will not enter payment or shipping details on Nurava Tech. The merchant handles the transaction directly.</p>
 			</div>
 		</div>

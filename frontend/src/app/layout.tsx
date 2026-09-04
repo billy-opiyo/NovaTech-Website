@@ -2,15 +2,10 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { CartProvider } from "@/lib/cartContext"
-import Header from "@/components/layout/Header"
-import Footer from "@/components/layout/Footer"
-import MobileNav from "@/components/layout/MobileNav"
-import PlatformMobileNav from "@/components/layout/PlatformMobileNav"
-import FloatingActions from "@/components/layout/FloatingActions"
 import PlatformHashScroll from "@/components/layout/PlatformHashScroll"
 import RouteScrollReset from "@/components/layout/RouteScrollReset"
 import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
-import SplashScreen from "@/components/layout/SplashScreen"
+import SiteChrome from "@/components/layout/SiteChrome"
 import { ToastProvider } from "@/components/ui/Toast"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
 import { getStoreContext } from "@/lib/store-context.server"
@@ -57,7 +52,7 @@ export default async function RootLayout({
 						})();`,
 					}}
 				/>
-				<link rel="icon" type="image/png" href={store.brand.favicon} />
+				<link rel="icon" href={store.brand.favicon} />
 				<link rel="preconnect" href="https://images.unsplash.com" />
 				<link rel="dns-prefetch" href="https://images.unsplash.com" />
 				<link rel="preconnect" href="https://images.pexels.com" />
@@ -79,18 +74,7 @@ export default async function RootLayout({
 							<RouteScrollReset />
 							{store.isPlatformHome && <PlatformHashScroll />}
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
-							<SplashScreen platformHome={store.isPlatformHome}>
-								<>
-									<Header />
-									<main className={`max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8 ${store.isPlatformHome ? "pb-24 lg:pb-8" : "pb-24 md:pb-8"}`}>
-										{children}
-									</main>
-									<Footer />
-									{store.isPlatformHome && <PlatformMobileNav />}
-									{!store.isPlatformHome && <MobileNav />}
-									<FloatingActions />
-								</>
-							</SplashScreen>
+							<SiteChrome>{children}</SiteChrome>
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>

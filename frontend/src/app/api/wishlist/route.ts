@@ -95,7 +95,8 @@ export async function DELETE(req: NextRequest) {
 			return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 		}
 
-		const { productId } = await req.json()
+		const body = await req.json().catch(() => ({})) as { productId?: string }
+		const { productId } = body
 		const context = await resolveTenantFromRequest(req)
 
 		await prisma.wishlistItem.deleteMany({ where: { userId: session.user.id, tenantId: context.tenantId, ...(productId ? { productId } : {}) } })
