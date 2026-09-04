@@ -9,7 +9,7 @@ export default async function PlatformPage() {
 				<h2 className="text-3xl font-bold">Platform overview</h2>
 				<p className="mt-2 text-gray-600 dark:text-gray-300">Platform-only operational surfaces are separated from merchant workspaces.</p>
 			</div>
-			<div className="grid gap-4 md:grid-cols-2">
+			<div className="grid gap-4 lg:grid-cols-2">
 				<Link href="/platform/operations" className="glass-card block p-6">
 					<h3 className="font-semibold">Platform operations</h3>
 					<p className="mt-2 text-sm text-gray-500">Cross-store metrics, tenant activity, previews, billing status, and suspension controls.</p>

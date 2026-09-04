@@ -143,9 +143,22 @@
     box-shadow: var(--glass-shadow);
   }
 
-  .glass-card {
-    @apply glass rounded-2xl p-4 transition-all duration-300 hover:shadow-lg;
-  }
+	.glass-card {
+		@apply glass rounded-2xl p-4 transition-all duration-300 hover:shadow-lg;
+	}
+
+	/* Admin tables keep their full column layout and scroll inside the card on
+	   narrow screens instead of widening the entire workspace. */
+	.admin-workspace .glass-card.overflow-x-auto {
+		min-width: 0;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		padding-bottom: 0.5rem;
+	}
+
+	.admin-workspace .glass-card.overflow-x-auto > table {
+		min-width: 640px;
+	}
 
   .navy-glass {
     background: linear-gradient(135deg, rgb(245 249 253 / 0.72), rgb(216 229 245 / 0.58));

@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import NotificationCenter from "@/components/notifications/NotificationCenter"
-import { LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
+import { Heart, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
@@ -53,7 +53,7 @@ export default function Header() {
 							{store.brand.name}
 						</span>
 					</Link>
-				<nav className="hidden gap-3 md:flex lg:gap-6">
+				<nav className="hidden gap-3 lg:flex lg:gap-6">
 					{navigation.map((link) => (
 							<Link
 								key={link.href}
@@ -69,7 +69,7 @@ export default function Header() {
 					<div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-4">
 						<button
 							onClick={toggleTheme}
-							className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+							className="hidden rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:inline-flex"
 							aria-label="Toggle dark mode"
 						>
 							{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
@@ -78,20 +78,26 @@ export default function Header() {
 							<PlatformAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} mobile />
 							<PlatformAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} />
 						</> : <>
-							<Link href={platformAccountHref} aria-label="Sign in" className="inline-flex items-center justify-center rounded-full p-2 text-gray-700 transition hover:bg-white/10 dark:text-white sm:hidden"><User size={20} /></Link>
-							<Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 sm:inline-flex">Get started</Link>
+							<Link href={platformAccountHref} aria-label="Sign in" className="inline-flex items-center justify-center rounded-full p-2 text-gray-700 transition hover:bg-white/10 dark:text-white lg:hidden"><User size={20} /></Link>
+							<Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 lg:inline-flex">Get started</Link>
 						</>)}
 						{!store.isPlatformHome && <>
-							<SearchOverlay />
+							<div className="hidden lg:block">
+								<SearchOverlay />
+							</div>
 							<NotificationCenter />
-							<Link href={getStoreRouteHref(store, "/cart")} aria-label="Open shopping cart" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{itemCount}</span>}</Link>
+							<Link href={getStoreRouteHref(store, "/account/wishlist")} aria-label="Open wishlist" className="hidden rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:inline-flex"><Heart size={20} /></Link>
+							<Link href={getStoreRouteHref(store, "/cart")} aria-label="Open shopping cart" className="relative hidden rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:inline-flex"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs text-white">{itemCount}</span>}</Link>
 							<StoreAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} store={store} isSignedIn={isSignedIn} />
 						</>}
 
 						{/* Mobile menu toggle */}
 						<button
-							className="md:hidden p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+							className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:hidden"
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+							aria-expanded={mobileMenuOpen}
+							aria-controls="site-mobile-menu"
+							aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
 						>
 							{mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
 						</button>
@@ -106,14 +112,23 @@ export default function Header() {
 						initial={{ opacity: 0, height: 0 }}
 						animate={{ opacity: 1, height: "auto" }}
 						exit={{ opacity: 0, height: 0 }}
-						className="md:hidden glass border-t border-white/10 overflow-hidden"
+						id="site-mobile-menu"
+						className="glass overflow-hidden border-t border-white/10 lg:hidden"
 					>
-						<div className="px-4 py-4 flex flex-col gap-3">
+						<div className="flex flex-col gap-3 px-4 py-4">
+							<button
+								type="button"
+								onClick={toggleTheme}
+								className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-gray-700 transition hover:bg-primary/10 dark:text-gray-300"
+							>
+								{theme === "dark" ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
+								<span>{theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}</span>
+							</button>
 						{navigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}
-									className="block text-gray-700 dark:text-gray-300 hover:text-primary"
+									className="block rounded-lg px-3 py-2 text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-300"
 									onClick={() => setMobileMenuOpen(false)}
 								>
 									{link.name}
@@ -184,7 +199,7 @@ function StoreAccountMenu({
 				className="inline-flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-0.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:min-w-[4rem] sm:px-1.5 sm:py-1"
 			>
 				{isSignedIn ? <AccountAvatar name={name} email={email} image={image} className="h-8 w-8" /> : <User size={20} aria-hidden="true" />}
-				<span className="max-w-16 truncate text-[9px] leading-tight sm:max-w-28 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
+				<span className="max-w-12 truncate text-[9px] leading-tight sm:max-w-20 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
 			</button>
 			{open && (
 				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
@@ -249,7 +264,7 @@ function PlatformAccountMenu({
 	}
 
 	return (
-		<div ref={menuRef} className={`relative ${mobile ? "sm:hidden" : "hidden sm:block"}`}>
+		<div ref={menuRef} className={`relative ${mobile ? "lg:hidden" : "hidden lg:block"}`}>
 			<button
 				type="button"
 				onClick={() => setOpen((current) => !current)}

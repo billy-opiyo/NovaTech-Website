@@ -26,7 +26,7 @@ export default function MobileNav() {
 
 	return (
 		<>
-			<nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass backdrop-blur-lg border-t border-white/10 safe-area-inset-bottom">
+			<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 glass backdrop-blur-lg safe-area-inset-bottom lg:hidden">
 				<div className="flex items-center justify-around py-2">
 					{navItems.map((item) => {
 						const isActive = pathname === item.href
@@ -64,7 +64,7 @@ export default function MobileNav() {
 				</div>
 			</nav>
 
-			<div className="md:hidden h-16" />
+			<div className="h-16 lg:hidden" />
 
 			<SearchOverlay open={searchOpen} onOpenChange={setSearchOpen} showTrigger={false} />
 		</>

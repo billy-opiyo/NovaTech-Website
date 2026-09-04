@@ -91,7 +91,7 @@ export default function AdminLayout({
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
 	return (
-		<div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
+		<div className="admin-workspace min-h-screen bg-gray-50 dark:bg-dark-bg">
 			<AnimatePresence>
 				{mobileSidebarOpen && (
 					<>
@@ -129,7 +129,7 @@ export default function AdminLayout({
 
 			<div
 				className={clsx(
-					"transition-all duration-300",
+					"min-w-0 transition-all duration-300",
 					sidebarOpen ? "lg:ml-72" : "lg:ml-20",
 				)}
 			>
@@ -163,7 +163,7 @@ export default function AdminLayout({
 					</div>
 				</header>
 
-				<main className="p-4 md:p-8">{children}</main>
+				<main className="min-w-0 p-4 md:p-8">{children}</main>
 			</div>
 		</div>
 	)

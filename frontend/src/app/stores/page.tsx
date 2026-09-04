@@ -23,7 +23,7 @@ export default async function StoreDirectoryPage() {
 					<p className="mt-2 text-gray-600 dark:text-gray-300">Published merchant storefronts will appear here.</p>
 				</div>
 			) : (
-				<section className="grid gap-6 md:grid-cols-2">
+				<section className="grid gap-6 lg:grid-cols-2">
 					{storeLinks.map(({ store, href }) => {
 						return (
 							<a key={store.id} href={href} className="glass-card navy-glass group block p-6 transition hover:-translate-y-1 hover:shadow-xl">

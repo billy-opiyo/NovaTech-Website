@@ -186,7 +186,7 @@ export default function ContactPage() {
 				</p>
 			</motion.div>
 
-			{showContactCards !== false && <div className="grid md:grid-cols-3 gap-6 mb-16">
+			{showContactCards !== false && <div className="mb-16 grid gap-6 lg:grid-cols-3">
 				{[
 					{
 						icon: Phone,
@@ -280,13 +280,13 @@ export default function ContactPage() {
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
 								onSubmit={handleSubmit}
-								className="glass-card p-6 md:p-8 space-y-4"
+								className="glass-card space-y-4 p-6 lg:p-8"
 							>
 								<div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
 									<label htmlFor="website">Website</label>
 									<input id="website" name="website" tabIndex={-1} autoComplete="off" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} />
 								</div>
-								<div className="grid md:grid-cols-2 gap-4">
+								<div className="grid gap-4 lg:grid-cols-2">
 									<div>
 										<label className="block text-sm font-medium mb-1">
 											Name *
@@ -317,7 +317,7 @@ export default function ContactPage() {
 									</div>
 								</div>
 
-								<div className="grid md:grid-cols-2 gap-4">
+								<div className="grid gap-4 lg:grid-cols-2">
 									<div>
 										<label className="block text-sm font-medium mb-1">
 											Phone Number
@@ -501,7 +501,7 @@ export default function ContactPage() {
 				viewport={{ once: true }}
 				className="glass-card p-8 mt-16"
 			>
-				<div className="grid md:grid-cols-3 gap-8">
+				<div className="grid gap-8 lg:grid-cols-3">
 					<div className="text-center">
 						<MapPin className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">{isPlatformHome ? "Platform Support" : "Visit Our Store"}</h3>

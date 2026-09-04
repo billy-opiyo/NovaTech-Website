@@ -63,7 +63,7 @@ function StoreCard({ store, isLight }: { store: HeroStore; isLight: boolean }) {
 
 function TrustStrip({ isLight }: { isLight: boolean }) {
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+		<div className="grid gap-3 lg:grid-cols-5">
 			{trustItems.map(({ title, text, icon: Icon }) => (
 				<div key={title} className={`flex items-start gap-3 rounded-xl border p-4 ${isLight ? "border-blue-200 bg-white/70" : "border-white/10 bg-white/[0.04]"}`}>
 					<Icon className="mt-0.5 shrink-0 text-primary" size={24} />
@@ -77,18 +77,18 @@ function TrustStrip({ isLight }: { isLight: boolean }) {
 function HeroArtwork({ theme }: { theme: "dark" | "light" }) {
 	const images = heroImages[theme]
 	const isLight = theme === "light"
-	const artworkAspect = isLight ? "aspect-[1024/1060] md:aspect-[1672/760]" : "aspect-[944/1288] md:aspect-[1672/760]"
+	const artworkAspect = isLight ? "aspect-[1024/1060] lg:aspect-[1672/760]" : "aspect-[944/1288] lg:aspect-[1672/760]"
   const maskBackground = isLight
     ? "linear-gradient(180deg, #fdfdfd 0%, #f8fbff 100%)"
     : "radial-gradient(120% 100% at 100% 0%, #032e5e 0%, rgba(3, 46, 94, 0.42) 38%, rgba(3, 46, 94, 0) 72%), radial-gradient(130% 120% at 100% 100%, #022045 0%, rgba(2, 32, 69, 0) 75%), linear-gradient(180deg, #000b1c 0%, #03182d 100%)"
 	return (
 		<div className={`relative ${artworkAspect} w-full overflow-hidden rounded-3xl shadow-2xl shadow-primary/10 ${isLight ? "bg-[#f8fbff]" : "bg-[#020a18]"}`}>
 			<picture className="absolute inset-0 block">
-				<source media="(max-width: 767px)" srcSet={images.mobile} />
+				<source media="(max-width: 1023px)" srcSet={images.mobile} />
 				<img src={images.desktop} alt="" className="absolute left-0 top-0 h-auto w-full max-w-none" />
 			</picture>
 			{/* The desktop composite contains the old left-side store panel. The artwork-only crop keeps the device montage while removing that embedded content. */}
-      <div className={`absolute bottom-0 left-0 hidden w-[46%] md:block ${isLight ? "top-[75%]" : "top-[65%]"}`} style={{ background: maskBackground }} aria-hidden="true" />
+			<div className={`absolute bottom-0 left-0 hidden w-[46%] lg:block ${isLight ? "top-[75%]" : "top-[65%]"}`} style={{ background: maskBackground }} aria-hidden="true" />
 		</div>
 	)
 }
@@ -104,7 +104,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 			<HeroArtwork theme={theme} />
 			<section className={`rounded-3xl border p-5 shadow-xl sm:p-8 ${isLight ? "border-blue-200 bg-[#edf6ff]" : "border-white/15 bg-[#071a2c]"}`}>
 				<div className="text-center"><h2 className={`text-2xl font-extrabold sm:text-3xl ${isLight ? "text-[#172554]" : "text-white"}`}>Top Stores on Nurava Tech</h2><p className={`mt-2 text-sm sm:text-base ${isLight ? "text-[#172554]/75" : "text-white/75"}`}>Products are sold and fulfilled by individual store partners.</p></div>
-				<div className="mt-6 grid gap-4 sm:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} isLight={isLight} />)}</div>
+				<div className="mt-6 grid gap-4 lg:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} isLight={isLight} />)}</div>
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
 				<p className={`mt-6 text-center text-sm sm:text-base ${isLight ? "text-[#172554]" : "text-white/85"}`}><span className="font-bold text-primary">Nurava Tech</span><span className="mx-2">—</span>The Marketplace for Electronics Store Partners and Smart Shoppers.</p>
 				<div className="mt-8 border-t border-white/10 pt-8"><TrustStrip isLight={isLight} /></div>

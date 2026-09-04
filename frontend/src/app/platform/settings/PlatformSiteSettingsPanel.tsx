@@ -112,19 +112,19 @@ export default function PlatformSiteSettingsPanel() {
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Branding and footer</h3><p className="mt-1 text-sm text-gray-500">Leave an asset path unchanged to keep the configured default.</p></div>
-				<div className="grid gap-4 md:grid-cols-2">
+				<div className="grid gap-4 lg:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Platform name</span><input className={inputClass} value={text("brand", "name")} onChange={(event) => updateSection("brand", "name", event.target.value)} /></label>
 					<label className="block"><span className="text-sm font-medium">Tagline</span><input className={inputClass} value={text("brand", "tagline")} onChange={(event) => updateSection("brand", "tagline", event.target.value)} /></label>
 					<div className="block"><span className="text-sm font-medium">Platform logo</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingLogo ? "cursor-wait opacity-60" : ""}`}>{uploadingLogo ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingLogo ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingLogo} onChange={(event) => { void uploadLogo(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "logo") && <img src={text("brand", "logo")} alt="Current platform logo" className="h-12 w-12 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB. Save the draft, then publish it to make the logo live on platform pages.</span></div>
 					<div className="block"><span className="text-sm font-medium">Platform favicon</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingFavicon ? "cursor-wait opacity-60" : ""}`}>{uploadingFavicon ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingFavicon ? "Uploading…" : "Upload favicon"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingFavicon} onChange={(event) => { void uploadFavicon(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "favicon") && <img src={text("brand", "favicon")} alt="Current platform favicon" className="h-10 w-10 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF favicon up to 1MB. Save the draft, then publish it to update the platform icon.</span></div>
-					<label className="block md:col-span-2"><span className="text-sm font-medium">Logo alt text</span><input className={inputClass} value={text("brand", "logoAlt")} onChange={(event) => updateSection("brand", "logoAlt", event.target.value)} /></label>
-					<label className="block md:col-span-2"><span className="text-sm font-medium">Footer description</span><textarea className={inputClass} value={text("site", "footerDescription")} onChange={(event) => updateSection("site", "footerDescription", event.target.value)} rows={3} /></label>
+					<label className="block lg:col-span-2"><span className="text-sm font-medium">Logo alt text</span><input className={inputClass} value={text("brand", "logoAlt")} onChange={(event) => updateSection("brand", "logoAlt", event.target.value)} /></label>
+					<label className="block lg:col-span-2"><span className="text-sm font-medium">Footer description</span><textarea className={inputClass} value={text("site", "footerDescription")} onChange={(event) => updateSection("site", "footerDescription", event.target.value)} rows={3} /></label>
 				</div>
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Platform contact</h3><p className="mt-1 text-sm text-gray-500">The WhatsApp number must use digits only with the country code, for example 254740470381.</p></div>
-				<div className="grid gap-4 md:grid-cols-2">
+				<div className="grid gap-4 lg:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Phone display</span><input className={inputClass} value={text("contact", "phoneDisplay")} onChange={(event) => updateSection("contact", "phoneDisplay", event.target.value)} /></label>
 					<label className="block"><span className="text-sm font-medium">Support email</span><input type="email" className={inputClass} value={text("contact", "email")} onChange={(event) => updateSection("contact", "email", event.target.value)} /></label>
 					<label className="block"><span className="text-sm font-medium">WhatsApp number</span><input inputMode="numeric" className={inputClass} value={text("contact", "whatsappNumber")} onChange={(event) => updateSection("contact", "whatsappNumber", event.target.value.replace(/\D/g, ""))} /></label>
@@ -138,18 +138,18 @@ export default function PlatformSiteSettingsPanel() {
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Social links</h3><p className="mt-1 text-sm text-gray-500">Use HTTPS links. Blank links are omitted from the platform footer.</p></div>
-				<div className="grid gap-4 md:grid-cols-2">
+				<div className="grid gap-4 lg:grid-cols-2">
 					{(["facebook", "instagram", "tiktok", "linkedin", "youtube", "x"] as const).map((key) => <label className="block" key={key}><span className="text-sm font-medium">{key === "x" ? "X / Twitter" : `${key[0].toUpperCase()}${key.slice(1)}`} URL</span><input type="url" className={inputClass} value={text("social", key)} onChange={(event) => updateSection("social", key, event.target.value)} placeholder="https://" /></label>)}
 				</div>
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">SEO and visibility</h3><p className="mt-1 text-sm text-gray-500">These options control platform metadata and public contact surfaces.</p></div>
-				<div className="grid gap-4 md:grid-cols-2">
+				<div className="grid gap-4 lg:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Meta title</span><input className={inputClass} value={text("seo", "title")} onChange={(event) => updateSection("seo", "title", event.target.value)} /></label>
 					<label className="block"><span className="text-sm font-medium">Open Graph image URL or path</span><input className={inputClass} value={text("seo", "ogImage")} onChange={(event) => updateSection("seo", "ogImage", event.target.value)} placeholder="https:// or /images/og.png" /></label>
-					<label className="block md:col-span-2"><span className="text-sm font-medium">Meta description</span><textarea className={inputClass} rows={3} value={text("seo", "description")} onChange={(event) => updateSection("seo", "description", event.target.value)} /></label>
-					<label className="block md:col-span-2"><span className="text-sm font-medium">Keywords</span><input className={inputClass} value={text("seo", "keywords")} onChange={(event) => updateSection("seo", "keywords", event.target.value)} /></label>
+					<label className="block lg:col-span-2"><span className="text-sm font-medium">Meta description</span><textarea className={inputClass} rows={3} value={text("seo", "description")} onChange={(event) => updateSection("seo", "description", event.target.value)} /></label>
+					<label className="block lg:col-span-2"><span className="text-sm font-medium">Keywords</span><input className={inputClass} value={text("seo", "keywords")} onChange={(event) => updateSection("seo", "keywords", event.target.value)} /></label>
 				</div>
 				<div className="grid gap-3 sm:grid-cols-2">
 					{(["showWhatsAppButton", "showWhatsAppContact", "showSocialLinks", "showContactCards"] as const).map((key) => <label className="flex items-center gap-3 text-sm" key={key}><input type="checkbox" checked={checked(key)} onChange={(event) => updateSection("features", key, event.target.checked)} /><span>{key === "showWhatsAppButton" ? "Show floating WhatsApp button" : key === "showWhatsAppContact" ? "Show WhatsApp contact link" : key === "showSocialLinks" ? "Show footer social links" : "Show contact cards"}</span></label>)}
