@@ -134,7 +134,7 @@ export default function ManageProductsPage() {
 			const images = parseLines(draft.images)
 			const specs = parseSpecs(draft.specs)
 			if (!draft.categoryId) throw new Error("Choose a product category")
-			if (!images.length) throw new Error("Add at least one gallery image URL or upload an image")
+			if (!images.length) throw new Error("Upload at least one gallery image")
 			const payload = {
 				name: draft.name.trim(), description: draft.description.trim(), brand: draft.brand.trim(), price: Number(draft.price),
 				discountedPrice: draft.discountedPrice.trim() ? Number(draft.discountedPrice) : undefined, stock: Number(draft.stock),
@@ -156,7 +156,7 @@ export default function ManageProductsPage() {
 	}
 
 	const uploadGallery = async (files: FileList | null) => {
-		if (!files || !editing) return
+		if (!files) return
 		const selectedFiles = Array.from(files)
 		setUploading(true); setError(""); setNotice("Optimizing product images…")
 		try {
@@ -164,17 +164,21 @@ export default function ManageProductsPage() {
 			const optimizedFiles: File[] = []
 			for (const file of selectedFiles) optimizedFiles.push(await optimizeImageForUpload(file))
 			for (const file of optimizedFiles) {
-				const formData = new FormData(); formData.append("file", file); formData.append("productId", editing.id)
+				const formData = new FormData(); formData.append("file", file); formData.append("productId", editing?.id || "general")
 				const response = await fetch("/api/products/upload", { method: "POST", body: formData }); const body = await response.json()
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
 				urls.push(body.url)
 			}
-			updateDraft("images", urls.join("\n")); setNotice("Gallery upload complete. Save the product to publish the new images."); addToast("Product images uploaded successfully.", "success")
+			setDraft((current) => ({ ...current, images: urls.join("\n") })); setNotice("Gallery upload complete. Save the product to publish the new images."); addToast("Product images uploaded successfully.", "success")
 		} catch (reason) {
 			const message = reason instanceof Error ? reason.message : "Gallery upload failed"
 			setError(message)
 			addToast(message, "error")
 		} finally { setUploading(false) }
+	}
+
+	const removeGalleryImage = (image: string) => {
+		setDraft((current) => ({ ...current, images: parseLines(current.images).filter((item) => item !== image).join("\n") }))
 	}
 
 	const remove = async () => {
@@ -197,8 +201,7 @@ export default function ManageProductsPage() {
 		{editorOpen && <form onSubmit={save} className="glass-card space-y-5 p-5"><div className="flex items-center justify-between"><div><h2 className="text-xl font-bold">{editing ? "Edit product" : "Add product"}</h2><p className="text-sm text-gray-500">Fields are saved to this store only.</p></div><button type="button" onClick={closeEditor} aria-label="Close editor"><X /></button></div>
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2"><label className="text-sm">Name *<input required minLength={3} value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Brand *<input required value={draft.brand} onChange={(event) => updateDraft("brand", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">SKU *{editing ? <span className="ml-1 text-xs text-gray-500">(cannot change)</span> : null}<input required disabled={Boolean(editing)} value={draft.sku} onChange={(event) => updateDraft("sku", event.target.value)} className="mt-1 w-full rounded-lg border p-2 disabled:opacity-60 dark:bg-dark-surface" /></label><div className="text-sm"><label>Category *<select required value={draft.categoryId} onChange={(event) => updateDraft("categoryId", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><div className="mt-2 flex gap-2"><input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="New category" className="min-w-0 flex-1 rounded-lg border p-2 dark:bg-dark-surface" /><button type="button" onClick={() => { void addCategory() }} disabled={categoryBusy || !categoryName.trim()} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50">{categoryBusy ? "Adding…" : "Add category"}</button></div></div><label className="text-sm">Price (KES) *<input required min="0.01" step="0.01" type="number" value={draft.price} onChange={(event) => updateDraft("price", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Sale price (KES)<input min="0.01" step="0.01" type="number" value={draft.discountedPrice} onChange={(event) => updateDraft("discountedPrice", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Stock *<input required min="0" step="1" type="number" value={draft.stock} onChange={(event) => updateDraft("stock", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Warranty<input value={draft.warranty} onChange={(event) => updateDraft("warranty", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label></div>
 			<label className="block text-sm">Description *<textarea required minLength={10} rows={3} value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>
-			<label className="block text-sm">Gallery image URLs *<textarea required rows={3} value={draft.images} onChange={(event) => updateDraft("images", event.target.value)} placeholder="One URL or app-relative path per line" className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>
-			{editing && <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm">{uploading ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={17} />} {uploading ? "Uploading…" : "Upload gallery images"}<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => { void uploadGallery(event.target.files); event.target.value = "" }} className="hidden" /></label>}
+			<div className="space-y-3 text-sm"><div><p className="font-medium">Gallery images *</p><p className="mt-1 text-xs text-gray-500">Upload one or more product images. Images are optimized and limited to 1 MB each.</p></div><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploading ? "cursor-not-allowed opacity-60" : ""}`}>{uploading ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={17} />} {uploading ? "Uploading…" : "Upload gallery images"}<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => { void uploadGallery(event.target.files); event.target.value = "" }} className="sr-only" /></label>{parseLines(draft.images).length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{parseLines(draft.images).map((image, index) => <div key={`${image}-${index}`} className="relative overflow-hidden rounded-lg border bg-gray-50 dark:bg-dark-surface"><img src={image} alt={`Product gallery image ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeGalleryImage(image)} disabled={uploading || saving} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white disabled:opacity-50" aria-label={`Remove gallery image ${index + 1}`}><X size={14} /></button></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-xs text-gray-500">No gallery images uploaded yet. Upload at least one image before saving.</p>}</div>
 			<label className="block text-sm">Specifications *<textarea rows={4} value={draft.specs} onChange={(event) => updateDraft("specs", event.target.value)} placeholder="Example:&#10;Storage=256GB&#10;Color=Black" className="mt-1 w-full rounded-lg border p-2 font-mono dark:bg-dark-surface" /></label>
 			<div className="flex flex-wrap gap-5 text-sm"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isFeatured} onChange={(event) => updateDraft("isFeatured", event.target.checked)} /> Featured</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isNewArrival} onChange={(event) => updateDraft("isNewArrival", event.target.checked)} /> New arrival</label></div>
 			{!categories.length && <p className="text-sm text-amber-600">No categories are available for this store. Add tenant categories before creating a product.</p>}<div className="flex justify-end gap-3"><button type="button" onClick={closeEditor} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || uploading || !categories.length} className="btn-primary inline-flex items-center gap-2">{saving && <Loader2 size={17} className="animate-spin" />} {saving ? "Saving…" : "Save product"}</button></div>
