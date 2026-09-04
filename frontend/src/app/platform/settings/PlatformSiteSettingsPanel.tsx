@@ -1,14 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2, Save, Send } from "lucide-react"
+import { Loader2, Save, Send, Upload } from "lucide-react"
 import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings } from "@/lib/platform-site-settings"
+import { optimizeImageForUpload } from "@/lib/image-upload"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
 
 export default function PlatformSiteSettingsPanel() {
 	const [draft, setDraft] = useState<PlatformSiteSettings>(initialSettings)
 	const [busy, setBusy] = useState<"loading" | "saving" | "publishing" | "idle">("loading")
+	const [uploadingLogo, setUploadingLogo] = useState(false)
+	const [uploadingFavicon, setUploadingFavicon] = useState(false)
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
 	const [publishedAt, setPublishedAt] = useState<string | null>(null)
@@ -58,6 +61,48 @@ export default function PlatformSiteSettingsPanel() {
 	const text = (section: "brand" | "site" | "contact" | "seo" | "social", key: string) => String((draft[section] as Record<string, unknown> | undefined)?.[key] || "")
 	const checked = (key: string) => (draft.features as Record<string, boolean> | undefined)?.[key] !== false
 
+	async function uploadLogo(file: File | undefined) {
+		if (!file) return
+		setUploadingLogo(true)
+		setMessage("")
+		setError("")
+		try {
+			const optimized = await optimizeImageForUpload(file)
+			const body = new FormData()
+			body.set("file", optimized)
+			const response = await fetch("/api/platform/settings/logo", { method: "POST", body })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to upload platform logo")
+			setDraft((current) => ({ ...current, brand: { ...current.brand, logo: data.url } }))
+			setMessage("Platform logo uploaded. Save the draft, then publish it to make it live.")
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to upload platform logo")
+		} finally {
+			setUploadingLogo(false)
+		}
+	}
+
+	async function uploadFavicon(file: File | undefined) {
+		if (!file) return
+		setUploadingFavicon(true)
+		setMessage("")
+		setError("")
+		try {
+			const optimized = await optimizeImageForUpload(file)
+			const body = new FormData()
+			body.set("file", optimized)
+			const response = await fetch("/api/platform/settings/favicon", { method: "POST", body })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to upload platform favicon")
+			setDraft((current) => ({ ...current, brand: { ...current.brand, favicon: data.url } }))
+			setMessage("Platform favicon uploaded. Save the draft, then publish it to make it live.")
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to upload platform favicon")
+		} finally {
+			setUploadingFavicon(false)
+		}
+	}
+
 	return (
 		<div className="space-y-6 pb-12">
 			<div>
@@ -70,8 +115,8 @@ export default function PlatformSiteSettingsPanel() {
 				<div className="grid gap-4 md:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Platform name</span><input className={inputClass} value={text("brand", "name")} onChange={(event) => updateSection("brand", "name", event.target.value)} /></label>
 					<label className="block"><span className="text-sm font-medium">Tagline</span><input className={inputClass} value={text("brand", "tagline")} onChange={(event) => updateSection("brand", "tagline", event.target.value)} /></label>
-					<label className="block"><span className="text-sm font-medium">Logo URL or app path</span><input className={inputClass} value={text("brand", "logo")} onChange={(event) => updateSection("brand", "logo", event.target.value)} placeholder="/images/logo.png" /></label>
-					<label className="block"><span className="text-sm font-medium">Favicon URL or app path</span><input className={inputClass} value={text("brand", "favicon")} onChange={(event) => updateSection("brand", "favicon", event.target.value)} placeholder="/images/favicon.png" /></label>
+					<div className="block"><span className="text-sm font-medium">Platform logo</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingLogo ? "cursor-wait opacity-60" : ""}`}>{uploadingLogo ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingLogo ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingLogo} onChange={(event) => { void uploadLogo(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "logo") && <img src={text("brand", "logo")} alt="Current platform logo" className="h-12 w-12 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB. Save the draft, then publish it to make the logo live on platform pages.</span></div>
+					<div className="block"><span className="text-sm font-medium">Platform favicon</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingFavicon ? "cursor-wait opacity-60" : ""}`}>{uploadingFavicon ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingFavicon ? "Uploading…" : "Upload favicon"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingFavicon} onChange={(event) => { void uploadFavicon(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "favicon") && <img src={text("brand", "favicon")} alt="Current platform favicon" className="h-10 w-10 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF favicon up to 1MB. Save the draft, then publish it to update the platform icon.</span></div>
 					<label className="block md:col-span-2"><span className="text-sm font-medium">Logo alt text</span><input className={inputClass} value={text("brand", "logoAlt")} onChange={(event) => updateSection("brand", "logoAlt", event.target.value)} /></label>
 					<label className="block md:col-span-2"><span className="text-sm font-medium">Footer description</span><textarea className={inputClass} value={text("site", "footerDescription")} onChange={(event) => updateSection("site", "footerDescription", event.target.value)} rows={3} /></label>
 				</div>
@@ -114,8 +159,8 @@ export default function PlatformSiteSettingsPanel() {
 			{error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 			{message && <p role="status" className="text-sm text-green-600 dark:text-green-400">{message}</p>}
 			<div className="flex flex-wrap items-center gap-3">
-				<button type="button" disabled={busy !== "idle"} onClick={() => request("PATCH")} className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Save size={16} />{busy === "saving" ? <><Loader2 size={16} className="animate-spin" />Saving…</> : "Save draft"}</button>
-				<button type="button" disabled={busy !== "idle"} onClick={() => request("POST")} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-60"><Send size={16} />{busy === "publishing" ? <><Loader2 size={16} className="animate-spin" />Publishing…</> : "Publish settings"}</button>
+				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon} onClick={() => request("PATCH")} className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Save size={16} />{busy === "saving" ? <><Loader2 size={16} className="animate-spin" />Saving…</> : "Save draft"}</button>
+				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon} onClick={() => request("POST")} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-60"><Send size={16} />{busy === "publishing" ? <><Loader2 size={16} className="animate-spin" />Publishing…</> : "Publish settings"}</button>
 				{publishedAt && <span className="text-xs text-gray-500">Last published {new Date(publishedAt).toLocaleString()}</span>}
 			</div>
 		</div>

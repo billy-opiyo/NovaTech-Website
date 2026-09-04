@@ -1,5 +1,5 @@
-import Link from "next/link"
 import { requirePlatformSession } from "@/lib/tenant-auth"
+import PlatformNavigation from "./PlatformNavigation"
 
 export const metadata = {
 	robots: { index: false, follow: false },
@@ -14,15 +14,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nurava Tech platform</p>
 					<h1 className="text-2xl font-bold">Control plane</h1>
 				</div>
-				<nav className="flex flex-wrap gap-4 text-sm font-semibold">
-					<Link href="/platform">Overview</Link>
-					<Link href="/platform/operations">Operations</Link>
-					<Link href="/platform/billing">Billing</Link>
-					{session.user.role === "SUPERADMIN" && <>
-						<Link href="/platform/access">Platform access</Link>
-						<Link href="/platform/settings">Site settings</Link>
-					</>}
-				</nav>
+				<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} />
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>
 		</div>
