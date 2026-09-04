@@ -24,10 +24,11 @@ export interface Product {
 	reviewCount?: number
 	isFeatured?: boolean
 	isNewArrival?: boolean
+	isTrending?: boolean
 }
 
 export interface ProductQuery {
-	[key: string]: string | number | undefined
+	[key: string]: string | number | boolean | undefined
 	page?: number
 	limit?: number
 	category?: string
@@ -36,6 +37,7 @@ export interface ProductQuery {
 	minPrice?: number
 	maxPrice?: number
 	brand?: string
+	trending?: boolean
 }
 
 export interface ProductListResponse {

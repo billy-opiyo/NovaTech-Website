@@ -26,7 +26,7 @@ export default function CatalogToolsPage() {
 	}
 
 	function downloadTemplate() {
-		const content = "name,slug,description,brand,sku,price,discountedPrice,stock,warranty,category,images,isFeatured,isNewArrival,specs,variants\nExample phone,example-phone,Example product description,Example Brand,SKU-001,25000,,5,12 months,Phones,https://example.com/image.jpg,false,true,\n"
+		const content = "name,slug,description,brand,sku,price,discountedPrice,stock,warranty,category,images,isFeatured,isNewArrival,isTrending,specs,variants\nExample phone,example-phone,Example product description,Example Brand,SKU-001,25000,,5,12 months,Phones,https://example.com/image.jpg,false,true,true,\n"
 		const url = URL.createObjectURL(new Blob([content], { type: "text/csv" })); const link = document.createElement("a"); link.href = url; link.download = "nurava-catalog-template.csv"; link.click(); URL.revokeObjectURL(url)
 	}
 

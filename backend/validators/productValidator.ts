@@ -19,6 +19,7 @@ const productFields = {
 	categoryId: z.string(),
 	isFeatured: z.boolean().optional(),
 	isNewArrival: z.boolean().optional(),
+	isTrending: z.boolean().optional(),
 	variants: z
 		.array(
 			z.object({
@@ -50,6 +51,7 @@ export const productUpdateSchema = z.object({
 	images: productFields.images.optional(),
 	isFeatured: productFields.isFeatured.optional(),
 	isNewArrival: productFields.isNewArrival.optional(),
+	isTrending: productFields.isTrending.optional(),
 	categoryId: productFields.categoryId.optional(),
 })
 

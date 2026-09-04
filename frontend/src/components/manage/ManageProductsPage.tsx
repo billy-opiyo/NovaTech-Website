@@ -26,19 +26,20 @@ type Product = {
 	category?: { name: string }
 	isFeatured: boolean
 	isNewArrival: boolean
+	isTrending: boolean
 	reviewCount?: number
 }
 
 type Draft = {
 	name: string; description: string; brand: string; sku: string; price: string
 	discountedPrice: string; stock: string; warranty: string; categoryId: string
-	images: string; specs: string; isFeatured: boolean; isNewArrival: boolean
+	images: string; specs: string; isFeatured: boolean; isNewArrival: boolean; isTrending: boolean
 }
 
 const emptyDraft: Draft = {
 	name: "", description: "", brand: "", sku: "", price: "", discountedPrice: "",
 	stock: "0", warranty: "", categoryId: "", images: "", specs: "",
-	isFeatured: false, isNewArrival: false,
+	isFeatured: false, isNewArrival: false, isTrending: false,
 }
 
 function draftFromProduct(product: Product): Draft {
@@ -47,7 +48,7 @@ function draftFromProduct(product: Product): Draft {
 		price: String(product.price), discountedPrice: product.discountedPrice == null ? "" : String(product.discountedPrice),
 		stock: String(product.stock), warranty: product.warranty || "", categoryId: product.categoryId,
 		images: product.images.join("\n"), specs: Object.entries(product.specs || {}).map(([key, value]) => `${key}=${value}`).join("\n"),
-		isFeatured: product.isFeatured, isNewArrival: product.isNewArrival,
+		isFeatured: product.isFeatured, isNewArrival: product.isNewArrival, isTrending: product.isTrending,
 	}
 }
 
@@ -145,7 +146,7 @@ export default function ManageProductsPage() {
 				name: draft.name.trim(), description: draft.description.trim(), brand: draft.brand.trim(), price: Number(draft.price),
 				discountedPrice: draft.discountedPrice.trim() ? Number(draft.discountedPrice) : undefined, stock: Number(draft.stock),
 				warranty: draft.warranty.trim() || undefined, categoryId: draft.categoryId, images, specs: Object.keys(specs).length ? specs : undefined,
-				isFeatured: draft.isFeatured, isNewArrival: draft.isNewArrival,
+				isFeatured: draft.isFeatured, isNewArrival: draft.isNewArrival, isTrending: draft.isTrending,
 				...(editing ? {} : { sku: draft.sku.trim(), slug: slugify(draft.name) }),
 			}
 			const response = await fetch(editing ? `/api/products/${editing.slug}` : "/api/products", {
@@ -209,7 +210,7 @@ export default function ManageProductsPage() {
 			<label className="block text-sm">Description *<textarea required minLength={10} rows={3} value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>
 			<div className="space-y-3 text-sm"><div><p className="font-medium">Gallery images *</p><p className="mt-1 text-xs text-gray-500">Upload one or more product images. Images are optimized and limited to 1 MB each.</p></div><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploading ? "cursor-not-allowed opacity-60" : ""}`}>{uploading ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={17} />} {uploading ? "Uploading…" : "Upload gallery images"}<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => { void uploadGallery(event.target.files); event.target.value = "" }} className="sr-only" /></label>{parseLines(draft.images).length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{parseLines(draft.images).map((image, index) => <div key={`${image}-${index}`} className="relative overflow-hidden rounded-lg border bg-gray-50 dark:bg-dark-surface"><img src={image} alt={`Product gallery image ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeGalleryImage(image)} disabled={uploading || saving} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white disabled:opacity-50" aria-label={`Remove gallery image ${index + 1}`}><X size={14} /></button></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-xs text-gray-500">No gallery images uploaded yet. Upload at least one image before saving.</p>}</div>
 			<label className="block text-sm">Specifications *<textarea rows={4} value={draft.specs} onChange={(event) => updateDraft("specs", event.target.value)} placeholder="Example:&#10;Storage=256GB&#10;Color=Black" className="mt-1 w-full rounded-lg border p-2 font-mono dark:bg-dark-surface" /></label>
-			<div className="flex flex-wrap gap-5 text-sm"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isFeatured} onChange={(event) => updateDraft("isFeatured", event.target.checked)} /> Featured</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isNewArrival} onChange={(event) => updateDraft("isNewArrival", event.target.checked)} /> New arrival</label></div>
+			<div className="flex flex-wrap gap-5 text-sm"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isFeatured} onChange={(event) => updateDraft("isFeatured", event.target.checked)} /> Featured</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isNewArrival} onChange={(event) => updateDraft("isNewArrival", event.target.checked)} /> New arrival</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isTrending} onChange={(event) => updateDraft("isTrending", event.target.checked)} /> Trending</label></div>
 			{!categories.length && <p className="text-sm text-amber-600">No categories are available for this store. Add tenant categories before creating a product.</p>}<div className="flex justify-end gap-3"><button type="button" onClick={closeEditor} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || uploading || !categories.length} className="btn-primary inline-flex items-center gap-2">{saving && <Loader2 size={17} className="animate-spin" />} {saving ? "Saving…" : "Save product"}</button></div>
 		</form>}
 		<div className="glass-card overflow-x-auto">{loading ? <p className="p-10 text-center text-gray-500">Loading catalog…</p> : <table className="w-full min-w-[980px]"><thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Product</th><th className="p-4">Category</th><th className="p-4">Price</th><th className="p-4">Stock</th><th className="p-4">Gallery</th><th className="p-4" /></tr></thead><tbody>{filtered.map((product) => <tr key={product.id} className="border-b last:border-0"><td className="p-4"><p className="font-medium">{product.name}</p><p className="text-xs text-gray-500">{product.brand} · {product.sku}</p></td><td className="p-4 text-sm">{product.category?.name || "—"}</td><td className="p-4">{product.discountedPrice ? <><span className="font-semibold">KES {product.discountedPrice.toLocaleString()}</span><span className="ml-2 text-xs text-gray-500 line-through">KES {product.price.toLocaleString()}</span></> : `KES ${product.price.toLocaleString()}`}</td><td className="p-4">{product.stock}</td><td className="p-4 text-sm">{product.images.length} image{product.images.length === 1 ? "" : "s"}</td><td className="p-4"><div className="flex items-center gap-3"><button onClick={() => startEdit(product)} className="inline-flex items-center gap-1 text-sm text-primary"><Pencil size={15} /> Edit</button><Link href={`/store/${storeSlug}/products/${product.slug}`} target="_blank" className="text-sm text-primary">View</Link><button onClick={() => setProductToDelete(product)} aria-label={`Delete ${product.name}`} className="text-red-500"><Trash2 size={17} /></button></div></td></tr>)}</tbody></table>}{!loading && !filtered.length && <p className="p-10 text-center text-gray-500">No products found.</p>}</div>

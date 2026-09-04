@@ -31,6 +31,7 @@ export async function middleware(request: NextRequest) {
 
 	let rewriteUrl: URL | null = null
 	let explicitStoreSlug: string | null = null
+	let selectedWorkspaceStoreSlug: string | null = null
 	if (isPlatformHost && pathname.startsWith(PLATFORM_STORE_PREFIX)) {
 		const [, , rawSlug, ...rest] = pathname.split("/")
 		const slug = rawSlug?.toLowerCase()
@@ -51,11 +52,14 @@ export async function middleware(request: NextRequest) {
 
 	if (rewriteUrl) {
 		// Keep the explicit store slug attached to the rewritten request.
-	} else if (isPlatformHost && isPathUnder(pathname, "/manage")) {
+	} else if (isPlatformHost && (isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/admin"))) {
 		const requestedStoreSlug = request.nextUrl.searchParams.get("store")?.trim().toLowerCase()
 		const savedSlug = request.cookies.get(PLATFORM_STORE_COOKIE)?.value?.toLowerCase()
 		const selectedSlug = isValidStoreSlug(requestedStoreSlug) ? requestedStoreSlug : savedSlug
-		if (isValidStoreSlug(selectedSlug)) requestHeaders.set("x-nurava-store-slug", selectedSlug)
+		if (isValidStoreSlug(selectedSlug)) {
+			selectedWorkspaceStoreSlug = selectedSlug
+			requestHeaders.set("x-nurava-store-slug", selectedSlug)
+		}
 		else requestHeaders.delete("x-nurava-store-slug")
 	} else {
 		requestHeaders.delete("x-nurava-store-slug")
@@ -93,6 +97,16 @@ export async function middleware(request: NextRequest) {
 	})
 	const isAuthenticated = !!token
 	const userRole = typeof token?.role === "string" ? token.role : undefined
+
+	// Once a merchant store has been selected, keep the workspace URL under that
+	// store. This keeps workspace requests tenant-identifiable in the address.
+	if (isAuthenticated && isPlatformHost && !rewriteUrl && selectedWorkspaceStoreSlug && (isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/admin"))) {
+		const scopedUrl = new URL(`${PLATFORM_STORE_PREFIX}${selectedWorkspaceStoreSlug}${pathname}`, request.url)
+		for (const [key, value] of request.nextUrl.searchParams) {
+			if (key !== "store") scopedUrl.searchParams.append(key, value)
+		}
+		return NextResponse.redirect(scopedUrl)
+	}
 
 	const effectivePathname = rewriteUrl?.pathname || pathname
 	const isAdminRoute = isPathUnder(effectivePathname, "/admin")
