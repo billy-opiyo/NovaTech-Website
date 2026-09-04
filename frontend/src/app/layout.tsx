@@ -8,6 +8,7 @@ import MobileNav from "@/components/layout/MobileNav"
 import PlatformMobileNav from "@/components/layout/PlatformMobileNav"
 import FloatingActions from "@/components/layout/FloatingActions"
 import PlatformHashScroll from "@/components/layout/PlatformHashScroll"
+import RouteScrollReset from "@/components/layout/RouteScrollReset"
 import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
 import SplashScreen from "@/components/layout/SplashScreen"
 import { ToastProvider } from "@/components/ui/Toast"
@@ -75,6 +76,7 @@ export default async function RootLayout({
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
+							<RouteScrollReset />
 							{store.isPlatformHome && <PlatformHashScroll />}
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							<SplashScreen platformHome={store.isPlatformHome}>
