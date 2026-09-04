@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function HeroBanner() {
 	const store = useStoreContext()
@@ -41,13 +42,13 @@ export default function HeroBanner() {
 				</p>
 				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
 					<Link
-						href={copy.primaryHref}
+						href={getStoreRouteHref(store, copy.primaryHref)}
 						className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
 					>
 						{copy.primaryLabel} <ArrowRight size={18} />
 					</Link>
 					<Link
-						href={copy.secondaryHref}
+						href={getStoreRouteHref(store, copy.secondaryHref)}
 						className="border border-primary text-primary hover:bg-primary hover:text-white px-6 py-2 rounded-lg transition w-full sm:w-auto text-center"
 					>
 						{copy.secondaryLabel}

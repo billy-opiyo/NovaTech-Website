@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function CategoryGrid() {
 	const store = useStoreContext()
@@ -21,7 +22,7 @@ export default function CategoryGrid() {
 						transition={{ delay: i * 0.1 }}
 					>
 						<Link
-							href={`/category/${cat.slug}`}
+							href={getStoreRouteHref(store, `/category/${cat.slug}`)}
 							className="glass-card navy-glass block overflow-hidden group"
 						>
 							<div className="relative h-40 w-full">

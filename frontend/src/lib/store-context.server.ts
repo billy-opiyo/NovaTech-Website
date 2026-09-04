@@ -58,6 +58,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const theme = record(store.themeSettings)
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
+		const socialSettings = record(contact.social)
 		const homepage = record(store.homepageSettings)
 		const commerce = record(store.commerceSettings)
 		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : clientConfig.contact.phoneDisplay
@@ -77,12 +78,19 @@ export async function getStoreContext(): Promise<StoreContext> {
 			tenantId: store.tenantId,
 			storeId: store.id,
 			storeSlug: store.slug,
+			storePathPrefix: isPlatformHost(requestHeaders.get("host")) ? `/store/${encodeURIComponent(store.slug)}` : "",
 			publicationStatus: store.publicationStatus,
 			brand: { ...clientConfig.brand, name: store.name, ...(store.logoUrl ? { logo: store.logoUrl } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
 			contact: { ...clientConfig.contact, ...contact, phoneDisplay, phoneHref: `tel:${phoneDisplay.replace(/[^\d+]/g, "")}`, email, emailHref: `mailto:${email}`, addressLine, cityCountry, mapLink, mapEmbedUrl },
+			social: {
+				...clientConfig.social,
+				facebook: typeof socialSettings.facebook === "string" ? socialSettings.facebook : clientConfig.social.facebook,
+				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : clientConfig.social.instagram,
+				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : clientConfig.social.tiktok,
+			},
 			homepage: { ...clientConfig.homepage, ...homepage },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
@@ -102,6 +110,7 @@ export function fallbackStoreContext(isPlatformHome = false): StoreContext {
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",
+		storePathPrefix: isPlatformHome ? "" : "/store/nuravatech",
 		publicationStatus: "PUBLISHED",
 		isPlatformHome,
 	} as unknown as StoreContext

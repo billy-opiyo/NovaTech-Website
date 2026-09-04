@@ -11,6 +11,7 @@ import Recommendations from "@/components/product/Recommendations"
 import ProductReviewForm from "@/components/product/ProductReviewForm"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -86,8 +87,8 @@ export default function ProductDetailPage() {
 	return (
 		<div className="mx-auto max-w-7xl space-y-10 py-6">
 			<nav className="flex items-center gap-2 text-sm text-gray-500">
-				<Link href="/products">Products</Link><ChevronRight size={14} />
-				<Link href={`/category/${product.category.slug}`}>{product.category.name}</Link><ChevronRight size={14} />
+				<Link href={getStoreRouteHref(store, "/products")}>Products</Link><ChevronRight size={14} />
+				<Link href={getStoreRouteHref(store, `/category/${product.category.slug}`)}>{product.category.name}</Link><ChevronRight size={14} />
 				<span className="text-gray-900 dark:text-white">{product.name}</span>
 			</nav>
 

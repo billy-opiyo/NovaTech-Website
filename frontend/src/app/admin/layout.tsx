@@ -32,6 +32,8 @@ import {
 	LoaderCircle,
 } from "lucide-react"
 import clsx from "clsx"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreHomeHref } from "@/lib/store-home"
 
 const sidebarLinks = (basePath: string) => [
 	{
@@ -177,12 +179,13 @@ function SidebarContent({
 	collapsed?: boolean
 	onClose?: () => void
 }) {
+	const store = useStoreContext()
 	const [signingOut, setSigningOut] = useState(false)
 
 	async function handleSignOut() {
 		setSigningOut(true)
 		try {
-			await signOut({ callbackUrl: "/" })
+			await signOut({ callbackUrl: getStoreHomeHref(store) })
 		} catch {
 			setSigningOut(false)
 		}

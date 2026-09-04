@@ -192,9 +192,10 @@ export default function AdminActivityPage() {
 				<div className="flex gap-3">
 					<button
 						onClick={fetchLogs}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+						disabled={isLoading}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-50"
 					>
-						<RefreshCw size={18} /> Refresh
+						<RefreshCw size={18} className={isLoading ? "animate-spin" : ""} /> {isLoading ? "Refreshing…" : "Refresh"}
 					</button>
 					<button onClick={exportLogs} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
 						<Download size={18} /> Export Logs

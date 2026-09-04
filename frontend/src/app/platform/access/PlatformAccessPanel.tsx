@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import { Copy, LoaderCircle, MailPlus, ShieldCheck } from "lucide-react"
+import { useToast } from "@/components/ui/Toast"
 
 const roles = ["PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"] as const
 type PlatformRole = (typeof roles)[number]
@@ -22,6 +23,7 @@ export default function PlatformAccessPanel() {
 	const [error, setError] = useState("")
 	const [busy, setBusy] = useState(false)
 	const [copied, setCopied] = useState(false)
+	const { addToast } = useToast()
 
 	async function load() {
 		const response = await fetch("/api/platform/access/invitations", { cache: "no-store" })
@@ -37,13 +39,15 @@ export default function PlatformAccessPanel() {
 		try {
 			const response = await fetch("/api/platform/access/invitations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, role }) })
 			const result = await response.json().catch(() => ({}))
-			if (!response.ok) { setError(result.message || "Unable to create platform invitation"); return }
+			if (!response.ok) { const message = result.message || "Unable to create platform invitation"; setError(message); addToast(message, "error"); return }
 			setInviteLink(result.inviteLink || "")
 			setMessage("Invitation created. Send the link to the invited person through an approved channel.")
+			addToast("Platform invitation created successfully.", "success")
 			setEmail("")
 			await load()
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to create platform invitation")
+			const message = reason instanceof Error ? reason.message : "Unable to create platform invitation"
+			setError(message); addToast(message, "error")
 		} finally {
 			setBusy(false)
 		}

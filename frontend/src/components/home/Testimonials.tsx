@@ -8,12 +8,14 @@ import type { FormEvent } from "react"
 import { Star } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useStoreContext } from "@/lib/store-context"
+import { useToast } from "@/components/ui/Toast"
 
 type StoreReview = { id: string; rating: number; title?: string | null; comment?: string | null; user?: { name?: string | null } }
 type Testimonial = { id: string; name: string; role: string; text: string; rating?: number }
 
 export default function Testimonials() {
 	const store = useStoreContext()
+	const { addToast } = useToast()
 	const pathname = usePathname()
 	const { data: session, status: sessionStatus } = useSession()
 	const [reviews, setReviews] = useState<StoreReview[]>([])
@@ -39,13 +41,16 @@ export default function Testimonials() {
 		try {
 			const response = await fetch("/api/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating, title: title.trim() || undefined, comment: comment.trim() }) })
 			const data = await response.json().catch(() => ({}))
-			if (response.status === 401) { setError("Please sign in before submitting a review."); return }
+			if (response.status === 401) { setError("Please sign in before submitting a review."); addToast("Please sign in before submitting a review.", "error"); return }
 			if (!response.ok) throw new Error(data.message || "Unable to submit review")
 			setMessage("Thank you. Your review is awaiting store approval.")
+			addToast("Review submitted and awaiting store approval.", "success")
 			setTitle("")
 			setComment("")
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : "Unable to submit review")
+			const message = reason instanceof Error ? reason.message : "Unable to submit review"
+			setError(message)
+			addToast(message, "error")
 		} finally { setSubmitting(false) }
 	}
 

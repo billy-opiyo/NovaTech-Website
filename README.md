@@ -82,6 +82,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Sign-in and Sign-up pages with form validation and error handling.
 - Email verification with six-digit codes and resend support.
 - Secure merchant invitation acceptance at `/auth/accept-invitation` with hashed expiring tokens, invited-email matching, membership activation, and email/manual link delivery.
+- Super Admin platform-access invitations at `/platform/access` for `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and `PLATFORM_ANALYST`, using invited-email-bound links that expire after seven days.
 - Forgot-password email flow and token-based password reset.
 - `getServerSession()` helper used across API routes for protected endpoints.
 - Account loading states and middleware protection for authenticated account routes.
@@ -91,8 +92,11 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Shared homepage layout with active-store branding and homepage content resolved through `StoreContext`; `client.config.ts` remains the safe developer fallback.
 - Authenticated preferred-store persistence through `User.preferredStoreId`, with a legacy preferred-store cookie fallback for returning browsers.
 - Reusable theme presets in `frontend/src/config/theme-presets.ts`.
-- Account profile image uploads for JPG, PNG, WEBP, and GIF files up to 5 MB, with generated storage keys and R2-backed storage.
+- Account profile image uploads for JPG, PNG, WEBP, and GIF files up to 1 MB, with generated storage keys and R2-backed storage.
+- Client/server image handling compresses product images to WebP where possible while enforcing the 1 MB image limit; verification PDFs remain limited separately to 10 MB.
 - Branded responsive splash screen, route loading UI, shared toast notifications, responsive footer grid, actionable contact links, and shared theme/search/cart/account controls.
+- The platform homepage includes a nine-step, preview-only Onboarding Merchant Guide with previous/next controls, pagination, touch swiping, theme-matched previews, and a final-step-only Create Store CTA.
+- Async actions provide loading feedback and viewport-safe toast notifications; toasts auto-dismiss after four seconds.
 
 ### 👑 Admin Panel
 
@@ -140,7 +144,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/manage/readiness` | GET | Tenant-scoped launch checklist with explicit publication and canonical-domain readiness states. |
 | `/api/health` | GET | Database-aware application health response with safe request correlation. |
 | `/api/newsletter`         | POST                   | Validates email and acknowledges subscription.                                                                                                                      |
-| `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2 (images only, 5MB max).                                                                                                 |
+| `/api/products/upload`    | POST                   | Admin product image upload to Cloudflare R2; images are optimized to WebP when possible and remain limited to 1 MB after validation.                                      |
+| `/api/platform/access/invitations` | GET, POST | Super Admin-only platform operator listing and seven-day invitation creation. |
+| `/api/platform/access/accept` | GET, POST | Preview and atomically accept a platform invitation for the invited email. |
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
 | `/api/billing/plans`      | GET                    | Lists active database-backed SaaS plans and add-ons for onboarding/catalog UI.                                                                                       |
 | `/api/manage/billing`     | GET, POST              | Tenant-scoped billing dashboard data and owner/admin subscription, add-on, setup-fee, renewal, cancellation, portal, and payment actions.                           |
@@ -479,7 +485,7 @@ npm run dev:open
 - ✔️ **Dark/light theme** — Configurable theme presets with CSS variables, localStorage persistence, and flash-free initialization
 - ✔️ **Global search** — Responsive search overlay with keyboard shortcut, live suggestions, and mobile positioning
 - ✔️ **Responsive and accessible UI** — Responsive shared layouts, improved focus/labels, semantic status messaging, and live toast notifications
-- ✔️ **Account enhancements** — Account loading states, corrected middleware guards, saved theme preferences, and profile image uploads up to 5 MB
+- ✔️ **Account enhancements** — Account loading states, corrected middleware guards, saved theme preferences, and profile image uploads up to 1 MB
 - ✔️ **Authentication flows** — Email verification with resend support and token-based password reset
 - ✔️ **Public information pages** — About, Blog, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions
 - ✔️ **Client customization** — Centralized branding, content, SEO, commerce defaults, feature flags, and theme selection
@@ -530,6 +536,12 @@ npm run dev:open
   - Featured products and new arrivals
   - Deals and on-sale products
   - RESTful API at `/api/recommendations` with multiple recommendation types
+- ✔️ **Merchant onboarding guidance** — Nine responsive visual preview cards mirror the store-creation path, with touch navigation on smaller screens, light/dark preview alignment, and a Create Store CTA only on the final step
+- ✔️ **Platform access management** — Super Admins can invite platform operators with explicit roles, invited-email matching, seven-day expiry, one-time acceptance, and server-side authorization
+- ✔️ **Store-aware routing** — The configured platform host and explicit `/store/{slug}` paths resolve platform and merchant contexts without reusing stale store navigation on the platform home
+- ✔️ **Store settings and feedback** — Validated social links and normalized WhatsApp destinations, four-second viewport-safe toasts, and loading states for important asynchronous actions
+- ✔️ **Image handling** — One-megabyte image validation across upload surfaces plus browser/server WebP optimization for product images
+- ✔️ **Review moderation** — Admin review workflows support status moderation together with controlled edit and delete operations
 
 ### Backend Service Layer
 

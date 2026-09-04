@@ -5,8 +5,14 @@ export type MerchantInquiryItem = {
 	price?: number
 }
 
-function normalizeWhatsAppNumber(value: string) {
+export function normalizeWhatsAppNumber(value: string) {
 	return value.replace(/\D/g, "")
+}
+
+export function getWhatsAppChatHref(number: string, message: string) {
+	const normalizedNumber = normalizeWhatsAppNumber(number)
+	if (!normalizedNumber) return ""
+	return `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(message)}`
 }
 
 export function getMerchantWhatsAppHref(input: {
@@ -21,7 +27,7 @@ export function getMerchantWhatsAppHref(input: {
 		return `- ${item.name}${variant}${quantity}${price}`
 	}).join("\n")
 	const text = `Hello ${input.storeName}, I found these products on Nurava Tech and would like to enquire about availability, delivery, warranty, and payment:\n${itemLines}`
-	return `https://wa.me/${normalizeWhatsAppNumber(input.number)}?text=${encodeURIComponent(text)}`
+	return getWhatsAppChatHref(input.number, text)
 }
 
 export function getMerchantEmailHref(email: string, storeName: string, items: MerchantInquiryItem[]) {

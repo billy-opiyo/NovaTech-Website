@@ -14,6 +14,7 @@ import {
 	ArrowDownRight,
 	Calendar,
 	Download,
+	Loader2,
 	Filter,
 } from "lucide-react"
 import clsx from "clsx"
@@ -88,6 +89,7 @@ export default function AdminAnalyticsPage() {
 	const [paymentMethods, setPaymentMethods] = useState<PaymentMethodStats[]>([])
 	const [growthData, setGrowthData] = useState<GrowthData | null>(null)
 	const [advancedAvailable, setAdvancedAvailable] = useState(true)
+	const [exporting, setExporting] = useState<"csv" | "json" | null>(null)
 
 	useEffect(() => {
 		fetchAnalytics()
@@ -184,6 +186,7 @@ export default function AdminAnalyticsPage() {
 	}
 
 	const handleExport = async (format: "csv" | "json") => {
+		setExporting(format)
 		try {
 			const response = await fetch(`/api/analytics/export?timeRange=${timeRange}&format=${format}`)
 
@@ -216,7 +219,7 @@ export default function AdminAnalyticsPage() {
 		} catch (err: unknown) {
 			console.error("Error exporting analytics:", err)
 			addToast("Failed to export analytics data", "error")
-		}
+		} finally { setExporting(null) }
 	}
 
 	const maxRevenue =
@@ -271,15 +274,17 @@ export default function AdminAnalyticsPage() {
 								<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
 									<button
 										onClick={() => handleExport("csv")}
+										disabled={Boolean(exporting)}
 										className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-sm"
 									>
-										Export as CSV
+										{exporting === "csv" && <Loader2 size={14} className="mr-2 inline animate-spin" aria-hidden="true" />}Export as CSV
 									</button>
 									<button
 										onClick={() => handleExport("json")}
+										disabled={Boolean(exporting)}
 										className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg text-sm"
 									>
-										Export as JSON
+										{exporting === "json" && <Loader2 size={14} className="mr-2 inline animate-spin" aria-hidden="true" />}Export as JSON
 									</button>
 								</div>
 							</div>

@@ -1,6 +1,9 @@
 "use client"
 
 import { FormEvent, useEffect, useMemo, useState } from "react"
+import { Loader2 } from "lucide-react"
+import { useToast } from "@/components/ui/Toast"
+import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
 
 type FormState = { businessType: string; taxStatus: string; locationType: string; settlementAccountType: string; legalName: string; phone: string; businessRegistrationNumber: string; taxIdentifier: string; county: string; town: string; addressLine: string; settlementAccountNumber: string; settlementAccountName: string }
 type Evidence = { id: string; type: string; status: string; contentType: string; sizeBytes: number; reviewedAt: string | null; reviewNote: string | null; createdAt: string }
@@ -13,6 +16,7 @@ function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/
 function requiredEvidence(form: FormState) { return ["GOVERNMENT_ID", "LOCATION_PROOF", "MPESA_OWNERSHIP", form.businessType === "REGISTERED_BUSINESS" ? "BUSINESS_REGISTRATION" : "OWNER_DECLARATION", ...(form.taxStatus === "REGISTERED" ? ["KRA_PIN"] : [])] }
 
 export default function MerchantVerificationPage() {
+	const { addToast } = useToast()
 	const [verification, setVerification] = useState<Verification | null>(null)
 	const [form, setForm] = useState<FormState>(emptyForm)
 	const [evidenceType, setEvidenceType] = useState("GOVERNMENT_ID")
@@ -43,25 +47,32 @@ export default function MerchantVerificationPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok && !["PHONE_VERIFICATION_REQUIRED", "EVIDENCE_REQUIRED"].includes(data.code)) throw new Error(data.message || "Unable to save verification details")
 			setMessage(data.message || "Verification details saved.")
+			addToast("Verification details saved successfully.", "success")
 			await load()
-		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to save verification details") } finally { setBusy(false) }
+		} catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to save verification details"; setMessage(message); addToast(message, "error") } finally { setBusy(false) }
 	}
 
 	async function requestPhoneCode() {
 		setBusy(true)
-		try { const response = await fetch("/api/manage/verification/phone", { method: "POST" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to send code"); setMessage(data.message) } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to send code") } finally { setBusy(false) }
+		try { const response = await fetch("/api/manage/verification/phone", { method: "POST" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to send code"); setMessage(data.message); addToast("Verification code sent successfully.", "success") } catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to send code"; setMessage(message); addToast(message, "error") } finally { setBusy(false) }
 	}
 
 	async function confirmPhoneCode() {
 		setBusy(true)
-		try { const response = await fetch("/api/manage/verification/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to verify phone"); setMessage(data.message); setCode(""); await load() } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to verify phone") } finally { setBusy(false) }
+		try { const response = await fetch("/api/manage/verification/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to verify phone"); setMessage(data.message); addToast("Phone verified successfully.", "success"); setCode(""); await load() } catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to verify phone"; setMessage(message); addToast(message, "error") } finally { setBusy(false) }
 	}
 
 	async function uploadEvidence(event: React.ChangeEvent<HTMLInputElement>) {
 		const file = event.target.files?.[0]
 		if (!file) return
+		if (isImageTooLarge(file)) {
+			setMessage(IMAGE_TOO_LARGE_MESSAGE)
+			addToast(IMAGE_TOO_LARGE_MESSAGE, "error")
+			event.target.value = ""
+			return
+		}
 		setBusy(true)
-		try { const body = new FormData(); body.set("type", evidenceType); body.set("file", file); const response = await fetch("/api/manage/verification/evidence", { method: "POST", body }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to upload document"); setMessage(`${labels[evidenceType]} uploaded for review.`); await load() } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to upload document") } finally { setBusy(false); event.target.value = "" }
+		try { const body = new FormData(); body.set("type", evidenceType); body.set("file", file); const response = await fetch("/api/manage/verification/evidence", { method: "POST", body }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to upload document"); setMessage(`${labels[evidenceType]} uploaded for review.`); addToast(`${labels[evidenceType]} uploaded successfully.`, "success"); await load() } catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to upload document"; setMessage(message); addToast(message, "error") } finally { setBusy(false); event.target.value = "" }
 	}
 
 	if (message && !verification) return <div className="glass-card p-6"><p>{message}</p></div>
@@ -87,10 +98,10 @@ export default function MerchantVerificationPage() {
 			<label className="grid gap-1 text-sm">M-Pesa account type<select value={form.settlementAccountType} onChange={(event) => setForm({ ...form, settlementAccountType: event.target.value })} className="rounded-lg border p-2.5"><option value="PAYBILL">Paybill</option><option value="TILL">Till</option><option value="OTHER">Other business account</option></select></label>
 			<label className="grid gap-1 text-sm">M-Pesa account number<input required value={form.settlementAccountNumber} onChange={(event) => setForm({ ...form, settlementAccountNumber: event.target.value })} className="rounded-lg border p-2.5" /></label>
 			<label className="grid gap-1 text-sm">M-Pesa account name<input required value={form.settlementAccountName} onChange={(event) => setForm({ ...form, settlementAccountName: event.target.value })} className="rounded-lg border p-2.5" /></label>
-			<button disabled={busy || approved || pending} className="btn-primary md:col-span-2 disabled:opacity-50">{busy ? "Saving…" : "Save details and continue"}</button>
+			<button disabled={busy || approved || pending} className="btn-primary inline-flex items-center gap-2 md:col-span-2 disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy ? "Saving…" : "Save details and continue"}</button>
 		</form>
-		<section className="glass-card p-6"><h2 className="text-xl font-semibold">Phone verification</h2><p className="mt-2 text-sm text-gray-600">{phoneVerified ? "Merchant phone verified." : "Save your details, then request a six-digit code by SMS."}</p><div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={busy || phoneVerified} onClick={() => void requestPhoneCode()} className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">Send code</button><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" maxLength={6} placeholder="6-digit code" className="w-36 rounded-lg border p-2" /><button type="button" disabled={busy || phoneVerified || code.length !== 6} onClick={() => void confirmPhoneCode()} className="btn-primary disabled:opacity-50">Verify phone</button></div></section>
-		<section className="glass-card p-6"><h2 className="text-xl font-semibold">Verification documents</h2><p className="mt-2 text-sm text-gray-600">PDF, JPG, PNG, or WEBP only; maximum 10MB. Upload documents privately. Do not upload passwords, M-Pesa PINs, or unrelated personal files.</p><div className="mt-4 flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Document type<select value={evidenceType} onChange={(event) => setEvidenceType(event.target.value)} className="rounded-lg border p-2.5">{Array.from(new Set([...required, ...Object.keys(labels)])).map((type) => <option key={type} value={type}>{labels[type]}</option>)}</select></label><label className="btn-primary inline-flex cursor-pointer items-center"><span>{busy ? "Uploading…" : "Choose document"}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={uploadEvidence} disabled={busy || approved} className="sr-only" /></label></div><div className="mt-5 divide-y">{verification.verificationEvidence.map((item) => <div className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm" key={item.id}><span><b>{labels[item.type] || humanize(item.type)}</b><span className="ml-2 text-xs text-gray-500">{(item.sizeBytes / 1024 / 1024).toFixed(2)}MB</span></span><span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.status === "APPROVED" ? "bg-green-100 text-green-800" : item.status === "REJECTED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{humanize(item.status)}</span></div>)}{!verification.verificationEvidence.length && <p className="py-4 text-sm text-gray-500">No documents uploaded yet.</p>}</div><div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">{required.map((type) => <span key={type} className={`rounded-full px-2 py-1 ${uploaded.has(type) ? "bg-green-100 text-green-800" : "bg-gray-100"}`}>{uploaded.has(type) ? "✓" : "○"} {labels[type]}</span>)}</div></section>
-		<button type="button" disabled={busy || approved || pending} onClick={() => void saveProfile()} className="btn-primary w-fit disabled:opacity-50">{pending ? "Awaiting review" : approved ? "Approved" : "Submit for Nurava review"}</button>
+		<section className="glass-card p-6"><h2 className="text-xl font-semibold">Phone verification</h2><p className="mt-2 text-sm text-gray-600">{phoneVerified ? "Merchant phone verified." : "Save your details, then request a six-digit code by SMS."}</p><div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={busy || phoneVerified} onClick={() => void requestPhoneCode()} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">{busy && <Loader2 size={15} className="animate-spin" aria-hidden="true" />} {busy ? "Sending…" : "Send code"}</button><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" maxLength={6} placeholder="6-digit code" className="w-36 rounded-lg border p-2" /><button type="button" disabled={busy || phoneVerified || code.length !== 6} onClick={() => void confirmPhoneCode()} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">{busy && <Loader2 size={15} className="animate-spin" aria-hidden="true" />} {busy ? "Verifying…" : "Verify phone"}</button></div></section>
+		<section className="glass-card p-6"><h2 className="text-xl font-semibold">Verification documents</h2><p className="mt-2 text-sm text-gray-600">PDF up to 10MB; JPG, PNG, or WEBP images up to 1MB. Upload documents privately. Do not upload passwords, M-Pesa PINs, or unrelated personal files.</p><div className="mt-4 flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Document type<select value={evidenceType} onChange={(event) => setEvidenceType(event.target.value)} className="rounded-lg border p-2.5">{Array.from(new Set([...required, ...Object.keys(labels)])).map((type) => <option key={type} value={type}>{labels[type]}</option>)}</select></label><label className="btn-primary inline-flex cursor-pointer items-center gap-2">{busy && <Loader2 size={15} className="animate-spin" aria-hidden="true" />}<span>{busy ? "Uploading…" : "Choose document"}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={uploadEvidence} disabled={busy || approved} className="sr-only" /></label></div><div className="mt-5 divide-y">{verification.verificationEvidence.map((item) => <div className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm" key={item.id}><span><b>{labels[item.type] || humanize(item.type)}</b><span className="ml-2 text-xs text-gray-500">{(item.sizeBytes / 1024 / 1024).toFixed(2)}MB</span></span><span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.status === "APPROVED" ? "bg-green-100 text-green-800" : item.status === "REJECTED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{humanize(item.status)}</span></div>)}{!verification.verificationEvidence.length && <p className="py-4 text-sm text-gray-500">No documents uploaded yet.</p>}</div><div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">{required.map((type) => <span key={type} className={`rounded-full px-2 py-1 ${uploaded.has(type) ? "bg-green-100 text-green-800" : "bg-gray-100"}`}>{uploaded.has(type) ? "✓" : "○"} {labels[type]}</span>)}</div></section>
+		<button type="button" disabled={busy || approved || pending} onClick={() => void saveProfile()} className="btn-primary inline-flex w-fit items-center gap-2 disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy ? "Submitting…" : pending ? "Awaiting review" : approved ? "Approved" : "Submit for Nurava review"}</button>
 	</div>
 }

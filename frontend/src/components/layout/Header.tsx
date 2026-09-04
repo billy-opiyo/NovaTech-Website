@@ -12,8 +12,11 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { signOut, useSession } from "next-auth/react"
 import AccountAvatar from "@/components/account/AccountAvatar"
+import { getStoreHomeHref, getStoreRouteHref } from "@/lib/store-home"
 
 const platformNavigation = [
+	// Explicitly select the platform context so a remembered merchant store
+	// cannot turn these links into the merchant homepage.
 	{ name: "Home", href: "/?platformHome=1" },
 	{ name: "Browse Stores", href: "/stores?all=1" },
 	{ name: "Plans", href: "/?platformHome=1#plans" },
@@ -26,8 +29,9 @@ export default function Header() {
 	const store = useStoreContext()
 	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-	const homeHref = store.isPlatformHome ? "/?platformHome=1" : "/"
-	const platformAccountHref = "/auth/signin?callbackUrl=%2Faccount"
+	const homeHref = getStoreHomeHref(store)
+	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
+	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
 	const accountName = session?.user?.name || session?.user?.email || "Account"
 
@@ -54,7 +58,7 @@ export default function Header() {
 						</span>
 					</Link>
 				<nav className="hidden gap-3 md:flex lg:gap-6">
-					{(store.isPlatformHome ? platformNavigation : store.navigation).map((link) => (
+					{navigation.map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
@@ -84,8 +88,8 @@ export default function Header() {
 						{!store.isPlatformHome && <>
 							<SearchOverlay />
 							<NotificationCenter />
-							<Link href="/cart" aria-label="Open shopping cart" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{itemCount}</span>}</Link>
-							<Link href="/account" aria-label={`Open ${accountName}'s account`} title={isSignedIn ? accountName : "Account"} className="rounded-full p-1.5 text-gray-700 transition hover:bg-gray-200 dark:text-white dark:hover:bg-gray-700">{isSignedIn ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-8 w-8" /> : <User size={20} />}</Link>
+							<Link href={getStoreRouteHref(store, "/cart")} aria-label="Open shopping cart" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition relative"><ShoppingCart size={20} />{itemCount > 0 && <span className="absolute -top-1 -right-1 bg-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{itemCount}</span>}</Link>
+							<Link href={getStoreRouteHref(store, "/account")} aria-label={`Open ${accountName}'s account`} title={isSignedIn ? accountName : "Account"} className="rounded-full p-1.5 text-gray-700 transition hover:bg-gray-200 dark:text-white dark:hover:bg-gray-700">{isSignedIn ? <AccountAvatar name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} className="h-8 w-8" /> : <User size={20} />}</Link>
 						</>}
 
 						{/* Mobile menu toggle */}
@@ -109,7 +113,7 @@ export default function Header() {
 						className="md:hidden glass border-t border-white/10 overflow-hidden"
 					>
 						<div className="px-4 py-4 flex flex-col gap-3">
-						{(store.isPlatformHome ? platformNavigation : store.navigation).map((link) => (
+						{navigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}

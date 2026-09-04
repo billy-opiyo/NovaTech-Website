@@ -8,6 +8,7 @@ import Newsletter from "@/components/home/Newsletter"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
 import Link from "next/link"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function MerchantHomePage() {
 	const store = useStoreContext()
@@ -28,9 +29,9 @@ export default function MerchantHomePage() {
 								<div className="flex items-start gap-3"><Mail className="mt-1 text-primary" size={20} /><div><p className="font-medium">Email Us</p><p className="text-gray-600">{store.contact.responseTime}</p><a href={store.contact.emailHref} className="text-primary transition-colors hover:underline">{store.contact.email}</a></div></div>
 							</div>
 							<div><h3 className="mb-3 font-semibold">Location</h3><div className="flex items-start gap-3"><MapPin className="mt-1 text-primary" size={20} /><div><p className="font-medium">Visit Our Store</p><p className="text-gray-600">{store.contact.addressLine}</p><p className="text-primary">{store.contact.cityCountry}</p></div></div></div>
-							<div className="mt-6"><h3 className="mb-3 font-semibold">Quick Links</h3><div className="flex flex-col gap-3"><Link href="/contact" className="text-primary transition-colors hover:underline">Contact Form</Link><Link href="/products?category=phones" className="text-primary transition-colors hover:underline">View Products</Link></div></div>
+							<div className="mt-6"><h3 className="mb-3 font-semibold">Quick Links</h3><div className="flex flex-col gap-3"><Link href={getStoreRouteHref(store, "/contact")} className="text-primary transition-colors hover:underline">Contact Form</Link><Link href={getStoreRouteHref(store, "/products?category=phones")} className="text-primary transition-colors hover:underline">View Products</Link></div></div>
 						</div>
-						<div className="space-y-6"><h2 className="text-2xl font-bold">Send Us a Message</h2><Link href="/contact" className="btn-primary flex w-full items-center justify-center gap-2 py-3"><Send size={18} /> Message Us</Link></div>
+						<div className="space-y-6"><h2 className="text-2xl font-bold">Send Us a Message</h2><Link href={getStoreRouteHref(store, "/contact")} className="btn-primary flex w-full items-center justify-center gap-2 py-3"><Send size={18} /> Message Us</Link></div>
 					</div>
 				</div>
 

@@ -334,8 +334,9 @@ body.splash-pending {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  opacity: 0;
-  animation: splash-fade-in 500ms ease-out 120ms forwards;
+	  /* This is server-rendered on the initial platform-home paint, so there is
+     no transparent interval exposing the navy body background. */
+	  opacity: 1;
   background-color: rgb(var(--color-bg-dark));
   background-image:
     linear-gradient(180deg, rgb(4 11 24 / 0.28), rgb(4 11 24 / 0.62)),
@@ -521,4 +522,61 @@ html:not(.dark) .splash-screen {
 
 .splash-ellipsis span:nth-child(3) {
   animation-delay: 320ms;
+}
+
+/* Merchant guide previews mirror the dark workspace UI, but must follow the
+   active global theme so a light-mode platform does not contain dark cards. */
+.merchant-guide-preview[data-preview-theme="light"] [class*="bg-[#0f172a]"] {
+  background-color: #f8fafc !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="bg-[#071a36]"] {
+  background-color: #e2e8f0 !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="bg-[#1e293b]"] {
+  background-color: #ffffff !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="border-sky-400/25"] {
+  border-color: rgb(14 116 144 / 0.25) !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="border-slate-700"],
+.merchant-guide-preview[data-preview-theme="light"] [class*="border-slate-600"] {
+  border-color: #cbd5e1 !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-slate-100"] {
+  color: #0f172a !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-slate-200"] {
+  color: #1e293b !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-slate-400"],
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-sky-300"] {
+  color: #0369a1 !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="bg-amber-950/40"] {
+  background-color: #fef3c7 !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="border-amber-400/40"] {
+  border-color: rgb(245 158 11 / 0.55) !important;
+}
+
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-amber-200"],
+.merchant-guide-preview[data-preview-theme="light"] [class*="text-amber-300"] {
+  color: #92400e !important;
 }

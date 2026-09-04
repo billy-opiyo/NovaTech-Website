@@ -3,7 +3,7 @@ import { z } from "zod"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { deleteFile, uploadFile, generateProfileFileKey } from "backend/lib/storage"
-import { hasAllowedFileSignature, type ValidatedFileKind } from "backend/lib/file-validation"
+import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES, type ValidatedFileKind } from "backend/lib/file-validation"
 
 const settingsSchema = z.object({
 	name: z.string().trim().min(2).max(100),
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 		if (!(file instanceof File)) return NextResponse.json({ message: "Please choose an image." }, { status: 400 })
 		const imageType = profileImageTypes.get(file.type)
 		if (!imageType) return NextResponse.json({ message: "Use a JPG, PNG, WEBP, or GIF image." }, { status: 400 })
-		if (file.size > 5 * 1024 * 1024) return NextResponse.json({ message: "Profile images must be 5MB or smaller." }, { status: 400 })
+		if (file.size > MAX_IMAGE_UPLOAD_BYTES) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })
 
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!hasAllowedFileSignature(buffer, [imageType.kind])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })

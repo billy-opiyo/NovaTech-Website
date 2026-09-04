@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 
 const SPLASH_DURATION = 5000
@@ -16,17 +16,24 @@ const SPLASH_IMAGES = [
 
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
+	const searchParams = useSearchParams()
 	// The splash belongs to the platform homepage's document load only. Keep the
 	// initial pathname stable so navigating to `/` in the client does not replay
 	// it; a real refresh/reload creates a new component instance and shows it.
 	const initialPathname = useRef(pathname)
 	const isInitialPlatformHomepage =
 		platformHome && initialPathname.current === "/" && pathname === "/"
-	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage
+	// Authentication callbacks can perform a full document navigation back to
+	// the platform homepage (especially OAuth). The user is already returning
+	// to the page they started from, so do not replay the platform splash.
+	const isLoginReturn = searchParams.get("login") === "success"
+	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage && !isLoginReturn
 	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
-	const [visible, setVisible] = useState(false)
+	// Render the splash on the first server paint. Keeping this true initially
+	// prevents the theme background from flashing before the client hydrates.
+	const [visible, setVisible] = useState(true)
 	const [readyToReveal, setReadyToReveal] = useState(false)
 
 	useEffect(() => {
@@ -42,20 +49,17 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 		let finishTimer: number | undefined
 		let frame = 0
 
-		const preloadSplashImages = async () => {
-			await Promise.all(
-				SPLASH_IMAGES.map(
-					(src) =>
-						new Promise<void>((resolve) => {
-							const image = new Image()
-							image.onload = () => resolve()
-							image.onerror = () => resolve()
-							image.src = src
-						}),
-				),
-			)
-			if (cancelled) return
+		const warmActiveSplashImage = () => {
+			const isLight = !document.documentElement.classList.contains("dark")
+			const isDesktop = window.matchMedia("(min-width: 1200px)").matches
+			const imageIndex = isLight ? (isDesktop ? 3 : 2) : isDesktop ? 1 : 0
+			const image = new Image()
+			image.decoding = "async"
+			image.src = SPLASH_IMAGES[imageIndex]
+		}
 
+		const startSplash = () => {
+			if (cancelled) return
 			hasShownSplash.current = true
 			setProgress(0)
 			setVisible(true)
@@ -79,21 +83,10 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			}, SPLASH_DURATION + POST_LOAD_DELAY)
 		}
 
-		const bootSplash = () => {
-			void preloadSplashImages()
-		}
-
-		if (document.readyState === "complete") {
-			bootSplash()
-		} else {
-			window.addEventListener("load", bootSplash, { once: true })
-			return () => {
-				cancelled = true
-				window.removeEventListener("load", bootSplash)
-				window.cancelAnimationFrame(frame)
-				if (finishTimer) window.clearTimeout(finishTimer)
-			}
-		}
+		// Start the visual immediately. The browser will continue loading the
+		// active artwork without holding the splash behind a blank background.
+		warmActiveSplashImage()
+		startSplash()
 
 		return () => {
 			cancelled = true
@@ -103,7 +96,10 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	}, [shouldShowSplash])
 
 	useEffect(() => {
-		if (!visible) return
+		// `visible` starts true so the initial platform document can render the
+		// splash immediately. It must never lock scrolling on merchant routes,
+		// auth pages, or after a login return where no splash is shown.
+		if (!shouldShowSplash || !visible) return
 
 		const html = document.documentElement
 		const body = document.body
@@ -127,11 +123,10 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			body.style.overflow = previousBodyOverflow
 			body.style.touchAction = previousBodyTouchAction
 		}
-	}, [visible])
+	}, [shouldShowSplash, visible])
 
 	if (!shouldShowSplash) return <>{children}</>
 	if (!readyToReveal) {
-		if (!visible) return null
 		return (
 			<div
 				className="splash-screen"
