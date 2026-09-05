@@ -5,6 +5,7 @@ import { initiateMpesaPayment } from "backend/payments/mpesa"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { getMerchantMpesaConfig } from "backend/payments/merchant-mpesa"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
@@ -12,7 +13,7 @@ const mpesaInitiateSchema = z.object({
 	amount: z.number().positive(),
 	phone: z.string().regex(/^(07\d{8}|2547\d{8})$/),
 	reference: z.string().min(3),
-	orderId: z.string().optional(),
+	orderId: z.string().min(1),
 	metadata: z.record(z.unknown()).optional(),
 })
 
@@ -25,6 +26,8 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = mpesaInitiateSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
+		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
+		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
 		if (validated.orderId) {
 			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, shippingAddress: true } })
 			const session = await getServerSession()
@@ -41,6 +44,8 @@ export async function POST(req: NextRequest) {
 			reference: validated.reference,
 			orderId: validated.orderId,
 			tenantId: context.tenantId,
+			kind: "ORDER",
+			merchantConfig,
 			metadata: validated.metadata,
 		})
 

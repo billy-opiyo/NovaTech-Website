@@ -9,6 +9,7 @@ import { requireMembership, requireStorePermission } from "../lib/tenant-access"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../lib/commerce-model"
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
+import { getMerchantMpesaConfig } from "../payments/merchant-mpesa"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -36,7 +37,9 @@ export async function createOrder(req: NextRequest) {
 		const session = await getServerSession()
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
+		if (validated.paymentMethod !== "MPESA") return NextResponse.json({ message: "Shopper checkout currently supports merchant-routed M-Pesa payments only." }, { status: 409 })
 		const context = await resolveTenantFromRequest(req)
+		if (!await getMerchantMpesaConfig(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
 
 		const order = await orderService.createOrder({
 			tenantId: context.tenantId,
@@ -53,14 +56,6 @@ export async function createOrder(req: NextRequest) {
 			notes: validated.notes,
 			idempotencyKey: req.headers.get("idempotency-key") || undefined,
 		})
-
-		// Send order confirmation email (non-blocking - don't fail the order if email fails)
-		try {
-			const { sendOrderConfirmationEmail } = await import("../lib/email")
-			await sendOrderConfirmationEmail(validated.shippingAddress.email, order)
-		} catch (emailError) {
-			console.error("Failed to send order confirmation email:", emailError)
-		}
 
 		return NextResponse.json(order, { status: 201 })
 	} catch (error: unknown) {

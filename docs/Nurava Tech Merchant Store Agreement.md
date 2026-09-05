@@ -98,11 +98,11 @@ Nurava may update platform components, security controls, or implementation deta
 - customer complaints and after-sales support; and
 - the Merchant’s own payment, delivery, refund, return, and warranty policies.
 
-4.3 Nurava provides store discovery, hosting, catalogue presentation, and enquiry handoff. Nurava does **not** collect shopper funds, complete the Merchant’s shopper sale, or represent itself as the merchant of record for that sale.
+4.3 Nurava provides store discovery, hosting, catalogue presentation, merchant-routed checkout infrastructure, and enquiry handoff. Where the Merchant has an active approved shopper-payment profile, the Platform sends an M-Pesa STK request to the Merchant’s verified PayBill or Till. Nurava does **not** receive or hold shopper funds, charge a product-sale commission, complete the Merchant’s sale as seller, or represent itself as the merchant of record.
 
-4.4 A shopper may select products and prepare an enquiry that is handed to the Merchant through available WhatsApp or email links. The handoff is not proof that a sale, payment, delivery commitment, or contract of sale has occurred.
+4.4 A shopper may either create a pending order and request payment through the Merchant’s verified M-Pesa route, or select products and prepare an enquiry that is handed to the Merchant through available WhatsApp or email links. An STK request or enquiry handoff is not, by itself, proof that delivery, a refund, warranty, or any other sale obligation has been completed.
 
-4.5 New shopper payment initiation, shopper payment verification, and new shopper transaction-commission creation are disabled under the merchant-direct launch model. Historical records, if any, remain separate for continuity and reconciliation.
+4.5 New shopper payment initiation and verification are available only when the Platform’s `MERCHANT_ROUTED` mode and the Merchant’s active approved payment profile are enabled. Merchant-routed shopper payments create no Nurava product-sale commission; historical commission records, if any, remain separate for continuity and reconciliation.
 
 ---
 
@@ -308,7 +308,7 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | SaaS billing method at launch | M-Pesa only |
 | SaaS collection model | Invoice-driven; provider callback confirms payment; no assumed automatic recurring debit |
 | Shopper commerce model | Merchant-direct; the Merchant is merchant of record |
-| Shopper funds | Nurava does not collect shopper funds |
+| Shopper funds | M-Pesa shopper payments are routed to the Merchant’s verified PayBill/Till; Nurava does not receive or hold shopper funds |
 | Shopper responsibilities | Merchant handles payment, delivery, returns, refunds, warranties, taxes, complaints, and sale contract |
 | Setup fee and first subscription | Collected together after the free pilot, through the applicable invoice/payment request |
 | Nurava SaaS tax policy | 16% VAT-inclusive pricing for taxable subscriptions, setup fees, and paid add-ons; invoices show the tax breakdown when enabled after registration/classification confirmation |
@@ -326,7 +326,7 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | Closed shopper enquiry retention | 12 months after the last interaction while the merchant workspace remains active |
 | Verification document retention | 90 days after final verification decision or account end, whichever is later; decision/audit metadata is retained separately |
 | Preserved billing/legal records | 7 years after the relationship or last transaction, subject to legal hold or applicable law |
-| Historical commissions | Historical records may remain for reconciliation; new shopper commission creation is disabled in merchant-direct mode |
+| Product-sale commissions | No Nurava product-sale commission is charged; historical commission records may remain for reconciliation |
 
 ### Schedule A acknowledgement
 

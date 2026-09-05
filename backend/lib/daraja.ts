@@ -4,7 +4,15 @@ import { PLATFORM_BRAND_NAME } from "./brand"
 const SANDBOX_BASE_URL = "https://sandbox.safaricom.co.ke"
 const PRODUCTION_BASE_URL = "https://api.safaricom.co.ke"
 
-let cachedToken: { token: string; expiresAt: number } | null = null
+export type DarajaCredentials = {
+	consumerKey: string
+	consumerSecret: string
+	passkey: string
+	shortcode: string
+	accountType?: "PAYBILL" | "TILL"
+}
+
+const tokenCache = new Map<string, { token: string; expiresAt: number }>()
 
 function getBaseUrl(): string {
 	return process.env.MPESA_ENV === "production"
@@ -12,14 +20,19 @@ function getBaseUrl(): string {
 		: SANDBOX_BASE_URL
 }
 
-export function isMpesaConfigured(): boolean {
+function envCredentials(): DarajaCredentials | null {
+	const consumerKey = process.env.MPESA_CONSUMER_KEY
+	const consumerSecret = process.env.MPESA_CONSUMER_SECRET
+	const passkey = process.env.MPESA_PASSKEY
+	const shortcode = process.env.MPESA_SHORTCODE
+	if (!consumerKey || !consumerSecret || !passkey || !shortcode) return null
+	return { consumerKey, consumerSecret, passkey, shortcode }
+}
+
+export function isMpesaConfigured(credentials?: DarajaCredentials): boolean {
+	if (credentials) return Boolean(credentials.consumerKey && credentials.consumerSecret && credentials.passkey && credentials.shortcode)
 	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_BRAND_NAME) return false
-	return Boolean(
-		process.env.MPESA_CONSUMER_KEY &&
-			process.env.MPESA_CONSUMER_SECRET &&
-			process.env.MPESA_PASSKEY &&
-			process.env.MPESA_SHORTCODE,
-	)
+	return Boolean(envCredentials())
 }
 
 export function normalizePhone(phone: string): string {
@@ -50,18 +63,17 @@ export function generatePassword(
 	}
 }
 
-async function getAccessToken(): Promise<string> {
-	if (cachedToken && cachedToken.expiresAt > Date.now()) {
-		return cachedToken.token
-	}
 
-	const consumerKey = process.env.MPESA_CONSUMER_KEY
-	const consumerSecret = process.env.MPESA_CONSUMER_SECRET
-	if (!consumerKey || !consumerSecret) {
+async function getAccessToken(credentials?: DarajaCredentials): Promise<string> {
+	const resolved = credentials || envCredentials()
+	if (!resolved) {
 		throw new Error("M-Pesa consumer key/secret not configured")
 	}
+	const cacheKey = `${resolved.consumerKey}:${resolved.shortcode}`
+	const cachedToken = tokenCache.get(cacheKey)
+	if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.token
 
-	const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
+	const auth = Buffer.from(`${resolved.consumerKey}:${resolved.consumerSecret}`).toString(
 		"base64",
 	)
 
@@ -74,20 +86,21 @@ async function getAccessToken(): Promise<string> {
 	}
 
 	const data = (await res.json()) as { access_token: string; expires_in: number }
-	cachedToken = {
+	tokenCache.set(cacheKey, {
 		token: data.access_token,
 		expiresAt: Date.now() + (data.expires_in - 60) * 1000,
-	}
+	})
 	return data.access_token
 }
 
 interface DarajaRequestOptions {
 	path: string
 	body: Record<string, unknown>
+	credentials?: DarajaCredentials
 }
 
-async function darajaRequest({ path, body }: DarajaRequestOptions) {
-	const token = await getAccessToken()
+async function darajaRequest({ path, body, credentials }: DarajaRequestOptions) {
+	const token = await getAccessToken(credentials)
 	const res = await fetch(`${getBaseUrl()}${path}`, {
 		method: "POST",
 		headers: {
@@ -110,6 +123,7 @@ export interface StkPushParams {
 	accountReference: string
 	transactionDesc?: string
 	callbackUrl: string
+	credentials?: DarajaCredentials
 }
 
 export async function stkPush({
@@ -118,9 +132,11 @@ export async function stkPush({
 	accountReference,
 	transactionDesc = `${PLATFORM_BRAND_NAME} Payment`,
 	callbackUrl,
+	credentials,
 }: StkPushParams) {
-	const shortcode = process.env.MPESA_SHORTCODE
-	const passkey = process.env.MPESA_PASSKEY
+	const resolved = credentials || envCredentials()
+	const shortcode = resolved?.shortcode
+	const passkey = resolved?.passkey
 	if (!shortcode || !passkey) {
 		throw new Error("M-Pesa shortcode/passkey not configured")
 	}
@@ -130,11 +146,12 @@ export async function stkPush({
 
 	return darajaRequest({
 		path: "/mpesa/stkpush/v1/processrequest",
+		credentials: resolved || undefined,
 		body: {
 			BusinessShortCode: shortcode,
 			Password: password,
 			Timestamp: timestamp,
-			TransactionType: "CustomerPayBillOnline",
+			TransactionType: resolved?.accountType === "TILL" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline",
 			Amount: Math.round(amount),
 			PartyA: normalizedPhone,
 			PartyB: shortcode,
@@ -148,11 +165,13 @@ export async function stkPush({
 
 export interface StkQueryParams {
 	checkoutRequestId: string
+	credentials?: DarajaCredentials
 }
 
-export async function stkQuery({ checkoutRequestId }: StkQueryParams) {
-	const shortcode = process.env.MPESA_SHORTCODE
-	const passkey = process.env.MPESA_PASSKEY
+export async function stkQuery({ checkoutRequestId, credentials }: StkQueryParams) {
+	const resolved = credentials || envCredentials()
+	const shortcode = resolved?.shortcode
+	const passkey = resolved?.passkey
 	if (!shortcode || !passkey) {
 		throw new Error("M-Pesa shortcode/passkey not configured")
 	}
@@ -161,6 +180,7 @@ export async function stkQuery({ checkoutRequestId }: StkQueryParams) {
 
 	return darajaRequest({
 		path: "/mpesa/stkpushquery/v1/query",
+		credentials: resolved || undefined,
 		body: {
 			BusinessShortCode: shortcode,
 			Password: password,

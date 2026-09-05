@@ -405,10 +405,13 @@ export async function recordOrderCommission(paymentId: string) {
 	if (!isShopperCheckoutEnabled()) return null
 	const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { tenant: { include: { plan: true } } } })
 	if (!payment?.tenantId || !payment.orderId || payment.status !== "COMPLETED") return null
-	const rate = payment.tenant?.plan?.transactionFeePercent || 0
+	// Merchant-routed shopper sales never generate platform commission. Keep a
+	// zero-valued transaction audit row so reconciliation can prove the payment
+	// was processed without treating it as SaaS revenue.
+	const rate = 0
 	return prisma.transaction.upsert({
 		where: { paymentId },
-		update: { grossAmount: payment.amount, commissionRate: rate, commissionAmount: calculateCommission(payment.amount, rate), status: "COMPLETED" },
-		create: { tenantId: payment.tenantId, orderId: payment.orderId, paymentId, currency: payment.currency, grossAmount: payment.amount, commissionRate: rate, commissionAmount: calculateCommission(payment.amount, rate), status: "COMPLETED" },
+		update: { grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION" } },
+		create: { tenantId: payment.tenantId, orderId: payment.orderId, paymentId, currency: payment.currency, grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION" } },
 	})
 }

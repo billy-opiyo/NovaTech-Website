@@ -65,13 +65,13 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
 - **Cart Page** — optional product selection list with quantity controls and save-for-later support.
-- **Merchant Handoff Page** — collects consented shopper contact details, saves a tenant-scoped enquiry with server-authoritative product snapshots, then sends the selected products to the independent store through WhatsApp or email. The merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
+- **Checkout and Merchant Handoff** — in `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and sends an M-Pesa STK request to the merchant's verified PayBill/Till with zero Nurava product commission. The merchant remains seller of record and handles delivery, refunds, taxes, warranty, and support. WhatsApp/email handoff remains available for direct contact.
 - **Merchant Enquiries and Quotes** — `/manage/enquiries` provides status tracking, internal notes, enquiry history, and owner/admin quote creation with email delivery.
 - **Catalog Import/Export** — `/manage/catalog` provides CSV templates, preview validation, SKU-based create/update imports, entitlement checks, partial success reporting, audit records, and current catalog export.
 - **Launch Readiness** — `/manage/readiness` provides server-backed publication checks and blocks publishing while required tenant, verification, legal, contact, settings, or canonical-domain checks are incomplete.
 - **Centralized Store Permissions** — A server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports.
 - **Operational Observability** — Critical operational responses include request IDs, structured safe failure events, and database-aware `/api/health` output.
-- **Platform boundary** — Nurava Tech does not create new shopper orders or collect shopper payments in `MERCHANT_DIRECT` mode.
+- **Platform boundary** — `MERCHANT_ROUTED` enables tenant-scoped shopper M-Pesa orders routed to the merchant's verified account; `MERCHANT_DIRECT` keeps contact-only checkout. Nurava Tech does not receive product-sale funds or charge a product commission in either mode.
 
 ### 👤 Authentication
 
@@ -123,7 +123,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Merchant onboarding and first publication require an explicit, versioned acknowledgement of the current merchant terms, privacy notice, and merchant responsibilities. Acceptance records are included in merchant exports and preserved separately from workspace-retention deletion.
 - Plan limits are server-enforced for products, staff accounts, and custom domains; additions are blocked when the entitlement is unavailable or full.
 - `npm --workspace backend run worker:lifecycle` runs the credential-free lifecycle worker source: subscription expiry/grace transitions and due retention processing. It is not automatic until a scheduler is configured, and it will not process due private evidence without the configured private bucket.
-- Historical shopper order/payment records remain separate from merchant SaaS billing; new shopper payments and transaction commission creation are disabled by the merchant-direct model.
+- Shopper order/payment records remain separate from merchant SaaS billing. In `MERCHANT_ROUTED` mode, each merchant supplies encrypted Daraja credentials and a verified matching PayBill/Till; callbacks confirm payment and failed payments restore reserved stock. Nurava's product-sale commission is always zero.
 
 ### 📦 Backend API (App Router Route Handlers)
 
@@ -132,7 +132,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/products`           | GET, POST              | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
 | `/api/reviews`            | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews.                                 |
 | `/api/wishlist`           | GET, POST, DELETE      | Read / add / remove wishlist items for authenticated users.                                                                                                         |
-| `/api/orders`             | GET, POST              | List historical authenticated-user orders; new shopper order creation is disabled in merchant-direct mode.                                                          |
+| `/api/orders`             | GET, POST              | Lists historical orders and creates tenant-scoped pending shopper orders when `MERCHANT_ROUTED` and the merchant's M-Pesa route is active. |
 | `/api/orders/[id]`        | GET, PATCH             | Fetch single order (owner or admin), admin updates order status / tracking number with user notification.                                                           |
 | `/api/coupons/validate`   | POST                   | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation.                                                     |
 | `/api/contact`            | POST                   | Creates a support ticket and sends email via Resend (support team + customer confirmation).                                                                         |
@@ -151,6 +151,9 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
 | `/api/billing/plans`      | GET                    | Lists active database-backed SaaS plans and add-ons for onboarding/catalog UI.                                                                                       |
 | `/api/manage/billing`     | GET, POST              | Tenant-scoped billing dashboard data and owner/admin subscription, add-on, setup-fee, renewal, cancellation, portal, and payment actions.                           |
+| `/api/manage/shopper-payments` | GET, PATCH | Owner/admin management of the merchant's verified PayBill/Till route; credentials are encrypted and never returned. |
+| `/api/payments/mpesa/initiate` | POST | Starts a tenant-scoped merchant-routed shopper STK Push for a pending order. |
+| `/api/payments/mpesa/verify` | POST | Reconciles a tenant-scoped shopper M-Pesa request and confirms the pending order after provider verification. |
 | `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, customer billing records, revenue, commissions, invoices, and failed-payment reporting.                       |
 | `/api/platform/operations` | GET, PATCH             | Platform-role-protected cross-store metrics, tenant activity, store previews, billing summaries, and authorized store suspension/reactivation.                    |
 
@@ -171,11 +174,12 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 💳 Payments (Real Provider Integration)
 
-- **M-Pesa** (`backend/payments/mpesa/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed in merchant-direct mode:
+- **M-Pesa** (`backend/payments/mpesa/`) — SaaS billing uses platform credentials; shopper checkout uses an active merchant profile in `MERCHANT_ROUTED` mode:
   - `initiateMpesaPayment` — STK Push request, stores `Payment` row (PENDING).
   - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
   - `simulateMpesaPayment` — Sandbox C2B simulate helper.
-  - Graceful "not configured" behavior when `MPESA_*` env vars are absent.
+  - Merchant PayBill/Till credentials are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`, checked against approved merchant verification, and never exposed to the browser.
+  - `MERCHANT_DIRECT` remains an explicit contact-only fallback; no shopper payment is initiated in that mode.
 - **Cards** (`backend/payments/cards/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed; SaaS subscriptions use the M-Pesa launch path and retain future-provider compatibility:
   - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
   - `verifyCardPayment` — Retrieves PaymentIntent, maps status, confirms order.
@@ -336,7 +340,7 @@ NovaTech Website/
 | `BillingCustomer` / `BillingRecord`         | Provider customer references and separately tracked onboarding/setup-fee status                         |
 | `Addon` / `AddonSubscription`               | Database-managed optional merchant capabilities and tenant subscriptions                                |
 | `Invoice` / `Payment`                       | SaaS invoices and provider payments; shopper order payments remain supported by nullable billing links  |
-| `Transaction`                               | Completed shopper payment commission with a plan-rate snapshot                                           |
+| `Transaction`                               | Shopper-payment audit/commission ledger; merchant-routed product commission is zero                    |
 
 ---
 
@@ -369,7 +373,7 @@ NovaTech Website/
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
 | `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
 | `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
-| `MPESA_BUSINESS_NAME`                | Registered M-Pesa business descriptor; production must be `Nurava Tech` |
+| `MPESA_BUSINESS_NAME`                | Platform SaaS billing descriptor; production must be `Nurava Tech` |
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
@@ -494,7 +498,7 @@ npm run dev:open
 - ✔️ **Shared merchant homepage content** — Merchant-specific hero, categories, featured products, testimonials, newsletter, contact, and map sections are rendered only on the resolved store host; platform-home action controls remain separate
 - ✔️ **Preferred store continuity** — Authenticated `User.preferredStoreId` persistence plus the legacy preferred-store browser fallback
 - ✔️ **Product API** — Filtering, pagination, search, creation (admin-protected, Zod validated)
-- ✔️ **Order API** — Historical order listing/status support; new shopper order creation is disabled in merchant-direct mode
+- ✔️ **Order API** — Tenant-scoped pending shopper orders, server-authoritative pricing/stock, and confirmed status after verified merchant-routed M-Pesa; merchant-direct mode remains contact-only
 - ✔️ **Review API** — Full CRUD with verified-purchase detection and role-aware deletion
 - ✔️ **Wishlist API** — Full CRUD for authenticated users
 - ✔️ **Coupon API** — Real DB-backed validation (expiry, usage limit, min order, discount)
@@ -519,9 +523,9 @@ npm run dev:open
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
-- ✔️ **Payments** — Merchant-direct shopper mode disables new platform shopper payments; SaaS billing provider flows and historical signature-verified webhook support remain separate
+- ✔️ **Payments** — Merchant-routed shopper M-Pesa STK Push uses each approved merchant's verified PayBill/Till and creates no Nurava product commission; SaaS billing remains separate
 - ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility
-- ✔️ **Merchant handoff** — Product selections are sent to independent stores for direct confirmation and transaction handling; Nurava Tech does not collect shopper payments or present itself as merchant of record
+- ✔️ **Merchant settlement boundary** — Product-sale funds are routed to the independent merchant's verified M-Pesa account; Nurava Tech is not merchant of record and receives no product-sale commission
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 - ✔️ **Inventory service** — Complete inventory management backend with:
   - Low stock and out-of-stock product detection

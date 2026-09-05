@@ -160,6 +160,12 @@ enum MerchantSettlementAccountType {
   OTHER
 }
 
+enum MerchantShopperPaymentStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
 enum MerchantVerificationEvidenceType {
   GOVERNMENT_ID
   BUSINESS_REGISTRATION
@@ -287,6 +293,7 @@ model Tenant {
   newsletterSubscriptions NewsletterSubscription[]
   storageAssets           StorageAsset[]
   billingCredits          BillingCredit[]
+  shopperPaymentProfile   MerchantShopperPaymentProfile?
 
   @@index([status, createdAt])
   @@index([verificationStatus])
@@ -313,6 +320,22 @@ model MerchantVerificationProfile {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([phoneVerifiedAt])
+}
+
+model MerchantShopperPaymentProfile {
+  id                    String                       @id @default(cuid())
+  tenantId              String                       @unique
+  accountType           MerchantSettlementAccountType
+  shortcode             String
+  credentialsCiphertext String
+  status                MerchantShopperPaymentStatus @default(PENDING)
+  verifiedAt            DateTime?
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }
 
 model MerchantLegalAcceptance {

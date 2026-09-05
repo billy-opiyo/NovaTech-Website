@@ -24,7 +24,7 @@
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
 | **Cart Page** | Item list with quantity controls, selection summary, save-for-later section, and direct merchant handoff. |
-| **Merchant Handoff Page** | Collects consented shopper contact details, persists a tenant-scoped enquiry with server-authoritative product snapshots, then opens WhatsApp/email links to the independent store. The merchant confirms price, delivery, payment, refunds, and warranty directly. |
+| **Shopper Checkout and Handoff** | In `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and requests M-Pesa payment through the merchant's verified PayBill/Till with zero Nurava product commission. WhatsApp/email contact remains available as a direct merchant handoff. |
 
 ## 👤 Authentication
 
@@ -90,7 +90,7 @@
 | **Future provider support** | Stripe provider helpers and historical webhook synchronization remain available behind the billing-provider boundary but are not presented as an active launch payment method. |
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins. In M-Pesa-only launch mode, an add-on remains pending until the next successful invoice callback, then its entitlement activates. |
 | **Plan entitlement enforcement** | Product, staff, custom-domain, storage, analytics-level, and WhatsApp-notification capabilities are checked server-side. Product-image uploads create tenant-scoped storage records and are blocked when the plan limit is reached. |
-| **Transaction commissions** | New shopper transaction commissions are disabled because each independent merchant completes its own sale. Existing historical records remain visible for reconciliation. |
+| **Transaction commissions** | Merchant-routed shopper sales create no Nurava product commission. The transaction row is retained as a zero-value audit record, while historical commission records remain visible for reconciliation. |
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
 | **Secure merchant verification** | `/manage/verification` collects encrypted merchant details, verifies the merchant phone by OTP, and uploads evidence to a separate private R2 bucket. Platform reviewers use restricted verification routes and short-lived document links; approval is required before publication or selling. |
@@ -103,7 +103,7 @@
 | `/api/products` | GET, POST | Filtered product listing (search, category, brand, price, stock, sale, featured, new arrivals, sort, paginate) and admin-only product creation with Zod validation. |
 | `/api/reviews` | GET, POST, PUT, DELETE | Paginated review listing per product, create review (verified-purchase detection), update own reviews, delete own or admin reviews. |
 | `/api/wishlist` | GET, POST, DELETE | Read / add / remove wishlist items for authenticated users. |
-| `/api/orders` | GET, POST | List historical authenticated-user orders; new shopper order creation returns a merchant-direct response. |
+| `/api/orders` | GET, POST | Lists historical orders and creates a pending tenant-scoped shopper order when merchant-routed M-Pesa is enabled and configured. |
 | `/api/orders/[id]` | GET, PATCH | Fetch single order (owner or admin), admin updates order status / tracking number with user notification. |
 | `/api/coupons/validate` | POST | Real coupon validation against DB (expiry, usage limit, active flag, min order value) and discount calculation. |
 | `/api/contact` | POST | Creates a support ticket and sends email via Resend (support team + customer confirmation). |
@@ -150,19 +150,22 @@
 
 ## 💳 Payment Boundaries
 
-Nurava Tech does not collect shopper payments in merchant-direct mode. The
-provider helpers and webhook records remain available for historical
-compatibility and separate merchant SaaS billing; new shopper payment
-initiation and verification routes fail closed.
+SaaS billing and shopper payments are separate. In `MERCHANT_ROUTED` mode,
+shopper M-Pesa requests use the selected merchant's approved, verified PayBill
+or Till credentials. Nurava Tech does not receive or hold product-sale funds,
+does not act as merchant of record, and records zero product-sale commission.
+`MERCHANT_DIRECT` is the contact-only fallback and fails closed at the order
+and payment route boundaries.
 
 ### M-Pesa (`backend/payments/mpesa/`)
 
 | Feature | Description |
 |---------|-------------|
-| `initiateMpesaPayment` | Legacy provider helper; new shopper initiation is disabled at the route boundary. |
-| `verifyMpesaPayment` | Legacy provider helper; new shopper verification is disabled at the route boundary. |
+| `initiateMpesaPayment` | Starts a platform SaaS or merchant-routed shopper STK request using the appropriate server-side credentials. |
+| `verifyMpesaPayment` | Queries the matching platform or merchant route and confirms a pending shopper order after provider verification. |
 | `simulateMpesaPayment` | Sandbox C2B simulate helper. |
-| Graceful fallback | "not configured" behavior when `MPESA_*` env vars are absent. |
+| Merchant route safety | Credentials are encrypted, tenant-scoped, matched to approved merchant verification, and never returned to clients. |
+| Graceful fallback | Clear not-configured behavior when platform or merchant M-Pesa credentials are absent. |
 
 ### Cards (`backend/payments/cards/`)
 
@@ -184,8 +187,8 @@ initiation and verification routes fail closed.
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/payments/mpesa/initiate` | Returns a merchant-direct response; no shopper STK Push is initiated. |
-| `POST /api/payments/mpesa/verify` | Returns a merchant-direct response; no shopper payment is verified. |
+| `POST /api/payments/mpesa/initiate` | Starts a merchant-routed shopper STK Push for a pending tenant order when enabled; fails closed in merchant-direct mode. |
+| `POST /api/payments/mpesa/verify` | Verifies a merchant-routed shopper payment and confirms the pending order after provider confirmation. |
 | `POST /api/payments/card/create-intent` | Returns a merchant-direct response; no shopper PaymentIntent is created. |
 | `POST /api/payments/card/verify` | Returns a merchant-direct response; no shopper payment is verified. |
 | `POST /api/payments/webhooks/stripe` | Stripe webhook (signature verified). |
@@ -233,7 +236,7 @@ Core models:
 | `NewsletterSubscription` | Tenant-scoped promotional consent, subscription, and unsubscribe state |
 | `StorageAsset` | Tenant/store-scoped product asset byte counts used for storage entitlements |
 | `Invoice` / `Payment` | SaaS invoices and provider payments, while retaining shopper order payments |
-| `Transaction` | Commission ledger for completed shopper payments |
+| `Transaction` | Zero-value merchant-routed shopper-payment audit rows plus historical commission records |
 
 **Order statuses:** PENDING, CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
 
@@ -270,7 +273,7 @@ Core models:
 | **Prisma Schema** | Complete relational data model with proper relationships. |
 | **Seed Data** | Admin user, categories, sample products, coupons. |
 | **Payments** | Merchant-direct shopper handoff plus SaaS Stripe Billing, invoice-driven M-Pesa collection, setup fees, add-ons, invoices, and signature-verified webhook lifecycle handling. |
-| **Merchant Handoff Flow** | Product selection displays the store's direct WhatsApp/email contact. The merchant confirms availability, price, delivery, payment, refunds, and warranty outside the Nurava Tech shopper payment flow. |
+| **Merchant Handoff Flow** | Product selection can still use the store's direct WhatsApp/email contact. When merchant-routed checkout is enabled, the shopper may instead request M-Pesa payment to the merchant's verified account; the merchant remains responsible for availability, delivery, payment disputes, refunds, and warranty. |
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |
 | **Recommendation Engine** | API-backed similar-product recommendations render on product-detail pages; the API also supports personalized, trending, featured, new-arrival, and deal queries. |

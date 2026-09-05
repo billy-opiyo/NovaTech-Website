@@ -200,14 +200,15 @@ export async function createOrder(data: CreateOrderData) {
 			}
 		}
 
-		// Create notification for user
+		// The order is only awaiting payment at this point. Confirmation is sent
+		// after the merchant-routed M-Pesa callback is verified.
 		if (data.userId) {
 			await tx.notification.create({
 				data: {
 					tenantId: data.tenantId,
 					userId: data.userId,
 					type: "ORDER_STATUS",
-					message: `Order #${order.id.slice(-8).toUpperCase()} has been placed successfully.`,
+					message: `Order #${order.id.slice(-8).toUpperCase()} is awaiting M-Pesa payment confirmation.`,
 				},
 			})
 		}
