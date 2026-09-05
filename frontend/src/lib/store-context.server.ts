@@ -101,7 +101,14 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const contact = record(store.contactSettings)
 		const socialSettings = record(contact.social)
 		const homepage = record(store.homepageSettings)
+		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)
+		const categories = clientConfig.homepage.categories.map((category) => {
+			const configuredImage = categoryImages[category.slug]
+			return typeof configuredImage === "string" && configuredImage.trim()
+				? { ...category, image: configuredImage }
+				: category
+		})
 		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : merchantContactDefaults.phoneDisplay
 		const email = typeof contact.email === "string" ? contact.email : merchantContactDefaults.email
 		const addressLine = typeof contact.addressLine === "string" ? contact.addressLine : merchantContactDefaults.addressLine
@@ -142,7 +149,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : merchantSocialDefaults.instagram,
 				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : merchantSocialDefaults.tiktok,
 			},
-			homepage: { ...clientConfig.homepage, ...homepage },
+			homepage: { ...clientConfig.homepage, ...homepage, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
 			isPlatformHome: platformHome,

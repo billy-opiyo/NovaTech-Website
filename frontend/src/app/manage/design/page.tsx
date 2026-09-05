@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Loader2, Upload } from "lucide-react"
+import { clientConfig } from "@/config/client.config"
 import { THEME_PRESETS } from "@/config/theme-presets"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
@@ -12,11 +13,19 @@ type Draft = {
 	logoUrl?: string
 	themePreset?: string
 	seo?: { description?: string }
-	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string }
+	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; categoryImages?: Partial<Record<CategorySlot, string>> }
 	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; mapLink?: string; mapEmbedUrl?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
 	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
+
+const CATEGORY_SLOTS = [
+	{ slug: "phones", label: "Phones" },
+	{ slug: "laptops", label: "Laptops" },
+	{ slug: "tablets", label: "Tablets" },
+	{ slug: "accessories", label: "Accessories" },
+] as const
+type CategorySlot = typeof CATEGORY_SLOTS[number]["slug"]
 
 const LOCAL_DRAFT_KEY = "novatech-store-design-draft"
 
@@ -35,6 +44,7 @@ export default function StoreDesignPage() {
 	const [error, setError] = useState("")
 	const [busy, setBusy] = useState(false)
 	const [uploadingLogo, setUploadingLogo] = useState(false)
+	const [uploadingCategory, setUploadingCategory] = useState<CategorySlot | null>(null)
 	const [localPreview, setLocalPreview] = useState(false)
 	const [versions, setVersions] = useState<Version[]>([])
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
@@ -61,7 +71,11 @@ export default function StoreDesignPage() {
 						themePreset: store.themeSettings?.preset,
 						...savedDraft,
 						seo: { ...store.seoSettings, ...savedDraft.seo },
-						homepage: { ...store.homepageSettings, ...savedDraft.homepage },
+						homepage: {
+							...store.homepageSettings,
+							...savedDraft.homepage,
+							categoryImages: { ...store.homepageSettings?.categoryImages, ...savedDraft.homepage?.categoryImages },
+						},
 						contact: { ...store.contactSettings, ...savedDraft.contact, social: { ...store.contactSettings?.social, ...savedDraft.contact?.social } },
 						commerce: { ...store.commerceSettings, ...savedDraft.commerce },
 					})
@@ -125,6 +139,38 @@ export default function StoreDesignPage() {
 			addToast(text, "error")
 		} finally {
 			setUploadingLogo(false)
+		}
+	}
+
+	async function uploadCategoryImage(slot: CategorySlot, file: File | undefined) {
+		if (!file) return
+		const label = CATEGORY_SLOTS.find((item) => item.slug === slot)?.label || slot
+		setUploadingCategory(slot)
+		setMessage("")
+		setError("")
+		try {
+			const optimized = await optimizeImageForUpload(file)
+			const body = new FormData()
+			body.set("file", optimized)
+			body.set("slot", slot)
+			const response = await fetch("/api/manage/store/category-image", { method: "POST", body })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || `Unable to upload the ${label.toLowerCase()} image`)
+			setDraft((current) => ({
+				...current,
+				homepage: {
+					...current.homepage,
+					categoryImages: { ...current.homepage?.categoryImages, [slot]: data.url },
+				},
+			}))
+			setMessage(`${label} image uploaded. Save the draft, then publish it to make it live.`)
+			addToast(`${label} category image uploaded successfully.`, "success")
+		} catch (reason) {
+			const text = reason instanceof Error ? reason.message : `Unable to upload the ${label.toLowerCase()} image`
+			setError(text)
+			addToast(text, "error")
+		} finally {
+			setUploadingCategory(null)
 		}
 	}
 
@@ -203,6 +249,29 @@ export default function StoreDesignPage() {
 					</div>
 					<label className="block"><span className="text-sm font-medium">Hero title</span><input value={draft.homepage?.heroTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">Hero highlight</span><input value={draft.homepage?.heroHighlight || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroHighlight: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<div className="border-t pt-5">
+						<h2 className="font-semibold">Shop by Category images</h2>
+						<p className="mt-1 text-sm text-gray-500">Choose the four images shown on your storefront homepage. The current images remain as fallbacks until you upload a replacement.</p>
+						<div className="mt-4 grid gap-4 sm:grid-cols-2">
+							{CATEGORY_SLOTS.map(({ slug, label }) => {
+								const fallback = clientConfig.homepage.categories.find((category) => category.slug === slug)?.image || ""
+								const image = draft.homepage?.categoryImages?.[slug] || fallback
+								const isUploading = uploadingCategory === slug
+								return (
+									<div key={slug} className="rounded-xl border p-3">
+										<p className="text-sm font-medium">{label}</p>
+										{image && <img src={image} alt={`${label} category preview`} className="mt-3 aspect-[16/9] w-full rounded-lg border object-cover" />}
+										<label className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${isUploading ? "cursor-wait opacity-60" : ""}`}>
+											{isUploading ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}
+											{isUploading ? "Uploading…" : `Upload ${label.toLowerCase()} image`}
+											<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingCategory !== null} onChange={(event) => { void uploadCategoryImage(slug, event.target.files?.[0]); event.target.value = "" }} className="sr-only" />
+										</label>
+										<span className="mt-1 block text-xs text-gray-500">JPG, PNG, WEBP, or GIF up to 1MB.</span>
+									</div>
+								)
+							})}
+						</div>
+					</div>
 					<label className="block"><span className="text-sm font-medium">SEO description</span><textarea maxLength={320} value={draft.seo?.description || ""} onChange={(event) => updateDraft({ seo: { ...draft.seo, description: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<div className="border-t pt-5">
 						<h2 className="font-semibold">Store contact</h2>
