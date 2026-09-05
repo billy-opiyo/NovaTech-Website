@@ -3,10 +3,13 @@
 import { FormEvent, useEffect, useState } from "react"
 import { Loader2, ShieldCheck } from "lucide-react"
 import { useToast } from "@/components/ui/Toast"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 type Profile = { accountType: "PAYBILL" | "TILL"; shortcode: string; status: string; verifiedAt: string | null; credentialsConfigured: boolean }
 
 export default function ShopperPaymentsPage() {
+	const store = useStoreContext()
 	const { addToast } = useToast()
 	const [profile, setProfile] = useState<Profile | null>(null)
 	const [accountType, setAccountType] = useState<"PAYBILL" | "TILL">("PAYBILL")
@@ -18,18 +21,18 @@ export default function ShopperPaymentsPage() {
 	const [busy, setBusy] = useState(false)
 
 	useEffect(() => {
-		fetch("/api/manage/shopper-payments", { cache: "no-store" }).then(async (response) => {
+		fetch(getStoreRouteHref(store, "/api/manage/shopper-payments"), { cache: "no-store" }).then(async (response) => {
 			const data = await response.json()
 			if (!response.ok) throw new Error(data.message || "Payment settings unavailable")
 			if (data.profile) { setProfile(data.profile); setAccountType(data.profile.accountType); setShortcode(data.profile.shortcode) }
 			setMessage("")
 		}).catch((error) => setMessage(error instanceof Error ? error.message : "Payment settings unavailable"))
-	}, [])
+	}, [store])
 
 	async function save(event: FormEvent) {
 		event.preventDefault(); setBusy(true); setMessage("")
 		try {
-			const response = await fetch("/api/manage/shopper-payments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountType, shortcode: shortcode.replace(/\D/g, ""), consumerKey: consumerKey || undefined, consumerSecret: consumerSecret || undefined, passkey: passkey || undefined }) })
+			const response = await fetch(getStoreRouteHref(store, "/api/manage/shopper-payments"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountType, shortcode: shortcode.replace(/\D/g, ""), consumerKey: consumerKey || undefined, consumerSecret: consumerSecret || undefined, passkey: passkey || undefined }) })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to save payment settings")
 			setProfile(data.profile); setConsumerKey(""); setConsumerSecret(""); setPasskey(""); setMessage(data.message); addToast(data.message, "success")
