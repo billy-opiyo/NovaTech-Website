@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion"
-import Image from "next/image"
 import Link from "next/link"
 import { getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
@@ -27,16 +26,16 @@ export default function CategoryGrid() {
 							href={getStoreRouteHref(store, `/category/${cat.slug}`)}
 							className="glass-card navy-glass group block min-h-[22rem] overflow-hidden sm:min-h-0"
 						>
-							<div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-								<Image
+							<div className="overflow-hidden rounded-xl">
+								{/* Keep the uploaded category artwork at its natural ratio so it is never letterboxed or cropped. */}
+								<img
 									src={
 										cat.image?.startsWith("https://images.unsplash.com/")
 											? getProductImage(cat.image)
 											: cat.image
 									}
 									alt={cat.name}
-									fill
-									className="object-contain transition-transform duration-500 lg:group-hover:scale-105"
+									className="block h-auto w-full rounded-xl transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>
 							<p className="text-center font-semibold mt-3 text-lg">

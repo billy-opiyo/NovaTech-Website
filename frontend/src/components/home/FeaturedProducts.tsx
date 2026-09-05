@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion"
-import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
@@ -35,12 +34,12 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 					>
 						<article className="glass-card navy-glass relative block overflow-hidden">
 						<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group block pb-28">
-							<div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-								<Image
+						<div className="mb-4 overflow-hidden rounded-xl">
+								{/* Product artwork keeps its complete uploaded image instead of being letterboxed or cropped. */}
+								<img
 									src={getProductImage(product.images[0], product.name)}
 									alt={product.name}
-									fill
-									className="object-contain transition-transform duration-500 lg:group-hover:scale-105"
+									className="block h-auto w-full rounded-xl transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>
 							<h3 className="font-semibold truncate">{product.name}</h3>
