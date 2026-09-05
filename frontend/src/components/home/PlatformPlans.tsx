@@ -50,11 +50,12 @@ export default function PlatformPlans({ plans, unavailable, source }: { plans: P
 			<div className="mx-auto max-w-3xl text-center">
 				<p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Plans for store partners</p>
 				<h2 id="platform-plans-title" className="mt-2 text-3xl font-extrabold sm:text-4xl">Simple billing, clear capacity</h2>
-				<p className="mt-3 text-gray-600 dark:text-gray-300">Choose the plan that fits your store. Plans are billed monthly, with a one-time setup fee shown clearly before you create your store.</p>
+				<p className="mt-3 font-semibold text-primary">Every new store starts with a six-month free Founding Merchant pilot on Starter limits — no payment is required to create your store.</p>
+				<p className="mt-2 text-gray-600 dark:text-gray-300">Plans are billed monthly with a one-time setup fee. When your pilot ends, you choose and pay for the plan that fits your store — nothing is charged automatically.</p>
 				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : "Prices shown from Nurava Tech's approved launch catalog; live billing is confirmed during setup."}</p>
 			</div>
 			{unavailable ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">Plan pricing is temporarily unavailable while the billing catalog is being connected. Please try again shortly.</div> : plans.length === 0 ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">No public plans are currently configured.</div> : <div className="mt-8 grid gap-5 lg:grid-cols-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} featured={plan.key === "BUSINESS"} />)}</div>}
-			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">Setup fees and subscription charges are separate. Optional add-ons, including WhatsApp notifications, are billed according to the active catalog.</p>
+			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">New stores begin with six months free (Founding Merchant pilot, Starter limits). Setup fees and subscription charges apply only after the pilot, when you choose a plan — no automatic charges. Optional add-ons, including WhatsApp notifications, are billed according to the active catalog.</p>
 		</section>
 	)
 }

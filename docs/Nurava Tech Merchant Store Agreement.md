@@ -43,8 +43,8 @@ The merchant is called **Merchant** in this Agreement.
 **Store name:** _______________________________________________________________  
 **Nurava store slug/subdomain:** _______________________________________________  
 **Custom domain, if included and approved:** __________________________________  
-**Selected plan:** ☐ Starter  ☐ Business  ☐ Enterprise  
-**Trial start date:** __________________  **Service start date:** _______________  
+**Selected plan:** ☐ Starter (pilot default)  ☐ Business  ☐ Enterprise
+**Pilot (trial) start date:** __________________  **Service start date:** _______________
 **Initial subscription term:** Monthly  
 **Special written commercial terms:** __________________________________________
 
@@ -112,9 +112,9 @@ Nurava may update platform components, security controls, or implementation deta
 
 5.2 Billing is monthly. The current commercial schedule is set out in **Schedule A**. Any negotiated price, discount, waiver, or Enterprise term must be written in the store details or a signed addendum.
 
-5.3 The trial period is 30 days from the trial start date. The setup fee and first monthly subscription are collected together after the trial ends, subject to the applicable invoice and payment instructions.
+5.3 The launch pilot grants six months of free access from the pilot (trial) start date, using the Starter-plan limits in the current catalog. The setup fee and first monthly subscription are collected together only after the pilot ends and the Merchant chooses a paid plan, subject to the applicable invoice and payment instructions. Nothing is charged automatically during or after the pilot.
 
-5.4 The payment grace period is three days after the applicable payment due date. During an eligible grace period, public storefront access may remain available under the platform’s lifecycle rules. The Merchant remains responsible for resolving the outstanding payment.
+5.4 The payment grace period is fourteen days after the applicable payment due date or pilot end date. During an eligible grace period, public storefront access may remain available under the platform’s lifecycle rules, with expiry reminders sent before and during the grace period. If no plan is paid for by the end of the grace period, the public storefront may be paused while the Merchant’s data and workspace access are preserved. The Merchant remains responsible for resolving the outstanding payment.
 
 5.5 M-Pesa is the only active SaaS billing method at launch. Setup fees, first subscriptions, and renewals are invoice-driven. A renewal invoice or payment request is not an automatic recurring debit authorization.
 
@@ -303,14 +303,14 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | Service model | Hosted merchant storefront SaaS subscription |
 | Store relationship | One independent merchant store per tenant; not a shared marketplace cart |
 | Billing interval | Monthly |
-| Trial | 30 days |
-| Payment grace period | 3 days |
+| Trial | Six-month free Founding Merchant pilot on Starter limits |
+| Payment grace period | 14 days |
 | SaaS billing method at launch | M-Pesa only |
 | SaaS collection model | Invoice-driven; provider callback confirms payment; no assumed automatic recurring debit |
 | Shopper commerce model | Merchant-direct; the Merchant is merchant of record |
 | Shopper funds | Nurava does not collect shopper funds |
 | Shopper responsibilities | Merchant handles payment, delivery, returns, refunds, warranties, taxes, complaints, and sale contract |
-| Setup fee and first subscription | Collected together after the trial, through the applicable invoice/payment request |
+| Setup fee and first subscription | Collected together after the free pilot, through the applicable invoice/payment request |
 | Nurava SaaS tax policy | 16% VAT-inclusive pricing for taxable subscriptions, setup fees, and paid add-ons; invoices show the tax breakdown when enabled after registration/classification confirmation |
 | Subscription cancellation refund | No routine refund; access continues through the paid period, subject to duplicate-payment, billing-error, or legal exceptions |
 | Setup-fee refund | Refund only if Nurava cannot provision the store before setup work begins; non-refundable after setup work starts |

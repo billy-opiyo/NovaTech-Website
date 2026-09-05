@@ -230,14 +230,15 @@ support, and billing copy is merchant/SaaS-facing.
 1. Sign in or create and verify an account.
 2. Open /onboarding.
 3. Enter a store name and optional lowercase slug.
-4. Select an active plan when plan data is available.
+4. The store starts on the Starter plan as part of the six-month free Founding
+   Merchant pilot; no plan selection or payment happens during onboarding.
 5. Accept the current merchant terms and privacy notice.
 6. Create the store.
 
-Onboarding creates the tenant, store, owner membership, 30-day trial dates,
-subscription, billing customer, billing record, platform-subdomain record, and
-trial-start legal acceptance in one transaction. A store starts as a draft and
-still needs verification and publication.
+Onboarding creates the tenant, store, owner membership, six-month free pilot
+dates (Starter-plan limits), subscription, billing customer, billing record,
+platform-subdomain record, and trial-start legal acceptance in one transaction.
+A store starts as a draft and still needs verification and publication.
 
 The onboarding page lists the user's memberships. Current tenant selection is
 host-based; a first-class multi-store switcher is a future update.
@@ -427,13 +428,21 @@ seed examples are Starter (KES 1,500/month, KES 5,000 setup), Business (KES
 3,500/month, KES 5,000 setup), and Enterprise (KES 8,500/month, KES 1,500
 setup). They are configurable seed values, not a live price promise.
 
-/manage/billing exposes the active plan, trial/current period, grace and
-cancellation state, setup-fee status, invoices, SaaS payment history, plan
-checkout/change, renewal, cancellation, Stripe portal where enabled, and
-add-on actions.
+/manage/billing exposes the active plan, pilot/current period with days
+remaining, grace and cancellation state, setup-fee status, invoices, SaaS
+payment history, plan checkout/change, renewal, cancellation, Stripe portal
+where enabled, and add-on actions.
+
+New stores start on a six-month free Founding Merchant pilot (Starter-plan
+limits, configurable via `NURAVA_MVP_PILOT_DAYS`). No payment is required
+during store creation and nothing is charged automatically. Reminders are sent
+at 14, 7, and 1 day before the pilot ends and during the following 14-day
+grace period. If no plan is paid for after the grace period, the public
+storefront is paused while merchant data and workspace access are preserved.
 
 At launch configuration, M-Pesa is invoice-driven. Setup fee and first
-subscription payment are collected together after the trial. Later renewals
+subscription payment are collected together after the free pilot, when the
+merchant chooses a plan. Later renewals
 create a local invoice and initiate a Daraja STK request. A successful callback
 updates invoice, payment, subscription, tenant, and setup-fee state. It is not
 an automatic recurring M-Pesa debit.
