@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { runSubscriptionLifecycleSweep } from "backend/billing/lifecycle"
+import { runPilotReminderSweep } from "backend/billing/reminders"
 import { runTenantRetentionSweep } from "backend/retention/tenant-retention"
 import { acquireScheduledJobLock, releaseScheduledJobLock } from "backend/workers/job-lock"
 
@@ -22,8 +23,9 @@ export async function GET(request: NextRequest) {
 
 		const startedAt = new Date()
 		const lifecycle = await runSubscriptionLifecycleSweep(startedAt)
+		const reminders = await runPilotReminderSweep(startedAt)
 		const retention = await runTenantRetentionSweep(startedAt)
-		return NextResponse.json({ ok: true, worker: "lifecycle", ranAt: startedAt.toISOString(), lifecycle, retention })
+		return NextResponse.json({ ok: true, worker: "lifecycle", ranAt: startedAt.toISOString(), lifecycle, reminders, retention })
 	} catch (error: unknown) {
 		console.error("Vercel lifecycle cron failed", error)
 		return NextResponse.json({ ok: false, worker: "lifecycle", message: "Lifecycle processing failed" }, { status: 500 })

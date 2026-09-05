@@ -2,7 +2,10 @@ import prisma from "../lib/db"
 import { retentionDueAt } from "../retention/tenant-retention"
 import type { SubscriptionStatus } from "@prisma/client"
 
-export const ACCESS_GRACE_PERIOD_DAYS = 3
+// Approved MVP policy: a 14-day payment grace period after the free pilot or
+// a missed payment due date. Public storefront access stays available during
+// the grace period; suspension preserves data and upgrade access.
+export const ACCESS_GRACE_PERIOD_DAYS = 14
 const dayMilliseconds = 24 * 60 * 60 * 1000
 
 type LifecycleSnapshot = {
@@ -34,7 +37,7 @@ export async function runSubscriptionLifecycleSweep(now = new Date(), limit = 10
 		{ status: "TRIALING", trialEndsAt: { lte: now } },
 		{ status: { in: ["ACTIVE", "PAST_DUE"] }, currentPeriodEnd: { lte: now } },
 		{ status: "GRACE_PERIOD", gracePeriodEndsAt: { lte: now } },
-	] }, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: Math.min(Math.max(limit, 1), 200), select: { id: true, tenantId: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true, cancelAtPeriodEnd: true, tenant: { select: { status: true, store: { select: { id: true, publicationStatus: true } } } } } })
+	] }, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: Math.min(Math.max(limit, 1), 200), select: { id: true, tenantId: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true, cancelAtPeriodEnd: true, tenant: { select: { status: true, suspensionReason: true, store: { select: { id: true, publicationStatus: true } } } } } })
 	const results: Array<{ subscriptionId: string; changed: boolean; error?: string }> = []
 	for (const subscription of subscriptions) {
 		const decision = lifecycleDecision(subscription, now)
@@ -46,7 +49,8 @@ export async function runSubscriptionLifecycleSweep(now = new Date(), limit = 10
 			await prisma.$transaction(async (transaction) => {
 				await transaction.subscription.update({ where: { id: subscription.id }, data: { status: decision.subscriptionStatus, gracePeriodEndsAt: decision.gracePeriodEndsAt || undefined } })
 				const tenantStatus = subscription.tenant.status === "SUSPENDED" && decision.tenantStatus !== "SUSPENDED" ? undefined : decision.tenantStatus
-				await transaction.tenant.update({ where: { id: subscription.tenantId }, data: { ...(tenantStatus ? { status: tenantStatus } : {}), ...(decision.retentionStartsAt ? { dataRetentionStartsAt: decision.retentionStartsAt, dataDeletionDueAt: retentionDueAt(decision.retentionStartsAt) } : {}) } })
+				const billingSuspension = decision.tenantStatus === "SUSPENDED" && subscription.tenant.status !== "SUSPENDED"
+				await transaction.tenant.update({ where: { id: subscription.tenantId }, data: { ...(tenantStatus ? { status: tenantStatus } : {}), ...(billingSuspension ? { suspensionReason: "BILLING", suspendedAt: now } : {}), ...(decision.retentionStartsAt ? { dataRetentionStartsAt: decision.retentionStartsAt, dataDeletionDueAt: retentionDueAt(decision.retentionStartsAt) } : {}) } })
 				if (subscription.tenant.store && ["SUSPENDED", "CANCELLED"].includes(decision.tenantStatus)) await transaction.store.update({ where: { id: subscription.tenant.store.id }, data: { publicationStatus: "SUSPENDED" } })
 			})
 			results.push({ subscriptionId: subscription.id, changed: true })

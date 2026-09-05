@@ -114,7 +114,8 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 ### 💼 SaaS Billing
 
 - Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, and setup fees for merchant platform services.
-- Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-trial activation and renewal collection, VAT/credit-aware invoices, scheduled plan changes, add-ons, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
+- New stores start on a six-month free Founding Merchant pilot (Starter limits, `NURAVA_MVP_PILOT_DAYS`-configurable): no payment during onboarding, no automatic charges, pilot-expiry reminders at 14/7/1 days, then a 14-day grace period before the storefront pauses with data preserved.
+- Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-pilot activation and renewal collection, VAT/credit-aware invoices, scheduled plan changes, add-ons, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
 - Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.

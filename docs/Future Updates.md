@@ -53,9 +53,10 @@ implemented:
 - Minimum observability foundation with request IDs on critical operational
   endpoints, structured failure events, and database-aware `/api/health` output.
 
-The production database still requires migrations `0015_commercial_alignment`
-and `0017_merchant_enquiries_and_quotes` to be deployed against a configured
-database before these schema-backed features can operate in a live environment.
+The production database still requires the committed migrations, including
+`0015_commercial_alignment`, `0017_merchant_enquiries_and_quotes`, and
+`0029_billing_suspension_reason`, to be deployed against a configured database
+before these schema-backed features can operate in a live environment.
 
 ## 1. Delivery principles
 
@@ -184,8 +185,9 @@ is still required before launch claims.
 - Add idempotent retry/dead-letter handling for failed webhook processing.
 - Add invoice PDF/receipt generation and merchant email delivery.
 - Add payment reconciliation and manual operator resolution.
-- Add grace-period notifications before suspension; grace-period access behavior
-  itself is implemented.
+- Pilot-expiry and grace-period notifications are implemented in the lifecycle
+  cron (14/7/1-day pilot reminders and grace start/ending reminders, recorded
+  as idempotent tenant notifications). Remaining: delivery-status dashboards.
 - Add billing test fixtures for trial expiry, renewal, failure, retry, plan
   change, cancellation, and reactivation.
 

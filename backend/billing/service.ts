@@ -21,6 +21,7 @@ export class BillingError extends Error {
 }
 
 const paidSubscriptionStatuses = ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] as const
+const billableSubscriptionStatuses = [...paidSubscriptionStatuses, "SUSPENDED"] as const
 const saasBillingProvider = (process.env.NURAVA_SAAS_BILLING_PROVIDER || "mpesa").toLowerCase()
 
 type StripeProviderPayload = {
@@ -78,6 +79,18 @@ function tenantStatusForSubscription(status: SubscriptionStatus) {
 	if (status === "GRACE_PERIOD") return "GRACE_PERIOD" as const
 	if (status === "CANCELLED") return "CANCELLED" as const
 	return "SUSPENDED" as const
+}
+
+async function restoreTenantAfterBillingPayment(tenantId: string, planId: string) {
+	const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { suspensionReason: true, verificationStatus: true, store: { select: { id: true, publicationStatus: true } } } })
+	if (!tenant || tenant.suspensionReason === "PLATFORM") {
+		await prisma.tenant.update({ where: { id: tenantId }, data: { planId } }).catch(() => undefined)
+		return
+	}
+	await prisma.tenant.update({ where: { id: tenantId }, data: { status: "ACTIVE", planId, ...(tenant.suspensionReason === "BILLING" ? { suspensionReason: null, suspendedAt: null } : {}) } }).catch(() => undefined)
+	if (tenant.suspensionReason === "BILLING" && tenant.verificationStatus === "APPROVED" && tenant.store?.publicationStatus === "SUSPENDED") {
+		await prisma.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } }).catch(() => undefined)
+	}
 }
 
 export async function listActivePlans() {
@@ -198,7 +211,7 @@ export async function createStripeCheckoutSession(input: { tenantId: string; own
 }
 
 export async function changeSubscriptionPlan(input: { tenantId: string; ownerUserId: string; email: string; planKey: string; successUrl: string; cancelUrl: string }) {
-	const current = await prisma.subscription.findFirst({ where: { tenantId: input.tenantId, status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" } })
+	const current = await prisma.subscription.findFirst({ where: { tenantId: input.tenantId, status: { in: [...billableSubscriptionStatuses] } }, orderBy: { createdAt: "desc" } })
 	if (!current) return createStripeCheckoutSession(input)
 	const { plan } = await getPlanAndAddons(input.planKey, [])
 	if (current.planId === plan.id) throw new BillingError("This plan is already active", 409, "PLAN_ALREADY_ACTIVE")
@@ -219,14 +232,14 @@ export async function changeSubscriptionPlan(input: { tenantId: string; ownerUse
 }
 
 export async function createMpesaInvoicePayment(input: { tenantId: string; ownerUserId: string; phone: string; kind?: InvoiceKind }) {
-	const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, include: { plan: true, billingRecord: true, subscriptions: { where: { status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" }, take: 1, include: { plan: true, pendingPlan: true, addonSubscriptions: { where: { status: { in: ["ACTIVE", "INCOMPLETE"] } }, include: { addon: true } } } } } })
-	if (!tenant?.plan || !tenant.subscriptions[0]) throw new BillingError("An active subscription is required before requesting a renewal", 409, "NO_ACTIVE_SUBSCRIPTION")
+	const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, include: { plan: true, billingRecord: true, subscriptions: { where: { status: { in: [...billableSubscriptionStatuses] } }, orderBy: { createdAt: "desc" }, take: 1, include: { plan: true, pendingPlan: true, addonSubscriptions: { where: { status: { in: ["ACTIVE", "INCOMPLETE"] } }, include: { addon: true } } } } } })
+	if (!tenant?.plan || !tenant.subscriptions[0]) throw new BillingError("A subscription is required before requesting a payment", 409, "NO_SUBSCRIPTION")
 	const subscription = tenant.subscriptions[0]
 	const billingPlan = subscription.pendingPlan || subscription.plan || tenant.plan
 	const addonTotal = subscription.addonSubscriptions.reduce((sum, item) => sum + item.addon.price, 0)
 	const setupFeeAmount = tenant.billingRecord && tenant.billingRecord.setupFeeStatus !== BillingRecordStatus.PAID ? tenant.billingRecord.setupFeeAmount : 0
 	const firstActivation = subscription.status === "TRIALING" || !subscription.currentPeriodStart
-	if (firstActivation && subscription.trialEndsAt && subscription.trialEndsAt > new Date()) throw new BillingError("Your 30-day trial is still active. Payment becomes available after the trial ends.", 409, "TRIAL_ACTIVE")
+	if (firstActivation && subscription.trialEndsAt && subscription.trialEndsAt > new Date()) throw new BillingError("Your six-month free pilot is still active. Payment becomes available after the pilot ends.", 409, "TRIAL_ACTIVE")
 	const totals = calculateSaasInvoiceTotals({ subscription: billingPlan.price || 0, addons: addonTotal, setupFee: firstActivation ? setupFeeAmount : 0, vatRate: configuredSaasVatRate() })
 	if (totals.grossAmount <= 0) throw new BillingError("The selected plan has no payable amount", 409, "BILLING_TOTAL_ZERO")
 	const kind = firstActivation ? InvoiceKind.SUBSCRIPTION : input.kind || InvoiceKind.RENEWAL
@@ -268,7 +281,7 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 }
 
 export async function createSetupFeeMpesaPayment(input: { tenantId: string; ownerUserId: string; phone: string }) {
-	throw new BillingError("The setup fee is collected together with the first subscription payment after the trial.", 409, "SETUP_FEE_WITH_SUBSCRIPTION")
+	throw new BillingError("The setup fee is collected together with the first subscription payment after the free pilot.", 409, "SETUP_FEE_WITH_SUBSCRIPTION")
 }
 
 export async function cancelSubscription(tenantId: string, immediate = false) {
@@ -328,7 +341,8 @@ export async function applyStripeSubscriptionEvent(subscriptionObject: StripePro
 	if (!local) return null
 	const status = mapStripeSubscriptionStatus(String(subscriptionObject.status || "incomplete"))
 	const updated = await prisma.subscription.update({ where: { id: local.id }, data: { provider: "stripe", providerSubscriptionId: providerId, providerCustomerId: String(subscriptionObject.customer || local.providerCustomerId || ""), status, currentPeriodStart: dateFromUnix(subscriptionObject.current_period_start), currentPeriodEnd: dateFromUnix(subscriptionObject.current_period_end), cancelAtPeriodEnd: Boolean(subscriptionObject.cancel_at_period_end) } })
-	await prisma.tenant.update({ where: { id: updated.tenantId }, data: { status: tenantStatusForSubscription(status), planId: updated.planId } }).catch(() => undefined)
+	if (status === "ACTIVE") await restoreTenantAfterBillingPayment(updated.tenantId, updated.planId)
+	else await prisma.tenant.update({ where: { id: updated.tenantId }, data: { status: tenantStatusForSubscription(status), planId: updated.planId } }).catch(() => undefined)
 	return updated
 }
 
@@ -359,6 +373,7 @@ export async function applyStripeInvoiceEvent(invoiceObject: StripeProviderPaylo
 		await prisma.payment.upsert({ where: { providerReference: paymentIntentId }, update: { status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, failureReason: failed ? "Stripe invoice payment failed" : undefined }, create: { tenantId: localInvoice.tenantId, invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, provider: "stripe", providerReference: paymentIntentId, amount: Number(invoiceObject.amount_paid || invoiceObject.amount_due || 0) / 100, currency: localInvoice.currency, status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", kind: "RENEWAL", metadata: { providerInvoiceId } } }).catch(() => undefined)
 	}
 	if (localSubscription) await prisma.subscription.update({ where: { id: localSubscription.id }, data: { status: paid ? "ACTIVE" : failed ? "PAST_DUE" : localSubscription.status } })
+	if (paid && localSubscription) await restoreTenantAfterBillingPayment(localSubscription.tenantId, localSubscription.planId)
 	if (paid) {
 		const billingRecord = metadata.billingRecordId
 			? await prisma.billingRecord.findUnique({ where: { id: metadata.billingRecordId } })
@@ -380,7 +395,7 @@ export async function markBillingPaymentFromMpesa(payment: { id: string; status:
 		const activated = await prisma.subscription.update({ where: { id: payment.subscriptionId }, data: { status: "ACTIVE", planId: subscription?.pendingPlanId || undefined, pendingPlanId: null, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 30 * 86400000), gracePeriodEndsAt: null } }).catch(() => null)
 		if (activated) {
 			await prisma.addonSubscription.updateMany({ where: { subscriptionId: payment.subscriptionId, status: "INCOMPLETE" }, data: { status: "ACTIVE" } }).catch(() => undefined)
-			await prisma.tenant.update({ where: { id: activated.tenantId }, data: { status: "ACTIVE", planId: activated.planId } }).catch(() => undefined)
+			await restoreTenantAfterBillingPayment(activated.tenantId, activated.planId)
 		}
 	}
 	if (payment.billingRecordId) await prisma.billingRecord.update({ where: { id: payment.billingRecordId }, data: { setupFeeStatus: completed ? "PAID" : "FAILED", setupFeePaidAt: completed ? new Date() : undefined, failureReason: completed ? null : payment.failureReason || "M-Pesa payment failed" } }).catch(() => undefined)

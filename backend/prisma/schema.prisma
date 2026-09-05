@@ -237,6 +237,8 @@ model Tenant {
   trialStartsAt           DateTime?
   trialEndsAt             DateTime?
   suspendedAt             DateTime?
+  // Distinguishes billing pauses from authorized platform suspensions.
+  suspensionReason        String?
   deletedAt               DateTime?
   dataRetentionStartsAt   DateTime?
   dataDeletionDueAt       DateTime?

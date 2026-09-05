@@ -5,6 +5,7 @@ import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/st
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { DEFAULT_STORE_CATEGORIES } from "backend/lib/default-categories"
+import { MVP_PILOT_PLAN_KEY, pilotTrialEndsAt } from "backend/billing/mvp-policy"
 
 export async function GET() {
 	const session = await auth()
@@ -29,9 +30,13 @@ export async function POST(request: Request) {
 
 	try {
 		const result = await prisma.$transaction(async (transaction) => {
+			// Approved MVP policy: every new store starts on the six-month free
+			// Founding Merchant pilot with Starter-plan limits. Any submitted
+			// planKey is overridden during the pilot; billing records stay in
+			// place for the plan the merchant later chooses.
 			const trialStartsAt = new Date()
-			const trialEndsAt = new Date(trialStartsAt.getTime() + 30 * 24 * 60 * 60 * 1000)
-			const plan = await transaction.plan.findFirst({ where: { key: data.planKey, active: true } })
+			const trialEndsAt = pilotTrialEndsAt(trialStartsAt)
+			const plan = await transaction.plan.findFirst({ where: { key: MVP_PILOT_PLAN_KEY, active: true } })
 			if (!plan) throw Object.assign(new Error("The selected plan is unavailable."), { code: "PLAN_NOT_FOUND" })
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt, trialEndsAt } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
