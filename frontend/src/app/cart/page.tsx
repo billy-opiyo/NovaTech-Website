@@ -48,7 +48,7 @@ export default function CartPage() {
 		if (!couponCode.trim() || couponApplied) return
 		setCouponError("")
 		try {
-			const response = await fetch("/api/coupons/validate", {
+			const response = await fetch(getStoreRouteHref(store, "/api/coupons/validate"), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ code: couponCode, subtotal }),

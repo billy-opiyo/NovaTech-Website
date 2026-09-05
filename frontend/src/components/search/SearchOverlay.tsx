@@ -96,7 +96,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 		const controller = new AbortController()
 		const loadSuggestions = async () => {
 			try {
-				const response = await fetch(`/api/products?q=${encodeURIComponent(query)}&limit=6`, {
+				const response = await fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(query)}&limit=6`), {
 					signal: controller.signal,
 					cache: "no-store",
 				})

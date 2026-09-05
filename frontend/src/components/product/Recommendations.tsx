@@ -32,7 +32,7 @@ export default function Recommendations({ productId }: { productId: string }) {
 	useEffect(() => {
 		const controller = new AbortController()
 		setState("loading")
-		fetch(`/api/recommendations?type=similar&productId=${encodeURIComponent(productId)}&limit=4`, { signal: controller.signal })
+		fetch(getStoreRouteHref(store, `/api/recommendations?type=similar&productId=${encodeURIComponent(productId)}&limit=4`), { signal: controller.signal })
 			.then(async (response) => {
 				if (!response.ok) throw new Error("Unable to load recommendations")
 				return response.json() as Promise<{ products: Recommendation[] }>
@@ -40,7 +40,7 @@ export default function Recommendations({ productId }: { productId: string }) {
 			.then((data) => { setProducts(data.products || []); setState("ready") })
 			.catch((reason: Error) => { if (reason.name !== "AbortError") setState("error") })
 		return () => controller.abort()
-	}, [productId])
+	}, [productId, store])
 
 	if (state === "loading") return <section className="border-t border-gray-200 pt-8 dark:border-gray-700"><h2 className="mb-5 text-2xl font-bold">You may also like</h2><p className="text-sm text-gray-500">Loading recommendations…</p></section>
 	if (state === "error") return null

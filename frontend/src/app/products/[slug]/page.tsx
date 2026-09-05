@@ -66,26 +66,26 @@ export default function ProductDetailPage() {
 	useEffect(() => {
 		if (!slug) return
 		setError("")
-		fetch(`/api/products/${encodeURIComponent(slug)}`)
+		fetch(getStoreRouteHref(store, `/api/products/${encodeURIComponent(slug)}`), { cache: "no-store" })
 			.then(async (response) => {
 				if (!response.ok) throw new Error("Product not found")
 				return response.json()
 			})
 			.then((data) => setProduct(data))
 			.catch((reason) => setError(reason.message || "Unable to load product"))
-	}, [slug])
+	}, [slug, store])
 
 	useEffect(() => {
 		if (!session?.user?.id || !product?.id) return
 		let cancelled = false
-		fetch("/api/wishlist", { cache: "no-store" })
+		fetch(getStoreRouteHref(store, "/api/wishlist"), { cache: "no-store" })
 			.then((response) => response.ok ? response.json() : [])
 			.then((items: { productId: string }[]) => {
 				if (!cancelled) setIsInWishlist(items.some((item) => item.productId === product.id))
 			})
 			.catch(() => undefined)
 		return () => { cancelled = true }
-	}, [product?.id, session?.user?.id])
+	}, [product?.id, session?.user?.id, store])
 
 	if (error) return <NotFoundState title="Product not found" description="We could not find that product. It may have been removed or the link may be out of date." />
 	if (!product) return <div className="mx-auto max-w-7xl py-20 text-center text-gray-500">Loading product…</div>
@@ -127,7 +127,7 @@ export default function ProductDetailPage() {
 		}
 		setWishlistBusy(true)
 		try {
-			const response = await fetch("/api/wishlist", { method: isInWishlist ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: loadedProduct.id }) })
+			const response = await fetch(getStoreRouteHref(store, "/api/wishlist"), { method: isInWishlist ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: loadedProduct.id }) })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to update wishlist")
 			setIsInWishlist((current) => !current)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Heart, Share2, ShoppingCart, Star, Trash2 } from "lucide-react"
@@ -28,16 +28,16 @@ export default function WishlistPage() {
 	const [clearRequested, setClearRequested] = useState(false)
 	const { addItem } = useCart()
 
-	async function load() {
-		const response = await fetch("/api/wishlist")
+	const load = useCallback(async () => {
+		const response = await fetch(getStoreRouteHref(store, "/api/wishlist"), { cache: "no-store" })
 		if (!response.ok) throw new Error("Unable to load wishlist")
 		setItems(await response.json())
-	}
-	useEffect(() => { load().catch((reason) => setError(reason.message)) }, [])
+	}, [store])
+	useEffect(() => { load().catch((reason) => setError(reason.message)) }, [load])
 
 	const sorted = useMemo(() => [...items].sort((a, b) => sortBy === "price-asc" ? (a.product.discountedPrice ?? a.product.price) - (b.product.discountedPrice ?? b.product.price) : sortBy === "price-desc" ? (b.product.discountedPrice ?? b.product.price) - (a.product.discountedPrice ?? a.product.price) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [items, sortBy])
-	async function remove() { if (!itemToRemove) return; try { const response = await fetch("/api/wishlist", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: itemToRemove.productId }) }); if (!response.ok) throw new Error("Unable to remove wishlist item"); setItems((current) => current.filter((item) => item.productId !== itemToRemove.productId)); setItemToRemove(null); addToast("Removed from wishlist", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to remove wishlist item", "error") } }
-	async function clear() { if (!clearRequested) return; try { const response = await fetch("/api/wishlist", { method: "DELETE" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to clear wishlist"); setItems([]); setClearRequested(false); addToast("Wishlist cleared successfully", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to clear wishlist", "error") } }
+	async function remove() { if (!itemToRemove) return; try { const response = await fetch(getStoreRouteHref(store, "/api/wishlist"), { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: itemToRemove.productId }) }); if (!response.ok) throw new Error("Unable to remove wishlist item"); setItems((current) => current.filter((item) => item.productId !== itemToRemove.productId)); setItemToRemove(null); addToast("Removed from wishlist", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to remove wishlist item", "error") } }
+	async function clear() { if (!clearRequested) return; try { const response = await fetch(getStoreRouteHref(store, "/api/wishlist"), { method: "DELETE" }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message || "Unable to clear wishlist"); setItems([]); setClearRequested(false); addToast("Wishlist cleared successfully", "success") } catch (error) { addToast(error instanceof Error ? error.message : "Unable to clear wishlist", "error") } }
 	function availableStock(product: WishlistItem["product"]) { return product.variants.length ? Math.max(...product.variants.map((variant) => variant.stock)) : product.stock }
 	function addToCart(item: WishlistItem) { const product = item.product; addItem({ productId: product.id, name: product.name, brand: product.brand, image: product.images[0] || "/placeholder-product.jpg", price: product.discountedPrice ?? product.price, quantity: 1, maxStock: availableStock(product), slug: product.slug }); addToast("Added to cart", "success") }
 	async function shareProduct(product: WishlistItem["product"]) {

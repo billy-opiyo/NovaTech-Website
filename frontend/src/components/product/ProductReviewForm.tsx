@@ -6,9 +6,12 @@ import type { FormEvent } from "react"
 import { usePathname } from "next/navigation"
 import { Star } from "lucide-react"
 import { useToast } from "@/components/ui/Toast"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function ProductReviewForm({ productId }: { productId: string }) {
 	const pathname = usePathname()
+	const store = useStoreContext()
 	const { addToast } = useToast()
 	const [rating, setRating] = useState(5)
 	const [title, setTitle] = useState("")
@@ -26,7 +29,7 @@ export default function ProductReviewForm({ productId }: { productId: string }) 
 		setRequiresSignIn(false)
 
 		try {
-			const response = await fetch("/api/reviews", {
+			const response = await fetch(getStoreRouteHref(store, "/api/reviews"), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ productId, rating, title: title.trim() || undefined, comment: comment.trim() }),
@@ -65,7 +68,7 @@ export default function ProductReviewForm({ productId }: { productId: string }) 
 				</div>
 				<label className="block text-sm font-medium">Title <span className="font-normal text-gray-500">(optional)</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} className="mt-2 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" placeholder="Summary of your experience" /></label>
 				<label className="block text-sm font-medium">Comment<textarea required minLength={10} maxLength={1000} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 min-h-28 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" placeholder="Tell other customers about this product" /></label>
-				{error && <p className="text-sm text-red-500">{error} {requiresSignIn && <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || "/")}`} className="font-medium underline">Sign in</Link>}</p>}
+				{error && <p className="text-sm text-red-500">{error} {requiresSignIn && <Link href={getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(pathname || "/")}`)} className="font-medium underline">Sign in</Link>}</p>}
 				{message && <p className="text-sm text-green-600">{message}</p>}
 				<button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">{submitting ? "Submitting…" : "Submit review"}</button>
 			</form>
