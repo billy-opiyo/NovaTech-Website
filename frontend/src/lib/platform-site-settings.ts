@@ -1,5 +1,19 @@
 import { clientConfig } from "@/config/client.config"
 
+export type PlatformTeamMember = {
+	id: string
+	name: string
+	role: string
+	bio: string
+	image?: string
+	social?: {
+		linkedin?: string
+		instagram?: string
+		x?: string
+		github?: string
+	}
+}
+
 export type PlatformSiteSettings = {
 	brand?: {
 		name?: string
@@ -43,6 +57,7 @@ export type PlatformSiteSettings = {
 		showSocialLinks?: boolean
 		showContactCards?: boolean
 	}
+	team?: PlatformTeamMember[]
 }
 
 export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
@@ -74,6 +89,26 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showSocialLinks: clientConfig.features.showSocialLinks,
 			showContactCards: clientConfig.features.showContactCards,
 		},
+		team: [
+			{
+				id: "founder-developer",
+				name: "Nurava Tech Founder",
+				role: "Founder & Developer",
+				bio: "Leads the product vision and builds the technology that helps independent stores serve shoppers better.",
+			},
+			{
+				id: "platform-operations",
+				name: "Nurava Tech Operations",
+				role: "Platform Operations",
+				bio: "Keeps the platform reliable and coordinates the systems that support merchants and shoppers.",
+			},
+			{
+				id: "merchant-success",
+				name: "Nurava Tech Team",
+				role: "Merchant Success",
+				bio: "Helps store partners present their products clearly and grow with dependable storefront tools.",
+			},
+		],
 	}
 }
 
