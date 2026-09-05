@@ -167,6 +167,8 @@ export async function PATCH(request: NextRequest) {
 				: await transaction.tenant.update({ where: { id: tenant.id }, data: { status: suspended ? "SUSPENDED" : "ACTIVE", suspendedAt: suspended ? new Date() : null, suspensionReason: suspended ? "PLATFORM" : null } })
 			if (tenant.store && (suspended || parsed.data.action === "reject_verification")) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: suspended || parsed.data.action === "reject_verification" ? "SUSPENDED" : tenant.store.publicationStatus } })
 			if (tenant.store && parsed.data.action === "reactivate_store" && tenant.store.publicationStatus === "SUSPENDED" && tenant.verificationStatus === "APPROVED") await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } })
+			if (parsed.data.action === "approve_verification") await transaction.merchantShopperPaymentProfile.updateMany({ where: { tenantId: tenant.id, status: "PENDING" }, data: { status: "ACTIVE", verifiedAt: new Date() } })
+			if (parsed.data.action === "reject_verification") await transaction.merchantShopperPaymentProfile.updateMany({ where: { tenantId: tenant.id }, data: { status: "SUSPENDED", verifiedAt: null } })
 			if (parsed.data.action === "approve_verification" || parsed.data.action === "reject_verification") await transaction.merchantVerificationEvidence.updateMany({ where: { tenantId: tenant.id, retentionDueAt: null }, data: { retentionDueAt: verificationEvidenceDueAt(new Date()) } })
 			return nextTenant
 		})

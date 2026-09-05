@@ -32,3 +32,6 @@ export function decryptMerchantVerificationDetails(value: string): Record<string
 export function hashMerchantVerificationOtp(code: string, salt: string) {
 	return crypto.scryptSync(code, salt, 32).toString("hex")
 }
+
+export const encryptMerchantPaymentDetails = encryptMerchantVerificationDetails
+export const decryptMerchantPaymentDetails = decryptMerchantVerificationDetails

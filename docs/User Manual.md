@@ -26,15 +26,15 @@ four distinct experiences:
 4. **Platform control plane:** Nurava operators manage tenants, verification,
    plans, add-ons, billing visibility, operations, and suspension.
 
-The current commerce model is <code>MERCHANT_DIRECT</code>. Nurava provides
-discovery, hosting, catalog presentation, and SaaS tools. The independent
-merchant is responsible for the final shopper price, payment, delivery, taxes,
-refunds, warranty, and sale contract.
-
-The shopper cart and handoff page prepare an enquiry and provide WhatsApp/email
-links. New shopper order creation and shopper payment initiation are closed at
-the server boundary. Existing order/payment records and compatibility helpers
-remain for historical data, testing, and separate SaaS billing.
+The current staging commerce model is <code>MERCHANT_ROUTED</code>. Nurava
+provides discovery, hosting, catalog presentation, and SaaS tools. In this
+mode, a shopper can create a pending order and pay through an M-Pesa STK Push
+that uses the selected merchant's approved, verified PayBill or Till. Nurava
+does not receive or hold the product-sale money and charges no product-sale
+commission. The independent merchant remains seller of record and is
+responsible for the final price, delivery, taxes, refunds, warranty, and sale
+contract. Setting <code>SHOPPER_COMMERCE_MODEL=MERCHANT_DIRECT</code> restores
+contact-only checkout.
 
 SaaS billing is different: merchant owners can pay Nurava plan, setup-fee,
 renewal, and add-on invoices through the configured platform provider.
@@ -172,12 +172,13 @@ CartProvider stores cart state in browser localStorage and supports:
 - subtotal, default shipping estimate, and total display; and
 - the configured free-shipping threshold (the default is KES 50,000).
 
-/cart and /checkout require sign-in in the current implementation. The checkout
-page does not take payment. It builds a merchant enquiry and exposes WhatsApp
-and email contact paths. The merchant confirms availability, final price,
-delivery, payment instructions, taxes, returns, and warranty.
-
-Do not describe a cart item as a completed platform order or payment.
+/cart and /checkout require sign-in in the current implementation. In
+merchant-routed mode, checkout validates delivery details, creates a pending
+tenant-scoped order using server-authoritative price and stock, and starts
+merchant-routed M-Pesa. The order becomes confirmed only after provider
+verification; failed payment cancels the pending order and restores reserved
+stock. WhatsApp/email contact remains available and creates the merchant
+enquiry path instead. A pending order is not a completed sale or payment.
 
 ### Account and authentication
 
@@ -388,11 +389,13 @@ four seconds.
 
 ### Enquiries and quotes
 
-The checkout handoff collects the shopper's name, email, optional phone/message,
+The contact handoff collects the shopper's name, email, optional phone/message,
 and explicit consent before opening WhatsApp or email. The server resolves the
 store from the request host and stores a MerchantEnquiry with authoritative
 product names, SKUs, quantities, variants, and advertised prices. It does not
-create a platform order or collect payment.
+collect payment. For M-Pesa checkout, the separate order flow creates a
+tenant-scoped pending Order and Payment, then confirms both only after a
+verified callback/query from the merchant's M-Pesa route.
 
 Authorized staff open /manage/enquiries to search enquiries and update NEW,
 CONTACTED, QUOTED, WON, LOST, or SPAM state. Staff can save internal notes;
@@ -562,12 +565,14 @@ Product image upload is a protected merchant/admin operation at
 /api/platform/access/invitations, /api/platform/access/accept,
 /api/platform/verification/{tenantId}, /api/billing/plans, and /api/health.
 
-**Payments:** /api/payments/webhooks/stripe,
+**Payments:** /api/manage/shopper-payments, /api/payments/webhooks/stripe,
 /api/payments/webhooks/mpesa/stk-callback,
 /api/payments/webhooks/mpesa/c2b, plus legacy
 /api/payments/mpesa/initiate, /api/payments/mpesa/verify,
-/api/payments/card/create-intent, and /api/payments/card/verify. The last
-four fail closed at the merchant-direct boundary for new shopper payments.
+/api/payments/card/create-intent, and /api/payments/card/verify. The two card
+routes remain disabled for shopper checkout. M-Pesa shopper routes work only
+when <code>SHOPPER_COMMERCE_MODEL=MERCHANT_ROUTED</code> and the merchant has
+an active approved payment profile.
 
 ## 10. Integrations
 
@@ -578,7 +583,7 @@ four fail closed at the merchant-direct boundary for new shopper payments.
 | Cloudflare R2 | Public product/profile files and private verification evidence |
 | Twilio | SMS order, support, and verification messages |
 | WhatsApp Cloud API | Customer/merchant notifications and enquiry support |
-| M-Pesa Daraja | SaaS invoice STK and callbacks |
+| M-Pesa Daraja | SaaS invoice STK plus tenant-scoped merchant shopper STK and callbacks |
 | Stripe | Provider-ready SaaS Checkout/portal/webhooks |
 | Google OAuth | Optional sign-in provider |
 
@@ -659,7 +664,7 @@ backup restore, or deployed browser behavior.
 | Payment not configured | Required provider variables and webhook setup |
 | Images have no public URL | R2 public bucket configuration/upload |
 | No email/SMS/WhatsApp | Provider credentials, sender approval, number formatting |
-| Shopper cannot pay | Expected in merchant-direct mode; use merchant enquiry |
+| Shopper cannot pay | Check the commerce model, merchant verification approval, matching PayBill/Till details, encrypted credentials, and Daraja callback/provider setup |
 | Data appears from wrong store | Correct verified host; tenant context is host-derived |
 | Invitation link fails | Known missing acceptance page; see Future Updates |
 | Platform metrics blank | Intentional unavailable-state behavior without live data |

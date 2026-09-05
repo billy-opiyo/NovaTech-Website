@@ -12,6 +12,8 @@ import type {
 import { cancelPendingOrder } from "../../services/order.service"
 import { applyStripeCheckoutCompleted, applyStripeInvoiceEvent, applyStripeSubscriptionEvent, markBillingPaymentFromMpesa, recordOrderCommission } from "../../billing/service"
 import { z } from "zod"
+import { getMerchantMpesaConfig } from "../merchant-mpesa"
+import type { MerchantMpesaConfig } from "../merchant-mpesa"
 
 const mpesaStkCallbackSchema = z.object({
 	Body: z.object({
@@ -198,8 +200,21 @@ export async function handleMpesaStkCallback(
 	const checkoutRequestId = stkCallback.CheckoutRequestID
 	const resultCode = stkCallback.ResultCode
 	const completed = resultCode === 0
-	if (completed && isMpesaConfigured()) {
-		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId }))
+	let paymentForQuery: { kind: string; tenantId: string | null } | null = null
+	let merchantConfig: MerchantMpesaConfig | null | undefined
+	try {
+		paymentForQuery = await prisma.payment.findFirst({ where: { provider: "mpesa", providerReference: checkoutRequestId }, select: { kind: true, tenantId: true } })
+		merchantConfig = paymentForQuery?.kind === "ORDER" && paymentForQuery.tenantId
+			? await getMerchantMpesaConfig(paymentForQuery.tenantId)
+			: undefined
+	} catch {
+		// The normal payment update below retains its retryable/no-database behavior.
+		paymentForQuery = null
+		merchantConfig = undefined
+	}
+	const callbackConfigured = paymentForQuery?.kind === "ORDER" ? Boolean(merchantConfig) : isMpesaConfigured()
+	if (completed && callbackConfigured) {
+		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials: merchantConfig || undefined }))
 		if (!providerCheck.success || providerCheck.data.ResponseCode !== "0" || providerCheck.data.ResultCode !== 0) return { ok: false, received: false, provider: "mpesa", event: "stk-callback", receivedAt, message: "M-Pesa callback could not be confirmed with the provider." }
 	}
 
@@ -326,9 +341,17 @@ async function updatePaymentByProviderReference(
 		}
 
 		if (payment.orderId) {
-			const order = await prisma.order.findFirst({ where: { id: payment.orderId }, select: { tenantId: true } })
-			if (!paymentOrderBelongsToTenant(payment.tenantId, order?.tenantId)) {
+			const order = await prisma.order.findFirst({ where: { id: payment.orderId }, select: { tenantId: true, status: true } })
+			if (!order) {
 				console.error(`Webhook tenant mismatch or missing tenant for ${providerReference}`)
+				return null
+			}
+			if (!paymentOrderBelongsToTenant(payment.tenantId, order.tenantId)) {
+				console.error(`Webhook tenant mismatch or missing tenant for ${providerReference}`)
+				return null
+			}
+			if (status === "COMPLETED" && order.status !== "PENDING") {
+				console.error(`Webhook payment arrived for non-pending order ${payment.orderId}`)
 				return null
 			}
 		}

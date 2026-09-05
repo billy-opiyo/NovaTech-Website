@@ -748,6 +748,15 @@ The safest first coding slice is the tenant foundation, not billing or a new mar
 6. keep the current storefront visually stable while it renders from the first tenant's database-backed settings.
 
 Once this slice is verified, billing, onboarding, custom domains, and merchant self-service can be built on a real isolation boundary instead of being layered onto the current single-store assumptions.
+
+### 2026-09-06 — Merchant-routed shopper M-Pesa checkout
+
+- The approved MVP payment choice is merchant-routed M-Pesa: each approved merchant configures its own verified PayBill or Till route.
+- `SHOPPER_COMMERCE_MODEL=MERCHANT_ROUTED` enables the shopper order flow in staging. `MERCHANT_DIRECT` remains the contact-only fallback.
+- Merchant payment credentials are stored encrypted and scoped to the merchant tenant. Shortcode and account type must match the approved merchant verification details before the route becomes active.
+- Checkout creates a pending order, reserves stock, initiates STK Push, and confirms only after provider verification. Failed payment cancels the pending order and restores stock.
+- Nurava Tech receives no product-sale funds and creates no product-sale commission. SaaS billing to Nurava remains a separate invoice-driven flow.
+- Added migration `0030_merchant_shopper_payment_profiles`; it must be deployed to a target database before this feature can run there. Daraja sandbox/production credentials, reachable callbacks, payment/refund procedures, and legal/tax/privacy review remain rollout gates.
 ### 2026-08-22 — Credential-free legal acceptance and retention boundary
 
 - Added server-authoritative, versioned merchant legal acceptance records for trial creation and first selling publication. Onboarding, publication, and rollback require an explicit acknowledgement; the record is included in merchant exports and preserved with billing/legal data.
