@@ -7,6 +7,7 @@ import { THEME_PRESETS } from "@/config/theme-presets"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
 import { optimizeImageForUpload } from "@/lib/image-upload"
+import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
 type Draft = {
 	name?: string
@@ -207,6 +208,7 @@ export default function StoreDesignPage() {
 			setLocalPreview(false)
 			setMessage(`Published settings version ${data.version}.`)
 			addToast("Store draft published successfully.", "success")
+			notifyStoreSettingsPublished({ scope: "store", storeSlug: data.store?.slug, publishedAt: data.store?.publishedAt })
 		} catch {
 			const message = "Publication requires the database and authorized store membership. The local preview remains unchanged."
 			setError(message); addToast(message, "error")

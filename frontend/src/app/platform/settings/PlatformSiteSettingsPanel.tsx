@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
+import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
 
@@ -49,6 +50,7 @@ export default function PlatformSiteSettingsPanel() {
 			} else {
 				setPublishedAt(data.publishedAt || new Date().toISOString())
 				setMessage("Platform settings published successfully.")
+				notifyStoreSettingsPublished({ scope: "platform", publishedAt: data.publishedAt })
 			}
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : "The platform settings request failed.")
