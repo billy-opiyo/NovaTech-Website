@@ -27,7 +27,7 @@ export default function CategoryGrid() {
 						>
 							<div className="relative h-40 w-full">
 								<Image
-									src={getProductImage(cat.image, cat.name)}
+								src={cat.image?.startsWith("https://images.unsplash.com/") ? getProductImage(cat.image) : cat.image}
 									alt={cat.name}
 									fill
 									className="object-cover group-hover:scale-105 transition-transform duration-500"

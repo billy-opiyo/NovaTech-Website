@@ -228,16 +228,16 @@
     width: 100%;
   }
 
-  @media (min-width: 640px) {
+  @media (min-width: 1024px) {
     .search-overlay-panel {
       top: calc(env(safe-area-inset-top) + 5.25rem);
-      right: auto;
-      left: 50%;
+      right: 1rem;
+      left: 1rem;
       width: min(calc(100% - 2rem), 36rem);
       max-width: none;
       max-height: none;
       overflow-y: visible;
-      transform: translateX(-50%);
+      margin-inline: auto;
     }
   }
 
