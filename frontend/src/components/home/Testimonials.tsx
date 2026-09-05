@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Star } from "lucide-react"
 import { useSession } from "next-auth/react"
@@ -26,12 +26,29 @@ export default function Testimonials() {
 	const [error, setError] = useState("")
 	const [submitting, setSubmitting] = useState(false)
 
-	useEffect(() => {
-		fetch("/api/reviews", { cache: "no-store" })
-			.then(async (response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load reviews")))
-			.then((data) => setReviews(Array.isArray(data.reviews) ? data.reviews : []))
-			.catch(() => setReviews([]))
+	const loadReviews = useCallback(async () => {
+		try {
+			const response = await fetch("/api/reviews", { cache: "no-store" })
+			if (!response.ok) throw new Error("Unable to load reviews")
+			const data = await response.json()
+			setReviews(Array.isArray(data.reviews) ? data.reviews : [])
+		} catch {
+			// Keep already-rendered reviews visible if a background refresh is unavailable.
+		}
 	}, [])
+
+	useEffect(() => {
+		void loadReviews()
+		const refresh = window.setInterval(() => void loadReviews(), 15000)
+		const refreshOnReturn = () => {
+			if (document.visibilityState === "visible") void loadReviews()
+		}
+		document.addEventListener("visibilitychange", refreshOnReturn)
+		return () => {
+			window.clearInterval(refresh)
+			document.removeEventListener("visibilitychange", refreshOnReturn)
+		}
+	}, [loadReviews])
 
 	async function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()

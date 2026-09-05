@@ -52,7 +52,7 @@ export default function ConfirmDialog({
 					<button type="button" ref={cancelRef} onClick={onCancel} disabled={busy} className="rounded-lg border px-4 py-2 font-semibold disabled:opacity-50">
 						{cancelLabel}
 					</button>
-					<button type="button" onClick={onConfirm} disabled={busy} aria-busy={busy} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+					<button type="button" onClick={onConfirm} disabled={busy} aria-busy={busy} className="destructive-action inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:opacity-50">
 						{busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
 						{busy ? "Working…" : confirmLabel}
 					</button>

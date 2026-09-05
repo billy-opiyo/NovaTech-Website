@@ -82,7 +82,7 @@ export default function Header() {
 							<Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 lg:inline-flex">Get started</Link>
 						</>)}
 						{!store.isPlatformHome && <>
-							<div className="hidden lg:block">
+							<div className="block">
 								<SearchOverlay />
 							</div>
 							<NotificationCenter />
@@ -199,7 +199,7 @@ function StoreAccountMenu({
 				className="inline-flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-0.5 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white sm:min-w-[4rem] sm:px-1.5 sm:py-1"
 			>
 				{isSignedIn ? <AccountAvatar name={name} email={email} image={image} className="h-8 w-8" /> : <User size={20} aria-hidden="true" />}
-				<span className="max-w-12 truncate text-[9px] leading-tight sm:max-w-20 sm:text-xs">{isSignedIn ? accountName : "Sign in"}</span>
+				{!isSignedIn && <span className="text-[9px] leading-tight sm:text-xs">Sign in</span>}
 			</button>
 			{open && (
 				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
@@ -207,7 +207,7 @@ function StoreAccountMenu({
 						<UserRound size={17} aria-hidden="true" />
 						Account
 					</Link>
-					{isSignedIn ? <button type="button" role="menuitem" disabled={signingOut} onClick={() => void handleSignOut()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30">
+					{isSignedIn ? <button type="button" role="menuitem" disabled={signingOut} onClick={() => void handleSignOut()} className="destructive-action flex w-full items-center gap-3 rounded-lg border-0 px-3 py-2.5 text-left text-sm disabled:cursor-wait disabled:opacity-60">
 						{signingOut ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <LogOut size={17} aria-hidden="true" />}
 						{signingOut ? "Signing out…" : "Sign out"}
 					</button> : <Link href={getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(getStoreRouteHref(store, "/"))}`)} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-primary transition hover:bg-primary/10">
@@ -275,7 +275,7 @@ function PlatformAccountMenu({
 				className={`inline-flex items-center justify-center gap-2 rounded-lg px-1.5 py-1 text-sm font-semibold text-gray-700 transition hover:bg-primary/10 dark:text-white ${mobile ? "rounded-full p-1" : ""}`}
 			>
 				<AccountAvatar name={name} email={email} image={image} className={mobile ? "h-7 w-7" : "h-7 w-7"} />
-				{!mobile && <span className="max-w-36 truncate text-left leading-tight text-gray-700 dark:text-white">{accountName}</span>}
+				{/* Authenticated users keep the avatar only so long names cannot crowd the header. */}
 			</button>
 			{open && (
 				<div role="menu" className="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-52 rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white">
@@ -283,7 +283,7 @@ function PlatformAccountMenu({
 						<UserRound size={17} aria-hidden="true" />
 						Account
 					</Link>
-					<button type="button" role="menuitem" disabled={signingOut} onClick={() => void handleSignOut()} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30">
+					<button type="button" role="menuitem" disabled={signingOut} onClick={() => void handleSignOut()} className="destructive-action flex w-full items-center gap-3 rounded-lg border-0 px-3 py-2.5 text-left text-sm disabled:cursor-wait disabled:opacity-60">
 						{signingOut ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : <LogOut size={17} aria-hidden="true" />}
 						{signingOut ? "Signing out…" : "Sign out"}
 					</button>

@@ -99,6 +99,14 @@ export default function ProductsClient() {
 	const searchParamsKey = searchParams.toString()
 
 	useEffect(() => {
+		const mediaQuery = window.matchMedia("(max-width: 1023px)")
+		const updateViewMode = () => setViewMode(mediaQuery.matches ? "list" : "grid")
+		updateViewMode()
+		mediaQuery.addEventListener("change", updateViewMode)
+		return () => mediaQuery.removeEventListener("change", updateViewMode)
+	}, [])
+
+	useEffect(() => {
 		const nextSearch = searchParams.get("q") || ""
 		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"

@@ -1,6 +1,6 @@
 "use client"
 
-import { FormEvent, useEffect, useState } from "react"
+import { FormEvent, useEffect, useRef, useState } from "react"
 import { useToast } from "@/components/ui/Toast"
 
 type Plan = {
@@ -31,6 +31,8 @@ export default function PlatformBillingPage() {
 	const [setupFeeAmount, setSetupFeeAmount] = useState("0")
 	const [billingInterval, setBillingInterval] = useState<"MONTH" | "YEAR">("MONTH")
 	const [active, setActive] = useState(true)
+	const [editingPlanId, setEditingPlanId] = useState<string | null>(null)
+	const planFormRef = useRef<HTMLFormElement>(null)
 	const { addToast } = useToast()
 
 	async function load() {
@@ -43,7 +45,13 @@ export default function PlatformBillingPage() {
 
 	useEffect(() => { load().catch((error) => setMessage(error.message || "Platform billing unavailable")) }, [])
 
+	useEffect(() => {
+		if (!editingPlanId) return
+		requestAnimationFrame(() => planFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }))
+	}, [editingPlanId])
+
 	function editPlan(plan: Plan) {
+		setEditingPlanId(plan.id)
 		setKey(plan.key)
 		setName(plan.name)
 		setPrice(plan.price == null ? "" : String(plan.price))
@@ -53,6 +61,7 @@ export default function PlatformBillingPage() {
 	}
 
 	function clearForm() {
+		setEditingPlanId(null)
 		setKey("")
 		setName("")
 		setPrice("")
@@ -84,7 +93,7 @@ export default function PlatformBillingPage() {
 		{message && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="glass-card p-5"><p className="text-sm text-gray-500">Subscriptions</p><p className="mt-2 text-2xl font-bold">{data.stats.subscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Active / trialing</p><p className="mt-2 text-2xl font-bold">{data.stats.activeSubscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Paid invoice revenue</p><p className="mt-2 text-2xl font-bold">{money(data.stats.paidRevenue)}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Legacy commission records</p><p className="mt-2 text-2xl font-bold">{money(data.stats.generatedCommission)}</p></div></div>
 		<div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-			<div className="glass-card p-5"><div className="flex items-center justify-between gap-3"><h3 className="text-xl font-semibold">Configured plans</h3><button type="button" onClick={clearForm} className="text-sm font-semibold text-primary">New plan</button></div><div className="mt-3 divide-y divide-gray-100">{data.plans.map((plan) => <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span><b>{plan.name}</b> <span className="text-gray-500">({plan.key})</span><br /><span className="text-xs text-gray-500">Subscription: {plan.price == null ? "Trial" : `${money(plan.price, plan.currency)} / ${plan.billingInterval?.toLowerCase()}`} · Setup: {money(plan.setupFeeAmount, plan.currency)}</span></span><span className="flex items-center gap-3"><span>{plan.active ? "Active" : "Inactive"}</span><button type="button" onClick={() => editPlan(plan)} className="rounded border px-3 py-1 text-xs font-semibold">Edit</button></span></div>)}</div><form onSubmit={savePlan} className="mt-5 grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Plan key<input required value={key} onChange={(event) => setKey(event.target.value)} placeholder="STARTER" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Plan name<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Starter" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Recurring price<input type="number" min="0" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Blank for trial" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">One-time setup fee<input required type="number" min="0" value={setupFeeAmount} onChange={(event) => setSetupFeeAmount(event.target.value)} className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Billing interval<select value={billingInterval} onChange={(event) => setBillingInterval(event.target.value as "MONTH" | "YEAR")} disabled={price === ""} className="rounded border p-2 font-normal dark:bg-dark-surface"><option value="MONTH">Monthly</option><option value="YEAR">Yearly</option></select></label><label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /> Active plan</label><div className="flex gap-2 sm:col-span-2"><button className="btn-primary">Save plan</button><button type="button" onClick={clearForm} className="rounded border px-4 py-2 font-semibold">Clear</button></div></form></div>
+			<div className="glass-card p-5"><div className="flex items-center justify-between gap-3"><h3 className="text-xl font-semibold">Configured plans</h3><button type="button" onClick={clearForm} className="text-sm font-semibold text-primary">New plan</button></div><div className="mt-3 divide-y divide-gray-100">{data.plans.map((plan) => <div key={plan.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span><b>{plan.name}</b> <span className="text-gray-500">({plan.key})</span><br /><span className="text-xs text-gray-500">Subscription: {plan.price == null ? "Trial" : `${money(plan.price, plan.currency)} / ${plan.billingInterval?.toLowerCase()}`} · Setup: {money(plan.setupFeeAmount, plan.currency)}</span></span><span className="flex items-center gap-3"><span>{plan.active ? "Active" : "Inactive"}</span><button type="button" onClick={() => editPlan(plan)} className="rounded border px-3 py-1 text-xs font-semibold">Edit</button></span></div>)}</div><form ref={planFormRef} onSubmit={savePlan} className="mt-5 scroll-mt-24 grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Plan key<input required value={key} onChange={(event) => setKey(event.target.value)} placeholder="STARTER" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Plan name<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Starter" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Recurring price<input type="number" min="0" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Blank for trial" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">One-time setup fee<input required type="number" min="0" value={setupFeeAmount} onChange={(event) => setSetupFeeAmount(event.target.value)} className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><label className="grid gap-1 text-sm font-semibold">Billing interval<select value={billingInterval} onChange={(event) => setBillingInterval(event.target.value as "MONTH" | "YEAR")} disabled={price === ""} className="rounded border p-2 font-normal dark:bg-dark-surface"><option value="MONTH">Monthly</option><option value="YEAR">Yearly</option></select></label><label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /> Active plan</label><div className="flex gap-2 sm:col-span-2"><button className="btn-primary">Save plan</button><button type="button" onClick={clearForm} className="rounded border px-4 py-2 font-semibold">Clear</button></div></form></div>
 			<div className="glass-card p-5"><h3 className="text-xl font-semibold">Add-ons</h3><div className="mt-3 divide-y divide-gray-100">{data.addons.map((addon) => <div key={addon.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span><b>{addon.name}</b> <span className="text-gray-500">({addon.key})</span></span><span>{money(addon.price, addon.currency)} / {addon.billingInterval.toLowerCase()} · {addon.active ? "Active" : "Inactive"}</span></div>)}</div><p className="mt-4 text-sm text-gray-500">Add-ons are database-managed through the platform billing API and can optionally be linked to Stripe recurring price IDs.</p></div>
 		</div>
 		<div className="glass-card p-5"><h3 className="text-xl font-semibold">Failed SaaS payments</h3>{data.failedPayments.length ? <div className="mt-3 divide-y divide-gray-100">{data.failedPayments.map((payment) => <div key={payment.id} className="flex justify-between gap-3 py-3 text-sm"><span>{payment.provider} · tenant {payment.tenantId}</span><span>{money(payment.amount, payment.currency)} · {humanize(payment.failureReason || "Failed")}</span></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No failed SaaS payments recorded.</p>}</div>
