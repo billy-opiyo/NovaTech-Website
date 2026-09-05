@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
-import { resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
+import { getRequestedStoreSlug, resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { clientConfig } from "@/config/client.config"
 import { platformSiteSettingsPatchSchema } from "backend/validators/platformSiteSettingsValidator"
@@ -63,7 +63,7 @@ function isPlatformHost(value: string | null): boolean {
 
 export async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
-	const requestedStoreSlug = requestHeaders.get("x-nurava-store-slug")?.trim().toLowerCase() || ""
+	const requestedStoreSlug = getRequestedStoreSlug(requestHeaders)
 	const platformHome = isPlatformHost(requestHeaders.get("host")) && !requestedStoreSlug
 	if (platformHome) {
 		// Platform discovery is independent of any merchant domain mapping. Keep

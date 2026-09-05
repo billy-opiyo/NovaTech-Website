@@ -90,6 +90,27 @@ test("Vercel platform hosts resolve an explicitly scoped store slug", async () =
 	}
 })
 
+test("Vercel platform store paths remain scoped when the middleware slug header is missing", async () => {
+	const domainFindUnique = prisma.domain.findUnique
+	const storeFindUnique = prisma.store.findUnique
+	;(prisma.domain.findUnique as any) = async () => null
+	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "demo" ? {
+		id: "store-demo",
+		tenantId: "tenant-demo",
+		slug: "demo",
+		publicationStatus: "PUBLISHED",
+		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
+	} : null
+	try {
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-request-path": "/store/demo" }) })
+		assert.equal(context.storeSlug, "demo")
+		assert.equal(context.tenantId, "tenant-demo")
+	} finally {
+		;(prisma.domain.findUnique as any) = domainFindUnique
+		;(prisma.store.findUnique as any) = storeFindUnique
+	}
+})
+
 test("local store subdomains resolve by store slug", async () => {
 	const domainFindUnique = prisma.domain.findUnique
 	const storeFindUnique = prisma.store.findUnique

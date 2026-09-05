@@ -36,6 +36,23 @@ export function normalizeHostname(value: string | null | undefined): string {
 	return withoutWhitespace.split(":")[0]
 }
 
+export function getRequestedStoreSlug(requestHeaders: Headers): string {
+	const headerSlug = requestHeaders.get("x-nurava-store-slug")?.trim().toLowerCase() || ""
+	if (headerSlug) return headerSlug
+
+	const requestPath = requestHeaders.get("x-nurava-request-path")?.trim() || ""
+	if (!requestPath) return ""
+	try {
+		const pathname = new URL(requestPath, "http://nurava.internal").pathname
+		const [, prefix, rawSlug] = pathname.split("/")
+		if (prefix !== "store" || !rawSlug) return ""
+		const slug = decodeURIComponent(rawSlug).trim().toLowerCase()
+		return /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slug) && slug.length <= 63 ? slug : ""
+	} catch {
+		return ""
+	}
+}
+
 function unavailableStore(context: { status: string; publicationStatus?: string }) {
 	if (context.status === "SUSPENDED" || context.status === "DELETED" || context.publicationStatus === "SUSPENDED") {
 		return new TenantResolutionError("UNAVAILABLE_STORE", "This store is currently unavailable.", 503)
@@ -57,7 +74,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	const isLocalSubdomain = hostname.endsWith(".localhost")
 	const isVercelProjectHost = hostname === "vercel.app" || hostname.endsWith(".vercel.app")
 	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHost
-	const requestedStoreSlug = request.headers.get("x-nurava-store-slug")?.trim().toLowerCase() || ""
+	const requestedStoreSlug = getRequestedStoreSlug(request.headers)
 	if (requestedStoreSlug && isCanonicalPlatformHost) {
 		const store = await prisma.store.findUnique({
 			where: { slug: requestedStoreSlug },
