@@ -18,6 +18,7 @@ type Draft = {
 	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
+type BusyAction = "saving" | "publishing" | "rollback" | null
 
 const CATEGORY_SLOTS = [
 	{ slug: "phones", label: "Phones" },
@@ -42,7 +43,7 @@ export default function StoreDesignPage() {
 	const [draft, setDraft] = useState<Draft>({})
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
-	const [busy, setBusy] = useState(false)
+	const [busy, setBusy] = useState<BusyAction>(null)
 	const [uploadingLogo, setUploadingLogo] = useState(false)
 	const [uploadingCategory, setUploadingCategory] = useState<CategorySlot | null>(null)
 	const [localPreview, setLocalPreview] = useState(false)
@@ -92,7 +93,7 @@ export default function StoreDesignPage() {
 	}
 
 	async function rollback(version: number) {
-		setBusy(true)
+		setBusy("rollback")
 		setMessage("")
 		setError("")
 		try {
@@ -107,7 +108,7 @@ export default function StoreDesignPage() {
 			const message = rollbackError instanceof Error ? rollbackError.message : "Rollback requires the database and store-owner access."
 			setError(message); addToast(message, "error")
 		}
-		setBusy(false)
+		setBusy(null)
 	}
 
 	function saveLocalDraft() {
@@ -175,7 +176,7 @@ export default function StoreDesignPage() {
 	}
 
 	async function save() {
-		setBusy(true)
+		setBusy("saving")
 		setMessage("")
 		setError("")
 		saveLocalDraft()
@@ -192,11 +193,11 @@ export default function StoreDesignPage() {
 			setMessage("Draft saved locally for preview. Database persistence is unavailable.")
 			addToast("Draft saved locally. Database persistence is unavailable.", "info")
 		}
-		setBusy(false)
+		setBusy(null)
 	}
 
 	async function publish() {
-		setBusy(true)
+		setBusy("publishing")
 		setMessage("")
 		setError("")
 		try {
@@ -210,7 +211,7 @@ export default function StoreDesignPage() {
 			const message = "Publication requires the database and authorized store membership. The local preview remains unchanged."
 			setError(message); addToast(message, "error")
 		}
-		setBusy(false)
+		setBusy(null)
 	}
 
 	const heroTitle = draft.homepage?.heroTitle || "Upgrade Your Tech"
@@ -224,8 +225,8 @@ export default function StoreDesignPage() {
 				title="Restore this published version?"
 				description={rollbackVersion === null ? "" : `Version ${rollbackVersion} will be copied into a new published version. Your current version remains recoverable.`}
 				confirmLabel="Restore version"
-				busy={busy}
-				onCancel={() => { if (!busy) setRollbackVersion(null) }}
+				busy={busy === "rollback"}
+				onCancel={() => { if (busy === null) setRollbackVersion(null) }}
 				onConfirm={() => {
 					if (rollbackVersion === null) return
 					const version = rollbackVersion
@@ -307,8 +308,8 @@ export default function StoreDesignPage() {
 					{error && <p className="text-sm text-red-600">{error}</p>}
 					{message && <p className="text-sm text-green-600">{message}</p>}
 					<label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={acceptLegalTerms} onChange={(event) => setAcceptLegalTerms(event.target.checked)} className="mt-1" /><span>Before publishing, I confirm that I have reviewed the current <a href="/terms" target="_blank" rel="noreferrer" className="text-primary underline">merchant terms</a> and <a href="/privacy-policy" target="_blank" rel="noreferrer" className="text-primary underline">privacy notice</a>, and understand that the merchant is responsible for its store sales, customers, delivery, refunds, taxes, and warranties.</span></label>
-					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={save} className="btn-primary inline-flex items-center gap-2">{busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy || localPreview || !acceptLegalTerms} onClick={publish} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy ? "Publishing…" : "Publish draft"}</button></div>
-					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy || localPreview} onClick={() => setRollbackVersion(item.version)} className="inline-flex items-center gap-1 rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}Restore</button></div>)}</div></div>}
+					<div className="flex flex-wrap gap-3"><button type="button" disabled={busy !== null} onClick={save} className="btn-primary inline-flex items-center gap-2">{busy === "saving" && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy === "saving" ? "Saving…" : "Save draft"}</button><button type="button" disabled={busy !== null || localPreview || !acceptLegalTerms} onClick={publish} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy === "publishing" && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}{busy === "publishing" ? "Publishing…" : "Publish draft"}</button></div>
+					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy !== null || localPreview} onClick={() => setRollbackVersion(item.version)} className="inline-flex items-center gap-1 rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy === "rollback" && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}Restore</button></div>)}</div></div>}
 				</section>
 
 				<section aria-label="Storefront preview" className="overflow-hidden rounded-2xl border shadow-xl" style={{ backgroundColor: preset.light.background, color: preset.light.text, fontFamily: preset.fontBody }}>
