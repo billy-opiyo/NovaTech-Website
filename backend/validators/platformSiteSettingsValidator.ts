@@ -12,6 +12,20 @@ const optionalHttpsOrPath = z.string().trim().max(500).refine((value) => {
 
 const optionalText = (max: number) => z.string().trim().max(max).optional()
 
+const teamMemberSchema = z.object({
+	id: z.string().trim().min(1).max(80),
+	name: z.string().trim().min(1).max(120),
+	role: z.string().trim().min(1).max(120),
+	bio: z.string().trim().max(600),
+	image: optionalHttpsOrPath.optional(),
+	social: z.object({
+		linkedin: optionalHttpsOrPath.optional(),
+		instagram: optionalHttpsOrPath.optional(),
+		x: optionalHttpsOrPath.optional(),
+		github: optionalHttpsOrPath.optional(),
+	}).strict().optional(),
+}).strict()
+
 export const platformSiteSettingsPatchSchema = z.object({
 	brand: z.object({
 		name: optionalText(120),
@@ -52,6 +66,7 @@ export const platformSiteSettingsPatchSchema = z.object({
 		showSocialLinks: z.boolean().optional(),
 		showContactCards: z.boolean().optional(),
 	}).strict().optional(),
+	team: z.array(teamMemberSchema).max(12).optional(),
 }).strict()
 
 export type PlatformSiteSettingsPatch = z.infer<typeof platformSiteSettingsPatchSchema>

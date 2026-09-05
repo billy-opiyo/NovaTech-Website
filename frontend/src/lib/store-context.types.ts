@@ -1,4 +1,5 @@
 import type { ClientConfig } from "@/config/client.config"
+import type { PlatformTeamMember } from "./platform-site-settings"
 
 export type StoreContext = ClientConfig & {
 	tenantId: string
@@ -8,4 +9,5 @@ export type StoreContext = ClientConfig & {
 	storePathPrefix: string
 	publicationStatus: "DRAFT" | "PUBLISHED" | "SUSPENDED"
 	isPlatformHome: boolean
+	platformTeam: PlatformTeamMember[]
 }

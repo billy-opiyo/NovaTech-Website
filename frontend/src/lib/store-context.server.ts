@@ -152,6 +152,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			homepage: { ...clientConfig.homepage, ...homepage, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
+			platformTeam: [],
 			isPlatformHome: platformHome,
 		} as unknown as StoreContext
 	} catch (error) {
@@ -177,6 +178,7 @@ export function fallbackStoreContext(isPlatformHome = false, platformSettings: P
 			seo: { ...clientConfig.seo, ...mergedPlatformSettings.seo },
 			features: { ...clientConfig.features, ...mergedPlatformSettings.features },
 		} : { contact: merchantContactDefaults, social: merchantSocialDefaults }),
+		platformTeam: isPlatformHome ? mergedPlatformSettings.team || [] : [],
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
-import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings } from "@/lib/platform-site-settings"
+import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
@@ -13,6 +13,7 @@ export default function PlatformSiteSettingsPanel() {
 	const [busy, setBusy] = useState<"loading" | "saving" | "publishing" | "idle">("loading")
 	const [uploadingLogo, setUploadingLogo] = useState(false)
 	const [uploadingFavicon, setUploadingFavicon] = useState(false)
+	const [uploadingTeamImage, setUploadingTeamImage] = useState<string | null>(null)
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
 	const [publishedAt, setPublishedAt] = useState<string | null>(null)
@@ -62,6 +63,24 @@ export default function PlatformSiteSettingsPanel() {
 	const inputClass = "mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 dark:border-white/10 dark:bg-dark-surface dark:text-white"
 	const text = (section: "brand" | "site" | "contact" | "seo" | "social", key: string) => String((draft[section] as Record<string, unknown> | undefined)?.[key] || "")
 	const checked = (key: string) => (draft.features as Record<string, boolean> | undefined)?.[key] !== false
+	const team = draft.team || []
+
+	function updateTeamMember(id: string, patch: Partial<PlatformTeamMember>) {
+		setDraft((current) => ({ ...current, team: (current.team || []).map((member) => member.id === id ? { ...member, ...patch } : member) }))
+	}
+
+	function updateTeamSocial(id: string, key: keyof NonNullable<PlatformTeamMember["social"]>, value: string) {
+		setDraft((current) => ({ ...current, team: (current.team || []).map((member) => member.id === id ? { ...member, social: { ...member.social, [key]: value } } : member) }))
+	}
+
+	function addTeamMember() {
+		const id = `team-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+		setDraft((current) => ({ ...current, team: [...(current.team || []), { id, name: "New team member", role: "Team role", bio: "Add a short description of this team member's contribution to Nurava Tech.", social: {} }] }))
+	}
+
+	function removeTeamMember(id: string) {
+		setDraft((current) => ({ ...current, team: (current.team || []).filter((member) => member.id !== id) }))
+	}
 
 	async function uploadLogo(file: File | undefined) {
 		if (!file) return
@@ -102,6 +121,28 @@ export default function PlatformSiteSettingsPanel() {
 			setError(reason instanceof Error ? reason.message : "Unable to upload platform favicon")
 		} finally {
 			setUploadingFavicon(false)
+		}
+	}
+
+	async function uploadTeamProfileImage(memberId: string, file: File | undefined) {
+		if (!file) return
+		setUploadingTeamImage(memberId)
+		setMessage("")
+		setError("")
+		try {
+			const optimized = await optimizeImageForUpload(file)
+			const body = new FormData()
+			body.set("file", optimized)
+			body.set("memberId", memberId)
+			const response = await fetch("/api/platform/settings/team-image", { method: "POST", body })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to upload team profile image")
+			updateTeamMember(memberId, { image: data.url })
+			setMessage("Team profile image uploaded. Save the draft, then publish it to make it live.")
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to upload team profile image")
+		} finally {
+			setUploadingTeamImage(null)
 		}
 	}
 
@@ -146,6 +187,35 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div><h3 className="text-lg font-semibold">Meet our team</h3><p className="mt-1 max-w-2xl text-sm text-gray-500">Edit the people and roles shown on the platform About page. Profile images are displayed as circular avatars. Changes remain private until published.</p></div>
+					<button type="button" onClick={addTeamMember} disabled={team.length >= 12 || busy !== "idle"} className="rounded-lg border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">Add team member</button>
+				</div>
+				<div className="space-y-5">
+					{team.map((member) => {
+						const uploading = uploadingTeamImage === member.id
+						return <div key={member.id} className="rounded-xl border border-gray-200 p-4 dark:border-white/10">
+							<div className="flex flex-wrap items-start justify-between gap-4">
+								<div className="flex min-w-0 items-center gap-4">
+									<div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/30 bg-primary/10 text-xl font-bold text-primary">{member.image ? <img src={member.image} alt={`${member.name} profile preview`} className="h-full w-full object-cover" /> : member.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "NT"}</div>
+									<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploading ? "cursor-wait opacity-60" : ""}`}>{uploading ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Upload size={15} aria-hidden="true" />}{uploading ? "Uploading…" : "Upload profile image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingTeamImage !== null || busy !== "idle"} onChange={(event) => { void uploadTeamProfileImage(member.id, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>
+								</div>
+								<button type="button" onClick={() => removeTeamMember(member.id)} disabled={busy !== "idle" || uploadingTeamImage !== null} className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50">Remove</button>
+							</div>
+							<div className="mt-4 grid gap-4 md:grid-cols-2">
+								<label className="block text-sm font-medium">Name<input className={inputClass} value={member.name} onChange={(event) => updateTeamMember(member.id, { name: event.target.value })} /></label>
+								<label className="block text-sm font-medium">Role<input className={inputClass} value={member.role} onChange={(event) => updateTeamMember(member.id, { role: event.target.value })} /></label>
+								<label className="block text-sm font-medium md:col-span-2">Short bio<textarea className={inputClass} rows={3} value={member.bio} onChange={(event) => updateTeamMember(member.id, { bio: event.target.value })} /></label>
+								{(["linkedin", "instagram", "x", "github"] as const).map((key) => <label className="block text-sm font-medium" key={key}>{key === "x" ? "X / Twitter" : `${key[0].toUpperCase()}${key.slice(1)}`} URL<input type="url" className={inputClass} value={member.social?.[key] || ""} onChange={(event) => updateTeamSocial(member.id, key, event.target.value)} placeholder="https://" /></label>)}
+							</div>
+							<p className="mt-3 text-xs text-gray-500">JPG, PNG, WEBP, or GIF up to 1MB.</p>
+						</div>
+					})}
+					{!team.length && <p className="rounded-lg border border-dashed p-5 text-sm text-gray-500">No team members configured. Add the Founder/Developer and other platform roles here.</p>}
+				</div>
+			</section>
+
+			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">SEO and visibility</h3><p className="mt-1 text-sm text-gray-500">These options control platform metadata and public contact surfaces.</p></div>
 				<div className="grid gap-4 lg:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Meta title</span><input className={inputClass} value={text("seo", "title")} onChange={(event) => updateSection("seo", "title", event.target.value)} /></label>
@@ -161,8 +231,8 @@ export default function PlatformSiteSettingsPanel() {
 			{error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 			{message && <p role="status" className="text-sm text-green-600 dark:text-green-400">{message}</p>}
 			<div className="flex flex-wrap items-center gap-3">
-				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon} onClick={() => request("PATCH")} className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Save size={16} />{busy === "saving" ? <><Loader2 size={16} className="animate-spin" />Saving…</> : "Save draft"}</button>
-				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon} onClick={() => request("POST")} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-60"><Send size={16} />{busy === "publishing" ? <><Loader2 size={16} className="animate-spin" />Publishing…</> : "Publish settings"}</button>
+				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon || uploadingTeamImage !== null} onClick={() => request("PATCH")} className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Save size={16} />{busy === "saving" ? <><Loader2 size={16} className="animate-spin" />Saving…</> : "Save draft"}</button>
+				<button type="button" disabled={busy !== "idle" || uploadingLogo || uploadingFavicon || uploadingTeamImage !== null} onClick={() => request("POST")} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-60"><Send size={16} />{busy === "publishing" ? <><Loader2 size={16} className="animate-spin" />Publishing…</> : "Publish settings"}</button>
 				{publishedAt && <span className="text-xs text-gray-500">Last published {new Date(publishedAt).toLocaleString()}</span>}
 			</div>
 		</div>
