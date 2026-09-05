@@ -144,12 +144,12 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			{showTrigger && (
 				<button
 					onClick={() => setOpen(true)}
-					className="hidden items-center gap-2 rounded-lg border border-primary/30 bg-white/10 px-2 py-2 text-sm text-gray-500 transition hover:text-gray-700 md:flex md:w-36 md:px-3 lg:w-64 lg:px-4 dark:hover:text-gray-300"
+					className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"
 					aria-label="Open search"
 				>
 					<Search size={16} />
-					<span className="flex-1 text-left">Search pages &amp; products...</span>
-					<kbd className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">
+					<span className="hidden flex-1 text-left md:block">Search pages &amp; products...</span>
+					<kbd className="hidden rounded bg-gray-200 px-2 py-0.5 text-xs dark:bg-gray-700 md:block">
 						⌘K
 					</kbd>
 				</button>
@@ -169,7 +169,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 							initial={{ opacity: 0, y: -20, scale: 0.95 }}
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -20, scale: 0.95 }}
-							className="search-overlay-panel fixed z-[60]"
+							className="search-overlay-panel fixed z-[60] max-w-[calc(100vw-1rem)]"
 						>
 							<div className="glass-card navy-glass p-4">
 								<div className="relative">
