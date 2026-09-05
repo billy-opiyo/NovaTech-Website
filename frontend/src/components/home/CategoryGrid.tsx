@@ -27,7 +27,7 @@ export default function CategoryGrid() {
 							href={getStoreRouteHref(store, `/category/${cat.slug}`)}
 							className="glass-card navy-glass group block min-h-[22rem] overflow-hidden sm:min-h-0"
 						>
-							<div className="relative h-80 w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 sm:h-40">
+							<div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
 								<Image
 									src={
 										cat.image?.startsWith("https://images.unsplash.com/")
@@ -36,7 +36,7 @@ export default function CategoryGrid() {
 									}
 									alt={cat.name}
 									fill
-									className="object-contain transition-transform duration-500 group-hover:scale-105"
+									className="object-contain transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>
 							<p className="text-center font-semibold mt-3 text-lg">
