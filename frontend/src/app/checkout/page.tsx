@@ -37,7 +37,7 @@ export default function CheckoutPage() {
 		if (!customerName.trim() || !customerEmail.trim() || !consent) { setError("Enter your name and email, then accept consent so the merchant can follow up."); return }
 		setBusy(true); setBusyMethod(contactMethod)
 		try {
-			const response = await fetch("/api/enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerName, customerEmail, customerPhone, message, contactMethod, consent, items: enquiryItems }) })
+			const response = await fetch(getStoreRouteHref(store, "/api/enquiries"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerName, customerEmail, customerPhone, message, contactMethod, consent, items: enquiryItems }) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
 			addToast("Your enquiry was sent successfully. The merchant will follow up shortly.", "success")

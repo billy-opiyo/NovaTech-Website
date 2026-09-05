@@ -38,14 +38,14 @@ export default function AccountPage() {
 				const nextUser = session.user || null
 				setUser(nextUser)
 				if (!nextUser) return
-				return fetch("/api/orders?limit=3")
+				return fetch(getStoreRouteHref(store, "/api/orders?limit=3"))
 					.then((response) => response.ok ? response.json() : null)
 					.then((data) => { if (active && data) setOrders(data.orders || []) })
 			})
 			.catch(() => { if (active) setUser(null) })
 			.finally(() => { if (active) setLoading(false) })
 		return () => { active = false }
-	}, [])
+	}, [store])
 
 	if (loading) return <div className="mx-auto max-w-md py-20 text-center text-gray-500">Loading account…</div>
 	if (!user) return <div className="mx-auto max-w-lg py-12"><div className="glass-card p-8 text-center sm:p-10"><div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"><User size={32} className="text-primary" /></div><h1 className="text-3xl font-bold">Welcome to your account</h1><p className="mt-3 text-gray-500">Sign in to view orders and manage your account, or create a new account to get started.</p><div className="mt-8 grid gap-3 sm:grid-cols-2"><Link href={getStoreRouteHref(store, "/auth/signin?callbackUrl=%2Faccount")} className="btn-primary inline-flex items-center justify-center gap-2"><LogIn size={18} /> Sign In</Link><Link href={getStoreRouteHref(store, "/auth/signup?callbackUrl=%2Faccount")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-2 font-semibold text-primary transition hover:bg-primary/10"><UserPlus size={18} /> Sign Up</Link></div></div></div>

@@ -52,7 +52,7 @@ export default function ProductActions({ productId, name, brand, image, price, s
 
 		setWishlistBusy(true)
 		try {
-			const response = await fetch("/api/wishlist", {
+			const response = await fetch(getStoreRouteHref(store, "/api/wishlist"), {
 				method: wishlisted ? "DELETE" : "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ productId }),

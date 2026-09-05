@@ -20,6 +20,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
 
 interface FAQ {
@@ -157,7 +158,7 @@ export default function ContactPage() {
 		setFormStatus("sending")
 		setFormError("")
 		try {
-			const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) })
+			const response = await fetch(getStoreRouteHref(store, "/api/contact"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to send your message.")
 			setFormStatus("sent")

@@ -1,8 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { useParams } from "next/navigation"
 import { Calendar, Package, Truck, CheckCircle2, Clock, MapPin } from "lucide-react"
 import clsx from "clsx"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 interface Order {
 	id: string
@@ -61,32 +64,21 @@ function formatDate(dateString: string): string {
 }
 
 export default function OrderTrackingPage() {
+	const params = useParams<{ id: string }>()
+	const store = useStoreContext()
 	const [order, setOrder] = useState<Order | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	useEffect(() => {
-		// Extract order ID from URL path
-		const path = window.location.pathname
-		const id = path.split("/").pop()
-		
-		if (id) {
-			fetchTrackingData(id)
-		} else {
-			setLoading(false)
-			setError("Order ID not found")
-		}
-	}, [])
-
-	const fetchTrackingData = async (id: string) => {
+	const fetchTrackingData = useCallback(async (id: string) => {
 		try {
 			setLoading(true)
 			setError(null)
-			const response = await fetch(`/api/orders/${id}/tracking`)
+			const response = await fetch(getStoreRouteHref(store, `/api/orders/${encodeURIComponent(id)}/tracking`))
 
 			if (!response.ok) {
 				if (response.status === 404) {
-					window.location.href = "/account/orders"
+					window.location.href = getStoreRouteHref(store, "/account/orders")
 					return
 				}
 				throw new Error("Failed to fetch tracking data")
@@ -100,7 +92,17 @@ export default function OrderTrackingPage() {
 		} finally {
 			setLoading(false)
 		}
-	}
+	}, [store])
+
+	useEffect(() => {
+		const id = params.id
+		if (id) {
+			void fetchTrackingData(id)
+		} else {
+			setLoading(false)
+			setError("Order ID not found")
+		}
+	}, [fetchTrackingData, params.id])
 
 	if (loading) {
 		return (
@@ -135,7 +137,7 @@ export default function OrderTrackingPage() {
 				</p>
 			</div>
 				<div className="flex items-center gap-3">
-					<a href={`/account/orders/${order.id}`} className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition text-sm font-medium">
+					<a href={getStoreRouteHref(store, `/account/orders/${order.id}`)} className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition text-sm font-medium">
 						View Order Details
 					</a>
 					{!isCancelled && order.trackingNumber && (
@@ -321,7 +323,7 @@ export default function OrderTrackingPage() {
 					<p className="text-gray-600 dark:text-gray-400 mb-6">
 						This order has been cancelled. If you have any questions, please contact support.
 					</p>
-					<a href="/contact" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition">
+					<a href={getStoreRouteHref(store, "/contact")} className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition">
 						Contact Support
 					</a>
 				</div>

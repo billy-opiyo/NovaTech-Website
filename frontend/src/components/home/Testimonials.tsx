@@ -8,6 +8,7 @@ import type { FormEvent } from "react"
 import { Star } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
 
 type StoreReview = { id: string; rating: number; title?: string | null; comment?: string | null; user?: { name?: string | null } }
@@ -28,14 +29,14 @@ export default function Testimonials() {
 
 	const loadReviews = useCallback(async () => {
 		try {
-			const response = await fetch("/api/reviews", { cache: "no-store" })
+			const response = await fetch(getStoreRouteHref(store, "/api/reviews"), { cache: "no-store" })
 			if (!response.ok) throw new Error("Unable to load reviews")
 			const data = await response.json()
 			setReviews(Array.isArray(data.reviews) ? data.reviews : [])
 		} catch {
 			// Keep already-rendered reviews visible if a background refresh is unavailable.
 		}
-	}, [])
+	}, [store])
 
 	useEffect(() => {
 		void loadReviews()
@@ -56,7 +57,7 @@ export default function Testimonials() {
 		setMessage("")
 		setError("")
 		try {
-			const response = await fetch("/api/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating, title: title.trim() || undefined, comment: comment.trim() }) })
+			const response = await fetch(getStoreRouteHref(store, "/api/reviews"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating, title: title.trim() || undefined, comment: comment.trim() }) })
 			const data = await response.json().catch(() => ({}))
 			if (response.status === 401) { setError("Please sign in before submitting a review."); addToast("Please sign in before submitting a review.", "error"); return }
 			if (!response.ok) throw new Error(data.message || "Unable to submit review")
@@ -96,7 +97,7 @@ export default function Testimonials() {
 					<label className="block text-sm font-medium">Review<textarea required minLength={10} maxLength={1000} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 min-h-28 w-full rounded-lg border bg-transparent px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary" placeholder="Tell other customers about your experience" /></label>
 					{error && <p className="text-sm text-red-500">{error}</p>}{message && <p className="text-sm text-green-600">{message}</p>}
 					<button type="submit" disabled={submitting} className="btn-primary disabled:opacity-50">{submitting ? "Submitting…" : "Submit review"}</button>
-				</form> : <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">Please <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || "/")}`} className="font-medium text-primary underline">sign in</Link> to submit a review.</p>}
+				</form> : <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">Please <Link href={getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(pathname || "/")}`)} className="font-medium text-primary underline">sign in</Link> to submit a review.</p>}
 			</div>
 		</section>
 	)
