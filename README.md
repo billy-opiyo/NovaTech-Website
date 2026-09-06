@@ -374,6 +374,9 @@ NovaTech Website/
 | `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
 | `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
 | `MPESA_BUSINESS_NAME`                | Platform SaaS billing descriptor; production must be `Nurava Tech` |
+| `SHOPPER_PAYMENTS_TEST_MODE`         | Explicit staging-only test switch for the Nurava Tech demo store; keep `false` in production |
+| `SHOPPER_PAYMENTS_TEST_TENANT_SLUG`  | Must be `nuravatech` for the staging-only test switch to activate |
+| `NURAVA_DEPLOYMENT_TIER`              | Deployment identity used by the staging Vercel Production environment; set `staging` only on the staging deployment |
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
@@ -386,6 +389,13 @@ NovaTech Website/
 | `E2E_PAYMENT_PROVIDER`                | Payment provider used by sandbox browser tests          |
 
 ---
+
+The staging-only shopper payment fixture is fail-closed and is restricted to
+the `nuravatech` store, non-production deployments, and `MPESA_ENV=sandbox`.
+When enabled, shopper payments reuse the existing sandbox Daraja environment
+credentials without creating a merchant payment profile or bypassing sign-in
+and store-admin permissions. It must be disabled before any production
+deployment.
 
 ## 🚀 Getting Started
 
