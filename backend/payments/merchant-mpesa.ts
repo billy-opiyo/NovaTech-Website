@@ -1,6 +1,7 @@
 import prisma from "../lib/db"
 import { decryptMerchantPaymentDetails } from "../lib/merchant-verification-secrets"
 import { normalizePhone } from "../lib/daraja"
+import { getNuravaShopperPaymentTestConfig } from "../lib/shopper-payment-test-mode"
 
 export type MerchantMpesaConfig = {
 	consumerKey: string
@@ -16,29 +17,27 @@ function digits(value: string) {
 
 /** Resolve an active, verified merchant route without exposing its secrets. */
 export async function getMerchantMpesaConfig(tenantId: string): Promise<MerchantMpesaConfig | null> {
-	const profile = await prisma.merchantShopperPaymentProfile.findUnique({
-		where: { tenantId },
+	const tenant = await prisma.tenant.findUnique({
+		where: { id: tenantId },
 		select: {
-			accountType: true,
-			shortcode: true,
-			credentialsCiphertext: true,
-			status: true,
-			verifiedAt: true,
-			tenant: {
-				select: {
-					verificationStatus: true,
-					verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } },
-				},
-			},
+			verificationStatus: true,
+			verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } },
+			store: { select: { slug: true } },
+			shopperPaymentProfile: { select: { accountType: true, shortcode: true, credentialsCiphertext: true, status: true, verifiedAt: true } },
 		},
 	})
-	if (!profile || profile.status !== "ACTIVE" || !profile.verifiedAt || profile.tenant.verificationStatus !== "APPROVED") return null
-	if (profile.accountType === "OTHER" || profile.tenant.verificationProfile?.settlementAccountType !== profile.accountType) return null
+	if (!tenant) return null
+	const testConfig = getNuravaShopperPaymentTestConfig(tenant.store?.slug)
+	if (testConfig) return testConfig
+
+	const profile = tenant.shopperPaymentProfile
+	if (!profile || profile.status !== "ACTIVE" || !profile.verifiedAt || tenant.verificationStatus !== "APPROVED") return null
+	if (profile.accountType === "OTHER" || tenant.verificationProfile?.settlementAccountType !== profile.accountType) return null
 
 	let verifiedDetails: Record<string, string>
 	try {
-		verifiedDetails = profile.tenant.verificationProfile
-			? decryptMerchantPaymentDetails(profile.tenant.verificationProfile.sensitiveDetailsCiphertext)
+		verifiedDetails = tenant.verificationProfile
+			? decryptMerchantPaymentDetails(tenant.verificationProfile.sensitiveDetailsCiphertext)
 			: {}
 	} catch {
 		return null

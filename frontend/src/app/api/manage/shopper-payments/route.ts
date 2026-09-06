@@ -7,6 +7,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { decryptMerchantPaymentDetails, decryptMerchantVerificationDetails, encryptMerchantPaymentDetails } from "backend/lib/merchant-verification-secrets"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getNuravaShopperPaymentTestConfig } from "backend/lib/shopper-payment-test-mode"
 
 const paymentProfileSchema = z.object({
 	accountType: z.enum(["PAYBILL", "TILL"]),
@@ -29,8 +30,9 @@ export async function GET() {
 	try {
 		const current = await access()
 		if ("response" in current) return current.response
+		const testConfig = getNuravaShopperPaymentTestConfig(current.context.storeSlug)
 		const profile = await prisma.merchantShopperPaymentProfile.findUnique({ where: { tenantId: current.context.tenantId }, select: { accountType: true, shortcode: true, status: true, verifiedAt: true, credentialsCiphertext: true } })
-		return NextResponse.json({ profile: profile ? { accountType: profile.accountType, shortcode: profile.shortcode, status: profile.status, verifiedAt: profile.verifiedAt, credentialsConfigured: Boolean(profile.credentialsCiphertext) } : null })
+		return NextResponse.json({ testMode: Boolean(testConfig), profile: profile ? { accountType: profile.accountType, shortcode: profile.shortcode, status: profile.status, verifiedAt: profile.verifiedAt, credentialsConfigured: Boolean(profile.credentialsCiphertext) } : testConfig ? { accountType: testConfig.accountType, shortcode: testConfig.shortcode, status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } : null })
 	} catch (error) {
 		return apiErrorResponse(error, "Shopper payment settings unavailable")
 	}
@@ -42,6 +44,15 @@ export async function PATCH(request: Request) {
 		if ("response" in current) return current.response
 		const parsed = paymentProfileSchema.safeParse(await request.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Enter a valid merchant M-Pesa route and credentials.", issues: parsed.error.flatten() }, { status: 400 })
+		const testConfig = getNuravaShopperPaymentTestConfig(current.context.storeSlug)
+		if (testConfig) {
+			const shortcode = parsed.data.shortcode.replace(/\D/g, "")
+			if (parsed.data.accountType !== testConfig.accountType || shortcode !== testConfig.shortcode) return NextResponse.json({ message: "Use the configured staging sandbox Paybill route for the Nurava Tech test store." }, { status: 409 })
+			for (const [name, value, expected] of [["consumer key", parsed.data.consumerKey, testConfig.consumerKey], ["consumer secret", parsed.data.consumerSecret, testConfig.consumerSecret], ["STK passkey", parsed.data.passkey, testConfig.passkey]] as const) {
+				if (value && value !== expected) return NextResponse.json({ message: `The ${name} must match the staging sandbox environment value.` }, { status: 400 })
+			}
+			return NextResponse.json({ message: "Nurava Tech staging sandbox payment route is active. Credentials are being read from the staging environment.", testMode: true, profile: { accountType: testConfig.accountType, shortcode: testConfig.shortcode, status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } })
+		}
 
 		const tenant = await prisma.tenant.findUnique({ where: { id: current.context.tenantId }, select: { verificationStatus: true, verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } } } })
 		if (!tenant?.verificationProfile) return NextResponse.json({ message: "Complete merchant verification before configuring shopper payments." }, { status: 409 })
