@@ -149,7 +149,7 @@ export default function ProductDetailPage() {
 
 			<section className="grid gap-8 lg:grid-cols-2">
 				<div>
-					<div className="relative aspect-square overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800">
+					<div className="relative aspect-square overflow-hidden rounded-2xl bg-transparent">
 						<Image src={getProductImage(product.images[selectedImage], product.name)} alt={product.name} fill className="object-contain" priority />
 						{product.images.length > 1 && <>
 							<button aria-label="Previous image" onClick={() => setSelectedImage((selectedImage + product.images.length - 1) % product.images.length)} className="absolute left-3 top-1/2 rounded-full bg-black/40 p-2 text-white"><ChevronLeft /></button>
@@ -157,7 +157,7 @@ export default function ProductDetailPage() {
 						</>}
 					</div>
 					<div className="mt-3 flex gap-3 overflow-auto">
-						{product.images.map((image, index) => <button key={image} onClick={() => setSelectedImage(index)} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 ${selectedImage === index ? "border-primary" : "border-transparent"}`}><Image src={getProductImage(image, product.name)} alt={`${product.name} ${index + 1}`} fill className="object-cover" /></button>)}
+						{product.images.map((image, index) => <button key={image} onClick={() => setSelectedImage(index)} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-transparent ${selectedImage === index ? "border-primary" : "border-transparent"}`}><Image src={getProductImage(image, product.name)} alt={`${product.name} ${index + 1}`} fill className="object-contain" /></button>)}
 					</div>
 				</div>
 

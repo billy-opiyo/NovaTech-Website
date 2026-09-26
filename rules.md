@@ -39,6 +39,7 @@ Production-grade web application development rules and standards for the Nurava 
 | **API** | Next.js API routes will do the Web Service work |
 | **ORM** | Prisma for schemas, queries and type safety cleaning |
 | **Storage** | Cloudflare R2 Storage |
+| **Payments** | M-Pesa Daraja API |
 | **Email** | Resend |
 | **Messaging** | WhatsApp Cloud APIs |
 | **Database URL** | When setting up Database URL in Prisma, use Neon's Pooled Connection string (`-pooler` in the host address) rather than the direct connection string |
