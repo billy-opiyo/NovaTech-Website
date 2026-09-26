@@ -27,19 +27,20 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 				{products.length === 0 ? <p className="glass-card p-6 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">No featured products yet. Products marked as featured by the merchant will appear here.</p> : products.map((product, i) => (
 					<motion.div
 						key={product.id}
+						className="h-full"
 						initial={{ opacity: 0, scale: 0.9 }}
 						whileInView={{ opacity: 1, scale: 1 }}
 						viewport={{ once: true }}
 						transition={{ delay: i * 0.1 }}
 					>
-						<article className="glass-card navy-glass relative block overflow-hidden">
-						<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group block pb-28">
-						<div className="mb-4 overflow-hidden rounded-xl">
-								{/* Product artwork keeps its complete uploaded image instead of being letterboxed or cropped. */}
+						<article className="glass-card navy-glass relative flex h-full flex-col overflow-hidden">
+						<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group flex h-full flex-col pb-28">
+						<div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl">
+								{/* Keep one responsive artwork viewport so every card aligns while the full image remains visible. */}
 								<img
 									src={getProductImage(product.images[0], product.name)}
 									alt={product.name}
-									className="block h-auto w-full rounded-xl transition-transform duration-500 lg:group-hover:scale-105"
+									className="block h-full w-full rounded-xl object-contain transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>
 							<h3 className="font-semibold truncate">{product.name}</h3>

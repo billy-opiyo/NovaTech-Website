@@ -31,6 +31,7 @@ test("order schemas validate checkout payloads and status transitions", () => {
 test("product schema validates slugs, stock, variants, and image URLs", () => {
 	const product = { name: "Nova Phone", slug: "nova-phone", description: "A useful phone for everyday work", brand: "Nova", sku: "NP-1", price: 1000, stock: 5, images: ["https://example.com/p.jpg"], categoryId: "phones", variants: [{ name: "Color", value: "Blue", stock: 2 }] }
 	assert.equal(productSchema.safeParse(product).success, true)
+	assert.equal(productSchema.safeParse({ ...product, discountedPrice: 1100 }).success, false)
 	assert.equal(productSchema.safeParse({ ...product, slug: "Not Valid" }).success, false)
 	assert.equal(productSchema.safeParse({ ...product, images: ["not-a-url"] }).success, false)
 })
