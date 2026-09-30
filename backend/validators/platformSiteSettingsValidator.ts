@@ -11,6 +11,46 @@ const optionalHttpsOrPath = z.string().trim().max(500).refine((value) => {
 }, "Use a valid HTTPS URL or app-relative path")
 
 const optionalText = (max: number) => z.string().trim().max(max).optional()
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a six-digit hex color, such as #0070f3").optional()
+const designModeColorsSchema = z.object({
+	background: hexColor,
+	surface: hexColor,
+	text: hexColor,
+	muted: hexColor,
+	border: hexColor,
+}).strict()
+const platformDesignSchema = z.object({
+	themePreset: z.string().trim().max(80).optional(),
+	colors: z.object({
+		primary: hexColor,
+		primaryDark: hexColor,
+		accent: hexColor,
+		light: designModeColorsSchema.optional(),
+		dark: designModeColorsSchema.optional(),
+	}).strict().optional(),
+	typography: z.object({
+		bodyFont: z.enum(["system", "inter", "georgia", "trebuchet", "verdana"]).optional(),
+		headingFont: z.enum(["system", "inter", "georgia", "trebuchet", "verdana"]).optional(),
+	}).strict().optional(),
+	glass: z.object({
+		blurPx: z.number().int().min(0).max(32).optional(),
+		cardRadiusPx: z.number().int().min(0).max(32).optional(),
+		lightOpacity: z.number().int().min(0).max(100).optional(),
+		darkOpacity: z.number().int().min(0).max(100).optional(),
+		lightBorderOpacity: z.number().int().min(0).max(100).optional(),
+		darkBorderOpacity: z.number().int().min(0).max(100).optional(),
+		shadow: z.enum(["none", "soft", "balanced", "bold"]).optional(),
+	}).strict().optional(),
+}).strict()
+
+const responsiveAssetsSchema = z.object({
+	darkDesktop: optionalHttpsOrPath.optional(),
+	darkTablet: optionalHttpsOrPath.optional(),
+	darkMobile: optionalHttpsOrPath.optional(),
+	lightDesktop: optionalHttpsOrPath.optional(),
+	lightTablet: optionalHttpsOrPath.optional(),
+	lightMobile: optionalHttpsOrPath.optional(),
+}).strict()
 
 const teamMemberSchema = z.object({
 	id: z.string().trim().min(1).max(80),
@@ -65,6 +105,24 @@ export const platformSiteSettingsPatchSchema = z.object({
 		showWhatsAppContact: z.boolean().optional(),
 		showSocialLinks: z.boolean().optional(),
 		showContactCards: z.boolean().optional(),
+	}).strict().optional(),
+	splash: z.object({
+		showProgress: z.boolean().optional(),
+		welcomeText: optionalText(120),
+		loadingText: optionalText(120),
+		images: responsiveAssetsSchema.optional(),
+	}).strict().optional(),
+	hero: z.object({
+		title: optionalText(180),
+		highlight: optionalText(120),
+		description: optionalText(320),
+		images: responsiveAssetsSchema.optional(),
+	}).strict().optional(),
+	design: platformDesignSchema.optional(),
+	legal: z.object({
+		terms: optionalText(12000),
+		privacy: optionalText(12000),
+		cookies: optionalText(12000),
 	}).strict().optional(),
 	team: z.array(teamMemberSchema).max(12).optional(),
 }).strict()

@@ -54,16 +54,12 @@ pre-billing state.
   taxes, and shopper complaints. Nurava does not collect shopper funds.
 - Merchant SaaS pricing is monthly: Starter KES 1,500 plus KES 5,000 setup;
   Business KES 3,500 plus KES 5,000 setup; Enterprise KES 8,500 plus KES 1,500
-  setup. New stores receive a six-month free Founding Merchant pilot on Starter
-  limits, followed by a 14-day payment grace period; setup and first
-  subscription are collected together after the pilot when the merchant
-  chooses a plan.
-  Update (MVP billing policy): superseded — new stores now receive a six-month
-  free Founding Merchant pilot on Starter limits (`NURAVA_MVP_PILOT_DAYS`,
-  default 180) with no payment during creation and no automatic charges,
-  followed by a 14-day payment grace period with reminders before the
-  storefront pauses; setup and first subscription are collected together only
-  after the pilot, when the merchant chooses a plan.
+  setup. At onboarding, a merchant chooses the monthly plan and pays any
+  configured one-time setup fee. Successful payment starts a six-month pilot
+  on that selected plan (`NURAVA_MVP_PILOT_DAYS`, default 180). No recurring
+  charges are automatic; the merchant manually initiates the first monthly
+  payment from month seven. A 14-day grace period and reminders precede a
+  storefront pause for unpaid invoices, while data is preserved.
 - M-Pesa is the only SaaS billing method at launch. Renewals are invoice-driven,
   provider-callback-authoritative, and do not assume automatic recurring debit.
 - Starter, Business, and Enterprise include 50, 250, and 1,000 active products;

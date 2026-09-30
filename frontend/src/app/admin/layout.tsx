@@ -32,6 +32,7 @@ import {
 	ClipboardCheck,
 	LoaderCircle,
 	Home,
+	BookOpen,
 } from "lucide-react"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
@@ -55,6 +56,7 @@ const sidebarLinks = (basePath: string, store: ReturnType<typeof useStoreContext
 			{ icon: Users, label: "Customers", href: getStoreRouteHref(store, `${basePath}/customers`), activeHref: `${basePath}/customers` },
 			{ icon: UsersRound, label: "Team access", href: getStoreRouteHref(store, `${basePath}/team`), activeHref: `${basePath}/team` },
 			{ icon: Star, label: "Reviews", href: getStoreRouteHref(store, `${basePath}/reviews`), activeHref: `${basePath}/reviews` },
+			{ icon: BookOpen, label: "Blog", href: getStoreRouteHref(store, `${basePath}/blog`), activeHref: `${basePath}/blog` },
 			{ icon: Truck, label: "Deliveries", href: getStoreRouteHref(store, `${basePath}/deliveries`), activeHref: `${basePath}/deliveries` },
 		],
 	},

@@ -231,15 +231,18 @@ support, and billing copy is merchant/SaaS-facing.
 1. Sign in or create and verify an account.
 2. Open /onboarding.
 3. Enter a store name and optional lowercase slug.
-4. The store starts on the Starter plan as part of the six-month free Founding
-   Merchant pilot; no plan selection or payment happens during onboarding.
-5. Accept the current merchant terms and privacy notice.
-6. Create the store.
+4. Select the monthly plan that matches the store and review its one-time setup
+   fee and monthly price.
+5. Accept the current merchant terms and privacy notice, then create the store.
+6. Open the billing workspace and pay the setup fee through the M-Pesa prompt.
+   The six-month pilot starts only after the provider confirms payment. The
+   selected plan applies during the pilot; monthly billing starts in month seven.
 
-Onboarding creates the tenant, store, owner membership, six-month free pilot
-dates (Starter-plan limits), subscription, billing customer, billing record,
-platform-subdomain record, and trial-start legal acceptance in one transaction.
-A store starts as a draft and still needs verification and publication.
+Onboarding creates the tenant, draft store, owner membership, selected-plan
+subscription, billing customer and billing record. For a plan with a setup fee,
+the subscription remains incomplete and the pilot dates are unset until a
+successful M-Pesa callback pays the fee. A store still needs verification and
+publication after the pilot is activated.
 
 The onboarding page lists the user's memberships. Current tenant selection is
 host-based; a first-class multi-store switcher is a future update.
@@ -436,19 +439,18 @@ remaining, grace and cancellation state, setup-fee status, invoices, SaaS
 payment history, plan checkout/change, renewal, cancellation, Stripe portal
 where enabled, and add-on actions.
 
-New stores start on a six-month free Founding Merchant pilot (Starter-plan
-limits, configurable via `NURAVA_MVP_PILOT_DAYS`). No payment is required
-during store creation and nothing is charged automatically. Reminders are sent
-at 14, 7, and 1 day before the pilot ends and during the following 14-day
-grace period. If no plan is paid for after the grace period, the public
-storefront is paused while merchant data and workspace access are preserved.
+The merchant selects a monthly plan during onboarding. A one-time setup fee is
+paid first through an M-Pesa STK request; the six-month pilot starts after the
+successful provider callback, using the selected plan's entitlements. The
+selected monthly subscription is payable from month seven. Nothing is charged
+automatically. Pilot-expiry reminders are sent at 14, 7, and 1 day before the
+pilot ends and during the following 14-day grace period. If payment remains
+unpaid after grace, the public storefront is paused while merchant data and
+workspace access are preserved.
 
-At launch configuration, M-Pesa is invoice-driven. Setup fee and first
-subscription payment are collected together after the free pilot, when the
-merchant chooses a plan. Later renewals
-create a local invoice and initiate a Daraja STK request. A successful callback
-updates invoice, payment, subscription, tenant, and setup-fee state. It is not
-an automatic recurring M-Pesa debit.
+Later monthly renewals create local invoices and require a merchant-initiated
+Daraja STK request. A successful callback updates invoice, payment, subscription,
+and tenant state. No automatic recurring M-Pesa debit is used.
 
 Nurava SaaS prices are configured as VAT-inclusive. When `NURAVA_VAT_ENABLED=true`,
 the invoice records the agreed 16% VAT rate and shows the net amount, VAT, any

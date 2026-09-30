@@ -14,9 +14,9 @@ type Draft = {
 	logoUrl?: string
 	themePreset?: string
 	seo?: { description?: string }
-	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; categoryImages?: Partial<Record<CategorySlot, string>> }
+	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; aboutTitle?: string; aboutDescription?: string; categoryImages?: Partial<Record<CategorySlot, string>>; legal?: { terms?: string; privacy?: string; cookies?: string } }
 	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; mapLink?: string; mapEmbedUrl?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
-	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number }
+	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number; categoryAvailability?: Partial<Record<CategorySlot, boolean>> }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
 type BusyAction = "saving" | "publishing" | "rollback" | null
@@ -73,10 +73,11 @@ export default function StoreDesignPage() {
 						themePreset: store.themeSettings?.preset,
 						...savedDraft,
 						seo: { ...store.seoSettings, ...savedDraft.seo },
-						homepage: {
+						 homepage: {
 							...store.homepageSettings,
 							...savedDraft.homepage,
 							categoryImages: { ...store.homepageSettings?.categoryImages, ...savedDraft.homepage?.categoryImages },
+							legal: { ...store.homepageSettings?.legal, ...savedDraft.homepage?.legal },
 						},
 						contact: { ...store.contactSettings, ...savedDraft.contact, social: { ...store.contactSettings?.social, ...savedDraft.contact?.social } },
 						commerce: { ...store.commerceSettings, ...savedDraft.commerce },
@@ -252,6 +253,8 @@ export default function StoreDesignPage() {
 					</div>
 					<label className="block"><span className="text-sm font-medium">Hero title</span><input value={draft.homepage?.heroTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">Hero highlight</span><input value={draft.homepage?.heroHighlight || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroHighlight: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<label className="block"><span className="text-sm font-medium">About page title</span><input value={draft.homepage?.aboutTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, aboutTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="About our store" /></label>
+					<label className="block"><span className="text-sm font-medium">About page description</span><textarea rows={4} value={draft.homepage?.aboutDescription || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, aboutDescription: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Tell shoppers what makes your store trusted." /></label>
 					<div className="border-t pt-5">
 						<h2 className="font-semibold">Shop by Category images</h2>
 						<p className="mt-1 text-sm text-gray-500">Choose the four images shown on your storefront homepage. The current images remain as fallbacks until you upload a replacement.</p>
@@ -273,6 +276,20 @@ export default function StoreDesignPage() {
 									</div>
 								)
 							})}
+						</div>
+					</div>
+					<div className="border-t pt-5">
+						<h2 className="font-semibold">Available product categories</h2>
+						<p className="mt-1 text-sm text-gray-500">Turn off categories your store does not currently sell. Disabled categories disappear from the storefront homepage; existing products remain safely stored.</p>
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">{CATEGORY_SLOTS.map(({ slug, label }) => <label key={slug} className="flex items-center gap-3 rounded-lg border p-3 text-sm"><input type="checkbox" checked={draft.commerce?.categoryAvailability?.[slug] !== false} onChange={(event) => updateDraft({ commerce: { ...draft.commerce, categoryAvailability: { ...draft.commerce?.categoryAvailability, [slug]: event.target.checked } } })} /><span>{label}</span></label>)}</div>
+					</div>
+					<div className="border-t pt-5">
+						<h2 className="font-semibold">Customer-facing legal pages</h2>
+						<p className="mt-1 text-sm text-gray-500">These templates belong to this merchant store only. Edit them when your own delivery, returns, privacy, or cookie practices differ.</p>
+						<div className="mt-3 space-y-3">
+							<label className="block"><span className="text-sm font-medium">Store Terms</span><textarea rows={6} value={draft.homepage?.legal?.terms || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, legal: { ...draft.homepage?.legal, terms: event.target.value } } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+							<label className="block"><span className="text-sm font-medium">Store Privacy Policy</span><textarea rows={6} value={draft.homepage?.legal?.privacy || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, legal: { ...draft.homepage?.legal, privacy: event.target.value } } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+							<label className="block"><span className="text-sm font-medium">Store Cookie Policy</span><textarea rows={6} value={draft.homepage?.legal?.cookies || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, legal: { ...draft.homepage?.legal, cookies: event.target.value } } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 						</div>
 					</div>
 					<label className="block"><span className="text-sm font-medium">SEO description</span><textarea maxLength={320} value={draft.seo?.description || ""} onChange={(event) => updateDraft({ seo: { ...draft.seo, description: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>

@@ -11,12 +11,32 @@ type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sk
 		categoryId?: string
 }
 
+const configurableCategorySlugs = ["phones", "laptops", "tablets", "accessories"] as const
+
+export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<string[]> {
+	const store = await prisma.store.findFirst({ where: { tenantId }, select: { commerceSettings: true } })
+	const commerce = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
+		? store.commerceSettings as Record<string, unknown>
+		: {}
+	const availability = commerce.categoryAvailability && typeof commerce.categoryAvailability === "object" && !Array.isArray(commerce.categoryAvailability)
+		? commerce.categoryAvailability as Record<string, unknown>
+		: {}
+	return configurableCategorySlugs.filter((slug) => availability[slug] === false)
+}
+
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
 	const where: Prisma.ProductWhereInput = { tenantId }
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 
 	const categorySlug = params.get("category")
+	if (categorySlug && hiddenCategories.includes(categorySlug)) {
+		const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1)
+		return { products: [], total: 0, page, totalPages: 0 }
+	}
 	if (categorySlug) {
 		where.category = { slug: categorySlug }
+	} else if (hiddenCategories.length) {
+		where.category = { slug: { notIn: hiddenCategories } }
 	}
 
 	const brands = params.get("brands")?.split(",")
@@ -140,8 +160,9 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 }
 
 export async function getProductBySlug(slug: string, tenantId: string) {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 	const product = await prisma.product.findFirst({
-		where: { slug, tenantId },
+		where: { slug, tenantId, ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}) },
 		include: {
 			category: true,
 			variants: { where: { tenantId } },
@@ -183,10 +204,12 @@ export async function getProductBySlug(slug: string, tenantId: string) {
 
 export async function searchProducts(query: string, tenantId: string) {
 	if (!query || query.length < 2) return []
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 
 	const products = await prisma.product.findMany({
 		where: {
 			tenantId,
+			...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}),
 			OR: [
 				{ name: { contains: query, mode: "insensitive" } },
 				{ brand: { contains: query, mode: "insensitive" } },

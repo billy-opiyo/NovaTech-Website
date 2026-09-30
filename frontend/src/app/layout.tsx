@@ -33,7 +33,7 @@ export default async function RootLayout({
 		<html
 			lang={store.site.language}
 			suppressHydrationWarning
-			style={themeToCssVariables(activeTheme) as React.CSSProperties}
+			style={themeToCssVariables(activeTheme, store.isPlatformHome ? store.platformSettings?.design : undefined) as React.CSSProperties}
 		>
 			<head>
 				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}

@@ -5,7 +5,7 @@ import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/st
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { DEFAULT_STORE_CATEGORIES } from "backend/lib/default-categories"
-import { MVP_PILOT_PLAN_KEY, pilotTrialEndsAt } from "backend/billing/mvp-policy"
+import { pilotTrialEndsAt } from "backend/billing/mvp-policy"
 
 export async function GET() {
 	const session = await auth()
@@ -30,24 +30,21 @@ export async function POST(request: Request) {
 
 	try {
 		const result = await prisma.$transaction(async (transaction) => {
-			// Approved MVP policy: every new store starts on the six-month free
-			// Founding Merchant pilot with Starter-plan limits. Any submitted
-			// planKey is overridden during the pilot; billing records stay in
-			// place for the plan the merchant later chooses.
-			const trialStartsAt = new Date()
-			const trialEndsAt = pilotTrialEndsAt(trialStartsAt)
-			const plan = await transaction.plan.findFirst({ where: { key: MVP_PILOT_PLAN_KEY, active: true } })
-			if (!plan) throw Object.assign(new Error("The selected plan is unavailable."), { code: "PLAN_NOT_FOUND" })
-			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt, trialEndsAt } })
+			const plan = await transaction.plan.findFirst({ where: { key: data.planKey, active: true } })
+			if (!plan || plan.price == null || plan.billingInterval !== "MONTH") throw Object.assign(new Error("Choose an active monthly plan."), { code: "PLAN_NOT_FOUND" })
+			const setupFeePaid = plan.setupFeeAmount <= 0
+			const trialStartsAt = setupFeePaid ? new Date() : null
+			const trialEndsAt = trialStartsAt ? pilotTrialEndsAt(trialStartsAt) : null
+			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt: trialStartsAt || undefined, trialEndsAt: trialEndsAt || undefined } })
 			const store = await transaction.store.create({ data: { tenantId: tenant.id, name: data.name, slug, country: data.country, currency: data.currency, timezone: data.timezone, defaultLocale: data.defaultLocale } })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
 			await transaction.category.createMany({ data: DEFAULT_STORE_CATEGORIES.map((category) => ({ tenantId: tenant.id, ...category })) })
 			await recordMerchantLegalAcceptance({ tenantId: tenant.id, acceptedById: session.user.id, context: "TRIAL_START", transaction })
-			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: "TRIALING", trialStartsAt, trialEndsAt } })
+			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: setupFeePaid ? "TRIALING" : "INCOMPLETE", trialStartsAt: trialStartsAt || undefined, trialEndsAt: trialEndsAt || undefined } })
 			await transaction.billingCustomer.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id } })
-			await transaction.billingRecord.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id, setupFeeAmount: plan.setupFeeAmount, currency: plan.currency, setupFeeStatus: plan.setupFeeAmount > 0 ? "PENDING" : "PAID", setupFeePaidAt: plan.setupFeeAmount > 0 ? undefined : new Date() } })
+			await transaction.billingRecord.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id, setupFeeAmount: plan.setupFeeAmount, currency: plan.currency, setupFeeStatus: setupFeePaid ? "PAID" : "PENDING", setupFeePaidAt: setupFeePaid ? new Date() : undefined } })
 			await transaction.domain.create({ data: { tenantId: tenant.id, storeId: store.id, hostname: `${slug}.${platformDomain}`, type: "PLATFORM_SUBDOMAIN", verificationToken: `${tenant.id}-platform`, verificationStatus: "PENDING" } })
-			return { tenantId: tenant.id, storeId: store.id, slug: store.slug }
+			return { tenantId: tenant.id, storeId: store.id, slug: store.slug, setupFeeRequired: !setupFeePaid, setupFeeAmount: plan.setupFeeAmount, currency: plan.currency, planName: plan.name }
 		})
 		return NextResponse.json(result, { status: 201 })
 	} catch (error: unknown) {

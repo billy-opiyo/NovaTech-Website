@@ -4,12 +4,14 @@ import { getStoreContext } from "@/lib/store-context.server"
 export default async function PrivacyPolicyPage() {
 	const store = await getStoreContext()
 	if (store.isPlatformHome) {
+		if (store.platformSettings?.legal?.privacy) return <InfoPage title="Merchant Privacy Policy" description="How Nurava Tech handles information provided by merchants who use the platform." sections={[{ title: "Current platform privacy policy", content: store.platformSettings.legal.privacy }]} />
 		return <InfoPage title="Merchant Privacy Policy" description="How Nurava Tech handles information provided by merchants who use the platform." sections={[
 			{ title: "Information we collect from merchants", content: "We collect information needed to create and operate a merchant account, including your name, business details, email address, phone number, store configuration, domain settings, subscription details, and support communications." },
 			{ title: "How we use merchant information", content: "We use this information to provide store hosting and discovery, manage merchant access, process platform subscriptions and setup fees, provide support, protect the platform, and improve our SaaS services. We do not use Nurava Tech as the seller of a merchant's products." },
 			{ title: "Merchant responsibilities and choices", content: "Merchants are responsible for the customer information they collect through their own store and for providing any notices required for that information. Merchants can update account details, manage communication preferences, and request access or deletion of platform-held account information by contacting support." },
 		]} />
 	}
+	if (store.legal?.privacy) return <InfoPage title={`${store.brand.name} Privacy Policy`} description={`How ${store.brand.name} handles shopper information.`} sections={[{ title: "Current store privacy policy", content: store.legal.privacy }]} />
 
 	return <InfoPage title="Privacy Policy" description="How this independent store collects, uses, and protects shopper information." sections={[
 		{ title: "Information we collect", content: "This store may collect details you provide when you create an account, contact the merchant, request product information, or subscribe to updates. This can include your name, email address, phone number, delivery details, and order information." },

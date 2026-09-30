@@ -14,6 +14,39 @@ export type PlatformTeamMember = {
 	}
 }
 
+export type PlatformResponsiveAssets = {
+	darkDesktop?: string
+	darkTablet?: string
+	darkMobile?: string
+	lightDesktop?: string
+	lightTablet?: string
+	lightMobile?: string
+}
+
+export type PlatformDesignSettings = {
+	themePreset?: string
+	colors?: {
+		primary?: string
+		primaryDark?: string
+		accent?: string
+		light?: Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
+		dark?: Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
+	}
+	typography?: {
+		bodyFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
+		headingFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
+	}
+	glass?: {
+		blurPx?: number
+		cardRadiusPx?: number
+		lightOpacity?: number
+		darkOpacity?: number
+		lightBorderOpacity?: number
+		darkBorderOpacity?: number
+		shadow?: "none" | "soft" | "balanced" | "bold"
+	}
+}
+
 export type PlatformSiteSettings = {
 	brand?: {
 		name?: string
@@ -57,6 +90,24 @@ export type PlatformSiteSettings = {
 		showSocialLinks?: boolean
 		showContactCards?: boolean
 	}
+	splash?: {
+		showProgress?: boolean
+		welcomeText?: string
+		loadingText?: string
+		images?: PlatformResponsiveAssets
+	}
+	hero?: {
+		title?: string
+		highlight?: string
+		description?: string
+		images?: PlatformResponsiveAssets
+	}
+	design?: PlatformDesignSettings
+	legal?: {
+		terms?: string
+		privacy?: string
+		cookies?: string
+	}
 	team?: PlatformTeamMember[]
 }
 
@@ -89,6 +140,25 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showSocialLinks: clientConfig.features.showSocialLinks,
 			showContactCards: clientConfig.features.showContactCards,
 		},
+		splash: {
+			showProgress: true,
+			welcomeText: "Welcome to",
+			loadingText: "Preparing your store",
+			images: {
+				darkDesktop: "/images/NovaTech cover desktop.png",
+				darkTablet: "/images/NovaTech cover mobile.png",
+				darkMobile: "/images/NovaTech cover mobile.png",
+				lightDesktop: "/images/NovaTech cover desktop light.png",
+				lightTablet: "/images/NovaTech cover mobile light.png",
+				lightMobile: "/images/NovaTech cover mobile light.png",
+			},
+		},
+		design: { themePreset: "nova-blue-orange" },
+		legal: {
+			terms: "Nurava Tech provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
+			privacy: "Nurava Tech processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
+			cookies: "Nurava Tech uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
+		},
 		team: [
 			{
 				id: "founder-developer",
@@ -113,6 +183,12 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 }
 
 export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: PlatformSiteSettings): PlatformSiteSettings {
+	// Ignore the retired hero customizations while continuing to parse older saved
+	// records safely; the platform homepage hero now uses its original artwork.
+	const safeBase = { ...base }
+	const safePatch = { ...patch }
+	delete safeBase.hero
+	delete safePatch.hero
 	const contact = { ...base.contact, ...patch.contact }
 	// Before the dedicated field existed, the platform settings screen stored
 	// this value as whatsappMessage. Treat it as the floating/social message so
@@ -121,13 +197,27 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		contact.whatsappFloatingMessage = patch.contact.whatsappMessage
 	}
 	return {
-		...base,
-		...patch,
+		...safeBase,
+		...safePatch,
 		brand: { ...base.brand, ...patch.brand },
 		site: { ...base.site, ...patch.site },
 		contact,
 		social: { ...base.social, ...patch.social },
 		seo: { ...base.seo, ...patch.seo },
 		features: { ...base.features, ...patch.features },
+		splash: { ...base.splash, ...patch.splash, images: { ...base.splash?.images, ...patch.splash?.images } },
+		design: {
+			...base.design,
+			...patch.design,
+			colors: {
+				...base.design?.colors,
+				...patch.design?.colors,
+				light: { ...base.design?.colors?.light, ...patch.design?.colors?.light },
+				dark: { ...base.design?.colors?.dark, ...patch.design?.colors?.dark },
+			},
+			typography: { ...base.design?.typography, ...patch.design?.typography },
+			glass: { ...base.design?.glass, ...patch.design?.glass },
+		},
+		legal: { ...base.legal, ...patch.legal },
 	}
 }

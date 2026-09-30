@@ -2,7 +2,7 @@ import prisma from "../lib/db"
 import { retentionDueAt } from "../retention/tenant-retention"
 import type { SubscriptionStatus } from "@prisma/client"
 
-// Approved MVP policy: a 14-day payment grace period after the free pilot or
+// Approved MVP policy: a 14-day payment grace period after the six-month pilot or
 // a missed payment due date. Public storefront access stays available during
 // the grace period; suspension preserves data and upgrade access.
 export const ACCESS_GRACE_PERIOD_DAYS = 14

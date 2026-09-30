@@ -37,6 +37,14 @@ const merchantSocialDefaults = {
 	x: "",
 }
 
+function merchantLegalDefaults(storeName: string) {
+	return {
+		terms: `This store is operated by ${storeName}. Product availability, prices, delivery, payment arrangements, returns, refunds, warranties, taxes, and customer support are handled by the merchant. Please contact the store directly before or after a purchase if you need help.`,
+		privacy: `${storeName} uses information you provide to respond to enquiries, arrange purchases and delivery, provide support, protect accounts, and communicate about store services. Contact the merchant directly to ask about access, correction, or deletion of your shopper information.`,
+		cookies: `${storeName} uses necessary browser storage for authentication, security, shopping sessions, saved preferences, and reliable storefront operation. You can manage optional storage through your browser settings.`,
+	}
+}
+
 async function getPublishedPlatformSettings(): Promise<PlatformSiteSettings> {
 	try {
 		const settings = await prisma.platformSiteSettings.findUnique({ where: { id: "platform" }, select: { publishedSettings: true } })
@@ -73,7 +81,9 @@ export async function getStoreContext(): Promise<StoreContext> {
 	}
 
 	try {
-		const requestContext = await resolveTenantFromRequest({ headers: requestHeaders })
+		// A suspended public store must resolve far enough to render a privacy-safe
+		// contact blocker instead of falling through to the platform 404 page.
+		const requestContext = await resolveTenantFromRequest({ headers: requestHeaders }, { allowSuspended: true })
 		const store = await prisma.store.findUnique({
 			where: { id: requestContext.storeId },
 			select: {
@@ -101,14 +111,25 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const contact = record(store.contactSettings)
 		const socialSettings = record(contact.social)
 		const homepage = record(store.homepageSettings)
+		const legalSettings = record(homepage.legal)
 		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)
-		const categories = clientConfig.homepage.categories.map((category) => {
+		const categoryAvailability = record(commerce.categoryAvailability)
+		const categories = clientConfig.homepage.categories.filter((category) => categoryAvailability[category.slug] !== false).map((category) => {
 			const configuredImage = categoryImages[category.slug]
 			return typeof configuredImage === "string" && configuredImage.trim()
 				? { ...category, image: configuredImage }
 				: category
 		})
+		const navigation = clientConfig.navigation.filter((link) => {
+			const categorySlug = link.href.match(/^\/category\/([^/?#]+)/)?.[1]
+			return !categorySlug || categoryAvailability[categorySlug] !== false
+		})
+		const configuredHeroHref = typeof homepage.heroPrimaryHref === "string" ? homepage.heroPrimaryHref : clientConfig.homepage.heroPrimaryHref
+		const hiddenHeroCategory = configuredHeroHref.match(/^\/category\/([^/?#]+)/)?.[1]
+		const heroPrimaryHref = hiddenHeroCategory && categoryAvailability[hiddenHeroCategory] === false
+			? categories[0] ? `/category/${categories[0].slug}` : "/products"
+			: configuredHeroHref
 		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : merchantContactDefaults.phoneDisplay
 		const email = typeof contact.email === "string" ? contact.email : merchantContactDefaults.email
 		const addressLine = typeof contact.addressLine === "string" ? contact.addressLine : merchantContactDefaults.addressLine
@@ -140,6 +161,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			publicationStatus: store.publicationStatus,
 			brand: { ...clientConfig.brand, name: store.name, ...(store.logoUrl ? { logo: store.logoUrl } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
+			navigation,
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
 			contact: { ...merchantContactDefaults, ...contact, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
@@ -149,9 +171,10 @@ export async function getStoreContext(): Promise<StoreContext> {
 				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : merchantSocialDefaults.instagram,
 				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : merchantSocialDefaults.tiktok,
 			},
-			homepage: { ...clientConfig.homepage, ...homepage, categories },
+			homepage: { ...clientConfig.homepage, ...homepage, heroPrimaryHref, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
+			legal: { ...merchantLegalDefaults(store.name), terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : merchantLegalDefaults(store.name).terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : merchantLegalDefaults(store.name).privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : merchantLegalDefaults(store.name).cookies },
 			platformTeam: [],
 			isPlatformHome: platformHome,
 		} as unknown as StoreContext
@@ -177,8 +200,11 @@ export function fallbackStoreContext(isPlatformHome = false, platformSettings: P
 			social: { ...clientConfig.social, ...mergedPlatformSettings.social },
 			seo: { ...clientConfig.seo, ...mergedPlatformSettings.seo },
 			features: { ...clientConfig.features, ...mergedPlatformSettings.features },
+			themePreset: mergedPlatformSettings.design?.themePreset || clientConfig.themePreset,
+			legal: mergedPlatformSettings.legal || {},
 		} : { contact: merchantContactDefaults, social: merchantSocialDefaults }),
 		platformTeam: isPlatformHome ? mergedPlatformSettings.team || [] : [],
+		platformSettings: isPlatformHome ? mergedPlatformSettings : undefined,
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",

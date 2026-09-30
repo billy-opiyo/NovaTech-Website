@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Check, LoaderCircle } from "lucide-react"
+import { Mail, Lock, User, AlertCircle, Eye, EyeOff, LoaderCircle } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
@@ -128,7 +128,7 @@ export default function SignUpPage() {
 					<AuthCloseButton fallback={getStoreHomeHref(store)} skipHistory />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
-						<p className="text-gray-500">Join {store.brand.name} for exclusive deals</p>
+						<p className="text-gray-500">Create an account to manage your Nurava Tech shopping experience.</p>
 					</div>
 
 					{error && (
@@ -253,17 +253,6 @@ export default function SignUpPage() {
 									required
 								/>
 							</div>
-						</div>
-
-						<div className="text-sm text-gray-500">
-							<p className="flex items-center gap-2 mb-1">
-								<Check size={14} className="text-green-500" /> Free shipping on
-								orders over {store.site.currency} {store.ecommerce.freeShippingThreshold.toLocaleString()}
-							</p>
-							<p className="flex items-center gap-2">
-								<Check size={14} className="text-green-500" /> Exclusive deals
-								and early access
-							</p>
 						</div>
 
 						<label className="flex items-start gap-2 text-sm text-gray-500">

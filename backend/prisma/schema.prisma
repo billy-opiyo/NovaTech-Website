@@ -202,6 +202,12 @@ enum StorePublicationStatus {
   SUSPENDED
 }
 
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum DomainType {
   PLATFORM_SUBDOMAIN
   CUSTOM
@@ -294,6 +300,7 @@ model Tenant {
   storageAssets           StorageAsset[]
   billingCredits          BillingCredit[]
   shopperPaymentProfile   MerchantShopperPaymentProfile?
+  blogPosts               BlogPost[]
 
   @@index([status, createdAt])
   @@index([verificationStatus])
@@ -408,6 +415,29 @@ model Store {
   merchantEnquiries MerchantEnquiry[]
 
   @@index([publicationStatus])
+}
+
+// A null tenantId is platform-owned content; tenant-scoped rows belong only
+// to that merchant. Public/admin queries must always select one scope.
+model BlogPost {
+  id             String         @id @default(cuid())
+  tenantId       String?
+  scopeKey       String         @default("platform")
+  title          String
+  slug           String
+  excerpt        String
+  content        String         @db.Text
+  coverImageUrl  String?
+  status         BlogPostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  createdById    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, publishedAt])
+  @@unique([scopeKey, slug])
 }
 
 model Domain {

@@ -2,6 +2,8 @@ import prisma from "../lib/db"
 import { PLATFORM_BRAND_NAME } from "../lib/brand"
 import { emailWasAccepted, sendEmail } from "../lib/email"
 import { escapeHtml } from "../lib/html"
+import { sendWhatsAppMessage } from "../lib/whatsapp"
+import { normalizePhone } from "../lib/daraja"
 import { graceReminderStage, pilotReminderStage, pilotReminderNotificationType, type PilotReminderStage } from "./mvp-policy"
 
 const dayMilliseconds = 24 * 60 * 60 * 1000
@@ -9,29 +11,29 @@ const reminderLookaheadDays = 15
 
 const stageCopy: Record<PilotReminderStage, { subject: string; heading: string; body: string }> = {
 	PILOT_ENDS_IN_14_DAYS: {
-		subject: `Your ${PLATFORM_BRAND_NAME} free pilot ends in 14 days`,
-		heading: "Your free pilot ends in 14 days",
-		body: "Your Founding Merchant pilot for {store} ends on {date}. No payment is due now and nothing is charged automatically. When the pilot ends, choose and pay for a plan from your billing page to keep your store running.",
+		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends in 14 days`,
+		heading: "Your six-month pilot ends in 14 days",
+		body: "The six-month pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
 	},
 	PILOT_ENDS_IN_7_DAYS: {
-		subject: `Your ${PLATFORM_BRAND_NAME} free pilot ends in 7 days`,
-		heading: "Your free pilot ends in 7 days",
-		body: "Your Founding Merchant pilot for {store} ends on {date}. No payment is due now and nothing is charged automatically. When the pilot ends, choose and pay for a plan from your billing page to keep your store running.",
+		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends in 7 days`,
+		heading: "Your six-month pilot ends in 7 days",
+		body: "The six-month pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
 	},
 	PILOT_ENDS_IN_1_DAY: {
-		subject: `Your ${PLATFORM_BRAND_NAME} free pilot ends tomorrow`,
-		heading: "Your free pilot ends tomorrow",
-		body: "Your Founding Merchant pilot for {store} ends on {date}. Nothing is charged automatically. After the pilot, a 14-day grace period keeps your store available while you choose and pay for a plan from your billing page.",
+		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends tomorrow`,
+		heading: "Your six-month pilot ends tomorrow",
+		body: "The pilot for {store} ends on {date}. A 14-day grace period then keeps your store available while you manually pay the selected plan's monthly subscription from your billing page. Nothing is charged automatically.",
 	},
 	GRACE_PERIOD_STARTED: {
 		subject: `Your ${PLATFORM_BRAND_NAME} grace period is active`,
 		heading: "Your grace period is active",
-		body: "Your free pilot for {store} has ended. A 14-day grace period is active until {date}, and your store stays available during this time. To keep the storefront running after it ends, choose and pay for a plan from your billing page. Nothing is charged automatically.",
+		body: "The pilot for {store} has ended. A 14-day grace period is active until {date}, and your store stays available during this time. Manually pay the selected plan's monthly subscription from your billing page to keep the storefront running. Nothing is charged automatically.",
 	},
 	GRACE_PERIOD_ENDING: {
 		subject: `Your ${PLATFORM_BRAND_NAME} grace period ends in a few days`,
 		heading: "Your grace period ends soon",
-		body: "The grace period for {store} ends on {date}. After it ends, the public storefront is paused while your data and workspace remain available. Choose and pay for a plan from your billing page to restore full operation.",
+		body: "The grace period for {store} ends on {date}. If the monthly subscription remains unpaid, the public storefront will be paused while your data and workspace remain available. Pay manually from your billing page to restore full operation.",
 	},
 }
 
@@ -41,8 +43,8 @@ type ReminderSubscription = {
 	trialEndsAt: Date | null
 	gracePeriodEndsAt: Date | null
 	tenant: {
-		store: { name: string } | null
-		memberships: Array<{ user: { email: string; name: string | null } }>
+		store: { name: string; contactSettings: unknown } | null
+		memberships: Array<{ user: { id: string; email: string; name: string | null } }>
 	}
 }
 
@@ -60,17 +62,31 @@ async function dispatchReminder(subscription: ReminderSubscription, stage: Pilot
 	const message = copy.body.split("{store}").join(storeName).split("{date}").join(dueDate.toLocaleDateString())
 	let delivered = 0
 	for (const membership of subscription.tenant.memberships) {
-		if (!membership.user?.email) continue
-		try {
-			const result = await sendEmail({ to: membership.user.email, subject: copy.subject, html: reminderHtml(copy.heading, message, `${appUrl}/manage/billing`) })
-			if (emailWasAccepted(result)) delivered += 1
-		} catch (error) {
-			console.error("Pilot reminder email failed", { tenantId: subscription.tenantId, stage, message: error instanceof Error ? error.message : String(error) })
+		if (membership.user?.email) {
+			try {
+				const result = await sendEmail({ to: membership.user.email, subject: copy.subject, html: reminderHtml(copy.heading, message, `${appUrl}/manage/billing`) })
+				if (emailWasAccepted(result)) delivered += 1
+			} catch (error) {
+				console.error("Pilot reminder email failed", { tenantId: subscription.tenantId, stage, message: error instanceof Error ? error.message : String(error) })
+			}
 		}
 	}
-	if (!delivered) return false
-	await prisma.notification.create({ data: { tenantId: subscription.tenantId, type, message } })
-	return true
+	const contact = subscription.tenant.store?.contactSettings && typeof subscription.tenant.store.contactSettings === "object" && !Array.isArray(subscription.tenant.store.contactSettings)
+		? subscription.tenant.store.contactSettings as Record<string, unknown>
+		: {}
+	const whatsappNumber = typeof contact.whatsappNumber === "string" ? contact.whatsappNumber : ""
+	if (whatsappNumber && process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+		try {
+			await sendWhatsAppMessage({ to: normalizePhone(whatsappNumber), text: `${copy.heading}\n\n${message}\n\nRenew manually from: ${appUrl}/manage/billing` })
+			delivered += 1
+		} catch (error) {
+			console.error("Pilot reminder WhatsApp failed", { tenantId: subscription.tenantId, stage, message: error instanceof Error ? error.message : String(error) })
+		}
+	}
+	const owner = subscription.tenant.memberships[0]?.user
+	if (!owner) return false
+	await prisma.notification.create({ data: { tenantId: subscription.tenantId, userId: owner.id, type, message } })
+	return delivered > 0 || Boolean(owner.email || whatsappNumber)
 }
 
 export async function runPilotReminderSweep(now = new Date(), limit = 100) {
@@ -88,7 +104,7 @@ export async function runPilotReminderSweep(now = new Date(), limit = 100) {
 			status: true,
 			trialEndsAt: true,
 			gracePeriodEndsAt: true,
-			tenant: { select: { store: { select: { name: true } }, memberships: { where: { role: "STORE_OWNER", active: true }, select: { user: { select: { email: true, name: true } } } } } },
+			tenant: { select: { store: { select: { name: true, contactSettings: true } }, memberships: { where: { role: "STORE_OWNER", active: true }, select: { user: { select: { id: true, email: true, name: true } } } } } },
 		},
 		orderBy: { updatedAt: "asc" },
 		take: Math.min(Math.max(limit, 1), 200),

@@ -37,9 +37,8 @@ export async function createOrder(req: NextRequest) {
 		const session = await getServerSession()
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
-		if (validated.paymentMethod !== "MPESA") return NextResponse.json({ message: "Shopper checkout currently supports merchant-routed M-Pesa payments only." }, { status: 409 })
 		const context = await resolveTenantFromRequest(req)
-		if (!await getMerchantMpesaConfig(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		if (validated.paymentMethod === "MPESA" && !await getMerchantMpesaConfig(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
 
 		const order = await orderService.createOrder({
 			tenantId: context.tenantId,
@@ -49,9 +48,6 @@ export async function createOrder(req: NextRequest) {
 			shippingAddress: validated.shippingAddress,
 			deliveryMethod: validated.deliveryMethod,
 			paymentMethod: validated.paymentMethod,
-			subtotal: validated.subtotal,
-			shippingCost: validated.shippingCost,
-			total: validated.total,
 			couponCode: validated.couponCode,
 			notes: validated.notes,
 			idempotencyKey: req.headers.get("idempotency-key") || undefined,
@@ -60,8 +56,11 @@ export async function createOrder(req: NextRequest) {
 		return NextResponse.json(order, { status: 201 })
 	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
+			const details = error.errors
+				.map((issue) => `${issue.path.join(".") || "request"}: ${issue.message}`)
+				.join("; ")
 			return NextResponse.json(
-				{ message: "Validation error", errors: error.errors },
+				{ code: "ORDER_VALIDATION_ERROR", message: `Order details need correction: ${details}`, errors: error.errors },
 				{ status: 400 },
 			)
 		}

@@ -16,6 +16,10 @@ export default function MerchantHomePage({ featuredProducts }: { featuredProduct
 	const hasPhone = Boolean(store.contact.phoneDisplay && store.contact.phoneHref)
 	const hasEmail = Boolean(store.contact.email && store.contact.emailHref)
 	const hasLocation = Boolean(store.contact.addressLine || store.contact.cityCountry || store.contact.mapEmbedUrl || store.contact.mapLink)
+	const firstAvailableCategory = store.homepage.categories[0]
+	const productsHref = firstAvailableCategory
+		? `/products?category=${encodeURIComponent(firstAvailableCategory.slug)}`
+		: "/products"
 	return (
 		<div className="space-y-24">
 			<HeroBanner />
@@ -33,7 +37,7 @@ export default function MerchantHomePage({ featuredProducts }: { featuredProduct
 								{hasEmail && <div className="flex items-start gap-3"><Mail className="mt-1 text-primary" size={20} /><div><p className="font-medium">Email Us</p>{store.contact.responseTime && <p className="text-gray-600">{store.contact.responseTime}</p>}<a href={store.contact.emailHref} className="text-primary transition-colors hover:underline">{store.contact.email}</a></div></div>}
 							</div>
 							{hasLocation && <div><h3 className="mb-3 font-semibold">Location</h3><div className="flex items-start gap-3"><MapPin className="mt-1 text-primary" size={20} /><div><p className="font-medium">Visit Our Store</p>{store.contact.addressLine && <p className="text-gray-600">{store.contact.addressLine}</p>}{store.contact.cityCountry && <p className="text-primary">{store.contact.cityCountry}</p>}</div></div></div>}
-							<div className="mt-6"><h3 className="mb-3 font-semibold">Quick Links</h3><div className="flex flex-col gap-3"><Link href={getStoreRouteHref(store, "/contact")} className="text-primary transition-colors hover:underline">Contact Form</Link><Link href={getStoreRouteHref(store, "/products?category=phones")} className="text-primary transition-colors hover:underline">View Products</Link></div></div>
+							<div className="mt-6"><h3 className="mb-3 font-semibold">Quick Links</h3><div className="flex flex-col gap-3"><Link href={getStoreRouteHref(store, "/contact")} className="text-primary transition-colors hover:underline">Contact Form</Link><Link href={getStoreRouteHref(store, productsHref)} className="text-primary transition-colors hover:underline">View Products</Link></div></div>
 						</div>
 						<div className="space-y-6"><h2 className="text-2xl font-bold">Send Us a Message</h2><Link href={getStoreRouteHref(store, "/contact")} className="btn-primary flex w-full items-center justify-center gap-2 py-3"><Send size={18} /> Message Us</Link></div>
 					</div>

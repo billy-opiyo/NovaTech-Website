@@ -2,9 +2,10 @@ const dayMilliseconds = 24 * 60 * 60 * 1000
 
 /**
  * MVP billing policy (approved on saas-staging):
- * - New stores start on a six-month free "Founding Merchant" pilot using the
- *   Starter-plan limits. No payment is required during store creation and no
- *   charge happens automatically.
+ * - A new store must pay its selected plan's one-time setup fee before its
+ *   six-month pilot begins. The selected plan stays in force for the pilot;
+ *   its monthly subscription becomes payable from month seven.
+ * - Pilot and subscription payments are initiated manually by the merchant.
  * - After the pilot ends, a 14-day grace period begins with reminders.
  * - If no plan is paid for during the grace period, the public storefront is
  *   paused while merchant data and workspace access remain preserved so the
