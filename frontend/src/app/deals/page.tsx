@@ -1,93 +1,18 @@
 import Link from "next/link"
-import { ArrowRight, Percent, Truck, ShieldCheck } from "lucide-react"
+import { ArrowRight, Percent, ShieldCheck, Truck } from "lucide-react"
+import { getDeals } from "backend/services/recommendation.service"
+import { getStoreContext } from "@/lib/store-context.server"
+import { getProductImage } from "@/constants/productImages"
+import { getStoreRouteHref } from "@/lib/store-home"
 
-const dealCards = [
-	{
-		title: "Weekend Smartphone Drop",
-		description:
-			"Get up to 18% off selected iPhone and Samsung models with free delivery nationwide.",
-		href: "/products?category=phones&sortBy=price-desc",
-		badge: "Hot deal",
-	},
-	{
-		title: "Work-from-Home Essentials",
-		description:
-			"Save on monitors, docking stations, and premium keyboards for your home office setup.",
-		href: "/products?category=laptops&sortBy=rating",
-		badge: "Top picks",
-	},
-	{
-		title: "Audio & Accessories",
-		description:
-			"Bundle pricing on headphones, smartwatches, and charging gear for everyday upgrades.",
-		href: "/products?category=accessories",
-		badge: "New",
-	},
-]
+export default async function DealsPage() {
+	const store = await getStoreContext()
+	const deals = store.isPlatformHome ? [] : await getDeals(store.tenantId, 24).catch(() => [])
 
-export default function DealsPage() {
-	return (
-		<div className="space-y-10">
-			<section className="glass-card rounded-3xl p-6 sm:p-8 md:p-12 text-center">
-				<div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-4">
-					<Percent size={16} />
-					Today&apos;s Deals
-				</div>
-				<h1 className="text-3xl md:text-5xl font-bold mb-4">
-					Fresh savings for every upgrade
-				</h1>
-				<p className="mx-auto max-w-2xl text-gray-600 dark:text-gray-300">
-					Discover limited-time offers on trusted tech essentials, all backed by
-					official warranties and fast delivery across Kenya.
-				</p>
-			</section>
+	return <div className="space-y-10"><section className="glass-card rounded-3xl p-6 text-center sm:p-8 md:p-12"><div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary"><Percent size={16} />Current store deals</div><h1 className="mb-4 text-3xl font-bold md:text-5xl">Savings from {store.brand.name}</h1><p className="mx-auto max-w-2xl text-gray-600 dark:text-gray-300">These offers are controlled by this merchant and reflect products currently marked with a sale price.</p></section>
 
-			<section className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-				{dealCards.map((deal) => (
-					<div key={deal.title} className="glass-card rounded-2xl p-6">
-						<span className="mb-4 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-							{deal.badge}
-						</span>
-						<h2 className="mb-3 text-2xl font-bold">{deal.title}</h2>
-						<p className="mb-6 text-gray-600 dark:text-gray-300">
-							{deal.description}
-						</p>
-						<Link
-							href={deal.href}
-							className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
-						>
-							Shop the deal <ArrowRight size={16} />
-						</Link>
-					</div>
-				))}
-			</section>
+		{deals.length === 0 ? <section className="glass-card p-8 text-center"><h2 className="text-xl font-bold">No active deals right now</h2><p className="mt-2 text-gray-600 dark:text-gray-300">This store has not published any products with a sale price yet. Please check back later.</p><Link href={getStoreRouteHref(store, "/products")} className="btn-primary mt-6 inline-flex items-center gap-2">Browse products <ArrowRight size={16} /></Link></section> : <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">{deals.map((deal) => <article key={deal.id} className="glass-card flex h-full flex-col overflow-hidden p-0"><div className="product-media relative flex aspect-[4/3] items-center justify-center overflow-hidden"><img src={getProductImage(deal.images[0], deal.name)} alt={deal.name} className="h-full w-full object-contain transition-transform duration-300 hover:scale-105" /></div><div className="flex flex-1 flex-col p-6"><span className="mb-3 inline-flex w-fit rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">On sale</span><h2 className="text-xl font-bold">{deal.name}</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{deal.brand} · {deal.category}</p><div className="mt-4 flex items-baseline gap-2"><span className="text-xl font-bold text-primary">KES {(deal.discountedPrice ?? deal.price).toLocaleString()}</span><span className="text-sm text-gray-400 line-through">KES {deal.price.toLocaleString()}</span></div><Link href={getStoreRouteHref(store, `/products/${deal.slug}`)} className="mt-auto inline-flex items-center gap-2 pt-6 font-semibold text-primary hover:underline">Shop the deal <ArrowRight size={16} /></Link></div></article>)}</section>}
 
-			<section className="grid gap-6 grid-cols-1 md:grid-cols-3">
-				<div className="glass-card rounded-2xl p-6">
-					<Truck className="mb-4 text-primary" size={28} />
-					<h3 className="mb-2 text-lg font-semibold">Fast delivery</h3>
-					<p className="text-sm text-gray-600 dark:text-gray-300">
-						Same-day dispatch on many in-stock items in Nairobi and nearby
-						regions.
-					</p>
-				</div>
-				<div className="glass-card rounded-2xl p-6">
-					<ShieldCheck className="mb-4 text-primary" size={28} />
-					<h3 className="mb-2 text-lg font-semibold">Genuine tech</h3>
-					<p className="text-sm text-gray-600 dark:text-gray-300">
-						Official warranties on premium devices and accessories from trusted
-						brands.
-					</p>
-				</div>
-				<div className="glass-card rounded-2xl p-6">
-					<Percent className="mb-4 text-primary" size={28} />
-					<h3 className="mb-2 text-lg font-semibold">Limited-time pricing</h3>
-					<p className="text-sm text-gray-600 dark:text-gray-300">
-						New offers appear often, so it pays to check back before your next
-						upgrade.
-					</p>
-				</div>
-			</section>
-		</div>
-	)
+		<section className="grid grid-cols-1 gap-6 md:grid-cols-3"><div className="glass-card rounded-2xl p-6"><Truck className="mb-4 text-primary" size={28} /><h3 className="mb-2 text-lg font-semibold">Merchant-confirmed delivery</h3><p className="text-sm text-gray-600 dark:text-gray-300">Delivery terms and availability are confirmed directly by {store.brand.name}.</p></div><div className="glass-card rounded-2xl p-6"><ShieldCheck className="mb-4 text-primary" size={28} /><h3 className="mb-2 text-lg font-semibold">Store-managed warranty</h3><p className="text-sm text-gray-600 dark:text-gray-300">The merchant provides the applicable warranty, returns, and after-sales terms.</p></div><div className="glass-card rounded-2xl p-6"><Percent className="mb-4 text-primary" size={28} /><h3 className="mb-2 text-lg font-semibold">Live store pricing</h3><p className="text-sm text-gray-600 dark:text-gray-300">Offers update when the merchant changes product pricing in the admin panel.</p></div></section>
+	</div>
 }

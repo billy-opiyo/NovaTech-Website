@@ -56,6 +56,10 @@ export async function PATCH(request: Request) {
 		const publishedSettings = mergePlatformSiteSettings(defaults, asSettings(existing?.publishedSettings))
 		const currentDraft = existing?.draftSettings ? asSettings(existing.draftSettings) : publishedSettings
 		const draftSettings = mergePlatformSiteSettings(currentDraft, parsed.data)
+		// The platform settings editor submits a complete snapshot. Replace this
+		// nested section so selecting a preset can intentionally clear prior custom
+		// color/font/glass overrides instead of having the merge resurrect them.
+		if (parsed.data.design) draftSettings.design = parsed.data.design
 		await prisma.platformSiteSettings.upsert({
 			where: { id: PLATFORM_SETTINGS_ID },
 			create: { id: PLATFORM_SETTINGS_ID, draftSettings: asJson(draftSettings) },

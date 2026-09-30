@@ -6,13 +6,16 @@ import { getFeaturedProducts, getSimilarProducts } from "../../backend/services/
 test("recommendation reads stay inside the resolved tenant", async () => {
 	const productFindMany = prisma.product.findMany
 	const productFindFirst = prisma.product.findFirst
+	const storeFindFirst = prisma.store.findFirst
 	const calls: Array<{ method: string; where: unknown }> = []
 	;(prisma.product.findMany as any) = async ({ where }: any) => { calls.push({ method: "findMany", where }); return [] }
 	;(prisma.product.findFirst as any) = async ({ where }: any) => { calls.push({ method: "findFirst", where }); return null }
+	;(prisma.store.findFirst as any) = async ({ where }: any) => { calls.push({ method: "store.findFirst", where }); return { commerceSettings: {} } }
 	try {
 		assert.deepEqual(await getFeaturedProducts("tenant-a", 4), [])
 		assert.deepEqual(await getSimilarProducts("product-b", "tenant-a", 4), [])
 		assert.deepEqual(calls, [
+			{ method: "store.findFirst", where: { tenantId: "tenant-a" } },
 			{ method: "findMany", where: { tenantId: "tenant-a", isFeatured: true, OR: [
 				{ variants: { none: { tenantId: "tenant-a" } }, stock: { gt: 0 } },
 				{ variants: { some: { tenantId: "tenant-a", stock: { gt: 0 } } } },
@@ -22,5 +25,6 @@ test("recommendation reads stay inside the resolved tenant", async () => {
 	} finally {
 		;(prisma.product.findMany as any) = productFindMany
 		;(prisma.product.findFirst as any) = productFindFirst
+		;(prisma.store.findFirst as any) = storeFindFirst
 	}
 })

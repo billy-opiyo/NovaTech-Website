@@ -376,7 +376,7 @@ async function updatePaymentByProviderReference(
 				metadata: newMetadata,
 			},
 		})
-		if (payment.kind !== "ORDER") await markBillingPaymentFromMpesa({ id: updatedPayment.id, status, invoiceId: updatedPayment.invoiceId, subscriptionId: updatedPayment.subscriptionId, billingRecordId: updatedPayment.billingRecordId, failureReason: extra.metadata?.resultDesc as string | undefined })
+		if (payment.kind !== "ORDER") await markBillingPaymentFromMpesa({ id: updatedPayment.id, status, kind: updatedPayment.kind, invoiceId: updatedPayment.invoiceId, subscriptionId: updatedPayment.subscriptionId, billingRecordId: updatedPayment.billingRecordId, failureReason: extra.metadata?.resultDesc as string | undefined })
 
 		if (payment.orderId && status === "COMPLETED") {
 			await recordOrderCommission(payment.id)

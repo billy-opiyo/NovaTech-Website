@@ -18,10 +18,7 @@ export const orderSchema = z.object({
 		landmark: z.string().trim().max(200).optional(),
 	}),
 	deliveryMethod: z.string().trim().min(1).max(40),
-	paymentMethod: z.string().trim().min(1).max(40),
-	subtotal: z.number().finite().positive(),
-	shippingCost: z.number().finite().min(0).max(100000000),
-	total: z.number().finite().positive().max(100000000),
+	paymentMethod: z.enum(["MPESA", "PAY_ON_DELIVERY"]),
 	couponCode: z.string().trim().max(80).optional(),
 	notes: z.string().trim().max(2000).optional(),
 })

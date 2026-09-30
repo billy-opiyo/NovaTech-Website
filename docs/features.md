@@ -16,7 +16,7 @@
 | **Search Overlay** | Responsive global search with `Ctrl+K` shortcut, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning. |
 | **Theme System** | Client-configured light/dark theme presets backed by CSS variables, with localStorage persistence and flash-free initialization before the first paint. |
 | **Responsive and Accessible UI** | Shared responsive layouts across desktop and mobile breakpoints, with clearer labels, focus states, semantic status messaging, and accessible live notifications. |
-| **Public Information Pages** | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions pages. |
+| **Public Information Pages** | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions pages. Platform and merchant blogs use separate tenant-scoped publishing and management workspaces. |
 
 ## 🛒 Product Selection & Merchant Handoff
 
@@ -85,8 +85,8 @@
 |---------|-------------|
 | **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, and Stripe price IDs. Legacy commission-rate fields remain for historical compatibility. |
 | **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, VAT/credit-aware invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
-| **MVP free pilot** | New stores start on a six-month free Founding Merchant pilot (Starter limits, configurable via `NURAVA_MVP_PILOT_DAYS`). No payment is required during store creation, nothing is charged automatically, and expiry reminders run from the lifecycle cron before and during the 14-day grace period. |
-| **M-Pesa SaaS collection** | At launch, setup fees and the first subscription are combined after the free pilot, when the merchant chooses a plan; later renewals create local invoices and Daraja STK requests. Callbacks confirm or fail the invoice/payment and update subscription state. This is invoice-driven rather than an automatic recurring charge. |
+| **Setup-gated pilot** | During onboarding, a merchant selects a monthly plan and creates the store workspace. A one-time setup fee must be paid before the six-month pilot starts; the selected plan and its entitlements apply during the pilot. Its monthly subscription becomes payable from month seven. No automatic charges occur. |
+| **M-Pesa SaaS collection** | Setup fees are invoiced and collected before the pilot through Daraja STK. The provider callback confirms payment and starts the pilot. Monthly subscription renewals are invoiced from month seven and manually initiated; callbacks confirm or fail each payment. This is invoice-driven rather than an automatic recurring charge. |
 | **Future provider support** | Stripe provider helpers and historical webhook synchronization remain available behind the billing-provider boundary but are not presented as an active launch payment method. |
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins. In M-Pesa-only launch mode, an add-on remains pending until the next successful invoice callback, then its entitlement activates. |
 | **Plan entitlement enforcement** | Product, staff, custom-domain, storage, analytics-level, and WhatsApp-notification capabilities are checked server-side. Product-image uploads create tenant-scoped storage records and are blocked when the plan limit is reached. |

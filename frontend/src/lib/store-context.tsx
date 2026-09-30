@@ -103,7 +103,10 @@ export function StoreContextProvider({ value, children }: { value: StoreContext;
 	}, [endpoint, isPlatformHome, scopeKey, storeSlug])
 
 	useEffect(() => {
-		const cssVariables = themeToCssVariables(getThemePreset(currentValue.themePreset))
+		const cssVariables = themeToCssVariables(
+			getThemePreset(currentValue.themePreset),
+			currentValue.isPlatformHome ? currentValue.platformSettings?.design : undefined,
+		)
 		for (const [name, cssValue] of Object.entries(cssVariables)) {
 			document.documentElement.style.setProperty(name, String(cssValue))
 		}

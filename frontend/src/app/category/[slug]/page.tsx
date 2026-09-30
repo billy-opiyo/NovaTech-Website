@@ -64,12 +64,12 @@ function ProductCard({ product, store }: { product: CategoryProduct; store: Stor
 	return (
 		<article className="glass-card relative overflow-hidden">
 			<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group block pb-24">
-				<div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+				<div className="product-media relative flex aspect-square items-center justify-center overflow-hidden rounded-xl">
 					<Image
 						src={getProductImage(product.images[0], product.name)}
 						alt={product.name}
 						fill
-						className="object-cover transition-transform duration-500 group-hover:scale-105"
+						className="object-contain transition-transform duration-500 group-hover:scale-105"
 					/>
 				</div>
 				<div className="p-4">
@@ -107,6 +107,7 @@ export default function CategoryPage() {
 	const { slug } = useParams<{ slug: string }>()
 	const store = useStoreContext()
 	const category = categoryData[slug]
+	const categoryIsEnabled = store.homepage.categories.some((item) => item.slug === slug)
 	const [catalogProducts, setCatalogProducts] = useState<CategoryProduct[]>([])
 	const [trendingProducts, setTrendingProducts] = useState<CategoryProduct[]>([])
 	const [loadingProducts, setLoadingProducts] = useState(true)
@@ -133,7 +134,7 @@ export default function CategoryPage() {
 		return () => controller.abort()
 	}, [category, slug, store])
 
-	if (!category) return <NotFoundState title="Category not found" description="That product category is not available. Explore the full Nurava Tech catalogue instead." />
+	if (!category || !categoryIsEnabled) return <NotFoundState title="Category not found" description="That product category is not available in this store. Browse the store's available products instead." />
 
 	return (
 		<div>

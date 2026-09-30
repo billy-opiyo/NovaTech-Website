@@ -38,6 +38,12 @@ test("Nurava staging shopper payment fixture is disabled for an unmarked product
 	})
 })
 
+test("Nurava shopper payment fixture cannot use the test route with live M-Pesa credentials", () => {
+	withEnvironment({ SHOPPER_PAYMENTS_TEST_MODE: "true", SHOPPER_PAYMENTS_TEST_TENANT_SLUG: "nuravatech", NURAVA_DEPLOYMENT_TIER: "staging", MPESA_ENV: "production", VERCEL_ENV: "production" }, () => {
+		assert.equal(isNuravaShopperPaymentTestMode("nuravatech"), false)
+	})
+})
+
 test("Nurava staging shopper payment fixture reuses only configured sandbox billing credentials", () => {
 	withEnvironment({ SHOPPER_PAYMENTS_TEST_MODE: "true", SHOPPER_PAYMENTS_TEST_TENANT_SLUG: "nuravatech", NURAVA_DEPLOYMENT_TIER: "staging", MPESA_ENV: "sandbox", MPESA_CONSUMER_KEY: "sandbox-consumer-key", MPESA_CONSUMER_SECRET: "sandbox-consumer-secret", MPESA_PASSKEY: "sandbox-passkey", MPESA_SHORTCODE: "174379" }, () => {
 		assert.deepEqual(getNuravaShopperPaymentTestConfig("nuravatech"), { consumerKey: "sandbox-consumer-key", consumerSecret: "sandbox-consumer-secret", passkey: "sandbox-passkey", shortcode: "174379", accountType: "PAYBILL" })

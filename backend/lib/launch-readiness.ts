@@ -16,7 +16,7 @@ function hasContact(value: unknown) {
 export async function getLaunchReadiness(tenantId: string, storeId: string, options: { legalAcceptanceOverride?: boolean } = {}) {
 	const [tenant, store, domains, legalAcceptance] = await Promise.all([
 		prisma.tenant.findFirst({ where: { id: tenantId }, select: { status: true, verificationStatus: true } }),
-		prisma.store.findFirst({ where: { id: storeId, tenantId }, select: { publicationStatus: true, name: true, slug: true, contactSettings: true, draftSettings: true } }),
+		prisma.store.findFirst({ where: { id: storeId, tenantId }, select: { publicationStatus: true, name: true, slug: true, contactSettings: true, draftSettings: true, tenant: { select: { billingRecord: { select: { setupFeeAmount: true, setupFeeStatus: true } } } } } }),
 		prisma.domain.findMany({ where: { tenantId, storeId }, select: { hostname: true, type: true, verificationStatus: true, sslStatus: true, isCanonical: true } }),
 		getCurrentMerchantLegalAcceptance(tenantId, "SELLING"),
 	])
@@ -30,10 +30,13 @@ export async function getLaunchReadiness(tenantId: string, storeId: string, opti
 	const verificationReady = tenant?.verificationStatus === "APPROVED"
 	const legalReady = Boolean(legalAcceptance || options.legalAcceptanceOverride)
 	const settingsReady = Boolean(store && (store.publicationStatus === "PUBLISHED" || draft))
+	const billingRecord = store?.tenant.billingRecord
+	const setupFeeReady = store?.publicationStatus === "PUBLISHED" || !billingRecord || billingRecord.setupFeeAmount <= 0 || ["PAID", "WAIVED"].includes(billingRecord.setupFeeStatus)
 
 	const checks: ReadinessCheck[] = [
 		{ key: "tenant-status", label: "Tenant account available", status: statusReady ? "PASS" : "FAIL", detail: tenant ? `Tenant status is ${tenant.status}.` : "Tenant was not found.", source: "Tenant.status" },
 		{ key: "merchant-verification", label: "Merchant approval", status: verificationReady ? "PASS" : "PENDING", detail: tenant ? `Merchant verification is ${tenant.verificationStatus}.` : "Merchant verification is unavailable.", source: "Tenant.verificationStatus" },
+		{ key: "setup-fee", label: "One-time setup fee", status: setupFeeReady ? "PASS" : "PENDING", detail: setupFeeReady ? "The selected plan's setup fee is settled." : "Pay the one-time setup fee to start the six-month pilot and publish the store.", source: "BillingRecord.setupFeeStatus" },
 		{ key: "legal-acceptance", label: "Current merchant terms accepted", status: legalReady ? "PASS" : "PENDING", detail: legalReady ? "Current selling terms are accepted." : "A current selling acceptance is required before publication.", source: "MerchantLegalAcceptance" },
 		{ key: "contact-details", label: "Public contact details", status: contact ? "PASS" : "PENDING", detail: contact ? "At least one public contact method is configured." : "Add an email, phone, or WhatsApp contact method to store settings.", source: "Store.contactSettings / draftSettings" },
 		{ key: "store-settings", label: "Store settings saved", status: settingsReady ? "PASS" : "PENDING", detail: settingsReady ? "Store settings or a publishable draft are available." : "Save store settings before publishing.", source: "Store.draftSettings / publicationStatus" },

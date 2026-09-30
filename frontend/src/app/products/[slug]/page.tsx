@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { AlertCircle, ChevronLeft, ChevronRight, Heart, LoaderCircle, Minus, Plus, ShoppingCart, Star } from "lucide-react"
@@ -149,15 +148,16 @@ export default function ProductDetailPage() {
 
 			<section className="grid gap-8 lg:grid-cols-2">
 				<div>
-					<div className="relative aspect-square overflow-hidden rounded-2xl bg-transparent">
-						<Image src={getProductImage(product.images[selectedImage], product.name)} alt={product.name} fill className="object-contain" priority />
+					<div className="product-detail-media relative flex min-h-[18rem] items-center justify-center sm:min-h-[26rem] lg:min-h-[34rem]">
+						{/* Keep the source aspect ratio: no forced square crop or letterbox frame. */}
+						<img src={getProductImage(product.images[selectedImage], product.name)} alt={product.name} className="block h-auto w-auto max-h-[min(70vh,42rem)] max-w-full rounded-md object-contain" fetchPriority="high" decoding="async" />
 						{product.images.length > 1 && <>
 							<button aria-label="Previous image" onClick={() => setSelectedImage((selectedImage + product.images.length - 1) % product.images.length)} className="absolute left-3 top-1/2 rounded-full bg-black/40 p-2 text-white"><ChevronLeft /></button>
 							<button aria-label="Next image" onClick={() => setSelectedImage((selectedImage + 1) % product.images.length)} className="absolute right-3 top-1/2 rounded-full bg-black/40 p-2 text-white"><ChevronRight /></button>
 						</>}
 					</div>
 					<div className="mt-3 flex gap-3 overflow-auto">
-						{product.images.map((image, index) => <button key={image} onClick={() => setSelectedImage(index)} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-transparent ${selectedImage === index ? "border-primary" : "border-transparent"}`}><Image src={getProductImage(image, product.name)} alt={`${product.name} ${index + 1}`} fill className="object-contain" /></button>)}
+						{product.images.map((image, index) => <button key={image} type="button" onClick={() => setSelectedImage(index)} aria-label={`View ${product.name} image ${index + 1}`} aria-current={selectedImage === index ? "true" : undefined} className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-visible rounded-lg bg-transparent p-0 transition-opacity ${selectedImage === index ? "opacity-100" : "opacity-60 hover:opacity-100"}`}><img src={getProductImage(image, product.name)} alt={`${product.name} ${index + 1}`} className="block h-auto w-auto max-h-full max-w-full rounded-md object-contain" loading="lazy" decoding="async" /></button>)}
 					</div>
 				</div>
 

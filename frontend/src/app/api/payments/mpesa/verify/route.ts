@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 	} catch (error: unknown) {
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
-				{ message: "Validation error", errors: error.errors },
+				{ code: "MPESA_VERIFY_VALIDATION_ERROR", message: `Payment verification details need correction: ${error.errors.map((issue) => `${issue.path.join(".") || "request"}: ${issue.message}`).join("; ")}`, errors: error.errors },
 				{ status: 400 },
 			)
 		}

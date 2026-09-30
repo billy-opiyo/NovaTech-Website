@@ -78,7 +78,7 @@ export default function Header() {
 							<PlatformAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} mobile />
 							<PlatformAccountMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} accountName={accountName} />
 						</> : <>
-							<Link href={platformAccountHref} aria-label="Sign in" className="inline-flex items-center justify-center rounded-full p-2 text-gray-700 transition hover:bg-white/10 dark:text-white lg:hidden"><User size={20} /></Link>
+							<Link href={platformAccountHref} aria-label="Sign in" className="inline-flex flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-gray-700 transition hover:bg-white/10 dark:text-white lg:hidden"><User size={20} /><span className="text-[10px] font-semibold leading-none">Sign in</span></Link>
 							<Link href={platformAccountHref} className="hidden items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 lg:inline-flex">Get started</Link>
 						</>)}
 						{!store.isPlatformHome && <>

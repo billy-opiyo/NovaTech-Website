@@ -1,7 +1,10 @@
 import InfoPage from "@/components/content/InfoPage"
 import PlatformTeamSection from "@/components/content/PlatformTeamSection"
+import { getStoreContext } from "@/lib/store-context.server"
 
-export default function AboutPage() {
+export default async function AboutPage() {
+	const store = await getStoreContext()
+	if (!store.isPlatformHome) return <InfoPage title={store.homepage.aboutTitle || `About ${store.brand.name}`} description={store.homepage.aboutDescription || `${store.brand.name} is an independent electronics store serving its customers directly.`} sections={[{ title: "Our store", content: store.homepage.aboutDescription || `${store.brand.name} manages its own products, availability, payment arrangements, delivery, returns, warranties, and customer support. Contact the store directly if you need help with a product or purchase.` }, { title: "Shop with confidence", content: `Browse the products published by ${store.brand.name}, confirm the details with the merchant, and use the store's stated payment and delivery arrangements.` }]} />
 	return (
 		<>
 			<InfoPage

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client"
 import prisma from "../lib/db"
+import { getHiddenStoreCategorySlugs } from "./productService"
 
 export interface ProductRecommendation {
 	id: string
@@ -238,6 +239,7 @@ export async function getRecommendedForUser(
  * Get trending products based on recent sales velocity
  */
 export async function getTrendingProducts(tenantId: string, limit: number = 12): Promise<TrendingProduct[]> {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 	const thirtyDaysAgo = new Date()
 	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -255,7 +257,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 		},
 		include: {
 		items: {
-			where: { tenantId },
+			where: { tenantId, ...(hiddenCategories.length ? { product: { category: { slug: { notIn: hiddenCategories } } } } : {}) },
 			include: {
 					product: {
 						include: {
@@ -295,7 +297,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 	if (topProductIds.length === 0) {
 		// Fallback to newest products if no recent sales
 		const products = await prisma.product.findMany({
-			where: availableProductWhere(tenantId),
+			where: { ...availableProductWhere(tenantId), ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}) },
 			include: {
 				category: true,
 				variants: { where: { tenantId }, select: { stock: true } },
@@ -319,6 +321,7 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 	const trendingProducts = await prisma.product.findMany({
 		where: {
 			...availableProductWhere(tenantId),
+			...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}),
 			id: { in: topProductIds },
 		},
 		include: {
@@ -434,8 +437,9 @@ export async function getSimilarProducts(
  * Get featured products
  */
 export async function getFeaturedProducts(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 	const products = await prisma.product.findMany({
-		where: { ...availableProductWhere(tenantId), isFeatured: true },
+		where: { ...availableProductWhere(tenantId), ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}), isFeatured: true },
 		include: {
 			category: true,
 			variants: { where: { tenantId }, select: { stock: true } },
@@ -462,8 +466,9 @@ export async function getFeaturedProducts(tenantId: string, limit: number = 12):
  * Get new arrivals
  */
 export async function getNewArrivals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 	const products = await prisma.product.findMany({
-		where: { ...availableProductWhere(tenantId), isNewArrival: true },
+		where: { ...availableProductWhere(tenantId), ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}), isNewArrival: true },
 		include: {
 			category: true,
 			variants: { where: { tenantId }, select: { stock: true } },
@@ -490,9 +495,11 @@ export async function getNewArrivals(tenantId: string, limit: number = 12): Prom
  * Get deals and on-sale products
  */
 export async function getDeals(tenantId: string, limit: number = 12): Promise<ProductRecommendation[]> {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
 	const products = await prisma.product.findMany({
 		where: {
 			...availableProductWhere(tenantId),
+			...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}),
 			discountedPrice: {
 				not: null,
 			},

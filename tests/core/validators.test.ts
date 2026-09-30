@@ -18,11 +18,12 @@ test("auth schemas accept valid credentials and reject malformed input", () => {
 const order = {
 	items: [{ productId: "p1", quantity: 2, variant: "Black" }],
 	shippingAddress: { fullName: "Ada", phone: "0712345678", email: "ada@example.com", county: "Nairobi", town: "Westlands", address: "1 Main St" },
-	deliveryMethod: "standard", paymentMethod: "mpesa", subtotal: 2000, shippingCost: 500, total: 2500,
+	deliveryMethod: "standard", paymentMethod: "MPESA",
 }
 
 test("order schemas validate checkout payloads and status transitions", () => {
 	assert.equal(orderSchema.safeParse(order).success, true)
+	assert.equal(orderSchema.safeParse({ ...order, paymentMethod: "PAY_ON_DELIVERY" }).success, true)
 	assert.equal(orderSchema.safeParse({ ...order, items: [{ productId: "p1", quantity: 0 }] }).success, false)
 	assert.equal(orderStatusSchema.safeParse({ status: "SHIPPED", trackingNumber: "TRK-1" }).success, true)
 	assert.equal(orderStatusSchema.safeParse({ status: "UNKNOWN" }).success, false)

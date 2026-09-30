@@ -14,7 +14,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nurava Tech platform</p>
 					<h1 className="text-2xl font-bold">Control plane</h1>
 				</div>
-				<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} />
+				<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} canManageContent={session.user.role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")} />
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>
 		</div>

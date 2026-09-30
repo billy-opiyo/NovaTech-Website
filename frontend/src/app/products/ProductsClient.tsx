@@ -63,15 +63,6 @@ const brands = [
 	"OnePlus",
 	"Xiaomi",
 ]
-const categories = [
-	{ name: "All Categories", slug: "" },
-	{ name: "Phones", slug: "phones" },
-	{ name: "Laptops", slug: "laptops" },
-	{ name: "Tablets", slug: "tablets" },
-	{ name: "Accessories", slug: "accessories" },
-	{ name: "Gaming", slug: "gaming" },
-]
-
 const sortOptions = [
 	{ value: "newest", label: "Newest" },
 	{ value: "price-asc", label: "Price: Low to High" },
@@ -81,6 +72,8 @@ const sortOptions = [
 
 export default function ProductsClient() {
 	const searchParams = useSearchParams()
+	const store = useStoreContext()
+	const categories = [{ name: "All Categories", slug: "" }, ...store.homepage.categories.map(({ name, slug }) => ({ name, slug }))]
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 	const initialSort = searchParams.get("sortBy") || searchParams.get("sort")
@@ -97,6 +90,12 @@ export default function ProductsClient() {
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
 	const [isLoading, setIsLoading] = useState(false)
 	const searchParamsKey = searchParams.toString()
+
+	useEffect(() => {
+		if (filters.category && !store.homepage.categories.some((category) => category.slug === filters.category)) {
+			setFilters((current) => ({ ...current, category: "" }))
+		}
+	}, [filters.category, store.homepage.categories])
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia("(max-width: 1023px)")
@@ -648,12 +647,12 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 					href={getStoreRouteHref(store, `/products/${product.slug}`)}
 					className="group block pb-24"
 				>
-					<div className="relative h-52 w-full mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+					<div className="product-media relative mb-4 flex h-52 w-full items-center justify-center overflow-hidden rounded-xl">
 					<Image
 						src={getProductImage(product.images[0], product.name)}
 						alt={product.name}
 						fill
-						className="object-cover group-hover:scale-105 transition-transform duration-500"
+						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>
 					{product.discountedPrice && (
 						<span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
@@ -743,12 +742,12 @@ function ProductListItem({
 					href={getStoreRouteHref(store, `/products/${product.slug}`)}
 					className="flex flex-col gap-4 pb-24 group sm:flex-row sm:gap-6"
 				>
-					<div className="relative h-40 w-40 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+					<div className="product-media relative flex h-40 w-40 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl">
 					<Image
 						src={getProductImage(product.images[0], product.name)}
 						alt={product.name}
 						fill
-						className="object-cover group-hover:scale-105 transition-transform duration-500"
+						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>
 					</div>
 					<div className="flex-1 flex flex-col justify-between py-2">

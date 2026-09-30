@@ -202,37 +202,79 @@ const hexToRgb = (hex: string) => {
 	return `${(number >> 16) & 255} ${(number >> 8) & 255} ${number & 255}`
 }
 
+type ThemeColorMode = Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
+export type PlatformThemeOverrides = {
+	colors?: { primary?: string; primaryDark?: string; accent?: string; light?: ThemeColorMode; dark?: ThemeColorMode }
+	typography?: { bodyFont?: string; headingFont?: string }
+	glass?: { blurPx?: number; cardRadiusPx?: number; lightOpacity?: number; darkOpacity?: number; lightBorderOpacity?: number; darkBorderOpacity?: number; shadow?: "none" | "soft" | "balanced" | "bold" }
+}
+
+const rgbaFromHex = (hex: string, percentage: number) => `rgba(${hexToRgb(hex).replaceAll(" ", ", ")}, ${Math.min(100, Math.max(0, percentage)) / 100})`
+const fontStacks: Record<string, string> = {
+	system: "ui-sans-serif, system-ui, sans-serif",
+	inter: "Inter, ui-sans-serif, system-ui, sans-serif",
+	georgia: "Georgia, 'Times New Roman', serif",
+	trebuchet: "'Trebuchet MS', sans-serif",
+	verdana: "Verdana, Geneva, sans-serif",
+}
+const shadowStyles = {
+	none: "none",
+	soft: "0 4px 18px rgba(15, 23, 42, 0.10)",
+	balanced: "0 8px 32px rgba(15, 23, 42, 0.18)",
+	bold: "0 14px 44px rgba(15, 23, 42, 0.30)",
+} as const
+
 export const getThemePreset = (id: string | undefined): ThemePreset =>
 	THEME_PRESETS[id as ThemePresetId] ?? THEME_PRESETS[DEFAULT_THEME_PRESET]
 
 /** CSS variables are emitted once on <html>; CSS switches light/dark values. */
-export const themeToCssVariables = (theme: ThemePreset): Record<`--${string}`, string> => ({
-	"--color-primary": hexToRgb(theme.primary),
-	"--color-primary-dark": hexToRgb(theme.primaryDark),
-	"--color-accent": hexToRgb(theme.accent),
-	"--color-bg-light": hexToRgb(theme.light.background),
-	"--color-surface-light": hexToRgb(theme.light.surface),
-	"--color-text-light": hexToRgb(theme.light.text),
-	"--color-muted-light": hexToRgb(theme.light.muted),
-	"--color-border-light": hexToRgb(theme.light.border),
-	"--color-bg-dark": hexToRgb(theme.dark.background),
-	"--color-surface-dark": hexToRgb(theme.dark.surface),
-	"--color-text-dark": hexToRgb(theme.dark.text),
-	"--color-muted-dark": hexToRgb(theme.dark.muted),
-	"--color-border-dark": hexToRgb(theme.dark.border),
-	"--theme-glass-bg-light": theme.light.glassBackground,
-	"--theme-glass-border-light": theme.light.glassBorder,
-	"--theme-glass-shadow-light": theme.light.glassShadow,
-	"--theme-scrollbar-track-light": theme.light.scrollbarTrack,
-	"--theme-scrollbar-thumb-light": theme.light.scrollbarThumb,
-	"--theme-scrollbar-thumb-hover-light": theme.light.scrollbarThumbHover,
-	"--theme-glass-bg-dark": theme.dark.glassBackground,
-	"--theme-glass-border-dark": theme.dark.glassBorder,
-	"--theme-glass-shadow-dark": theme.dark.glassShadow,
-	"--theme-scrollbar-track-dark": theme.dark.scrollbarTrack,
-	"--theme-scrollbar-thumb-dark": theme.dark.scrollbarThumb,
-	"--theme-scrollbar-thumb-hover-dark": theme.dark.scrollbarThumbHover,
-	"--font-body": theme.fontBody,
-	"--font-heading": theme.fontHeading,
-	"--radius-card": theme.cardRadius,
-})
+export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThemeOverrides): Record<`--${string}`, string> => {
+	const primary = overrides?.colors?.primary || theme.primary
+	const primaryDark = overrides?.colors?.primaryDark || theme.primaryDark
+	const accent = overrides?.colors?.accent || theme.accent
+	const color = (mode: "light" | "dark", key: keyof ThemeColorMode) => overrides?.colors?.[mode]?.[key] || theme[mode][key]
+	const glassBackground = (mode: "light" | "dark") => {
+		const opacity = mode === "light" ? overrides?.glass?.lightOpacity : overrides?.glass?.darkOpacity
+		return opacity === undefined ? theme[mode].glassBackground : rgbaFromHex(color(mode, "surface"), opacity)
+	}
+	const glassBorder = (mode: "light" | "dark") => {
+		const opacity = mode === "light" ? overrides?.glass?.lightBorderOpacity : overrides?.glass?.darkBorderOpacity
+		return opacity === undefined ? theme[mode].glassBorder : rgbaFromHex(primary, opacity)
+	}
+	const shadow = overrides?.glass?.shadow ? shadowStyles[overrides.glass.shadow] : null
+	const scrollbarColors = (mode: "light" | "dark") => overrides?.colors?.primary
+		? { track: rgbaFromHex(primary, mode === "light" ? 11 : 22), thumb: rgbaFromHex(primary, 75), hover: rgbaFromHex(primary, 95) }
+		: { track: theme[mode].scrollbarTrack, thumb: theme[mode].scrollbarThumb, hover: theme[mode].scrollbarThumbHover }
+	const lightScrollbar = scrollbarColors("light")
+	const darkScrollbar = scrollbarColors("dark")
+	return {
+	"--color-primary": hexToRgb(primary),
+	"--color-primary-dark": hexToRgb(primaryDark),
+	"--color-accent": hexToRgb(accent),
+	"--color-bg-light": hexToRgb(color("light", "background")),
+	"--color-surface-light": hexToRgb(color("light", "surface")),
+	"--color-text-light": hexToRgb(color("light", "text")),
+	"--color-muted-light": hexToRgb(color("light", "muted")),
+	"--color-border-light": hexToRgb(color("light", "border")),
+	"--color-bg-dark": hexToRgb(color("dark", "background")),
+	"--color-surface-dark": hexToRgb(color("dark", "surface")),
+	"--color-text-dark": hexToRgb(color("dark", "text")),
+	"--color-muted-dark": hexToRgb(color("dark", "muted")),
+	"--color-border-dark": hexToRgb(color("dark", "border")),
+	"--theme-glass-bg-light": glassBackground("light"),
+	"--theme-glass-border-light": glassBorder("light"),
+	"--theme-glass-shadow-light": shadow || theme.light.glassShadow,
+	"--theme-scrollbar-track-light": lightScrollbar.track,
+	"--theme-scrollbar-thumb-light": lightScrollbar.thumb,
+	"--theme-scrollbar-thumb-hover-light": lightScrollbar.hover,
+	"--theme-glass-bg-dark": glassBackground("dark"),
+	"--theme-glass-border-dark": glassBorder("dark"),
+	"--theme-glass-shadow-dark": shadow || theme.dark.glassShadow,
+	"--theme-scrollbar-track-dark": darkScrollbar.track,
+	"--theme-scrollbar-thumb-dark": darkScrollbar.thumb,
+	"--theme-scrollbar-thumb-hover-dark": darkScrollbar.hover,
+	"--font-body": fontStacks[overrides?.typography?.bodyFont || ""] || theme.fontBody,
+	"--font-heading": fontStacks[overrides?.typography?.headingFont || ""] || theme.fontHeading,
+	"--radius-card": overrides?.glass?.cardRadiusPx === undefined ? theme.cardRadius : `${overrides.glass.cardRadiusPx}px`,
+	"--glass-blur": overrides?.glass?.blurPx === undefined ? "12px" : `${overrides.glass.blurPx}px`,
+}}

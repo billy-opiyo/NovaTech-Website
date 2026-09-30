@@ -37,9 +37,6 @@ export interface CreateOrderData {
 	}
 	deliveryMethod: string
 	paymentMethod: string
-	subtotal: number
-	shippingCost: number
-	total: number
 	couponCode?: string
 	notes?: string
 	idempotencyKey?: string
@@ -52,6 +49,13 @@ export async function createOrder(data: CreateOrderData) {
 			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { where: { tenantId: data.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			if (existing) return existing
 		}
+		const store = await tx.store.findFirst({ where: { tenantId: data.tenantId }, select: { commerceSettings: true } })
+		const commerceSettings = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
+			? store.commerceSettings as Record<string, unknown>
+			: {}
+		const categoryAvailability = commerceSettings.categoryAvailability && typeof commerceSettings.categoryAvailability === "object" && !Array.isArray(commerceSettings.categoryAvailability)
+			? commerceSettings.categoryAvailability as Record<string, unknown>
+			: {}
 
 		// Prices, discounts, shipping, and stock are authoritative on the server.
 		const products = await Promise.all(
@@ -61,6 +65,7 @@ export async function createOrder(data: CreateOrderData) {
 					id: true,
 					stock: true,
 					name: true,
+					category: { select: { slug: true } },
 					price: true,
 					discountedPrice: true,
 					variants: { where: { tenantId: data.tenantId }, select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
@@ -77,6 +82,9 @@ export async function createOrder(data: CreateOrderData) {
 			const product = productById.get(item.productId)
 			if (!product) {
 				throw new Error(`Product not found: ${item.productId}`)
+			}
+			if (["phones", "laptops", "tablets", "accessories"].includes(product.category.slug) && categoryAvailability[product.category.slug] === false) {
+				throw new Error(`${product.category.slug} are not currently offered by this store`)
 			}
 			const selectedVariant = resolveVariantSelection(product.variants, item.variant)
 			if (!selectedVariant.valid) throw new Error(`Selected variant is unavailable for ${product.name}`)
@@ -110,13 +118,6 @@ export async function createOrder(data: CreateOrderData) {
 			couponUsedCount = coupon.usedCount
 			discount = Math.min(subtotal, Math.max(0, coupon.discountPercent ? subtotal * coupon.discountPercent / 100 : (coupon.discountAmount || 0)))
 		}
-		const store = await tx.store.findFirst({
-			where: { tenantId: data.tenantId },
-			select: { commerceSettings: true },
-		})
-		const commerceSettings = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
-			? store.commerceSettings as Record<string, unknown>
-			: {}
 		const freeShippingThreshold = typeof commerceSettings.freeShippingThreshold === "number" && Number.isFinite(commerceSettings.freeShippingThreshold)
 			? Math.max(0, commerceSettings.freeShippingThreshold)
 			: 50000
@@ -200,15 +201,18 @@ export async function createOrder(data: CreateOrderData) {
 			}
 		}
 
-		// The order is only awaiting payment at this point. Confirmation is sent
-		// after the merchant-routed M-Pesa callback is verified.
+		// M-Pesa orders remain pending until the provider callback is verified.
+		// Pay-on-delivery orders remain pending for the merchant to confirm after
+		// arranging delivery and collecting payment at the agreed point.
 		if (data.userId) {
 			await tx.notification.create({
 				data: {
 					tenantId: data.tenantId,
 					userId: data.userId,
 					type: "ORDER_STATUS",
-					message: `Order #${order.id.slice(-8).toUpperCase()} is awaiting M-Pesa payment confirmation.`,
+					message: data.paymentMethod === "PAY_ON_DELIVERY"
+						? `Order #${order.id.slice(-8).toUpperCase()} was placed with pay on delivery.`
+						: `Order #${order.id.slice(-8).toUpperCase()} is awaiting M-Pesa payment confirmation.`,
 				},
 			})
 		}
@@ -294,6 +298,51 @@ export async function getOrderById(orderId: string, tenantId: string, userId?: s
 	return order
 }
 
+async function cancelOrderAndRestoreInventory(orderId: string, tenantId: string) {
+	return prisma.$transaction(async (transaction) => {
+		const order = await transaction.order.findFirst({
+			where: { id: orderId, tenantId },
+			include: {
+				items: {
+					where: { tenantId },
+					include: {
+						product: {
+							select: {
+								variants: {
+									where: { tenantId },
+									select: { id: true, name: true, value: true, priceModifier: true, stock: true },
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+		if (!order) throw new Error("Order not found")
+		if (order.status !== "CANCELLED") {
+			if (!ORDER_STATUS_TRANSITIONS[order.status].includes("CANCELLED")) throw new Error(`Order cannot move from ${order.status} to CANCELLED`)
+			const claimed = await transaction.order.updateMany({ where: { id: order.id, tenantId, status: order.status }, data: { status: "CANCELLED" } })
+			if (claimed.count !== 1) throw new Error("Order status changed while it was being cancelled")
+			for (const item of order.items) {
+				const selectedVariant = resolveVariantSelection(item.product.variants, item.variant)
+				if (!selectedVariant.valid) throw new Error("Unable to restore stock for an invalid product variant")
+				if (selectedVariant.selected.length) {
+					for (const variant of selectedVariant.selected) {
+						if (!variant.id) throw new Error("Unable to restore stock for an invalid product variant")
+						await transaction.variant.updateMany({ where: { id: variant.id, tenantId }, data: { stock: { increment: item.quantity } } })
+					}
+				} else {
+					await transaction.product.updateMany({ where: { id: item.productId, tenantId }, data: { stock: { increment: item.quantity } } })
+				}
+			}
+		}
+		return transaction.order.findFirst({
+			where: { id: order.id, tenantId },
+			include: { items: { where: { tenantId }, include: { product: { select: { name: true, slug: true } } } }, user: { select: { name: true, email: true, orderUpdates: true } } },
+		})
+	})
+}
+
 export async function updateOrderStatus(
 	orderId: string,
 	status: string,
@@ -305,7 +354,7 @@ export async function updateOrderStatus(
 	if (existing.status !== status && !ORDER_STATUS_TRANSITIONS[existing.status].includes(status as OrderStatus)) {
 		throw new Error(`Order cannot move from ${existing.status} to ${status}`)
 	}
-	const order = await prisma.order.update({
+	const order = status === "CANCELLED" ? await cancelOrderAndRestoreInventory(existing.id, tenantId) : await prisma.order.update({
 		where: { id: existing.id },
 		data: {
 			status: status as Prisma.OrderUpdateInput["status"],
@@ -332,6 +381,7 @@ export async function updateOrderStatus(
 			},
 		},
 	})
+	if (!order) throw new Error("Order not found")
 
 	// Create notification for user
 	if (order.userId) {
