@@ -6,6 +6,7 @@ import prisma from "backend/lib/db"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { verificationEvidenceDueAt } from "backend/retention/tenant-retention"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getMerchantOnboardingMode, isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 
 const readRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
 const manageRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
@@ -112,6 +113,7 @@ export async function GET(request: NextRequest) {
 		])
 
 		return NextResponse.json({
+			merchantOnboardingMode: getMerchantOnboardingMode(),
 			stats: {
 				totalTenants,
 				activeTenants,
@@ -149,6 +151,7 @@ export async function PATCH(request: NextRequest) {
 	try {
 		const parsed = mutationSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid platform operation", issues: parsed.error.flatten() }, { status: 400 })
+		if (parsed.data.action.includes("verification") && !isMerchantVerificationRequired()) return NextResponse.json({ message: "Merchant document review is disabled under the current light-onboarding policy.", code: "VERIFICATION_REVIEW_DISABLED" }, { status: 409 })
 		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, verificationStatus: true, store: { select: { id: true, publicationStatus: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant store not found" }, { status: 404 })
 		if (parsed.data.action === "approve_verification") {
@@ -165,10 +168,9 @@ export async function PATCH(request: NextRequest) {
 			const nextTenant = verificationAction
 				? await transaction.tenant.update({ where: { id: tenant.id }, data: { verificationStatus: parsed.data.action === "approve_verification" ? "APPROVED" : parsed.data.action === "reject_verification" ? "REJECTED" : "PENDING_REVIEW", verificationReviewedAt: parsed.data.action === "request_verification" ? null : new Date(), verificationReviewerId: parsed.data.action === "request_verification" ? null : access.session!.user.id, verificationNotes: parsed.data.notes || null } })
 				: await transaction.tenant.update({ where: { id: tenant.id }, data: { status: suspended ? "SUSPENDED" : "ACTIVE", suspendedAt: suspended ? new Date() : null, suspensionReason: suspended ? "PLATFORM" : null } })
-			if (tenant.store && (suspended || parsed.data.action === "reject_verification")) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: suspended || parsed.data.action === "reject_verification" ? "SUSPENDED" : tenant.store.publicationStatus } })
-			if (tenant.store && parsed.data.action === "reactivate_store" && tenant.store.publicationStatus === "SUSPENDED" && tenant.verificationStatus === "APPROVED") await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } })
-			if (parsed.data.action === "approve_verification") await transaction.merchantShopperPaymentProfile.updateMany({ where: { tenantId: tenant.id, status: "PENDING" }, data: { status: "ACTIVE", verifiedAt: new Date() } })
-			if (parsed.data.action === "reject_verification") await transaction.merchantShopperPaymentProfile.updateMany({ where: { tenantId: tenant.id }, data: { status: "SUSPENDED", verifiedAt: null } })
+			if (tenant.store && suspended) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "SUSPENDED" } })
+			if (tenant.store && parsed.data.action === "reactivate_store" && tenant.store.publicationStatus === "SUSPENDED" && (!isMerchantVerificationRequired() || tenant.verificationStatus === "APPROVED")) await transaction.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } })
+			if (parsed.data.action === "approve_verification") await transaction.merchantShopperPaymentProfile.updateMany({ where: { tenantId: tenant.id, status: { in: ["PENDING", "CONFIGURED", "SUSPENDED"] } }, data: { status: "ACTIVE", verifiedAt: new Date() } })
 			if (parsed.data.action === "approve_verification" || parsed.data.action === "reject_verification") await transaction.merchantVerificationEvidence.updateMany({ where: { tenantId: tenant.id, retentionDueAt: null }, data: { retentionDueAt: verificationEvidenceDueAt(new Date()) } })
 			return nextTenant
 		})

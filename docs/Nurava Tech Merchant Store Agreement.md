@@ -30,8 +30,8 @@ The platform provider is called **Nurava**, **Platform**, or **Platform Provider
 **Legal/business name:** ______________________________________________________  
 **Trading name:** _____________________________________________________________  
 **Owner/authorized signatory:** _______________________________________________  
-**Business registration number (if applicable):** _______________________________  
-**KRA PIN/tax identifier (if applicable):** _____________________________________  
+**Business registration number (optional, if applicable):** ______________________
+**KRA PIN/tax identifier (optional, if applicable):** ____________________________
 **Physical/business address:** _________________________________________________  
 **Email:** ______________________________  **Telephone:** ______________________  
 **Merchant M-Pesa number/name:** ______________________________________________
@@ -98,11 +98,11 @@ Nurava may update platform components, security controls, or implementation deta
 - customer complaints and after-sales support; and
 - the Merchant’s own payment, delivery, refund, return, and warranty policies.
 
-4.3 Nurava provides store discovery, hosting, catalogue presentation, merchant-routed checkout infrastructure, and enquiry handoff. Where the Merchant has an active approved shopper-payment profile, the Platform sends an M-Pesa STK request to the Merchant’s verified PayBill or Till. Nurava does **not** receive or hold shopper funds, charge a product-sale commission, complete the Merchant’s sale as seller, or represent itself as the merchant of record.
+4.3 Nurava provides store discovery, hosting, catalogue presentation, merchant-routed checkout infrastructure, and enquiry handoff. Where the Merchant has a configured shopper-payment profile, the Platform sends an M-Pesa STK request to the Merchant’s self-declared PayBill or Till; Daraja determines whether the route can accept the payment. Nurava does **not** receive or hold shopper funds, charge a product-sale commission, complete the Merchant’s sale as seller, or represent itself as the merchant of record.
 
-4.4 A shopper may either create a pending order and request payment through the Merchant’s verified M-Pesa route, or select products and prepare an enquiry that is handed to the Merchant through available WhatsApp or email links. An STK request or enquiry handoff is not, by itself, proof that delivery, a refund, warranty, or any other sale obligation has been completed.
+4.4 A shopper may either create a pending order and request payment through the Merchant’s configured, self-declared M-Pesa route, or select products and prepare an enquiry that is handed to the Merchant through available WhatsApp or email links. An STK request or enquiry handoff is not, by itself, proof that delivery, a refund, warranty, or any other sale obligation has been completed.
 
-4.5 New shopper payment initiation and verification are available only when the Platform’s `MERCHANT_ROUTED` mode and the Merchant’s active approved payment profile are enabled. Merchant-routed shopper payments create no Nurava product-sale commission; historical commission records, if any, remain separate for continuity and reconciliation.
+4.5 New shopper payment initiation and verification are available only when the Platform’s `MERCHANT_ROUTED` mode and the Merchant’s configured payment profile are enabled. A configured profile records merchant-provided details; it does not certify account ownership. The payment provider’s response determines whether a payment request can proceed. Merchant-routed shopper payments create no Nurava product-sale commission; historical commission records, if any, remain separate for continuity and reconciliation.
 
 ---
 
@@ -152,15 +152,15 @@ The following launch configuration was recorded in the commercial decisions. The
 
 ## 7. Merchant onboarding and verification
 
-7.1 The Merchant must provide accurate onboarding information and complete the applicable verification process before the store can be approved for publication and selling.
+7.1 The Merchant must provide accurate account, store, contact, and payment-routing information and accept the applicable merchant terms. Under the default light-onboarding policy, documentary identity/business verification and phone OTP are not prerequisites to publication.
 
-7.2 The verification workflow may require verified merchant email, phone OTP, government identification, location evidence, merchant-owned M-Pesa ownership evidence, and an owner declaration or business-registration evidence as applicable. KRA PIN evidence is required where the Merchant represents that it has a registered tax status.
+7.2 The Merchant may self-declare its PayBill/Till number and account/business name. This is not proof of legal identity, tax status, or account ownership. Nurava may retain and re-enable a separate verification workflow if its policy changes; any documents submitted through that workflow remain subject to the stated privacy and retention terms.
 
-7.3 Verification evidence must be submitted through the secure verification workflow. Sensitive identity, tax, location, and settlement evidence must not be placed in ordinary notes, chat, public product storage, or public storefront content.
+7.3 If verification is enabled and evidence is requested, it must be submitted through the secure verification workflow. Sensitive identity, tax, location, and settlement evidence must not be placed in ordinary notes, chat, public product storage, or public storefront content.
 
 7.4 Verification information is encrypted where supported by the platform. Private evidence is stored separately from public product assets and is made available to authorized reviewers through restricted, short-lived access.
 
-7.5 The store must be published, its host must be verified, and the Merchant verification status must be approved before public storefront resolution and selling are enabled. Nurava may reject or suspend verification where evidence is incomplete, inconsistent, fraudulent, unsafe, or otherwise unsuitable for publication.
+7.5 The store must be published and its host must be verified before public storefront resolution and selling are enabled. Independent platform or billing suspension controls continue to apply. When a stricter verification policy is active, approval may additionally be required before selling.
 
 ---
 
@@ -308,7 +308,7 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | SaaS billing method at launch | M-Pesa only |
 | SaaS collection model | Invoice-driven; provider callback confirms payment; no assumed automatic recurring debit |
 | Shopper commerce model | Merchant-direct; the Merchant is merchant of record |
-| Shopper funds | M-Pesa shopper payments are routed to the Merchant’s verified PayBill/Till; Nurava does not receive or hold shopper funds |
+| Shopper funds | M-Pesa shopper payments are routed to the Merchant’s self-declared PayBill/Till; Daraja determines provider acceptance and Nurava does not receive or hold shopper funds |
 | Shopper responsibilities | Merchant handles payment, delivery, returns, refunds, warranties, taxes, complaints, and sale contract |
 | Setup fee and first subscription | Setup fee is paid before the pilot; selected monthly subscription is payable from month seven |
 | Nurava SaaS tax policy | 16% VAT-inclusive pricing for taxable subscriptions, setup fees, and paid add-ons; invoices show the tax breakdown when enabled after registration/classification confirmation |
@@ -318,7 +318,7 @@ This Schedule records the launch decisions captured in the Nurava Tech commercia
 | Add-ons | Optional paid add-ons; M-Pesa add-ons remain pending until successful invoice confirmation |
 | WhatsApp | Opt-in paid order-update add-on; promotional messaging requires consent and unsubscribe controls |
 | Overages | No automatic surprise overages; server-side limits block additions at plan capacity |
-| Store publication | Requires verified host and approved merchant verification |
+| Store publication | Requires publication readiness and a verified host; documentary merchant verification is optional under the default light-onboarding policy |
 | Security/policy suspension | Authorized platform action may restrict access or publication; actions are audited |
 | Billing suspension | Lifecycle rules can move unpaid subscriptions through past-due, grace, suspended, cancelled, incomplete, or unpaid states |
 | Data deletion | Soft deletion followed by export/retention workflow |
@@ -359,20 +359,22 @@ Merchant initials: __________  Platform initials: __________  Date: ____________
 
 ---
 
-# Schedule C — Verification and signing checklist
+# Schedule C — Optional verification and signing checklist
 
-Before publication or first selling access, confirm:
+The default light-onboarding policy does not make the identity, documentary, or phone checks below prerequisites to publication or payment-route configuration. This checklist is retained for internal use only if Nurava re-enables the stricter `VERIFICATION_REQUIRED` policy, or where a separate legal obligation requires a check. The ordinary launch requirements remain account security, accepted merchant terms, applicable billing/setup-fee rules, publication readiness, and any required host/domain checks.
+
+If the stricter verification policy is active, confirm the applicable items:
 
 | Item | Status | Notes/date |
 |---|---|---|
-| Merchant identity and authority checked | ☐ Pending ☐ Complete | __________________ |
-| Merchant email verified | ☐ Pending ☐ Complete | __________________ |
-| Merchant phone OTP verified | ☐ Pending ☐ Complete | __________________ |
-| Government ID reviewed where applicable | ☐ Pending ☐ Complete | __________________ |
-| Location evidence reviewed | ☐ Pending ☐ Complete | __________________ |
-| Merchant-owned M-Pesa evidence reviewed | ☐ Pending ☐ Complete | __________________ |
-| Owner declaration/business registration reviewed | ☐ Pending ☐ Complete | __________________ |
-| KRA PIN/tax evidence reviewed where applicable | ☐ Pending ☐ Complete | __________________ |
+| Merchant identity and authority checked, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Merchant email verified, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Merchant phone OTP verified, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Government ID reviewed, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Location evidence reviewed, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Merchant-owned M-Pesa evidence reviewed, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| Owner declaration/business registration reviewed, if policy requires | ☐ N/A ☐ Pending ☐ Complete | __________________ |
+| KRA PIN/tax evidence reviewed, if separately applicable | ☐ N/A ☐ Pending ☐ Complete | __________________ |
 | Store host/domain verified | ☐ Pending ☐ Complete | __________________ |
 | Legal/privacy/tax fields completed | ☐ Pending ☐ Complete | __________________ |
 | Merchant terms/privacy/agreement versions accepted | ☐ Pending ☐ Complete | __________________ |
@@ -406,7 +408,7 @@ The parties sign this Agreement after professional review confirms the legal, pr
 **Attachments included:**  
 ☐ Lawyer-reviewed merchant terms  ☐ Lawyer-reviewed privacy notice  ☐ Lawyer-reviewed refund/cancellation policy  
 ☐ Data-processing/privacy schedule  ☐ Support/SLA schedule  ☐ Pricing/invoice schedule  
-☐ Verification approval record  ☐ Other: ______________________________________
+☐ Verification approval record, only if required by active policy  ☐ Other: ______
 
 ---
 

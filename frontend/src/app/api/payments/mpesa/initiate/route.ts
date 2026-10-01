@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 		const amount = order.total
 		if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ message: "The order has an invalid payable total." }, { status: 409 })
 		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
-		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 
 		const result = await initiateMpesaPayment({
 			amount,

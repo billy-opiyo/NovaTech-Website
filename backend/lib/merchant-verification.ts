@@ -1,7 +1,20 @@
 import type { MerchantVerificationStatus } from "@prisma/client"
 
+export type MerchantOnboardingMode = "LIGHT" | "VERIFICATION_REQUIRED"
+
+/** One server-side switch keeps verification policy consistent across routes. */
+export function getMerchantOnboardingMode(): MerchantOnboardingMode {
+	return process.env.MERCHANT_ONBOARDING_MODE?.trim().toUpperCase() === "VERIFICATION_REQUIRED"
+		? "VERIFICATION_REQUIRED"
+		: "LIGHT"
+}
+
+export function isMerchantVerificationRequired() {
+	return getMerchantOnboardingMode() === "VERIFICATION_REQUIRED"
+}
+
 export function canMerchantSell(status: MerchantVerificationStatus) {
-	return status === "APPROVED"
+	return !isMerchantVerificationRequired() || status === "APPROVED"
 }
 
 export function merchantVerificationMessage(status: MerchantVerificationStatus) {

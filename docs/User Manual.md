@@ -29,7 +29,8 @@ four distinct experiences:
 The current staging commerce model is <code>MERCHANT_ROUTED</code>. Nurava
 provides discovery, hosting, catalog presentation, and SaaS tools. In this
 mode, a shopper can create a pending order and pay through an M-Pesa STK Push
-that uses the selected merchant's approved, verified PayBill or Till. Nurava
+using the selected merchant's configured, self-declared PayBill or Till. Daraja
+determines whether it accepts and completes the payment. Nurava
 does not receive or hold the product-sale money and charges no product-sale
 commission. The independent merchant remains seller of record and is
 responsible for the final price, delivery, taxes, refunds, warranty, and sale
@@ -322,29 +323,33 @@ and default shipping cost.
 
 Save draft persists to the server when available. If the database is unavailable,
 the editor can keep a local browser preview, but it is not public and cannot
-publish. Publishing requires owner/admin access, approved merchant
-verification, current merchant legal acceptance, and a saved draft.
+publish. Publishing requires owner/admin access, current merchant legal
+acceptance, launch readiness, and a saved draft. Under the default
+light-onboarding policy, merchant identity documents, phone OTP, and platform
+verification approval are not required. Set
+`MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore that workflow.
 
 Every publication creates StoreSettingsVersion. Rollback creates a new version
 from an earlier version, preserving history. Publication does not prove DNS,
 SSL, provider, email, or deployment readiness.
 
-### Merchant verification
+### Merchant verification and M-Pesa setup
 
-Owner/admin users submit business type, tax status, location type, settlement
-account type, legal identity, phone, registration number when applicable, KRA
-PIN when applicable, location, and settlement details.
+Light onboarding is the default. Merchants do not need to submit identity,
+business-registration, location, KRA, or M-Pesa-ownership documents, complete
+merchant phone OTP, or wait for platform review before publishing. Existing
+verification records remain protected by the current retention process.
 
-Sensitive details are encrypted and are not returned in ordinary status
-responses. Merchant email verification is required first. A six-digit phone OTP
-is sent through the configured SMS provider; it expires after 10 minutes,
-requests are rate-limited, and incorrect attempts are capped.
+To accept shopper M-Pesa payments, an owner/admin self-declares the account
+type, PayBill/Till number, and account/business name in Shopper payments, then
+enters Daraja credentials. Credentials are encrypted and scoped to that store.
+The system does not verify account ownership at setup; Daraja's response when a
+shopper initiates payment determines whether the configured route can process
+it. Never enter an M-Pesa PIN. Merchant terms, account access, billing, custom
+domain checks, and platform suspension controls remain separate requirements.
 
-Evidence accepts PDF files up to 10 MB and JPG, PNG, or WEBP images up to 1 MB
-in a separate private R2 bucket. Required evidence is government ID, location
-proof, M-Pesa ownership, business registration or owner declaration, and KRA
-PIN when applicable. Completion enters PENDING_REVIEW. Platform approval is
-required before public selling or publication.
+Set `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore the retained
+phone OTP, private evidence upload, and platform review process.
 
 ### Domains
 
@@ -499,9 +504,12 @@ Platform roles and SUPERADMIN can access:
 - /platform/access — Super Admin-only platform operator invitations, current
   access, and pending invitation management.
 
-Review actions include request verification, approve, and reject. Approval is
-blocked until profile, phone, and required approved evidence are complete.
-Suspension or rejected verification can suspend public publication.
+When `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED`, review actions include
+request verification, approve, and reject; the retained workflow may block
+selling until required evidence is approved. In the default `LIGHT` mode, these
+review actions are unavailable and verification status alone does not suspend
+or unpublish a store. Authorized platform suspension remains independent of
+verification policy.
 
 The platform overview deliberately shows unavailable-state messaging when the
 database/provider is not configured; it must not fabricate tenant or revenue
@@ -660,13 +668,13 @@ backup restore, or deployed browser behavior.
 
 | Symptom | Check |
 |---|---|
-| Store unavailable | Tenant status, verification, publication, domain state, database |
+| Store unavailable | Tenant/store suspension, publication, applicable billing, domain state, database; verification only when strict onboarding mode is enabled |
 | Design is local preview | Database unavailable; local draft is not public |
 | Billing empty | Tenant/subscription records, provider, live DB |
 | Payment not configured | Required provider variables and webhook setup |
 | Images have no public URL | R2 public bucket configuration/upload |
 | No email/SMS/WhatsApp | Provider credentials, sender approval, number formatting |
-| Shopper cannot pay | Check the commerce model, merchant verification approval, matching PayBill/Till details, encrypted credentials, and Daraja callback/provider setup |
+| Shopper cannot pay | Check the commerce model, merchant payment profile status, self-declared PayBill/Till/account name, encrypted credentials, and Daraja callback/provider response; documentary approval is required only in strict onboarding mode |
 | Data appears from wrong store | Correct verified host; tenant context is host-derived |
 | Invitation link fails | Known missing acceptance page; see Future Updates |
 | Platform metrics blank | Intentional unavailable-state behavior without live data |

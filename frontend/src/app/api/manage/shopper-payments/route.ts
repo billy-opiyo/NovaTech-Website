@@ -6,12 +6,14 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { decryptMerchantPaymentDetails, decryptMerchantVerificationDetails, encryptMerchantPaymentDetails } from "backend/lib/merchant-verification-secrets"
+import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { getNuravaShopperPaymentTestConfig } from "backend/lib/shopper-payment-test-mode"
 
 const paymentProfileSchema = z.object({
 	accountType: z.enum(["PAYBILL", "TILL"]),
 	shortcode: z.string().trim().regex(/^\d{5,10}$/, "Enter the merchant Paybill or Till number."),
+	accountName: z.string().trim().min(2).max(160),
 	consumerKey: z.string().trim().min(8).max(300).optional(),
 	consumerSecret: z.string().trim().min(8).max(300).optional(),
 	passkey: z.string().trim().min(8).max(300).optional(),
@@ -31,8 +33,8 @@ export async function GET() {
 		const current = await access()
 		if ("response" in current) return current.response
 		const testConfig = getNuravaShopperPaymentTestConfig(current.context.storeSlug)
-		const profile = await prisma.merchantShopperPaymentProfile.findUnique({ where: { tenantId: current.context.tenantId }, select: { accountType: true, shortcode: true, status: true, verifiedAt: true, credentialsCiphertext: true } })
-		return NextResponse.json({ testMode: Boolean(testConfig), profile: profile ? { accountType: profile.accountType, shortcode: profile.shortcode, status: profile.status, verifiedAt: profile.verifiedAt, credentialsConfigured: Boolean(profile.credentialsCiphertext) } : testConfig ? { accountType: testConfig.accountType, shortcode: testConfig.shortcode, status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } : null })
+		const profile = await prisma.merchantShopperPaymentProfile.findUnique({ where: { tenantId: current.context.tenantId }, select: { accountType: true, shortcode: true, accountName: true, status: true, verifiedAt: true, credentialsCiphertext: true } })
+		return NextResponse.json({ testMode: Boolean(testConfig), verificationRequired: isMerchantVerificationRequired(), profile: profile ? { accountType: profile.accountType, shortcode: profile.shortcode, accountName: profile.accountName || "", status: profile.status, verifiedAt: profile.verifiedAt, credentialsConfigured: Boolean(profile.credentialsCiphertext) } : testConfig ? { accountType: testConfig.accountType, shortcode: testConfig.shortcode, accountName: "Nurava Tech", status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } : null })
 	} catch (error) {
 		return apiErrorResponse(error, "Shopper payment settings unavailable")
 	}
@@ -51,15 +53,19 @@ export async function PATCH(request: Request) {
 			for (const [name, value, expected] of [["consumer key", parsed.data.consumerKey, testConfig.consumerKey], ["consumer secret", parsed.data.consumerSecret, testConfig.consumerSecret], ["STK passkey", parsed.data.passkey, testConfig.passkey]] as const) {
 				if (value && value !== expected) return NextResponse.json({ message: `The ${name} must match the staging sandbox environment value.` }, { status: 400 })
 			}
-			return NextResponse.json({ message: "Nurava Tech staging sandbox payment route is active. Credentials are being read from the staging environment.", testMode: true, profile: { accountType: testConfig.accountType, shortcode: testConfig.shortcode, status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } })
+			return NextResponse.json({ message: "Nurava Tech staging sandbox payment route is active. Credentials are being read from the staging environment.", testMode: true, profile: { accountType: testConfig.accountType, shortcode: testConfig.shortcode, accountName: "Nurava Tech", status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } })
 		}
 
+		const verificationRequired = isMerchantVerificationRequired()
 		const tenant = await prisma.tenant.findUnique({ where: { id: current.context.tenantId }, select: { verificationStatus: true, verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } } } })
-		if (!tenant?.verificationProfile) return NextResponse.json({ message: "Complete merchant verification before configuring shopper payments." }, { status: 409 })
-		let verificationDetails: Record<string, string>
-		try { verificationDetails = decryptMerchantVerificationDetails(tenant.verificationProfile.sensitiveDetailsCiphertext) } catch { return NextResponse.json({ message: "Merchant verification data is unavailable. Contact platform support." }, { status: 503 }) }
-		const verifiedNumber = (verificationDetails.settlementAccountNumber || "").replace(/\D/g, "")
-		if (tenant.verificationProfile.settlementAccountType !== parsed.data.accountType || verifiedNumber !== parsed.data.shortcode) return NextResponse.json({ message: "The shopper payment route must match the verified merchant M-Pesa account." }, { status: 409 })
+		if (!tenant) return NextResponse.json({ message: "Merchant store not found." }, { status: 404 })
+		if (verificationRequired) {
+			if (!tenant.verificationProfile) return NextResponse.json({ message: "Complete merchant verification before configuring shopper payments." }, { status: 409 })
+			let verificationDetails: Record<string, string>
+			try { verificationDetails = decryptMerchantVerificationDetails(tenant.verificationProfile.sensitiveDetailsCiphertext) } catch { return NextResponse.json({ message: "Merchant verification data is unavailable. Contact platform support." }, { status: 503 }) }
+			const verifiedNumber = (verificationDetails.settlementAccountNumber || "").replace(/\D/g, "")
+			if (tenant.verificationProfile.settlementAccountType !== parsed.data.accountType || verifiedNumber !== parsed.data.shortcode) return NextResponse.json({ message: "The shopper payment route must match the verified merchant M-Pesa account." }, { status: 409 })
+		}
 
 		const existing = await prisma.merchantShopperPaymentProfile.findUnique({ where: { tenantId: current.context.tenantId }, select: { credentialsCiphertext: true } })
 		let credentials = { consumerKey: parsed.data.consumerKey, consumerSecret: parsed.data.consumerSecret, passkey: parsed.data.passkey }
@@ -73,13 +79,14 @@ export async function PATCH(request: Request) {
 		const completeCredentials: Record<string, string> = { consumerKey: credentials.consumerKey, consumerSecret: credentials.consumerSecret, passkey: credentials.passkey }
 
 		const approved = tenant.verificationStatus === "APPROVED"
+		const status = verificationRequired ? (approved ? "ACTIVE" : "PENDING") : "CONFIGURED"
 		const profile = await prisma.merchantShopperPaymentProfile.upsert({
 			where: { tenantId: current.context.tenantId },
-			create: { tenantId: current.context.tenantId, accountType: parsed.data.accountType, shortcode: parsed.data.shortcode, credentialsCiphertext: encryptMerchantPaymentDetails(completeCredentials), status: approved ? "ACTIVE" : "PENDING", verifiedAt: approved ? new Date() : null },
-			update: { accountType: parsed.data.accountType, shortcode: parsed.data.shortcode, credentialsCiphertext: encryptMerchantPaymentDetails(completeCredentials), status: approved ? "ACTIVE" : "PENDING", verifiedAt: approved ? new Date() : null },
-			select: { accountType: true, shortcode: true, status: true, verifiedAt: true },
+			create: { tenantId: current.context.tenantId, accountType: parsed.data.accountType, shortcode: parsed.data.shortcode, accountName: parsed.data.accountName, credentialsCiphertext: encryptMerchantPaymentDetails(completeCredentials), status, verifiedAt: verificationRequired && approved ? new Date() : null },
+			update: { accountType: parsed.data.accountType, shortcode: parsed.data.shortcode, accountName: parsed.data.accountName, credentialsCiphertext: encryptMerchantPaymentDetails(completeCredentials), status, verifiedAt: verificationRequired && approved ? new Date() : null },
+			select: { accountType: true, shortcode: true, accountName: true, status: true, verifiedAt: true },
 		})
-		return NextResponse.json({ message: approved ? "Shopper M-Pesa payments enabled for this store." : "Payment details saved and will activate after merchant verification approval.", profile })
+		return NextResponse.json({ message: verificationRequired ? (approved ? "Shopper M-Pesa route configured." : "Payment route saved and will activate after merchant verification approval.") : "Payment route saved. Daraja will confirm whether it can accept payments when a shopper starts checkout.", profile: { ...profile, credentialsConfigured: true } })
 	} catch (error) {
 		return apiErrorResponse(error, "Unable to save shopper payment settings")
 	}
