@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
-import { getPlatformDomain } from "backend/lib/platform-domain"
-import { isValidStoreSlug, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route"
+import { isValidStoreSlug, isVercelProjectHostname, PLATFORM_STORE_COOKIE, PLATFORM_STORE_PREFIX } from "./lib/platform-store-route"
 
 function isPathUnder(pathname: string, basePath: string) {
 	return pathname === basePath || pathname.startsWith(`${basePath}/`)
@@ -22,9 +21,9 @@ export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl
 	const requestHeaders = new Headers(request.headers)
 	requestHeaders.set("x-nurava-request-path", `${request.nextUrl.pathname}${request.nextUrl.search}`)
-	const platformDomain = getPlatformDomain()
+	const platformDomain = (process.env.PLATFORM_DOMAIN || "").trim().toLowerCase()
 	const hostname = request.nextUrl.hostname.toLowerCase()
-	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}`
+	const isPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHostname(hostname)
 	const isWorkspaceRoute = isPathUnder(pathname, "/manage") || isPathUnder(pathname, "/platform") || isPathUnder(pathname, "/admin")
 	const explicitPlatformHome = request.nextUrl.searchParams.get("platformHome") === "1"
 	const isPlatformRoot = pathname === "/"

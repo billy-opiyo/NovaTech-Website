@@ -64,7 +64,7 @@ test("canonical platform hosts bypass merchant domain mappings", async () => {
 	}
 })
 
-test("canonical platform hosts resolve an explicitly scoped store slug", async () => {
+test("Vercel platform hosts resolve an explicitly scoped store slug", async () => {
 	const domainFindUnique = prisma.domain.findUnique
 	const storeFindUnique = prisma.store.findUnique
 	let domainLookups = 0
@@ -80,7 +80,7 @@ test("canonical platform hosts resolve an explicitly scoped store slug", async (
 		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null
 	try {
-		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech.com", "x-nurava-store-slug": "demo" }) })
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-store-slug": "demo" }) })
 		assert.equal(context.storeSlug, "demo")
 		assert.equal(context.tenantId, "tenant-demo")
 		assert.equal(domainLookups, 0)

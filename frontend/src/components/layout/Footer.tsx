@@ -5,7 +5,9 @@ import { useEffect, useState } from "react"
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 import { clientConfig } from "@/config/client.config"
+import { isVercelProjectHostname } from "@/lib/platform-store-route"
 import { getWhatsAppChatHref } from "@/lib/merchant-contact"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
@@ -99,6 +101,8 @@ export default function Footer() {
 		const hostname = window.location.hostname
 		if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
 			setPlatformHomeHref(`${window.location.protocol}//localhost${window.location.port ? `:${window.location.port}` : ""}`)
+		} else if (isVercelProjectHostname(hostname)) {
+			setPlatformHomeHref(window.location.origin)
 		} else {
 			setPlatformHomeHref(PLATFORM_HOME_URL)
 		}
@@ -119,7 +123,7 @@ export default function Footer() {
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
 						{(store.isPlatformHome ? merchantServiceLinks : shopperServiceLinks).map(({ label, href }) => (
 							<li key={href}>
-								<Link href={href} className="hover:text-primary transition-colors">
+								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}
 								</Link>
 							</li>
@@ -136,7 +140,7 @@ export default function Footer() {
 						</>}
 						{(store.isPlatformHome ? platformQuickLinks : quickLinks).map(({ label, href }) => (
 							<li key={href}>
-								<Link href={href} className="hover:text-primary transition-colors">
+								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}
 								</Link>
 							</li>

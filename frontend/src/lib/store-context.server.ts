@@ -6,6 +6,7 @@ import { clientConfig } from "@/config/client.config"
 import { platformSiteSettingsPatchSchema } from "backend/validators/platformSiteSettingsValidator"
 import type { StoreContext } from "./store-context.types"
 import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
+import { isVercelProjectHostname } from "./platform-store-route"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
@@ -65,7 +66,7 @@ function isPlatformHost(value: string | null): boolean {
 	if (!value) return false
 	const hostname = value.trim().toLowerCase().split(":")[0]
 	const platformDomain = getPlatformDomain()
-	return isLocalPreviewHost(value) || hostname === platformDomain || hostname === `www.${platformDomain}`
+	return isLocalPreviewHost(value) || isVercelProjectHostname(hostname) || hostname === platformDomain || hostname === `www.${platformDomain}`
 }
 
 export async function getStoreContext(): Promise<StoreContext> {

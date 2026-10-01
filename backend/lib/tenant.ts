@@ -73,15 +73,9 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	const platformDomain = getPlatformDomain()
 	const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1"
 	const isLocalSubdomain = hostname.endsWith(".localhost")
-<<<<<<< HEAD
 	const isVercelProjectHost = hostname === "vercel.app" || hostname.endsWith(".vercel.app")
 	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHost
 	const requestedStoreSlug = getRequestedStoreSlug(request.headers)
-=======
-	const isVercelProjectHost = hostname === "vercel.app" || hostname.endsWith(".vercel.app")
-	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHost
-	const requestedStoreSlug = getRequestedStoreSlug(request.headers)
->>>>>>> ae86a6e (feat(tenant): add getRequestedStoreSlug function for improved store slug resolution)
 	if (requestedStoreSlug && isCanonicalPlatformHost) {
 		const store = await prisma.store.findUnique({
 			where: { slug: requestedStoreSlug },
@@ -128,7 +122,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		}
 	}
 
-	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`)
+	const isPlatformHost = hostname === platformDomain || hostname.endsWith(`.${platformDomain}`) || isVercelProjectHost
 	const slug = isLocalHost || isCanonicalPlatformHost
 		? "nuravatech"
 		: isLocalSubdomain
