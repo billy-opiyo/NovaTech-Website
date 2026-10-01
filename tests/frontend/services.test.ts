@@ -1,5 +1,6 @@
 import { test, afterEach } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { ApiError, apiFetch, buildQueryString } from "../../frontend/src/services/api"
 import { getProducts, getProductBySlug, searchProducts } from "../../frontend/src/services/products"
 import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from "../../frontend/src/services/orders"
@@ -122,6 +123,13 @@ test("platform store card destinations open the selected storefront directly", (
 	assert.equal(getStorePublicHref("nuravatech", "nuravatech-saas-staging.vercel.app", "nuravatech.com"), "https://nuravatech-saas-staging.vercel.app/store/nuravatech")
 	assert.equal(getStorePublicHref("demo-store", "localhost:3000", "nuravatech.com"), "http://demo-store.localhost:3000")
 	assert.equal(getStorePublicHref("demo-store", "nuravatech.com", "nuravatech.com"), "https://demo-store.nuravatech.com")
+})
+
+test("platform store cards request a fresh tenant-scoped storefront page", () => {
+	const hero = readFileSync("frontend/src/components/home/PlatformHero.tsx", "utf8")
+	const card = hero.slice(hero.indexOf("function StoreCard"), hero.indexOf("function TrustStrip"))
+	assert.match(card, /<a\s+href={store\.href}/)
+	assert.doesNotMatch(card, /<Link\s+href={store\.href}/)
 })
 
 test("merchant WhatsApp links normalize customer contact numbers", () => {
