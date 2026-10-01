@@ -1,0 +1,1 @@
+ALTER TYPE "MerchantShopperPaymentStatus" ADD VALUE IF NOT EXISTS 'CONFIGURED';

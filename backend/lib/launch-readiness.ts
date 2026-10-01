@@ -1,5 +1,6 @@
 import prisma from "./db"
 import { getCurrentMerchantLegalAcceptance } from "./legal-acceptance"
+import { isMerchantVerificationRequired } from "./merchant-verification"
 
 export type ReadinessStatus = "PASS" | "PENDING" | "FAIL"
 export type ReadinessCheck = { key: string; label: string; status: ReadinessStatus; detail: string; source: string }
@@ -27,7 +28,8 @@ export async function getLaunchReadiness(tenantId: string, storeId: string, opti
 	const canonicalCustomDomain = domains.find((domain) => domain.type === "CUSTOM" && domain.isCanonical)
 	const customDomainReady = !canonicalCustomDomain || (canonicalCustomDomain.verificationStatus === "VERIFIED" && Boolean(canonicalCustomDomain.sslStatus && ["ACTIVE", "ISSUED", "READY"].includes(canonicalCustomDomain.sslStatus.toUpperCase())))
 	const statusReady = Boolean(tenant && ["TRIALING", "ACTIVE", "GRACE_PERIOD"].includes(tenant.status))
-	const verificationReady = tenant?.verificationStatus === "APPROVED"
+	const verificationRequired = isMerchantVerificationRequired()
+	const verificationReady = !verificationRequired || tenant?.verificationStatus === "APPROVED"
 	const legalReady = Boolean(legalAcceptance || options.legalAcceptanceOverride)
 	const settingsReady = Boolean(store && (store.publicationStatus === "PUBLISHED" || draft))
 	const billingRecord = store?.tenant.billingRecord
@@ -35,7 +37,7 @@ export async function getLaunchReadiness(tenantId: string, storeId: string, opti
 
 	const checks: ReadinessCheck[] = [
 		{ key: "tenant-status", label: "Tenant account available", status: statusReady ? "PASS" : "FAIL", detail: tenant ? `Tenant status is ${tenant.status}.` : "Tenant was not found.", source: "Tenant.status" },
-		{ key: "merchant-verification", label: "Merchant approval", status: verificationReady ? "PASS" : "PENDING", detail: tenant ? `Merchant verification is ${tenant.verificationStatus}.` : "Merchant verification is unavailable.", source: "Tenant.verificationStatus" },
+		{ key: "merchant-verification", label: verificationRequired ? "Merchant verification" : "Merchant verification (optional)", status: verificationReady ? "PASS" : "PENDING", detail: !verificationRequired ? "Documentary verification is not required under the current light-onboarding policy." : tenant ? `Merchant verification is ${tenant.verificationStatus}.` : "Merchant verification is unavailable.", source: "MERCHANT_ONBOARDING_MODE / Tenant.verificationStatus" },
 		{ key: "setup-fee", label: "One-time setup fee", status: setupFeeReady ? "PASS" : "PENDING", detail: setupFeeReady ? "The selected plan's setup fee is settled." : "Pay the one-time setup fee to start the six-month pilot and publish the store.", source: "BillingRecord.setupFeeStatus" },
 		{ key: "legal-acceptance", label: "Current merchant terms accepted", status: legalReady ? "PASS" : "PENDING", detail: legalReady ? "Current selling terms are accepted." : "A current selling acceptance is required before publication.", source: "MerchantLegalAcceptance" },
 		{ key: "contact-details", label: "Public contact details", status: contact ? "PASS" : "PENDING", detail: contact ? "At least one public contact method is configured." : "Add an email, phone, or WhatsApp contact method to store settings.", source: "Store.contactSettings / draftSettings" },

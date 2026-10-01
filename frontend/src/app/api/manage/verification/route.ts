@@ -8,6 +8,7 @@ import { requireStorePermission } from "backend/lib/tenant-access"
 import { normalizePhone } from "backend/lib/daraja"
 import { decryptMerchantVerificationDetails, encryptMerchantVerificationDetails } from "backend/lib/merchant-verification-secrets"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 
 const profileSchema = z.object({
 	businessType: z.enum(["INDIVIDUAL", "REGISTERED_BUSINESS"]),
@@ -41,7 +42,7 @@ export async function GET() {
 		const { context } = await access()
 		const tenant = await prisma.tenant.findUnique({ where: { id: context.tenantId }, select: { id: true, verificationStatus: true, verificationSubmittedAt: true, verificationReviewedAt: true, verificationNotes: true, verificationProfile: { select: { businessType: true, taxStatus: true, locationType: true, settlementAccountType: true, phoneVerifiedAt: true, updatedAt: true } }, verificationEvidence: { orderBy: { createdAt: "desc" }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, reviewedAt: true, reviewNote: true, createdAt: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant workspace not found" }, { status: 404 })
-		return NextResponse.json({ verification: tenant })
+		return NextResponse.json({ verification: tenant, verificationRequired: isMerchantVerificationRequired() })
 	} catch (error: any) {
 		return apiErrorResponse(error, "Verification status unavailable")
 	}
@@ -49,6 +50,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
 	try {
+		if (!isMerchantVerificationRequired()) return NextResponse.json({ message: "Documentary merchant verification is optional and disabled under the current onboarding policy.", code: "VERIFICATION_NOT_REQUIRED" }, { status: 410 })
 		const { context, session } = await access()
 		const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { emailVerified: true } })
 		if (!user?.emailVerified) return NextResponse.json({ message: "Verify the merchant account email before submitting verification.", code: "EMAIL_VERIFICATION_REQUIRED" }, { status: 409 })

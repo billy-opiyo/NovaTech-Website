@@ -24,7 +24,7 @@
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
 | **Cart Page** | Item list with quantity controls, selection summary, save-for-later section, and direct merchant handoff. |
-| **Shopper Checkout and Handoff** | In `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and requests M-Pesa payment through the merchant's verified PayBill/Till with zero Nurava product commission. WhatsApp/email contact remains available as a direct merchant handoff. |
+| **Shopper Checkout and Handoff** | In `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and requests M-Pesa payment through the merchant-declared PayBill/Till route with zero Nurava product commission. Daraja responses determine payment success; WhatsApp/email handoff remains available. |
 
 ## 👤 Authentication
 
@@ -93,7 +93,7 @@
 | **Transaction commissions** | Merchant-routed shopper sales create no Nurava product commission. The transaction row is retained as a zero-value audit record, while historical commission records remain visible for reconciliation. |
 | **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, legacy commission visibility, invoices, and failed SaaS payments. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
-| **Secure merchant verification** | `/manage/verification` collects encrypted merchant details, verifies the merchant phone by OTP, and uploads evidence to a separate private R2 bucket. Platform reviewers use restricted verification routes and short-lived document links; approval is required before publication or selling. |
+| **Reversible merchant verification** | Light onboarding is the default: identity/business/location/KRA/M-Pesa-ownership documents, phone OTP, and platform approval are not required to publish. Set `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore the retained private evidence and review workflow. Existing records remain under normal retention. |
 | **Lifecycle and retention worker** | `backend/workers/lifecycle.ts` applies subscription expiry/grace transitions, processes 90-day merchant-workspace retention, 12-month closed-enquiry retention, and due private verification-file deletion while preserving 7-year SaaS billing/legal records. Deployment scheduling remains an operational gate. |
 
 ## 📦 Backend API (App Router Route Handlers)
@@ -151,8 +151,8 @@
 ## 💳 Payment Boundaries
 
 SaaS billing and shopper payments are separate. In `MERCHANT_ROUTED` mode,
-shopper M-Pesa requests use the selected merchant's approved, verified PayBill
-or Till credentials. Nurava Tech does not receive or hold product-sale funds,
+shopper M-Pesa requests use the selected merchant's configured, self-declared
+PayBill or Till credentials. Daraja responses determine payment success. Nurava Tech does not receive or hold product-sale funds,
 does not act as merchant of record, and records zero product-sale commission.
 `MERCHANT_DIRECT` is the contact-only fallback and fails closed at the order
 and payment route boundaries.
@@ -164,7 +164,7 @@ and payment route boundaries.
 | `initiateMpesaPayment` | Starts a platform SaaS or merchant-routed shopper STK request using the appropriate server-side credentials. |
 | `verifyMpesaPayment` | Queries the matching platform or merchant route and confirms a pending shopper order after provider verification. |
 | `simulateMpesaPayment` | Sandbox C2B simulate helper. |
-| Merchant route safety | Credentials are encrypted, tenant-scoped, matched to approved merchant verification, and never returned to clients. |
+| Merchant route safety | Credentials are encrypted and tenant-scoped. Under light onboarding, account name and PayBill/Till are merchant-declared; the provider's response determines whether the route can accept payments. Credentials are never returned to clients. |
 | Graceful fallback | Clear not-configured behavior when platform or merchant M-Pesa credentials are absent. |
 
 ### Cards (`backend/payments/cards/`)

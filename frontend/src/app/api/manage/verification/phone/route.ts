@@ -10,6 +10,7 @@ import { decryptMerchantVerificationDetails, hashMerchantVerificationOtp } from 
 import { sendSmsMessage } from "backend/lib/sms"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 
 async function access() {
 	const session = await auth()
@@ -20,6 +21,7 @@ async function access() {
 }
 
 export async function POST(request: NextRequest) {
+	if (!isMerchantVerificationRequired()) return NextResponse.json({ message: "Merchant phone OTP is not required under the current light-onboarding policy.", code: "VERIFICATION_NOT_REQUIRED" }, { status: 410 })
 	const limited = await rateLimiter(request, "merchant-verification-phone")
 	if (limited) return limited
 	try {
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+	if (!isMerchantVerificationRequired()) return NextResponse.json({ message: "Merchant phone OTP is not required under the current light-onboarding policy.", code: "VERIFICATION_NOT_REQUIRED" }, { status: 410 })
 	const limited = await rateLimiter(request, "merchant-verification-phone-confirm")
 	if (limited) return limited
 	try {

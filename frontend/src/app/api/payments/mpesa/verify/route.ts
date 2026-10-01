@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 		const payment = await prisma.payment.findFirst({ where: { tenantId: context.tenantId, OR: [{ providerReference: validated.reference }, { metadata: { path: ["reference"], equals: validated.reference } }] } })
 		if (!payment || payment.kind !== "ORDER" || !payment.orderId) return NextResponse.json({ message: "Shopper payment request not found in this store." }, { status: 404 })
 		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
-		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 		const result = await verifyMpesaPayment(validated.reference, context.tenantId, merchantConfig)
 		if (payment && result.status !== "PENDING") {
 			// Order payment state is reconciled by verifyMpesaPayment. SaaS billing

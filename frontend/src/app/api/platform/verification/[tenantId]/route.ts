@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { decryptMerchantVerificationDetails } from "backend/lib/merchant-verification-secrets"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 
 const reviewRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
 
@@ -10,6 +11,7 @@ async function requireReviewer() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
 	if (session.user.role !== "SUPERADMIN" && !reviewRoles.has(session.user.platformRole || "")) return { response: NextResponse.json({ message: "Verification reviewer access required" }, { status: 403 }) }
+	if (!isMerchantVerificationRequired()) return { response: NextResponse.json({ message: "Merchant verification review is disabled under the current light-onboarding policy.", code: "VERIFICATION_REVIEW_DISABLED" }, { status: 409 }) }
 	return { session }
 }
 

@@ -8,6 +8,7 @@ import { isShopperCheckoutEnabled } from "../lib/commerce-model"
 import { calculateSaasInvoiceTotals, configuredSaasVatRate } from "./policy"
 import { pilotTrialEndsAt } from "./mvp-policy"
 import { finalizeInvoiceCredits, releaseInvoiceCredits, reserveBillingCredits } from "./credits"
+import { isMerchantVerificationRequired } from "../lib/merchant-verification"
 
 export class BillingError extends Error {
 	status: number
@@ -89,7 +90,7 @@ async function restoreTenantAfterBillingPayment(tenantId: string, planId: string
 		return
 	}
 	await prisma.tenant.update({ where: { id: tenantId }, data: { status: "ACTIVE", planId, ...(tenant.suspensionReason === "BILLING" ? { suspensionReason: null, suspendedAt: null } : {}) } }).catch(() => undefined)
-	if (tenant.suspensionReason === "BILLING" && tenant.verificationStatus === "APPROVED" && tenant.store?.publicationStatus === "SUSPENDED") {
+	if (tenant.suspensionReason === "BILLING" && (!isMerchantVerificationRequired() || tenant.verificationStatus === "APPROVED") && tenant.store?.publicationStatus === "SUSPENDED") {
 		await prisma.store.update({ where: { id: tenant.store.id }, data: { publicationStatus: "PUBLISHED" } }).catch(() => undefined)
 	}
 }

@@ -23,11 +23,13 @@ export default function MerchantVerificationPage() {
 	const [code, setCode] = useState("")
 	const [message, setMessage] = useState("Loading verification status…")
 	const [busy, setBusy] = useState(false)
+	const [verificationRequired, setVerificationRequired] = useState(true)
 
 	async function load() {
 		const response = await fetch("/api/manage/verification", { cache: "no-store" })
 		const data = await response.json().catch(() => ({}))
 		if (!response.ok) throw new Error(data.message || "Verification status unavailable")
+		setVerificationRequired(Boolean(data.verificationRequired))
 		setVerification(data.verification)
 		if (data.verification.verificationProfile) setForm((current) => ({ ...current, businessType: data.verification.verificationProfile.businessType, taxStatus: data.verification.verificationProfile.taxStatus, locationType: data.verification.verificationProfile.locationType, settlementAccountType: data.verification.verificationProfile.settlementAccountType }))
 		setMessage("")
@@ -77,6 +79,7 @@ export default function MerchantVerificationPage() {
 
 	if (message && !verification) return <div className="glass-card p-6"><p>{message}</p></div>
 	if (!verification) return null
+	if (!verificationRequired) return <section className="glass-card max-w-3xl space-y-3 p-6"><h1 className="text-2xl font-bold">Merchant verification is optional</h1><p className="text-gray-600">This store can be configured and published without identity, business-registration, location, KRA, or M-Pesa ownership documents, phone OTP, or a platform review.</p><p className="text-sm text-gray-500">Your store’s sign-in and access security, merchant terms, payment-provider requirements, and platform suspension controls still apply. Previously submitted verification records remain subject to the existing retention policy.</p></section>
 	const approved = verification.verificationStatus === "APPROVED"
 	const pending = verification.verificationStatus === "PENDING_REVIEW"
 	const phoneVerified = Boolean(verification.verificationProfile?.phoneVerifiedAt)

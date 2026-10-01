@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
-import { merchantVerificationMessage } from "backend/lib/merchant-verification"
+import { isMerchantVerificationRequired, merchantVerificationMessage } from "backend/lib/merchant-verification"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { getLaunchReadiness } from "backend/lib/launch-readiness"
 import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 		if (!store) return withRequestId(NextResponse.json({ message: "Store not found" }, { status: 404 }), requestId)
 		const readiness = await getLaunchReadiness(context.tenantId, context.storeId, { legalAcceptanceOverride: body.acceptLegalTerms === true })
 		if (!readiness.ready) return withRequestId(NextResponse.json({ message: "Complete the launch readiness checks before publishing.", code: "LAUNCH_READINESS_INCOMPLETE", checks: readiness.checks, requestId }, { status: 409 }), requestId)
-		if (store.tenant.verificationStatus !== "APPROVED") return NextResponse.json({ message: merchantVerificationMessage(store.tenant.verificationStatus), code: "MERCHANT_VERIFICATION_REQUIRED", verificationStatus: store.tenant.verificationStatus }, { status: 409 })
+		if (isMerchantVerificationRequired() && store.tenant.verificationStatus !== "APPROVED") return NextResponse.json({ message: merchantVerificationMessage(store.tenant.verificationStatus), code: "MERCHANT_VERIFICATION_REQUIRED", verificationStatus: store.tenant.verificationStatus }, { status: 409 })
 		const currentAcceptance = await getCurrentMerchantLegalAcceptance(context.tenantId, "SELLING")
 		if (!currentAcceptance && body.acceptLegalTerms !== true) return NextResponse.json({ message: "Confirm the current merchant terms, privacy notice, and merchant responsibilities before publishing.", code: "MERCHANT_LEGAL_ACCEPTANCE_REQUIRED" }, { status: 409 })
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })

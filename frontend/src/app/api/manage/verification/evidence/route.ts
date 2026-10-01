@@ -10,6 +10,7 @@ import { deletePrivateFile, generateVerificationFileKey, uploadPrivateFile } fro
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES, type ValidatedFileKind } from "backend/lib/file-validation"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 
 const evidenceTypes = ["GOVERNMENT_ID", "BUSINESS_REGISTRATION", "KRA_PIN", "LOCATION_PROOF", "MPESA_OWNERSHIP", "OWNER_DECLARATION"] as const
 const evidenceSchema = z.object({ type: z.enum(evidenceTypes) })
@@ -35,6 +36,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+	if (!isMerchantVerificationRequired()) return NextResponse.json({ message: "Document uploads are disabled under the current light-onboarding policy.", code: "VERIFICATION_NOT_REQUIRED" }, { status: 410 })
 	const limited = await rateLimiter(request, "merchant-verification-evidence")
 	if (limited) return limited
 	let objectKey: string | null = null
