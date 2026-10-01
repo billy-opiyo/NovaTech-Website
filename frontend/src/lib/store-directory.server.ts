@@ -1,9 +1,8 @@
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
-import { normalizeHostname } from "backend/lib/tenant"
 import { getPlatformDomain } from "backend/lib/platform-domain"
-import { isVercelProjectHostname } from "./platform-store-route"
+import { getStorePublicHref, resolveDirectoryStoreLogo } from "./platform-store-route"
 
 export type PublishedStoreDirectoryEntry = {
 	id: string
@@ -73,7 +72,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: store.logoUrl,
+				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
 				tagline,
 				featuredProduct: product ? {
 					name: product.name,
@@ -148,7 +147,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: store.logoUrl,
+				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
 				tagline: typeof homepage.heroDescription === "string" ? homepage.heroDescription : "Explore this store's catalogue and merchant offers.",
 				averageRating: Math.round(review.averageRating * 10) / 10,
 				reviewCount: review.reviewCount,
@@ -166,13 +165,5 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 export async function getStorePublicUrl(slug: string): Promise<string> {
 	const requestHeaders = await headers()
 	const host = requestHeaders.get("host") || "localhost:3000"
-	const hostname = normalizeHostname(host)
-	const port = host.includes(":") ? `:${host.split(":").pop()}` : ""
-	if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
-		return `http://${slug}.localhost${port}`
-	}
-	if (isVercelProjectHostname(hostname)) return `https://${hostname}/store/${encodeURIComponent(slug)}`
-
-	const platformDomain = getPlatformDomain()
-	return `https://${slug}.${platformDomain}`
+	return getStorePublicHref(slug, host, getPlatformDomain())
 }

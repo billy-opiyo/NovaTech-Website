@@ -7,6 +7,7 @@ import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from ".
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
 import { getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
+import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -109,6 +110,18 @@ test("store navigation keeps merchant routes inside the active storefront", () =
 	assert.equal(getStoreRouteHref(merchant, "/category/phones"), "/store/demo/category/phones")
 	assert.equal(getStoreRouteHref(merchant, "/store/demo/products"), "/store/demo/products")
 	assert.equal(getStoreRouteHref(platform, "/stores?all=1"), "/stores?all=1")
+})
+
+test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {
+	assert.equal(resolveDirectoryStoreLogo("nuravatech", null, "/images/nurava-logo.png"), "/images/nurava-logo.png")
+	assert.equal(resolveDirectoryStoreLogo("nuravatech", "https://cdn.example.com/store-logo.webp", "/images/nurava-logo.png"), "https://cdn.example.com/store-logo.webp")
+	assert.equal(resolveDirectoryStoreLogo("another-store", null, "/images/nurava-logo.png"), null)
+})
+
+test("platform store card destinations open the selected storefront directly", () => {
+	assert.equal(getStorePublicHref("nuravatech", "nuravatech-saas-staging.vercel.app", "nuravatech.com"), "https://nuravatech-saas-staging.vercel.app/store/nuravatech")
+	assert.equal(getStorePublicHref("demo-store", "localhost:3000", "nuravatech.com"), "http://demo-store.localhost:3000")
+	assert.equal(getStorePublicHref("demo-store", "nuravatech.com", "nuravatech.com"), "https://demo-store.nuravatech.com")
 })
 
 test("merchant WhatsApp links normalize customer contact numbers", () => {
