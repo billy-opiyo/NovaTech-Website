@@ -46,7 +46,7 @@ function getHeroStores(stores: Array<PlatformDiscoveryStore & { href: string }>)
 function StoreCard({ store, isLight }: { store: HeroStore; isLight: boolean }) {
 	const initials = store.name.split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase()
 	return (
-		<Link
+		<a
 			href={store.href}
 			className={`group flex min-h-28 items-center gap-4 rounded-2xl border p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg ${isLight ? "border-blue-200 bg-white" : "border-white/15 bg-[#061427]"}`}
 		>
@@ -57,7 +57,7 @@ function StoreCard({ store, isLight }: { store: HeroStore; isLight: boolean }) {
 				<h3 className={`break-words text-lg font-bold leading-tight group-hover:text-primary ${isLight ? "text-[#172554]" : "text-white"}`}>{store.name}</h3>
 				<p className={`mt-2 flex items-center gap-1 text-sm ${isLight ? "text-[#172554]/75" : "text-white/75"}`}><Star size={14} className="fill-current text-yellow-400" /> {store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}</p>
 			</div>
-		</Link>
+		</a>
 	)
 }
 
