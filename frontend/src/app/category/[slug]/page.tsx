@@ -111,15 +111,17 @@ export default function CategoryPage() {
 	const [catalogProducts, setCatalogProducts] = useState<CategoryProduct[]>([])
 	const [trendingProducts, setTrendingProducts] = useState<CategoryProduct[]>([])
 	const [loadingProducts, setLoadingProducts] = useState(true)
+	const query = `category=${encodeURIComponent(slug)}&limit=4&sortBy=newest`
+	const catalogUrl = getStoreRouteHref(store, `/api/products?${query}`)
+	const trendingUrl = getStoreRouteHref(store, `/api/products?${query}&trending=true`)
 
 	useEffect(() => {
 		if (!category) return
 		const controller = new AbortController()
-		const query = `category=${encodeURIComponent(slug)}&limit=4&sortBy=newest`
 		setLoadingProducts(true)
 		Promise.all([
-			fetch(getStoreRouteHref(store, `/api/products?${query}`), { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Products unavailable"))),
-			fetch(getStoreRouteHref(store, `/api/products?${query}&trending=true`), { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Trending products unavailable"))),
+			fetch(catalogUrl, { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Products unavailable"))),
+			fetch(trendingUrl, { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Trending products unavailable"))),
 		])
 			.then(([catalogBody, trendingBody]) => {
 				setCatalogProducts(catalogBody.products || [])
@@ -130,9 +132,11 @@ export default function CategoryPage() {
 				setCatalogProducts([])
 				setTrendingProducts([])
 			})
-			.finally(() => setLoadingProducts(false))
+			.finally(() => {
+				if (!controller.signal.aborted) setLoadingProducts(false)
+			})
 		return () => controller.abort()
-	}, [category, slug, store])
+	}, [category, slug, catalogUrl, trendingUrl])
 
 	if (!category || !categoryIsEnabled) return <NotFoundState title="Category not found" description="That product category is not available in this store. Browse the store's available products instead." />
 
