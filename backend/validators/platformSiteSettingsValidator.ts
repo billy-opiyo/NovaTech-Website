@@ -110,12 +110,16 @@ export const platformSiteSettingsPatchSchema = z.object({
 		showProgress: z.boolean().optional(),
 		welcomeText: optionalText(120),
 		loadingText: optionalText(120),
+		backgroundMode: z.enum(["images", "color", "glass"]).optional(),
+		backgroundColor: hexColor,
+		glassOpacity: z.number().int().min(0).max(100).optional(),
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),
 	hero: z.object({
 		title: optionalText(180),
 		highlight: optionalText(120),
 		description: optionalText(320),
+		// Legacy saved artwork remains parseable for compatibility; merge strips it.
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),
 	design: platformDesignSchema.optional(),

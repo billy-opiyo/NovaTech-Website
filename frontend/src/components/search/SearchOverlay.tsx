@@ -30,14 +30,10 @@ interface ProductSearchResult {
 }
 
 const popularSearches = [
-	"iPhone 15",
-	"MacBook",
-	"Samsung Galaxy",
-	"Gaming Laptop",
-	"AirPods",
-	"Smartwatch",
-	"4K TV",
-	"iPad",
+	"Popular products",
+	"New arrivals",
+	"Best sellers",
+	"Special offers",
 ]
 
 interface SearchOverlayProps {
@@ -92,6 +88,10 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)
 			.map((page) => ({ type: "page", text: page.text, href: getStoreRouteHref(store, page.href), description: page.description }))
+		const categorySuggestions: SearchSuggestion[] = store.isPlatformHome ? [] : store.homepage.categories
+			.filter((category) => `${category.name} ${category.slug}`.toLowerCase().includes(normalizedQuery))
+			.slice(0, 4)
+			.map((category) => ({ type: "category", text: category.name, href: getStoreRouteHref(store, `/category/${category.slug}`), description: `Browse ${category.name}` }))
 
 		const controller = new AbortController()
 		const loadSuggestions = async () => {
@@ -109,9 +109,9 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 					image: product.images?.[0],
 					price: product.discountedPrice ?? product.price,
 				}))
-				setSuggestions([...pageSuggestions, ...products].slice(0, 8))
+				setSuggestions([...pageSuggestions, ...categorySuggestions, ...products].slice(0, 8))
 			} catch (error) {
-				if ((error as Error).name !== "AbortError") setSuggestions(pageSuggestions)
+				if ((error as Error).name !== "AbortError") setSuggestions([...pageSuggestions, ...categorySuggestions].slice(0, 8))
 			}
 		}
 		const debounce = window.setTimeout(loadSuggestions, 150)

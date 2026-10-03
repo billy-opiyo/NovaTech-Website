@@ -3,7 +3,7 @@
 The storefront has safe developer defaults plus database-backed store settings:
 
 - `frontend/src/config/client.config.ts` contains fallback branding, content, contact details, navigation, SEO, commerce defaults, and feature flags.
-- `frontend/src/config/theme-presets.ts` contains the reusable electronics-store visual systems.
+- `frontend/src/config/theme-presets.ts` contains reusable visual systems for multi-industry storefronts.
 - The active server-resolved `StoreContext` supplies published store branding, homepage content, contact details, map links, and theme settings when those values exist.
 
 ## Selling to a new client

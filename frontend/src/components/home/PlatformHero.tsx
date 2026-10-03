@@ -4,30 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeftRight, ArrowRight, ChevronDown, Search, ShoppingBag, ShoppingCart, Star, Store } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
+import { useStoreContext } from "@/lib/store-context"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
-
-const heroImages = {
-	dark: {
-		desktop: "/images/Nurava%20Tech%20hero%20desktop-image-ui.png",
-		mobile: "/images/Nurava%20Tech%20hero%20mobile-image-ui.png",
-	},
-	light: {
-		desktop: "/images/Nurava%20Tech%20hero%20desktop-image-ui%20light.png",
-		mobile: "/images/Nurava%20Tech%20hero%20mobile-image-ui%20light.png",
-	},
-} as const
 
 type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
 	href: string
 	productCount?: number
 	fallbackColor?: string
 }
-
-const fallbackStores: HeroStore[] = [
-	{ id: "fallback-gadget-galaxy", name: "Gadget Galaxy", logoUrl: null, averageRating: 0, reviewCount: 0, href: "/stores?all=1", fallbackColor: "#1677ff", industry: { name: "Electronics", slug: "electronics" }, isDemo: false },
-	{ id: "fallback-techhub", name: "TechHub Electronics", logoUrl: null, averageRating: 0, reviewCount: 0, href: "/stores?all=1", fallbackColor: "#a855f7", industry: { name: "Electronics", slug: "electronics" }, isDemo: false },
-	{ id: "fallback-digital-zone", name: "Digital Zone", logoUrl: null, averageRating: 0, reviewCount: 0, href: "/stores?all=1", fallbackColor: "#f97316", industry: { name: "Electronics", slug: "electronics" }, isDemo: false },
-]
 
 const trustItems = [
 	{ title: "We don't sell.", text: "We empower stores to sell better.", icon: Store },
@@ -77,38 +61,29 @@ function TrustStrip({ isLight }: { isLight: boolean }) {
 	)
 }
 
-function HeroArtwork({ theme }: { theme: "dark" | "light" }) {
-	const images = heroImages[theme]
-	const isLight = theme === "light"
-	const artworkAspect = isLight ? "aspect-[1024/1060] lg:aspect-[1672/760]" : "aspect-[944/1288] lg:aspect-[1672/760]"
-  const maskBackground = isLight
-    ? "linear-gradient(180deg, #fdfdfd 0%, #f8fbff 100%)"
-    : "radial-gradient(120% 100% at 100% 0%, #032e5e 0%, rgba(3, 46, 94, 0.42) 38%, rgba(3, 46, 94, 0) 72%), radial-gradient(130% 120% at 100% 100%, #022045 0%, rgba(2, 32, 69, 0) 75%), linear-gradient(180deg, #000b1c 0%, #03182d 100%)"
-	return (
-		<div className={`relative ${artworkAspect} w-full overflow-hidden rounded-3xl shadow-2xl shadow-primary/10 ${isLight ? "bg-[#f8fbff]" : "bg-[#020a18]"}`}>
-			<picture className="absolute inset-0 block">
-				<source media="(max-width: 1023px)" srcSet={images.mobile} />
-				<img src={images.desktop} alt="" className="absolute left-0 top-0 h-auto w-full max-w-none" />
-			</picture>
-			{/* The desktop composite contains the old left-side store panel. The artwork-only crop keeps the device montage while removing that embedded content. */}
-			<div className={`absolute bottom-0 left-0 hidden w-[46%] lg:block ${isLight ? "top-[75%]" : "top-[65%]"}`} style={{ background: maskBackground }} aria-hidden="true" />
-		</div>
-	)
-}
-
 export default function PlatformHero({ stores }: { stores: Array<PlatformDiscoveryStore & { href: string }> }) {
 	const { theme } = useTheme()
+	const storeContext = useStoreContext()
 	const isLight = theme === "light"
+	const hero = storeContext.isPlatformHome ? storeContext.platformSettings?.hero : undefined
+	const heroTitle = hero?.title?.trim() || "Nurava Tech is the technology platform"
+	const heroHighlight = hero?.highlight?.trim() || "connecting you with trusted stores"
+	const heroDescription = hero?.description?.trim() || "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya."
 	const [industrySlug, setIndustrySlug] = useState("all")
-	const availableStores: HeroStore[] = stores.length ? stores : fallbackStores
+	const availableStores: HeroStore[] = stores
 	const industries = Array.from(new Map(availableStores.flatMap((store) => store.industry ? [[store.industry.slug, store.industry.name] as const] : [])).entries()).sort((left, right) => left[1].localeCompare(right[1]))
 	const filteredStores = industrySlug === "all" ? availableStores : availableStores.filter((store) => store.industry?.slug === industrySlug)
 	const heroStores = getHeroStores(filteredStores)
 
 	return (
-		<section aria-labelledby="platform-hero-title" className="space-y-5">
-			<h1 id="platform-hero-title" className="sr-only">One Platform. Many Trusted Stores. Endless Choices.</h1>
-			<HeroArtwork theme={theme} />
+		<section aria-labelledby="platform-hero-title" className="space-y-8">
+			<div className="glass-card navy-glass rounded-3xl px-5 py-10 text-center shadow-xl sm:px-10 sm:py-14 lg:px-16 lg:py-16">
+				<h1 id="platform-hero-title" className="mx-auto max-w-5xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-6xl">
+					{heroTitle} <span className="text-primary">{heroHighlight}</span>
+				</h1>
+				<p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-gray-600 dark:text-gray-300 sm:text-lg lg:text-xl">{heroDescription}</p>
+			</div>
+			<TrustStrip isLight={isLight} />
 			<section className={`rounded-3xl border p-5 shadow-xl sm:p-8 ${isLight ? "border-blue-200 bg-[#edf6ff]" : "border-white/15 bg-[#071a2c]"}`}>
 				<div className="text-center">
 					<h2 className={`text-2xl font-extrabold sm:text-3xl ${isLight ? "text-[#172554]" : "text-white"}`}>Top Available Stores</h2>
@@ -134,8 +109,6 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 				</div>
 				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} isLight={isLight} />)}</div> : <p className="mt-6 rounded-xl border border-white/10 p-6 text-center text-sm text-gray-500">No stores are available in this industry yet.</p>}
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
-				<p className={`mt-6 text-center text-sm sm:text-base ${isLight ? "text-[#172554]" : "text-white/85"}`}><span className="font-bold text-primary">Nurava Tech</span><span className="mx-2">—</span>The Marketplace for Electronics Store Partners and Smart Shoppers.</p>
-				<div className="mt-8 border-t border-white/10 pt-8"><TrustStrip isLight={isLight} /></div>
 			</section>
 		</section>
 	)

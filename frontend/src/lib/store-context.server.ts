@@ -8,43 +8,9 @@ import type { StoreContext } from "./store-context.types"
 import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
 import { isVercelProjectHostname } from "./platform-store-route"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
+import { themeOverridesFromIndustry } from "./industry-theme"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
-
-function themeOverridesFromIndustry(theme: { colors: unknown; typography: unknown } | null | undefined) {
-	if (!theme) return undefined
-	const colors = record(theme.colors)
-	const typography = record(theme.typography)
-	const colorValue = (key: string) => typeof colors[key] === "string" && /^#[0-9a-f]{6}$/i.test(colors[key] as string) ? colors[key] as string : undefined
-	const lightPalette = {
-		...(colorValue("background") ? { background: colorValue("background") } : {}),
-		...(colorValue("surface") ? { surface: colorValue("surface") } : {}),
-		...(colorValue("text") ? { text: colorValue("text") } : {}),
-		...(colorValue("muted") ? { muted: colorValue("muted") } : {}),
-		...(colorValue("border") ? { border: colorValue("border") } : {}),
-	}
-	const darkPalette = {
-		background: colorValue("darkBackground") || "#171717",
-		surface: colorValue("darkSurface") || "#262626",
-		text: colorValue("darkText") || "#f5f5f5",
-		muted: colorValue("darkMuted") || "#b3b3b3",
-		border: colorValue("darkBorder") || "#454545",
-	}
-	const allowedFonts = new Set(["system", "inter", "georgia", "trebuchet", "verdana"])
-	const bodyFont = typeof typography.body === "string" && allowedFonts.has(typography.body) ? typography.body : undefined
-	const headingFont = typeof typography.heading === "string" && allowedFonts.has(typography.heading) ? typography.heading : undefined
-	return {
-		colors: {
-			...(colorValue("primary") ? { primary: colorValue("primary") } : {}),
-			...(colorValue("primaryLight") ? { primaryLight: colorValue("primaryLight") } : {}),
-			...(colorValue("primaryDark") ? { primaryDark: colorValue("primaryDark") } : {}),
-			...(colorValue("accent") ? { accent: colorValue("accent") } : {}),
-			light: lightPalette,
-			dark: darkPalette,
-		},
-		...(bodyFont || headingFont ? { typography: { ...(bodyFont ? { bodyFont } : {}), ...(headingFont ? { headingFont } : {}) } } : {}),
-	}
-}
 
 // Merchant storefronts must not inherit Nurava platform contact details when
 // a merchant has not configured its own public contact information yet.
@@ -155,6 +121,8 @@ export async function getStoreContext(): Promise<StoreContext> {
 			...defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset),
 			...record(store.homepageSettings),
 		}
+		delete homepage.heroImage
+		delete homepage.heroImageAlt
 		const legalSettings = record(homepage.legal)
 		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)

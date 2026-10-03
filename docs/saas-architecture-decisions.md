@@ -1,14 +1,14 @@
 # Nurava Tech SaaS architecture decisions
 
 **Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
-**Date:** 2026-08-21
+**Date:** 2026-10-03 (positioning updated)
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
 
 ## Product scope
 
-- Initial customers are independent Kenyan electronics shops, phone and laptop dealers, repair/accessory businesses, and small distributors.
-- The first release hosts separate merchant stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
+- Nurava Tech serves independent Kenyan merchants across diverse industries through configurable storefronts and catalog settings.
+- The platform serves diverse independent merchants through separate configured stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
 - The beta includes a hosted storefront, catalog discovery, staff memberships, theme/content controls, basic analytics, platform subdomains, merchant-routed shopper M-Pesa checkout with zero product commission, merchant-direct enquiry fallback, merchant SaaS billing, and platform support.
 - Advanced warehouse management, marketplace carts, custom application work, and enterprise database isolation remain later-stage work.
 

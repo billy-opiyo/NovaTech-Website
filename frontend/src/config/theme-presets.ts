@@ -2,7 +2,7 @@
  * Developer-managed visual presets.
  *
  * Keep these presets free of client data. Client-specific branding belongs in
- * client.config.ts, while this file contains reusable electronics-store UI
+ * client.config.ts, while this file contains reusable multi-industry storefront UI
  * systems that can be selected from that config.
  */
 
@@ -88,7 +88,7 @@ export const THEME_PRESETS = {
 	"royal-purple": {
 		id: "royal-purple",
 		name: "Royal Purple",
-		description: "Confident violet and gold for premium lifestyle electronics.",
+		description: "Confident violet and gold for a polished, premium storefront.",
 		primary: "#7c3aed",
 		primaryDark: "#6d28d9",
 		accent: "#f59e0b",
@@ -114,7 +114,7 @@ export const THEME_PRESETS = {
 	"ocean-teal": {
 		id: "ocean-teal",
 		name: "Ocean Teal",
-		description: "Calm teal and coral for approachable everyday electronics.",
+		description: "Calm teal and coral for approachable everyday commerce.",
 		primary: "#0f766e",
 		primaryDark: "#115e59",
 		accent: "#f97316",

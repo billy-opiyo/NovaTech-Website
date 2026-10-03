@@ -17,7 +17,15 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const showProgress = splashSettings?.showProgress !== false
 	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
 	const splashImages = splashSettings?.images || {}
+	const backgroundMode = splashSettings?.backgroundMode || "glass"
+	const useBackgroundImages = backgroundMode === "images"
+	const backgroundColor = splashSettings?.backgroundColor || "#071a2c"
+	const colorChannels = backgroundColor.match(/[\da-f]{2}/gi)?.map((channel) => Number.parseInt(channel, 16)) || [7, 26, 44]
+	const splashForeground = colorChannels[0] * 0.299 + colorChannels[1] * 0.587 + colorChannels[2] * 0.114 > 150 ? "#0f172a" : "#ffffff"
 	const splashStyle = {
+		"--splash-background-color": backgroundColor,
+		"--splash-foreground": splashForeground,
+		"--splash-glass-opacity": `${Math.max(30, Math.min(100, splashSettings?.glassOpacity ?? 88))}%`,
 		"--splash-dark-desktop": `url("${splashImages.darkDesktop || "/images/NovaTech cover desktop.png"}")`,
 		"--splash-dark-tablet": `url("${splashImages.darkTablet || "/images/NovaTech cover mobile.png"}")`,
 		"--splash-dark-mobile": `url("${splashImages.darkMobile || "/images/NovaTech cover mobile.png"}")`,
@@ -58,6 +66,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 		let frame = 0
 
 		const warmActiveSplashImage = () => {
+			if (!useBackgroundImages) return
 			const isLight = !document.documentElement.classList.contains("dark")
 			const isDesktop = window.matchMedia("(min-width: 1200px)").matches
 			const isTablet = window.matchMedia("(min-width: 768px)").matches
@@ -105,7 +114,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			window.cancelAnimationFrame(frame)
 			if (finishTimer) window.clearTimeout(finishTimer)
 		}
-	}, [shouldShowSplash, splashDuration, splashImages.darkDesktop, splashImages.darkMobile, splashImages.lightDesktop, splashImages.lightMobile])
+	}, [shouldShowSplash, splashDuration, showProgress, useBackgroundImages, splashImages.darkDesktop, splashImages.darkTablet, splashImages.darkMobile, splashImages.lightDesktop, splashImages.lightTablet, splashImages.lightMobile])
 
 	useEffect(() => {
 		// `visible` starts true so the initial platform document can render the
@@ -141,7 +150,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	if (!readyToReveal) {
 		return (
 			<div
-				className="splash-screen"
+				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}`}
 				style={splashStyle}
 				role="status"
 				aria-live="polite"

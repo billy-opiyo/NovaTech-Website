@@ -1,16 +1,16 @@
 # Multi-Industry Commerce Audit and Migration Report
 
-Status: Phase 1 audit completed before application changes
+Status: Initial architecture audit and implementation report; current positioning and deployment status are updated below.
 
-Branch: `multi-industry-commerce`
+Current integration branch: `saas-staging`
 
 ## Executive summary
 
-The platform already has a strong tenant foundation: `Tenant`, `Store`, `Membership`, scoped commerce records, store/domain resolution, store settings drafts, published settings versions, and permission checks. The catalog and storefront are not yet industry-agnostic. Electronics behavior is currently supplied by developer-owned defaults and client configuration, while product specifications are stored as an untyped JSON object and rendered through a fixed electronics product editor.
+Nurava Tech is a multi-industry commerce platform for diverse independent stores. Merchants configure separate storefronts, categories, themes, and product attributes for their businesses; the platform's general positioning does not enumerate the store types it hosts. The architecture supports tenant-scoped commerce, industry configuration, and store-specific discovery. The legacy Nurava Tech catalog and its electronics defaults remain as compatibility data, not as a limit on the platform's scope.
 
 The safest conversion is additive. Existing `Product.specs`, electronics categories, store JSON settings, orders, users, and tenant records remain valid. New industry, theme, attribute-definition, and product-attribute-value records are introduced alongside the current fields. The existing electronics store is assigned the seeded Electronics configuration and continues to use its current content/settings as overrides. New stores select an industry and receive a snapshot of its categories, attribute definitions, theme, and homepage defaults.
 
-## Current architecture findings
+## Original pre-migration architecture findings (historical baseline)
 
 ### Tenant and store boundary
 
@@ -134,26 +134,24 @@ Rollback is schema-safe: stop using new APIs, restore the previous application r
 - Add audit logs for industry/theme/attribute changes and publish workflows.
 - Add cache invalidation keyed by store and configuration version for public storefronts.
 
-## Implementation status and local verification
+## Current implementation and deployment status
 
-Status: Implementation is present in the working tree on `multi-industry-commerce`; no commit or push has been made.
+The multi-industry source changes are integrated into `saas-staging`. Onboarding supports industry selection; platform-protected controls manage industries, themes, categories, and attribute definitions; merchant catalogs and storefront defaults are resolved from each store's configuration. Legacy product specifications and the original Nurava Tech catalog remain supported for compatibility.
 
-The additive Prisma schema and migration are implemented in `backend/prisma/schema.prisma` and `backend/prisma/migrations/0034_multi_industry_commerce/migration.sql`. The migration introduces the industry, theme, category-template, store-type, and typed product-attribute models; assigns existing stores/categories/products to their store/industry; and copies recognized legacy electronics specifications into typed values without dropping or rewriting `Product.specs`. Electronics, Furniture, and Cake Shop configurations are seeded in the migration. Existing Nurava seed behavior is retained and its records now carry explicit store ownership.
+Migrations `0034_multi_industry_commerce` and `0035_industry_order_customizations` were deployed to the dedicated Neon database for this staging branch, `nuravatech-saas-staging`. No migration, database push, seed, or credential change was performed for this documentation and copy update.
 
-Industry selection and default snapshots are wired into onboarding. Platform-protected APIs and the platform dashboard manage industries, themes, categories, and attribute definitions. Merchant product entry and product details use industry-defined typed attributes, while legacy specs remain supported. Storefront navigation, category cards, hero/featured/banner content, and theme defaults now use store/industry configuration with the existing electronics configuration retained as a compatibility fallback.
+Public platform positioning is industry-neutral. Platform pages describe Nurava Tech as a multi-industry platform for diverse stores and do not enumerate the types of businesses it hosts. Industry names remain visible where needed for actual onboarding, store discovery, or platform administration.
 
-Database safety boundary: the migration has **not** been applied. No Prisma migration, `db push`, or database seed command has been run, and no `.env.local` or other environment credentials were read or used. Schema validation and Prisma client generation were performed offline with a disposable loopback schema-check URL. Apply this migration only after configuring the separate Neon database URL intended for this branch, reviewing the target explicitly, and taking the planned backup/rehearsal steps.
-
-Local verification: combined frontend type-check and backend production build passed; Prisma schema validation passed; lint completed with 0 errors (91 warnings, predominantly existing warnings); and the full test suite passed (93/93). The suite includes mocked tenant-isolation checks; it also emits expected integration-test errors while confirming graceful handling of unavailable provider credentials and the unavailable local database. The migration has not received a live-database rehearsal, and database-backed cross-tenant integration tests remain outstanding until the branch-specific Neon database is configured.
+Earlier verification results recorded below are historical snapshots, not evidence of the current staging deployment or browser rendering. Authenticated visual/browser verification and live Vercel runtime behavior must be checked separately.
 
 Known follow-up: industry attribute definitions remain shared at industry level rather than being versioned/snapshotted per store. Changes by a platform administrator therefore affect active stores using that industry. Add per-store schema version snapshots/audit history before offering frequent in-place schema edits. Also retain a production rehearsal and a reviewed reverse-order rollback procedure as release gates.
 
 ## Continuation: discovery, storefront presets, and order compatibility
 
-The branch continuation adds platform discovery filters by industry to the available, most-reviewed, and top-rated store groups. The two development demo tenants are titled **Nurava Furnitures** and **Nurava Cakes** and use their own store routes; the existing Nurava Tech entry remains available. Demo tenant/catalog records are defined in the development seed and have not been inserted into any database.
+The branch continuation adds platform discovery filters by industry to the available, most-reviewed, and top-rated store groups. Development demo tenants have their own store routes; their records are defined in the development seed. No seed command was run as part of this documentation update.
 
-Furniture and cake homepage presets now include distinct hero copy, imagery, non-empty category artwork, and palettes (beige/cream/walnut for furniture; chocolate/cream for cakes). Shared glass styling remains in place, with theme-aware text contrast. Industry-specific order input is limited to cake customizations; those choices are validated and carried through cart, checkout/enquiry, and order-item snapshots without changing authoritative product prices, inventory, payment, shipping, or delivery calculations. Store category availability is resolved from the selected store's categories rather than an electronics-only list. Existing plan rows are not overwritten by the development seed, preserving prices and entitlements controlled by the platform owner.
+Industry homepage presets support distinct hero copy, artwork, and palettes. Shared glass styling remains in place, with theme-aware text contrast. Industry-specific order inputs are validated and carried through cart, checkout/enquiry, and order-item snapshots without changing authoritative product prices, inventory, payment, shipping, or delivery calculations. Store category availability is resolved from the selected store's categories. Existing plan rows are not overwritten by development seeding, preserving prices and entitlements controlled by the platform owner.
 
-The Beauty industry is intentionally absent from initial presets and platform/onboarding records. The platform owner can control which configured industries are active for new-store onboarding from the platform industry dashboard. This changes availability only; it does not remove existing stores.
+The platform owner controls which configured industries are active for new-store onboarding from the platform industry dashboard. This changes availability only; it does not remove existing stores.
 
-The branch-specific Neon URL is intentionally not configured or inspected here. The only schema check used a disposable loopback URL and passed. No migration, database push, or seed was run; migrations `0034_multi_industry_commerce` and `0035_industry_order_customizations` remain unapplied migration files pending explicit review against the separate Neon database for this branch. Fresh local verification passed: Prisma schema validation, combined frontend type-check/backend build, lint (0 errors; 93 warnings), and all 96 tests. Database-backed payment webhook tests log expected localhost-unavailable errors while validating graceful handling; no branch Neon database was contacted. These checks do not constitute a live database rehearsal or visual browser QA.
+The initial feature-branch verification and database-safety notes above describe an earlier point in the rollout. The two industry migrations have since been applied to the dedicated staging Neon database noted above. Source checks and automated tests do not substitute for authenticated browser QA or visual confirmation of the deployed Vercel experience.

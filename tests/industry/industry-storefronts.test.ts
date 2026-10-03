@@ -3,16 +3,17 @@ import assert from "node:assert/strict"
 import { defaultCategoryImage, defaultIndustryHomepage } from "../../backend/lib/industry-content"
 import { cakeCustomizationsSchema, normalizeIndustryCustomizations } from "../../backend/lib/cake-customizations"
 
-test("industry homepage defaults provide relevant copy and Unsplash hero art", () => {
+test("industry homepage defaults provide relevant copy without hero artwork", () => {
 	const furniture = defaultIndustryHomepage({ name: "Furniture", slug: "furniture" })
 	const cakes = defaultIndustryHomepage({ name: "Cake Shop", slug: "cakes" })
 	const futureIndustry = defaultIndustryHomepage({ name: "Florist", slug: "florist" })
-	assert.equal(furniture.heroImageAlt, "Warm, wood-finished living room with considered furniture")
 	assert.match(String(furniture.heroDescription), /furniture|home/i)
 	assert.match(String(cakes.heroDescription), /cake|bake/i)
-	assert.match(String(cakes.heroImage), /^https:\/\/images\.unsplash\.com\//)
 	assert.match(String(futureIndustry.heroTitle), /Florist/)
-	assert.match(String(futureIndustry.heroImage), /^https:\/\/images\.unsplash\.com\//)
+	assert.equal("heroImage" in furniture, false)
+	assert.equal("heroImageAlt" in cakes, false)
+	assert.equal("heroImage" in futureIndustry, false)
+	assert.equal("heroImage" in defaultIndustryHomepage({ name: "Furniture", slug: "furniture" }, { heroImage: "https://example.com/old-hero.jpg", heroImageAlt: "Legacy" }), false)
 })
 
 test("category defaults select artwork by industry and category instead of blank placeholders", () => {

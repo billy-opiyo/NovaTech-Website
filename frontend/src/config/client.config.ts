@@ -11,7 +11,7 @@ export const clientConfig = {
 		logo: "/images/NovaTech icon.png",
 		logoAlt: "Nurava Tech logo",
 		favicon: "/images/NovaTech%20icon.png",
-		tagline: "Kenya's trusted electronics store",
+		tagline: "Kenya's multi-industry commerce platform",
 	},
 	site: {
 		url: "https://nuravatech.com",
@@ -40,8 +40,8 @@ export const clientConfig = {
 	},
 	seo: {
 		title: "",
-		description: "Shop genuine phones, laptops, and accessories with warranty and fast delivery across Kenya.",
-		keywords: "electronics, Kenya, phones, laptops, accessories, M-Pesa, online shopping",
+		description: "Discover independent stores, explore diverse products, and connect with merchants across Kenya.",
+		keywords: "Kenya, independent stores, multi-industry commerce, merchant storefronts, M-Pesa, online shopping",
 		ogImage: "",
 	},
 	// Change this value to one of the IDs in theme-presets.ts for another visual system.
@@ -70,7 +70,7 @@ export const clientConfig = {
 		heroSecondaryLabel: "Today's Deals",
 		heroSecondaryHref: "/deals",
 		aboutTitle: "About Nurava Tech",
-		aboutDescription: "Nurava Tech helps shoppers discover independent electronics stores and connect with merchants directly.",
+		aboutDescription: "Nurava Tech helps shoppers discover independent stores and connect with merchants directly.",
 		categoryTitle: "Shop by Category",
 		featuredTitle: "Featured Products",
 		bannerTitle: "",

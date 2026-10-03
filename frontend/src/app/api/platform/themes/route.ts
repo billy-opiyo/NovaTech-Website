@@ -15,8 +15,13 @@ async function platformAccess() {
 export async function GET() {
 	const access = await platformAccess()
 	if ("response" in access) return access.response
-	const themes = await prisma.theme.findMany({ include: { industry: { select: { id: true, name: true, slug: true } } }, orderBy: [{ active: "desc" }, { name: "asc" }] })
-	return NextResponse.json({ themes })
+	try {
+		const themes = await prisma.theme.findMany({ include: { industry: { select: { id: true, name: true, slug: true } } }, orderBy: [{ active: "desc" }, { name: "asc" }] })
+		return NextResponse.json({ themes })
+	} catch (error: unknown) {
+		console.error("Theme list failed", error)
+		return NextResponse.json({ message: "Unable to load theme settings" }, { status: 503 })
+	}
 }
 
 export async function POST(request: Request) {
