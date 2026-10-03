@@ -19,6 +19,7 @@ const heroImages = {
 
 type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
 	href: string
+	productCount?: number
 	fallbackColor?: string
 }
 
