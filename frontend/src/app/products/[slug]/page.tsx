@@ -15,6 +15,7 @@ import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
+import type { CakeCustomizations } from "backend/lib/cake-customizations"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -42,6 +43,7 @@ type Product = {
 	averageRating: number
 	reviewCount: number
 	specs?: Record<string, unknown> | null
+	attributeValues?: { id: string; value: unknown; displayValue?: string | null; definition: { id: string; name: string; key: string } }[]
 	variants: Variant[]
 	reviews: Review[]
 }
@@ -59,6 +61,10 @@ export default function ProductDetailPage() {
 	const [selectedImage, setSelectedImage] = useState(0)
 	const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
 	const [quantity, setQuantity] = useState(1)
+	const [cakeMessage, setCakeMessage] = useState("")
+	const [cakeIcing, setCakeIcing] = useState<CakeCustomizations["icing"]>(undefined)
+	const [cakeEventDate, setCakeEventDate] = useState("")
+	const [cakeDietaryNotes, setCakeDietaryNotes] = useState("")
 	const [isInWishlist, setIsInWishlist] = useState(false)
 	const [wishlistBusy, setWishlistBusy] = useState(false)
 
@@ -104,7 +110,8 @@ export default function ProductDetailPage() {
 		.filter((variant) => selectedVariants[variant.name] === variant.value)
 		.reduce((stock, variant) => Math.min(stock, variant.stock), product.variants.length > 0 && !hasCompleteVariantSelection ? 0 : product.stock)
 
-	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: loadedProduct.name, quantity, variant: Object.values(selectedVariants).join(" / ") || undefined, price: currentPrice }] })
+	const cakePreferenceText = [cakeMessage.trim() ? `Message: ${cakeMessage.trim()}` : "", cakeIcing ? `Icing: ${cakeIcing}` : "", cakeEventDate ? `Event date: ${cakeEventDate}` : "", cakeDietaryNotes.trim() ? `Notes: ${cakeDietaryNotes.trim()}` : ""].filter(Boolean).join(", ")
+	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: loadedProduct.name, quantity, variant: [Object.entries(selectedVariants).map(([name, value]) => `${name}: ${value}`).join(" / "), store.industry?.slug === "cakes" ? cakePreferenceText : ""].filter(Boolean).join(" · ") || undefined, price: currentPrice }] })
 
 	function addToCart() {
 		if (loadedProduct.variants.length > 0 && !hasCompleteVariantSelection) {
@@ -115,7 +122,13 @@ export default function ProductDetailPage() {
 			addToast("This product is currently out of stock.", "error")
 			return
 		}
-		addItem({ productId: loadedProduct.id, name: loadedProduct.name, brand: loadedProduct.brand, image: getProductImage(loadedProduct.images[0], loadedProduct.name), price: currentPrice, quantity, maxStock: selectedStock, slug: loadedProduct.slug, variant: Object.values(selectedVariants).join(" / ") || undefined })
+		const customizations: CakeCustomizations = {
+			...(cakeMessage.trim() ? { message: cakeMessage.trim() } : {}),
+			...(cakeIcing ? { icing: cakeIcing } : {}),
+			...(cakeEventDate ? { eventDate: cakeEventDate } : {}),
+			...(cakeDietaryNotes.trim() ? { dietaryNotes: cakeDietaryNotes.trim() } : {}),
+		}
+		addItem({ productId: loadedProduct.id, name: loadedProduct.name, brand: loadedProduct.brand, image: getProductImage(loadedProduct.images[0], loadedProduct.name), price: currentPrice, quantity, maxStock: selectedStock, slug: loadedProduct.slug, variant: Object.entries(selectedVariants).map(([name, value]) => `${name}: ${value}`).join(" / ") || undefined, ...(store.industry?.slug === "cakes" && Object.keys(customizations).length > 0 ? { customizations } : {}) })
 		addToast(`${loadedProduct.name} added to cart.`, "success")
 	}
 
@@ -171,6 +184,8 @@ export default function ProductDetailPage() {
 
 					{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} disabled={variant.stock < 1} onClick={() => setSelectedVariants({ ...selectedVariants, [name]: variant.value })} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}
 
+					{store.industry?.slug === "cakes" && <fieldset className="glass-card space-y-3 p-4"><legend className="px-2 font-semibold text-primary">Make it yours</legend><p className="text-sm text-gray-500">Optional preferences are sent with this cake line for the baker to confirm.</p><label className="block text-sm">Message on the cake<input maxLength={50} value={cakeMessage} onChange={(event) => setCakeMessage(event.target.value)} placeholder="e.g. Happy birthday, Amina!" className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="block text-sm">Icing preference<select value={cakeIcing || ""} onChange={(event) => setCakeIcing((event.target.value || undefined) as CakeCustomizations["icing"])} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface"><option value="">Let the baker recommend</option><option value="chocolate-buttercream">Chocolate buttercream</option><option value="vanilla-buttercream">Vanilla buttercream</option><option value="whipped-cream">Whipped cream</option><option value="fondant">Fondant finish</option><option value="no-preference">No preference</option></select></label><label className="block text-sm">Celebration date<input type="date" value={cakeEventDate} onChange={(event) => setCakeEventDate(event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="block text-sm">Dietary needs or design notes<textarea maxLength={300} value={cakeDietaryNotes} onChange={(event) => setCakeDietaryNotes(event.target.value)} rows={3} placeholder="Allergies, colours, or a detail to discuss with the baker" className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label></fieldset>}
+
 					<div className="flex flex-wrap items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button type="button" onClick={addToCart} disabled={selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection)} className="btn-primary inline-flex flex-1 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"><ShoppingCart size={18} />{product.variants.length > 0 && !hasCompleteVariantSelection ? "Select options" : "Add to cart"}</button><button type="button" onClick={() => void toggleWishlist()} disabled={wishlistBusy} aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} className="inline-flex items-center justify-center rounded-lg border p-3 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"><LoaderCircle size={18} className={wishlistBusy ? "animate-spin" : "hidden"} aria-hidden="true" /><Heart size={18} className={`${wishlistBusy ? "hidden" : ""} ${isInWishlist ? "fill-current" : ""}`} aria-hidden="true" /></button><a href={merchantOrderHref} target="_blank" rel="noreferrer" aria-disabled={selectedStock < 1} className={`inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1e8e3e] px-4 py-3 text-center font-semibold text-white transition hover:bg-[#25D366] sm:w-auto ${selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection) ? "pointer-events-none opacity-50" : ""}`}><FaWhatsapp size={18} aria-hidden="true" />Order via WhatsApp</a></div>
 					<p className="text-xs text-gray-500">Nurava Tech connects you with this independent store. The merchant confirms availability, delivery, payment, refunds, and warranty directly.</p>
 					<p className="text-gray-600 dark:text-gray-300">{product.description}</p>
@@ -178,7 +193,7 @@ export default function ProductDetailPage() {
 			</section>
 
 			<section className="grid gap-8 lg:grid-cols-2">
-				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Specifications</h2><dl className="divide-y divide-gray-200 dark:divide-gray-700">{Object.entries(product.specs || {}).map(([key, value]) => <div key={key} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{key}</dt><dd className="text-right text-gray-500">{String(value)}</dd></div>)}</dl><p className="mt-5 text-sm text-gray-500">Warranty: {product.warranty || "Contact us for warranty details"}</p></div>
+				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Specifications</h2><dl className="divide-y divide-gray-200 dark:divide-gray-700">{Object.entries(product.specs || {}).map(([key, value]) => <div key={key} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{key}</dt><dd className="text-right text-gray-500">{String(value)}</dd></div>)}{(product.attributeValues || []).map((attribute) => <div key={attribute.id} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{attribute.definition.name}</dt><dd className="text-right text-gray-500">{attribute.displayValue || String(attribute.value)}</dd></div>)}</dl><p className="mt-5 text-sm text-gray-500">Warranty: {product.warranty || "Contact us for warranty details"}</p></div>
 				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Customer reviews</h2>{product.reviews.length === 0 ? <p className="text-gray-500">No reviews yet.</p> : <div className="space-y-5">{product.reviews.map((review) => <article key={review.id} className="border-b border-gray-200 pb-5 last:border-0 dark:border-gray-700"><div className="flex items-center justify-between"><span className="font-medium">{review.user?.name || "Customer"}</span><span className="flex items-center gap-1 text-sm"><Star size={14} className="fill-yellow-500 text-yellow-500" />{review.rating}</span></div><h3 className="mt-2 font-semibold">{review.title}</h3><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{review.comment}</p>{review.isVerifiedPurchase && <span className="mt-2 inline-block text-xs text-green-600">Verified purchase</span>}</article>)}</div>}<ProductReviewForm productId={product.id} /></div>
 			</section>
 

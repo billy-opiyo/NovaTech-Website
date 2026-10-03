@@ -9,6 +9,7 @@ import {
 	ReactNode,
 } from "react"
 import { useStoreContext } from "./store-context"
+import type { CakeCustomizations } from "backend/lib/cake-customizations"
 
 export interface CartItem {
 	id: string
@@ -19,6 +20,7 @@ export interface CartItem {
 	price: number
 	quantity: number
 	variant?: string
+	customizations?: CakeCustomizations
 	maxStock: number
 	slug: string
 }
@@ -83,7 +85,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 			const existingIndex = prev.findIndex(
 				(item) =>
 					item.productId === newItem.productId &&
-					item.variant === newItem.variant,
+					item.variant === newItem.variant &&
+					JSON.stringify(item.customizations || null) === JSON.stringify(newItem.customizations || null),
 			)
 			if (existingIndex > -1) {
 				const updated = [...prev]

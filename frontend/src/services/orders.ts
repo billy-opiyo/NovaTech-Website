@@ -6,6 +6,7 @@ export interface OrderItem {
 	quantity: number
 	price: number
 	variant?: string | null
+	customizations?: { message?: string; icing?: string; eventDate?: string; dietaryNotes?: string } | null
 	product?: {
 		name: string
 		slug: string

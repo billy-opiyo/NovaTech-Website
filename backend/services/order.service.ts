@@ -6,6 +6,7 @@ import { sendWhatsAppMessage } from "../notifications/whatsapp"
 import { PLATFORM_BRAND_NAME } from "../lib/brand"
 import { getTenantEntitlement } from "../billing/subscription"
 import { resolveVariantSelection } from "../lib/product-variant"
+import { normalizeIndustryCustomizations } from "../lib/cake-customizations"
 
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
 	PENDING: ["CONFIRMED", "CANCELLED"],
@@ -25,6 +26,7 @@ export interface CreateOrderData {
 		productId: string
 		quantity: number
 		variant?: string
+		customizations?: import("../lib/cake-customizations").CakeCustomizations
 	}[]
 	shippingAddress: {
 		fullName: string
@@ -49,13 +51,15 @@ export async function createOrder(data: CreateOrderData) {
 			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { where: { tenantId: data.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			if (existing) return existing
 		}
-		const store = await tx.store.findFirst({ where: { tenantId: data.tenantId }, select: { commerceSettings: true } })
+		const store = await tx.store.findFirst({ where: { tenantId: data.tenantId }, select: { id: true, commerceSettings: true, industry: { select: { slug: true } } } })
 		const commerceSettings = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
 			? store.commerceSettings as Record<string, unknown>
 			: {}
 		const categoryAvailability = commerceSettings.categoryAvailability && typeof commerceSettings.categoryAvailability === "object" && !Array.isArray(commerceSettings.categoryAvailability)
 			? commerceSettings.categoryAvailability as Record<string, unknown>
 			: {}
+		const storeCategories = await tx.category.findMany({ where: { tenantId: data.tenantId, ...(store?.id ? { storeId: store.id } : {}) }, select: { slug: true } })
+		const hiddenCategorySlugs = new Set(storeCategories.filter((category) => categoryAvailability[category.slug] === false).map((category) => category.slug))
 
 		// Prices, discounts, shipping, and stock are authoritative on the server.
 		const products = await Promise.all(
@@ -76,14 +80,14 @@ export async function createOrder(data: CreateOrderData) {
 		let subtotal = 0
 		const requestedQuantities = new Map<string, number>()
 		const requestedVariantQuantities = new Map<string, number>()
-		const resolvedItems: { productId: string; quantity: number; variant?: string; variantIds: string[]; price: number }[] = []
+		const resolvedItems: { productId: string; quantity: number; variant?: string; variantIds: string[]; price: number; customizations?: import("../lib/cake-customizations").CakeCustomizations }[] = []
 		for (const item of data.items) {
 			if (!Number.isInteger(item.quantity) || item.quantity < 1) throw new Error("Order quantities must be positive integers")
 			const product = productById.get(item.productId)
 			if (!product) {
 				throw new Error(`Product not found: ${item.productId}`)
 			}
-			if (["phones", "laptops", "tablets", "accessories"].includes(product.category.slug) && categoryAvailability[product.category.slug] === false) {
+			if (hiddenCategorySlugs.has(product.category.slug)) {
 				throw new Error(`${product.category.slug} are not currently offered by this store`)
 			}
 			const selectedVariant = resolveVariantSelection(product.variants, item.variant)
@@ -103,7 +107,8 @@ export async function createOrder(data: CreateOrderData) {
 			} else {
 				requestedQuantities.set(item.productId, (requestedQuantities.get(item.productId) || 0) + item.quantity)
 			}
-			resolvedItems.push({ productId: item.productId, quantity: item.quantity, variant: item.variant, variantIds: selectedVariant.selected.flatMap((variant) => variant.id ? [variant.id] : []), price: unitPrice })
+			const customizations = normalizeIndustryCustomizations(store?.industry?.slug, item.customizations)
+			resolvedItems.push({ productId: item.productId, quantity: item.quantity, variant: item.variant, variantIds: selectedVariant.selected.flatMap((variant) => variant.id ? [variant.id] : []), price: unitPrice, customizations })
 			subtotal += unitPrice * item.quantity
 		}
 
@@ -135,7 +140,8 @@ export async function createOrder(data: CreateOrderData) {
 					quantity: item.quantity,
 					price: item.price,
 					variant: item.variant,
-					variantIds: item.variantIds,
+				variantIds: item.variantIds,
+				...(item.customizations ? { customizations: item.customizations } : {}),
 				}
 			})
 

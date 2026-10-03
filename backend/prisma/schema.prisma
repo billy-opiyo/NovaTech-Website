@@ -203,6 +203,14 @@ enum StorePublicationStatus {
   SUSPENDED
 }
 
+enum ProductAttributeType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DROPDOWN
+  MULTI_SELECT
+}
+
 enum BlogPostStatus {
   DRAFT
   PUBLISHED
@@ -390,6 +398,8 @@ model MerchantVerificationEvidence {
 model Store {
   id                String                 @id @default(cuid())
   tenantId          String                 @unique
+  industryId        String?
+  storeTypeId       String?
   name              String
   slug              String                 @unique
   publicationStatus StorePublicationStatus @default(DRAFT)
@@ -410,13 +420,114 @@ model Store {
   updatedAt         DateTime               @updatedAt
 
   tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  industry          Industry?              @relation(fields: [industryId], references: [id], onDelete: SetNull)
+  storeType         StoreType?              @relation(fields: [storeTypeId], references: [id], onDelete: SetNull)
   domains           Domain[]
   settingsVersions  StoreSettingsVersion[]
   preferredUsers    User[]                 @relation("UserPreferredStore")
   storageAssets     StorageAsset[]
   merchantEnquiries MerchantEnquiry[]
+  categories        Category[]
+  products          Product[]
 
   @@index([publicationStatus])
+  @@index([industryId])
+  @@index([storeTypeId])
+}
+
+model StoreType {
+	 id          String   @id @default(cuid())
+	 industryId  String
+	 name        String
+	 slug        String
+	 description String?
+	 active      Boolean  @default(true)
+	 createdAt   DateTime @default(now())
+	 updatedAt   DateTime @updatedAt
+
+	 industry Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+	 stores   Store[]
+
+	 @@unique([industryId, slug])
+	 @@index([industryId, active])
+}
+
+model Industry {
+  id              String                     @id @default(cuid())
+  name            String
+  slug            String                     @unique
+  description     String?
+  icon            String?
+  active          Boolean                    @default(true)
+  defaultThemeId  String?
+  homepagePreset  Json?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  defaultTheme    Theme?                     @relation("IndustryDefaultTheme", fields: [defaultThemeId], references: [id], onDelete: SetNull)
+  themes          Theme[]                    @relation("IndustryThemes")
+  categoryTemplates IndustryCategoryTemplate[]
+  attributeDefinitions ProductAttributeDefinition[]
+  stores          Store[]
+  storeTypes      StoreType[]
+
+  @@index([active, name])
+}
+
+model Theme {
+  id                String      @id @default(cuid())
+  name              String
+  slug              String      @unique
+  industryId        String?
+  colors            Json
+  typography        Json
+  heroLayout        String?
+  bannerStyle       String?
+  productGridStyle  String?
+  active            Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  industry           Industry?  @relation("IndustryThemes", fields: [industryId], references: [id], onDelete: SetNull)
+  defaultForIndustry Industry[] @relation("IndustryDefaultTheme")
+
+  @@index([industryId, active])
+}
+
+model IndustryCategoryTemplate {
+  id          String   @id @default(cuid())
+  industryId  String
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  displayOrder Int     @default(0)
+  active      Boolean  @default(true)
+
+  industry Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@unique([industryId, slug])
+  @@index([industryId, active, displayOrder])
+}
+
+model ProductAttributeDefinition {
+  id           String               @id @default(cuid())
+  industryId   String
+  name         String
+  key          String
+  type         ProductAttributeType
+  required     Boolean              @default(false)
+  options      String[]             @default([])
+  displayOrder Int                  @default(0)
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  industry Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+  values   ProductAttributeValue[]
+
+  @@unique([industryId, key])
+  @@index([industryId, active, displayOrder])
 }
 
 // A null tenantId is platform-owned content; tenant-scoped rows belong only
@@ -912,6 +1023,7 @@ model StoreSettingsVersion {
 model Category {
   id          String     @id @default(cuid())
   tenantId    String?
+  storeId     String?
   name        String
   slug        String
   description String?
@@ -921,8 +1033,10 @@ model Category {
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
   tenant      Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store       Store?     @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, slug])
+  @@index([storeId, slug])
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
 }
@@ -930,6 +1044,7 @@ model Category {
 model Product {
   id              String   @id @default(cuid())
   tenantId        String?
+  storeId         String?
   name            String
   slug            String
   description     String
@@ -958,14 +1073,33 @@ model Product {
   cartItems      CartItem[]
   wishlistItems  WishlistItem[]
   recentlyViewed RecentlyViewed[]
+  attributeValues ProductAttributeValue[]
   tenant         Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store?           @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
+  @@index([storeId, createdAt])
   @@index([tenantId, slug])
     @@index([tenantId, sku])
     @@index([tenantId, isTrending])
   @@unique([tenantId, slug])
   @@unique([tenantId, sku])
+}
+
+model ProductAttributeValue {
+  id           String                     @id @default(cuid())
+  productId    String
+  definitionId String
+  value        Json
+  displayValue String?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  product    Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  definition ProductAttributeDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, definitionId])
+  @@index([definitionId])
 }
 
 model Variant {
@@ -994,6 +1128,7 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Int      @default(1)
   variant   String? // store selected variant (e.g., "Color:Red")
+  customizations Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1109,6 +1244,7 @@ model OrderItem {
   price     Float
   variant   String?
   variantIds String[] @default([])
+  customizations Json?
   tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, orderId])

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { assertTenantProductLimit } from "../billing/subscription"
 import { deleteFile } from "../lib/storage"
 import type { ProductInput } from "../validators/productValidator"
+import { validateAndNormalizeProductAttributes } from "../lib/industry"
 
 type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sku" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
 		discountedPrice?: number | null
@@ -11,17 +12,17 @@ type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sk
 		categoryId?: string
 }
 
-const configurableCategorySlugs = ["phones", "laptops", "tablets", "accessories"] as const
-
 export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<string[]> {
-	const store = await prisma.store.findFirst({ where: { tenantId }, select: { commerceSettings: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, commerceSettings: true } })
 	const commerce = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
 		? store.commerceSettings as Record<string, unknown>
 		: {}
 	const availability = commerce.categoryAvailability && typeof commerce.categoryAvailability === "object" && !Array.isArray(commerce.categoryAvailability)
 		? commerce.categoryAvailability as Record<string, unknown>
 		: {}
-	return configurableCategorySlugs.filter((slug) => availability[slug] === false)
+	if (!store) return []
+	const categories = await prisma.category.findMany({ where: { tenantId, storeId: store.id }, select: { slug: true } })
+	return categories.filter(({ slug }) => availability[slug] === false).map(({ slug }) => slug)
 }
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
@@ -123,6 +124,7 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 			where,
 			include: {
 				category: true,
+				attributeValues: { include: { definition: true } },
 				variants: { where: { tenantId } },
 				reviews: {
 					where: { moderationStatus: "APPROVED" },
@@ -165,6 +167,7 @@ export async function getProductBySlug(slug: string, tenantId: string) {
 		where: { slug, tenantId, ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}) },
 		include: {
 			category: true,
+			attributeValues: { include: { definition: true } },
 			variants: { where: { tenantId } },
 			reviews: {
 				where: { moderationStatus: "APPROVED" },
@@ -235,11 +238,16 @@ export async function searchProducts(query: string, tenantId: string) {
 
 export async function createProduct(data: ProductInput, tenantId: string) {
 	await assertTenantProductLimit(tenantId)
-	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId }, select: { id: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	if (!store) throw new Error("Store not found")
+	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId, storeId: store.id }, select: { id: true } })
 	if (!category) throw new Error("Category not found")
-	return prisma.product.create({
-		data: {
+	const attributes = await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
+	return prisma.$transaction(async (transaction) => {
+		const product = await transaction.product.create({
+			data: {
 			tenantId,
+			storeId: store.id,
 			name: data.name,
 			slug: data.slug,
 			description: data.description,
@@ -267,11 +275,11 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 						})),
 					}
 				: undefined,
-		},
-		include: {
-			category: true,
-			variants: true,
-		},
+			},
+			include: { category: true, variants: true },
+		})
+		if (attributes.length) await transaction.productAttributeValue.createMany({ data: attributes.map((attribute) => ({ productId: product.id, definitionId: attribute.definitionId, value: attribute.value, displayValue: attribute.displayValue })) })
+		return transaction.product.findUniqueOrThrow({ where: { id: product.id }, include: { category: true, variants: true, attributeValues: { include: { definition: true } } } })
 	})
 }
 
@@ -283,16 +291,26 @@ export async function updateProduct(slug: string, data: ProductUpdateInput, tena
 	if (update.stock !== undefined) update.stock = Number(update.stock)
 	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
 	if (!product) throw new Error("Product not found")
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	if (!store) throw new Error("Store not found")
 	if (update.categoryId !== undefined) {
 		if (typeof update.categoryId !== "string") throw new Error("Invalid category")
-		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId }, select: { id: true } })
+		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId, storeId: store.id }, select: { id: true } })
 		if (!category) throw new Error("Category not found")
 	}
+	const attributeValues = data.attributes === undefined ? undefined : await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
 	const nextPrice = update.price === undefined ? product.price : Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
 		throw new Error("discountedPrice cannot exceed price")
 	}
-	const updated = await prisma.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: { where: { tenantId } } } })
+	const updated = await prisma.$transaction(async (transaction) => {
+		const result = await transaction.product.update({ where: { id: product.id }, data: update, include: { category: true, variants: { where: { tenantId } } } })
+		if (attributeValues !== undefined) {
+			await transaction.productAttributeValue.deleteMany({ where: { productId: product.id } })
+			if (attributeValues.length) await transaction.productAttributeValue.createMany({ data: attributeValues.map((attribute) => ({ productId: product.id, definitionId: attribute.definitionId, value: attribute.value, displayValue: attribute.displayValue })) })
+		}
+		return transaction.product.findUniqueOrThrow({ where: { id: result.id }, include: { category: true, variants: { where: { tenantId } }, attributeValues: { include: { definition: true } } } })
+	})
 	if (Array.isArray(update.images)) {
 		const publicPrefix = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "").replace(/\/$/, "")
 		const retained = new Set(updated.images)

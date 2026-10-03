@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { cakeCustomizationsSchema } from "../lib/cake-customizations"
 
 export const orderSchema = z.object({
 	items: z.array(
@@ -6,6 +7,7 @@ export const orderSchema = z.object({
 			productId: z.string().trim().min(1).max(100),
 			quantity: z.number().int().min(1).max(99),
 			variant: z.string().trim().max(200).optional(),
+			customizations: cakeCustomizationsSchema.optional(),
 		}),
 	).min(1).max(50),
 	shippingAddress: z.object({

@@ -195,24 +195,37 @@
 	}
 
   .navy-glass {
-    background: linear-gradient(135deg, rgb(245 249 253 / 0.72), rgb(216 229 245 / 0.58));
-    border-color: rgb(255 255 255 / 0.72);
-    box-shadow: 0 14px 36px rgb(45 75 120 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.82);
-    color: #102858;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: linear-gradient(135deg, var(--glass-bg), rgb(var(--color-theme-surface) / 0.62));
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--color-theme-text) / 0.08);
+    color: rgb(var(--color-theme-text));
+    backdrop-filter: blur(var(--glass-blur, 16px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
   }
 
   .navy-glass .text-gray-600 {
-    color: #38547d;
+    color: rgb(var(--color-theme-muted));
   }
 
   .navy-glass .text-gray-500 {
-    color: #536b8f;
+    color: rgb(var(--color-theme-muted));
+  }
+
+  .dark .text-gray-500,
+  .dark .text-gray-600 {
+    color: rgb(var(--color-theme-muted));
+  }
+
+  .dark .text-primary:not(.btn-primary) {
+    color: var(--color-primary-light, rgb(var(--color-primary)));
+  }
+
+  .dark .text-primary:not(.btn-primary):hover {
+    color: #ffffff;
   }
 
   .navy-glass:hover {
-    border-color: rgb(43 89 155 / 0.38);
+    border-color: rgb(var(--color-primary) / 0.45);
   }
 
   /* Reuse the soft blue light surface for utility white panels without
@@ -230,22 +243,21 @@
   }
 
   .dark .navy-glass {
-    background: linear-gradient(135deg, rgb(8 37 73 / 0.84), rgb(4 20 43 / 0.72));
-    border-color: rgb(96 165 250 / 0.28);
-    box-shadow: 0 14px 36px rgb(2 12 27 / 0.24), inset 0 1px 0 rgb(191 219 254 / 0.12);
-    color: #e2e8f0;
+    background: linear-gradient(135deg, var(--glass-bg), rgb(var(--color-theme-surface) / 0.78));
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--color-theme-text) / 0.06);
   }
 
   .dark .navy-glass .text-gray-600 {
-    color: #cbd5e1;
+    color: rgb(var(--color-theme-muted));
   }
 
   .dark .navy-glass .text-gray-500 {
-    color: #94a3b8;
+    color: rgb(var(--color-theme-muted));
   }
 
   .dark .navy-glass:hover {
-    border-color: rgb(125 211 252 / 0.42);
+    border-color: rgb(var(--color-primary) / 0.5);
   }
 
   .search-overlay-panel {
@@ -635,4 +647,34 @@ html:not(.dark) .splash-screen {
 .merchant-guide-preview[data-preview-theme="light"] [class*="text-amber-200"],
 .merchant-guide-preview[data-preview-theme="light"] [class*="text-amber-300"] {
   color: #92400e !important;
+}
+[data-hero-layout="editorial"],
+[data-hero-layout="split"] {
+	text-align: left;
+}
+
+[data-hero-layout="editorial"] > div > div,
+[data-hero-layout="split"] > div > div {
+	justify-content: flex-start;
+}
+
+[data-hero-layout="editorial"] h1 {
+	max-width: 16ch;
+}
+
+[data-banner-style="gradient"] {
+	background-image: linear-gradient(120deg, rgb(var(--color-primary) / 0.16), rgb(var(--color-accent) / 0.12));
+}
+
+[data-banner-style="festive"] {
+	border-color: rgb(var(--color-accent) / 0.5);
+	background-image: radial-gradient(circle at 10% 0%, rgb(var(--color-accent) / 0.16), transparent 38%);
+}
+
+[data-product-grid-style="editorial"] article {
+	border-radius: 0.5rem;
+}
+
+[data-product-grid-style="soft-cards"] article {
+	border-radius: 1.5rem;
 }
