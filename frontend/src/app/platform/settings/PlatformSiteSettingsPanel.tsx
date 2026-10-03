@@ -94,7 +94,7 @@ export default function PlatformSiteSettingsPanel() {
 		return Math.round(Number(match?.[1] || (property === "glassBorder" ? 0.15 : 0.5)) * 100)
 	}
 
-	function updateVisualText(section: "splash" | "design", key: string, value: string | boolean) {
+	function updateVisualText(section: "splash" | "design", key: string, value: string | boolean | number) {
 		setDraft((current) => ({ ...current, [section]: { ...current[section], [key]: value } }))
 	}
 
@@ -259,6 +259,15 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
+				<div><h3 className="text-lg font-semibold">Platform homepage hero</h3><p className="mt-1 text-sm text-gray-500">Edit the heading and supporting text shown in the responsive glass hero card. Text is used in light and dark modes; hero artwork is no longer displayed.</p></div>
+				<div className="grid gap-4">
+					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: Nurava Tech is the technology platform</span></label>
+					<label className="block"><span className="text-sm font-medium">Highlighted heading</span><input maxLength={120} className={inputClass} value={draft.hero?.highlight || ""} onChange={(event) => updateSection("hero", "highlight", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: connecting you with trusted stores</span></label>
+					<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={320} rows={3} className={inputClass} value={draft.hero?.description || ""} onChange={(event) => updateSection("hero", "description", event.target.value)} /></label>
+				</div>
+			</section>
+
+			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Platform contact</h3><p className="mt-1 text-sm text-gray-500">The WhatsApp number must use digits only with the country code, for example 254740470381.</p></div>
 				<div className="grid gap-4 lg:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Phone display</span><input className={inputClass} value={text("contact", "phoneDisplay")} onChange={(event) => updateSection("contact", "phoneDisplay", event.target.value)} /></label>
@@ -280,10 +289,15 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
-				<div><h3 className="text-lg font-semibold">Platform splash screen</h3><p className="mt-1 text-sm text-gray-500">Keep the current images as fallbacks or upload separate light/dark assets for desktop, tablet, and mobile screens.</p></div>
+				<div><h3 className="text-lg font-semibold">Platform splash screen</h3><p className="mt-1 text-sm text-gray-500">Choose responsive artwork, a solid color, or a glassmorphism surface. Selecting color or glass automatically hides the splash background images without deleting them.</p></div>
 				<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.showProgress !== false} onChange={(event) => updateVisualText("splash", "showProgress", event.target.checked)} /><span>Show progress bar, percentage, and loading ellipsis</span></label>
 				<div className="grid gap-4 md:grid-cols-2"><label className="block"><span className="text-sm font-medium">Welcome text</span><input className={inputClass} value={draft.splash?.welcomeText || ""} onChange={(event) => updateVisualText("splash", "welcomeText", event.target.value)} /></label><label className="block"><span className="text-sm font-medium">Loading text</span><input className={inputClass} value={draft.splash?.loadingText || ""} onChange={(event) => updateVisualText("splash", "loadingText", event.target.value)} /></label></div>
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visualSlots.map(([slot, label]) => { const id = `splash.${slot}`; return <div key={id} className="rounded-lg border border-gray-200 p-3 dark:border-white/10"><p className="text-sm font-medium">{label}</p>{assetValue(slot) && <img src={assetValue(slot)} alt={`${label} splash preview`} className="mt-2 h-24 w-full rounded object-cover" />}<label className={`mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${uploadingVisual === id ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}{uploadingVisual === id ? "Uploading…" : "Upload image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", slot, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div> })}</div>
+				<div className="grid gap-4 md:grid-cols-2">
+					<label className="block"><span className="text-sm font-medium">Splash background style</span><select className={inputClass} value={draft.splash?.backgroundMode || "glass"} onChange={(event) => updateVisualText("splash", "backgroundMode", event.target.value)}><option value="glass">Navy glassmorphism</option><option value="color">Solid background color</option><option value="images">Responsive background images</option></select><span className="mt-1 block text-xs text-gray-500">Color and glass modes override images on every device and in both theme modes.</span></label>
+					{draft.splash?.backgroundMode !== "images" && <label className="block"><span className="text-sm font-medium">Background / glass tint</span><div className="mt-2 flex items-center gap-3"><input aria-label="Splash background color" type="color" className="h-12 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-white/10 dark:bg-dark-surface" value={draft.splash?.backgroundColor || "#071a2c"} onChange={(event) => updateVisualText("splash", "backgroundColor", event.target.value)} /><span className="text-sm text-gray-500">{draft.splash?.backgroundColor || "#071a2c"}</span></div></label>}
+					{draft.splash?.backgroundMode === "glass" && <label className="block md:col-span-2"><span className="text-sm font-medium">Glass surface opacity</span><div className="mt-2 flex items-center gap-3"><input aria-label="Glass surface opacity" type="range" min={30} max={100} value={draft.splash?.glassOpacity ?? 88} onChange={(event) => updateVisualText("splash", "glassOpacity", Number(event.target.value))} className="min-w-0 flex-1" /><output className="w-12 text-right text-xs text-gray-500">{draft.splash?.glassOpacity ?? 88}%</output></div></label>}
+				</div>
+				{draft.splash?.backgroundMode === "images" && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visualSlots.map(([slot, label]) => { const id = `splash.${slot}`; return <div key={id} className="rounded-lg border border-gray-200 p-3 dark:border-white/10"><p className="text-sm font-medium">{label}</p>{assetValue(slot) && <img src={assetValue(slot)} alt={`${label} splash preview`} className="mt-2 h-24 w-full rounded object-cover" />}<label className={`mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${uploadingVisual === id ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}{uploadingVisual === id ? "Uploading…" : "Upload image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", slot, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div> })}</div>}
 			</section>
 
 			<section className="glass-card space-y-5 p-6">

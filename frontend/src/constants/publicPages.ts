@@ -8,18 +8,14 @@ export type PublicPage = {
 // Keep this index limited to customer-facing routes. Admin, API, and
 // authenticated account routes must never appear in the public search UI.
 export const publicPages: PublicPage[] = [
-	{ text: "Home", href: "/", description: "Nurava Tech home page", keywords: "store electronics shop" },
-	{ text: "All Products", href: "/products", description: "Browse phones, laptops, accessories, and more", keywords: "products catalog shop" },
-	{ text: "Phones", href: "/category/phones", description: "Shop smartphones and mobile phones", keywords: "mobile smartphones iphone samsung" },
-	{ text: "Laptops", href: "/category/laptops", description: "Shop laptops and computers", keywords: "computers macbook dell hp lenovo" },
-	{ text: "Tablets", href: "/category/tablets", description: "Shop tablets and iPads", keywords: "ipad tablet" },
-	{ text: "Accessories", href: "/category/accessories", description: "Shop chargers, cases, audio, and accessories", keywords: "chargers cables headphones cases" },
-	{ text: "Deals", href: "/deals", description: "Today’s electronics deals and offers", keywords: "sale discounts offers" },
+	{ text: "Home", href: "/", description: "Nurava Tech multi-industry platform", keywords: "store platform commerce shop" },
+	{ text: "All Products", href: "/products", description: "Browse products available from this store", keywords: "products catalog shop" },
+	{ text: "Deals", href: "/deals", description: "Current offers from this store", keywords: "sale discounts offers" },
 	{ text: "Compare Products", href: "/compare", description: "Compare products and specifications", keywords: "comparison specs" },
 	{ text: "About Nurava Tech", href: "/about", description: "Learn about Nurava Tech", keywords: "company about us" },
-	{ text: "Blog", href: "/blog", description: "Technology news, guides, and advice", keywords: "technology news guides" },
+	{ text: "Blog", href: "/blog", description: "Business and commerce news, guides, and updates", keywords: "business commerce news guides" },
 	{ text: "FAQs", href: "/faqs", description: "Frequently asked questions", keywords: "help questions answers" },
-	{ text: "Warranty", href: "/warranty", description: "Nurava Tech product warranty information", keywords: "guarantee support" },
+	{ text: "Warranty", href: "/warranty", description: "Information about store-provided product warranties", keywords: "guarantee support" },
 	{ text: "Contact Us", href: "/contact", description: "Contact Nurava Tech support", keywords: "support message phone email" },
 	{ text: "Return Policy", href: "/return-policy", description: "Returns and refunds policy", keywords: "returns refunds exchange" },
 	{ text: "Privacy Policy", href: "/privacy-policy", description: "How Nurava Tech handles your privacy", keywords: "privacy data" },

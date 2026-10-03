@@ -1,6 +1,6 @@
-# Nurava Tech — Electronics E-Commerce Platform (Kenya)
+# Nurava Tech — Multi-Industry Commerce Platform (Kenya)
 
-A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
+Nurava Tech is a multi-industry commerce platform for diverse independent stores in the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate their own storefronts, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -47,7 +47,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | **Home Pages**       | The platform root is a social-proof store discovery homepage; each merchant host keeps its own hero, shop-by-category grid, featured products, customer testimonials, newsletter, and contact sections. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
 | **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, merchant warranty information, reviews section, and direct merchant enquiry handoff. |
-| **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
+| **Category Pages**   | Dynamic category landing pages and subcategories configured for each store.                                                                                                                 |
 | **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
 | **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
 | **Search Overlay**   | Responsive global search with `Ctrl+K`, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning.                                                   |

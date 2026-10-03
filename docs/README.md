@@ -1,6 +1,6 @@
 # Nurava Tech — Documentation
 
-This directory contains documentation for the Nurava Tech hosted storefront platform, whose first release supports separate electronics stores for the Kenyan market.
+This directory documents Nurava Tech, a multi-industry commerce platform for diverse independent stores in the Kenyan market. Merchants configure separate storefronts for their businesses; platform descriptions intentionally do not enumerate the industries hosted.
 
 ## Project Overview
 
@@ -9,7 +9,7 @@ Nurava Tech is a **monorepo** managed with **npm workspaces**, containing:
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
 
-The platform enables customers to discover published stores at `/stores`, then browse, search, and compare electronics (phones, laptops, tablets, and accessories) before contacting the selected independent store directly. Each merchant confirms its own sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context.
+The platform enables customers to discover published stores at `/stores`, browse and compare products, and connect directly with the selected merchant. Each merchant manages its own catalog and confirms its sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context, with categories and product attributes configured for each store.
 
 ## Recent Changes
 
@@ -133,11 +133,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Home | Public | [Open](http://localhost:3000/) | [Open](https://nuravatech.com/) |
 | Products | Public | [Open](http://localhost:3000/products) | [Open](https://nuravatech.com/products) |
 | Product detail | Public; dynamic | `http://localhost:3000/products/{product-slug}` | `https://nuravatech.com/products/{product-slug}` |
-| Category landing | Public; dynamic | `http://localhost:3000/category/{category-slug}` | `https://nuravatech.com/category/{category-slug}` |
-| Phones category | Public | [Open](http://localhost:3000/category/phones) | [Open](https://nuravatech.com/category/phones) |
-| Laptops category | Public | [Open](http://localhost:3000/category/laptops) | [Open](https://nuravatech.com/category/laptops) |
-| Tablets category | Public | [Open](http://localhost:3000/category/tablets) | [Open](https://nuravatech.com/category/tablets) |
-| Accessories category | Public | [Open](http://localhost:3000/category/accessories) | [Open](https://nuravatech.com/category/accessories) |
+| Store-configured category | Public; dynamic | `http://localhost:3000/category/{category-slug}` | `https://nuravatech.com/category/{category-slug}` |
 | Deals | Public | [Open](http://localhost:3000/deals) | [Open](https://nuravatech.com/deals) |
 | Compare products | Public | [Open](http://localhost:3000/compare) | [Open](https://nuravatech.com/compare) |
 | Contact | Public | [Open](http://localhost:3000/contact) | [Open](https://nuravatech.com/contact) |
@@ -220,7 +216,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 ### Dynamic URL values
 
 - `{product-slug}` is the product's `slug` value, for example `iphone-15-pro-max`.
-- `{category-slug}` is a category slug, such as `phones`, `laptops`, `tablets`, or `accessories`.
+- `{category-slug}` is a category slug configured for the active store.
 - `{order-id}` is the ID shown on the signed-in customer's Orders page.
 
 API route handlers in `frontend/src/app/api` are intentionally excluded: they are backend endpoints rather than browser pages. For their reference, see the root [API endpoints documentation](../README.md#-backend-api-app-router-route-handlers).

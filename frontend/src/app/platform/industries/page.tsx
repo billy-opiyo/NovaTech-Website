@@ -1,11 +1,7 @@
 "use client"
 
-import { FormEvent, useEffect, useState } from "react"
-
-type CategoryTemplate = { id: string; name: string; slug: string; description: string | null; displayOrder: number; active: boolean }
-type AttributeDefinition = { id: string; name: string; key: string; type: string; required: boolean; options: string[]; active: boolean }
-type Theme = { id: string; name: string; slug: string; active: boolean; colors: Record<string, string>; typography: Record<string, string> }
-type Industry = { id: string; name: string; slug: string; description: string | null; icon: string | null; active: boolean; categoryTemplates: CategoryTemplate[]; attributeDefinitions: AttributeDefinition[]; defaultTheme: Theme | null; themes: Theme[]; _count: { stores: number } }
+import { useEffect, useState, type FormEvent } from "react"
+import { asRecord, normalizeIndustries, normalizeThemes, type AttributeDefinition, type Industry, type Theme } from "@/lib/industry-admin-data"
 
 const initialCategories = "[{\"name\":\"Products\",\"slug\":\"products\",\"description\":\"\",\"displayOrder\":1}]"
 const initialAttributes = "[{\"name\":\"Material\",\"key\":\"material\",\"type\":\"TEXT\",\"required\":false,\"options\":[],\"displayOrder\":1}]"
@@ -43,25 +39,28 @@ export default function IndustriesPage() {
 		setEditIndustrySlug(selected.slug)
 		setEditIndustryDescription(selected.description || "")
 		setEditIndustryIcon(selected.icon || "")
-		const full = selected as Industry & { homepagePreset?: Record<string, unknown> }
-		setHomepagePresetJson(JSON.stringify(full.homepagePreset || {}, null, 2))
+		setHomepagePresetJson(JSON.stringify(selected.homepagePreset || {}, null, 2))
 	}, [selectedId, industries])
 	const reload = async () => {
 		const [industryResponse, themeResponse] = await Promise.all([fetch("/api/platform/industries", { cache: "no-store" }), fetch("/api/platform/themes", { cache: "no-store" })])
-		const [industryBody, themeBody] = await Promise.all([industryResponse.json(), themeResponse.json()])
-		if (!industryResponse.ok) throw new Error(industryBody.message || "Industries are unavailable")
-		if (!themeResponse.ok) throw new Error(themeBody.message || "Themes are unavailable")
-		setIndustries(industryBody.industries || [])
-		setThemes(themeBody.themes || [])
-		if (!selectedId && industryBody.industries?.[0]) setSelectedId(industryBody.industries[0].id)
+		const [industryBody, themeBody] = await Promise.all([industryResponse.json().catch(() => null), themeResponse.json().catch(() => null)])
+		const industryMessage = asRecord(industryBody).message
+		const themeMessage = asRecord(themeBody).message
+		if (!industryResponse.ok) throw new Error(typeof industryMessage === "string" ? industryMessage : "Industries are unavailable")
+		if (!themeResponse.ok) throw new Error(typeof themeMessage === "string" ? themeMessage : "Themes are unavailable")
+		const nextIndustries = normalizeIndustries(asRecord(industryBody).industries)
+		const nextThemes = normalizeThemes(asRecord(themeBody).themes)
+		setIndustries(nextIndustries)
+		setThemes(nextThemes)
+		if (!selectedId && nextIndustries[0]) setSelectedId(nextIndustries[0].id)
 	}
 
 	useEffect(() => { void reload().catch((error: unknown) => setMessage(error instanceof Error ? error.message : "Unable to load industry settings")) }, [])
 
 	async function send(url: string, method: string, body?: unknown) {
 		const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
-		const result = await response.json().catch(() => ({}))
-		if (!response.ok) throw new Error(result.message || "The change could not be saved")
+		const result = asRecord(await response.json().catch(() => null))
+		if (!response.ok) throw new Error(typeof result.message === "string" ? result.message : "The change could not be saved")
 		return result
 	}
 
@@ -71,7 +70,9 @@ export default function IndustriesPage() {
 			const categoryTemplates = JSON.parse(categoriesJson) as unknown
 			const attributeDefinitions = JSON.parse(attributesJson) as unknown
 			const result = await send("/api/platform/industries", "POST", { name, slug, description, icon, categoryTemplates, attributeDefinitions, active: true })
-			setMessage(`${result.industry.name} created`); setName(""); setSlug(""); setDescription(""); setIcon(""); await reload(); setSelectedId(result.industry.id)
+			const createdIndustry = asRecord(result.industry)
+			setMessage(`${typeof createdIndustry.name === "string" ? createdIndustry.name : name} created`); setName(""); setSlug(""); setDescription(""); setIcon(""); await reload()
+			if (typeof createdIndustry.id === "string") setSelectedId(createdIndustry.id)
 		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to create industry") }
 		finally { setBusy(false) }
 	}
@@ -103,20 +104,22 @@ export default function IndustriesPage() {
 
 	async function addCategory(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault(); if (!selected) return
-		const form = new FormData(event.currentTarget); setBusy(true)
+		const formElement = event.currentTarget
+		const form = new FormData(formElement); setBusy(true)
 		try {
 			await send(`/api/platform/industries/${selected.id}/categories`, "POST", { name: String(form.get("categoryName")), slug: String(form.get("categorySlug")), description: String(form.get("categoryDescription") || ""), imageUrl: String(form.get("categoryImageUrl") || "").trim() || null, displayOrder: Number(form.get("categoryOrder") || 0) })
-			setMessage("Category preset added"); await reload(); event.currentTarget.reset()
+			setMessage("Category preset added"); await reload(); formElement.reset()
 		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to add category preset") }
 		finally { setBusy(false) }
 	}
 
 	async function addAttribute(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault(); if (!selected) return
-		const form = new FormData(event.currentTarget); const type = String(form.get("attributeType")); const options = String(form.get("attributeOptions") || "").split(",").map((item) => item.trim()).filter(Boolean); setBusy(true)
+		const formElement = event.currentTarget
+		const form = new FormData(formElement); const type = String(form.get("attributeType")); const options = String(form.get("attributeOptions") || "").split(",").map((item) => item.trim()).filter(Boolean); setBusy(true)
 		try {
 			await send(`/api/platform/industries/${selected.id}/attributes`, "POST", { name: String(form.get("attributeName")), key: String(form.get("attributeKey")), type, required: form.get("attributeRequired") === "on", options, displayOrder: Number(form.get("attributeOrder") || 0) })
-			setMessage("Product attribute added"); await reload(); event.currentTarget.reset()
+			setMessage("Product attribute added"); await reload(); formElement.reset()
 		} catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to add product attribute") }
 		finally { setBusy(false) }
 	}
@@ -142,7 +145,7 @@ export default function IndustriesPage() {
 
 	function editTheme(theme: Theme) {
 		setEditingThemeId(theme.id); setThemeName(theme.name); setThemeSlug(theme.slug)
-		setThemeIndustryId((theme as Theme & { industryId?: string | null }).industryId || "")
+		setThemeIndustryId(theme.industryId || "")
 		setThemeColors(JSON.stringify(theme.colors)); setThemeTypography(JSON.stringify(theme.typography))
 	}
 

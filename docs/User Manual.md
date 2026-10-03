@@ -1,9 +1,9 @@
 # Nurava Tech SaaS User Manual
 
-**Product:** Nurava Tech hosted multi-store electronics platform  
+**Product:** Nurava Tech multi-industry commerce platform for diverse independent stores
 **Primary domain:** https://nuravatech.com  
 **Market defaults:** Kenya, English, en-KE, KES, Africa/Nairobi  
-**Repository audit:** 3 September 2026
+**Repository audit:** 3 October 2026
 
 This manual describes how the application works for shoppers, merchants,
 platform operators, and developers. It is based on the current source, Prisma
@@ -13,8 +13,9 @@ gated, historical, or a known gap.
 
 ## 1. Product model and the most important boundary
 
-Nurava Tech is a SaaS platform for independent electronics merchants. It has
-four distinct experiences:
+Nurava Tech is a multi-industry SaaS platform that gives diverse independent
+merchants their own configurable storefronts and business tools. It has four
+distinct experiences:
 
 1. **Platform discovery:** the root domain and /stores help shoppers discover
    eligible stores.

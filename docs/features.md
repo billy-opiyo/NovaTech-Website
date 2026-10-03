@@ -10,7 +10,7 @@
 | **Store Host Routing** | Local previews support `{store-slug}.localhost`; staging/preview Vercel project hosts and explicit `/store/{slug}` paths preserve platform/store context; production links use `{store-slug}.{PLATFORM_DOMAIN}` when DNS and deployment routing are configured. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination. |
 | **Product Detail** | Image gallery with zoom, product variants, pricing, stock status, warranty info, reviews section, sticky add-to-cart, and API-backed similar-product recommendations. |
-| **Category Pages** | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories. |
+| **Category Pages** | Dynamic category landing pages and subcategories configured for each store. |
 | **Deals Page** | Promotional deal cards linking into filtered product listings. |
 | **Compare Page** | Side-by-side product comparison with spec tables and highlight win/loss indicators. |
 | **Search Overlay** | Responsive global search with `Ctrl+K` shortcut, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning. |

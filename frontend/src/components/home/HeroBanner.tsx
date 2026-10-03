@@ -27,13 +27,9 @@ export default function HeroBanner() {
 		secondaryHref: store.homepage.heroSecondaryHref,
 	}
 	return (
-		<section data-hero-layout={store.themeLayout?.heroLayout || "centered"} className="relative isolate min-h-[24rem] overflow-hidden rounded-3xl glass-card navy-glass p-6 text-center sm:p-8 md:p-16">
-			{!store.isPlatformHome && store.homepage.heroImage && <>
-				<img src={store.homepage.heroImage} alt={store.homepage.heroImageAlt || ""} className="absolute inset-0 z-0 h-full w-full object-cover" fetchPriority="high" />
-				<div className="absolute inset-0 z-0 bg-gradient-to-r from-black/75 via-black/50 to-black/30 backdrop-blur-[1px]" aria-hidden="true" />
-			</>}
+		<section data-hero-layout={store.themeLayout?.heroLayout || "centered"} className="relative overflow-hidden rounded-3xl glass-card navy-glass p-6 text-center sm:p-8 md:p-16">
 			<motion.div
-				className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-white/20 bg-black/25 p-5 shadow-2xl backdrop-blur-md sm:p-8"
+				className="mx-auto max-w-4xl"
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.8 }}
@@ -42,7 +38,7 @@ export default function HeroBanner() {
 					{copy.title}
 					<span className="block text-primary">{copy.highlight}</span>
 				</h1>
-				<p className={`mb-8 mx-auto max-w-2xl text-base sm:text-lg md:text-xl ${!store.isPlatformHome && store.homepage.heroImage ? "text-white/90" : "text-gray-600 dark:text-gray-300"}`}>
+				<p className="mb-8 mx-auto max-w-2xl text-base text-gray-600 dark:text-gray-300 sm:text-lg md:text-xl">
 					{copy.description}
 				</p>
 				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">

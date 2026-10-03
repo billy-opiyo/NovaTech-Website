@@ -94,12 +94,16 @@ export type PlatformSiteSettings = {
 		showProgress?: boolean
 		welcomeText?: string
 		loadingText?: string
+		backgroundMode?: "images" | "color" | "glass"
+		backgroundColor?: string
+		glassOpacity?: number
 		images?: PlatformResponsiveAssets
 	}
 	hero?: {
 		title?: string
 		highlight?: string
 		description?: string
+		/** Legacy values are accepted when reading saved settings but are never merged or rendered. */
 		images?: PlatformResponsiveAssets
 	}
 	design?: PlatformDesignSettings
@@ -144,6 +148,9 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showProgress: true,
 			welcomeText: "Welcome to",
 			loadingText: "Preparing your store",
+			backgroundMode: "glass",
+			backgroundColor: "#071a2c",
+			glassOpacity: 88,
 			images: {
 				darkDesktop: "/images/NovaTech cover desktop.png",
 				darkTablet: "/images/NovaTech cover mobile.png",
@@ -152,6 +159,11 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 				lightTablet: "/images/NovaTech cover mobile light.png",
 				lightMobile: "/images/NovaTech cover mobile light.png",
 			},
+		},
+		hero: {
+			title: "Nurava Tech is the technology platform",
+			highlight: "connecting you with trusted stores",
+			description: "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya.",
 		},
 		design: { themePreset: "nova-blue-orange" },
 		legal: {
@@ -183,12 +195,17 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 }
 
 export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: PlatformSiteSettings): PlatformSiteSettings {
-	// Ignore the retired hero customizations while continuing to parse older saved
-	// records safely; the platform homepage hero now uses its original artwork.
 	const safeBase = { ...base }
 	const safePatch = { ...patch }
 	delete safeBase.hero
 	delete safePatch.hero
+	const defaults = getPlatformSiteSettingsDefaults().hero!
+	const nonBlank = (value: string | undefined, fallback: string) => value?.trim() || fallback
+	const hero = {
+		title: nonBlank(patch.hero?.title, nonBlank(base.hero?.title, defaults.title!)),
+		highlight: nonBlank(patch.hero?.highlight, nonBlank(base.hero?.highlight, defaults.highlight!)),
+		description: nonBlank(patch.hero?.description, nonBlank(base.hero?.description, defaults.description!)),
+	}
 	const contact = { ...base.contact, ...patch.contact }
 	// Before the dedicated field existed, the platform settings screen stored
 	// this value as whatsappMessage. Treat it as the floating/social message so
@@ -205,7 +222,12 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		social: { ...base.social, ...patch.social },
 		seo: { ...base.seo, ...patch.seo },
 		features: { ...base.features, ...patch.features },
-		splash: { ...base.splash, ...patch.splash, images: { ...base.splash?.images, ...patch.splash?.images } },
+		splash: {
+			...base.splash,
+			...patch.splash,
+			images: { ...base.splash?.images, ...patch.splash?.images },
+		},
+		hero,
 		design: {
 			...base.design,
 			...patch.design,

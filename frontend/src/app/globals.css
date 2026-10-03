@@ -416,6 +416,60 @@ body.splash-pending {
   isolation: isolate;
 }
 
+.splash-screen.splash-screen--solid {
+	background-color: var(--splash-background-color, #071a2c);
+	background-image: none;
+	color: var(--splash-foreground, #fff);
+}
+
+.splash-screen.splash-screen--glass {
+	background-color: var(--splash-background-color, #071a2c);
+	background-image:
+		radial-gradient(ellipse at 15% 15%, rgb(38 111 178 / 0.34), transparent 48%),
+		radial-gradient(ellipse at 85% 85%, rgb(10 41 76 / 0.75), transparent 54%);
+	color: var(--splash-foreground, #fff);
+}
+
+.splash-screen--glass::before {
+	position: absolute;
+	inset: 1.25rem;
+	border: 1px solid rgb(255 255 255 / 0.2);
+	border-radius: 2rem;
+	background: linear-gradient(145deg, color-mix(in srgb, var(--splash-background-color, #071a2c) var(--splash-glass-opacity, 88%), transparent), rgb(255 255 255 / 0.035));
+	box-shadow: 0 24px 80px rgb(0 0 0 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.14);
+	backdrop-filter: blur(18px);
+	-webkit-backdrop-filter: blur(18px);
+	content: "";
+	pointer-events: none;
+}
+
+.splash-screen--solid .splash-welcome,
+.splash-screen--solid .splash-loading,
+.splash-screen--glass .splash-welcome,
+.splash-screen--glass .splash-loading {
+	color: var(--splash-foreground, #fff);
+}
+
+html:not(.dark) .splash-screen.splash-screen--solid,
+html:not(.dark) .splash-screen.splash-screen--glass {
+	background-color: var(--splash-background-color, #071a2c);
+	background-image: none;
+	color: var(--splash-foreground, #fff);
+}
+
+html:not(.dark) .splash-screen.splash-screen--glass {
+	background-image:
+		radial-gradient(ellipse at 15% 15%, rgb(38 111 178 / 0.34), transparent 48%),
+		radial-gradient(ellipse at 85% 85%, rgb(10 41 76 / 0.75), transparent 54%);
+}
+
+@media (max-width: 767px) {
+	.splash-screen--glass::before {
+		inset: 0.75rem;
+		border-radius: 1.5rem;
+	}
+}
+
 @media (min-width: 768px) {
   .splash-screen {
     background-image:

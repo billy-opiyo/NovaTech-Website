@@ -1,5 +1,7 @@
 # Nurava Tech SaaS Switch Plan
 
+> Current product direction: Nurava Tech is a multi-industry commerce platform for diverse independent stores. Dated planning notes below are historical unless explicitly updated; technical references to legacy catalog data describe compatibility, not a limit on platform scope.
+
 ## Current implementation status (2026-08-21)
 
 The tenant foundation and source-level merchant SaaS billing slice are
@@ -49,7 +51,7 @@ pre-billing state.
 ## Approved provisional commercial decisions (2026-08-21)
 
 - Launch market and currency: Kenya and KES.
-- Each independent merchant is the merchant of record for its own electronics
+- Each independent merchant is the merchant of record for its own product
   sales, shopper payments, delivery, returns, refunds, warranties, product
   taxes, and shopper complaints. Nurava does not collect shopper funds.
 - Merchant SaaS pricing is monthly: Starter KES 1,500 plus KES 5,000 setup;
@@ -320,13 +322,13 @@ pre-billing state.
 - Phase 5 must deploy and verify migration `0005_shopper_store_preference`, regenerate Prisma Client, test real `{slug}.localhost` and platform-subdomain resolution with a database, and run cross-store browser/isolation checks.
 - Remaining pre-launch work still includes payment-provider setup, custom-domain verification, preview routing, unscoped legacy admin/API paths, DNS/SSL, and legal/tax/privacy review.
 
-**Date:** 18 August 2026
-**Current implementation:** Nurava Tech's original electronics storefront plus the tenant/store foundation and pre-Phase 5 shopper discovery slice
-**Target product:** A multi-tenant SaaS platform that lets independent digital-electronics merchants create, brand, manage, and publish their own online stores
+**Date:** 18 August 2026 (original plan; current product scope updated 3 October 2026)
+**Current implementation:** Nurava Tech is a multi-industry commerce platform with tenant-scoped storefronts, industry configuration, and platform discovery.
+**Target product:** A multi-tenant SaaS platform that lets diverse independent merchants create, brand, manage, and publish their own online stores.
 
 ## 1. Recommended product direction
 
-Nurava Tech should become a hosted commerce platform for electronics merchants, rather than a collection of separately configured Nurava Tech websites.
+Nurava Tech is a hosted multi-industry commerce platform for diverse independent stores, rather than a collection of separately configured Nurava Tech websites.
 
 Each paying client should be able to:
 
@@ -365,7 +367,7 @@ Decide these points before changing the payment or database design:
 
 ### Target customer
 
-Start with independent electronics shops, phone dealers, laptop retailers, repair-and-accessory businesses, and small distributors that need a professional storefront without building software themselves.
+Serve independent merchants across diverse industries who need a professional storefront and business tools without building software themselves.
 
 ### Minimum viable offer
 
@@ -705,7 +707,7 @@ Add observability dimensions for `tenantId`, `storeId`, request ID, user ID, rou
 ### Phase 5 — Hardening and controlled beta
 
 - Run security, isolation, payment, backup/restore, load, accessibility, and browser tests.
-- Launch with a small group of invited electronics merchants.
+- Launch with a small group of invited merchants representing the platform's multi-industry scope.
 - Observe onboarding completion, first-product time, first-publish time, checkout success, support demand, and payment failures.
 - Fix operational gaps before public self-service sign-up.
 
