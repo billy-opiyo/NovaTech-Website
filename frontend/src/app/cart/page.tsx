@@ -69,6 +69,7 @@ export default function CartPage() {
 	const freeShippingThreshold = Math.max(0, store.ecommerce.freeShippingThreshold)
 	const qualifiesForFreeShipping = freeShippingThreshold === 0 || subtotal >= freeShippingThreshold
 	const finalTotal = Math.max(0, total - couponDiscount)
+	const customizationLines = (item: (typeof items)[number]) => Object.entries(item.customizations || {}).map(([key, value]) => `${key}: ${value}`).join(" · ")
 
 	if (items.length === 0 && savedItems.length === 0) {
 		return (
@@ -175,11 +176,12 @@ export default function CartPage() {
 												>
 													{item.name}
 												</Link>
-												{item.variant && (
-													<p className="text-sm text-gray-500 mt-1">
-														{item.variant}
-													</p>
-												)}
+								{item.variant && (
+									<p className="text-sm text-gray-500 mt-1">
+										{item.variant}
+									</p>
+								)}
+								{item.customizations && <p className="mt-1 text-xs text-primary">{customizationLines(item)}</p>}
 											</div>
 											<p className="font-bold text-lg ml-4">
 												KES {(item.price * item.quantity).toLocaleString()}

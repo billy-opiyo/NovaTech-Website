@@ -19,7 +19,7 @@ export const clientConfig = {
 		language: "en",
 		country: "Kenya",
 		currency: "KES",
-		footerDescription: "A trusted technology marketplace connecting shoppers with independent Kenyan stores.",
+		footerDescription: "A trusted commerce platform connecting shoppers with independent Kenyan stores.",
 	},
 	contact: {
 		phoneDisplay: "+254 700 123 456",
@@ -72,6 +72,9 @@ export const clientConfig = {
 		aboutTitle: "About Nurava Tech",
 		aboutDescription: "Nurava Tech helps shoppers discover independent electronics stores and connect with merchants directly.",
 		categoryTitle: "Shop by Category",
+		featuredTitle: "Featured Products",
+		bannerTitle: "",
+		bannerContent: "",
 		newsletterTitle: "Stay Updated",
 		newsletterDescription: "Get exclusive deals and new arrivals straight to your inbox.",
 		categories: [

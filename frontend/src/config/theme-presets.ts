@@ -204,7 +204,7 @@ const hexToRgb = (hex: string) => {
 
 type ThemeColorMode = Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
 export type PlatformThemeOverrides = {
-	colors?: { primary?: string; primaryDark?: string; accent?: string; light?: ThemeColorMode; dark?: ThemeColorMode }
+	colors?: { primary?: string; primaryLight?: string; primaryDark?: string; accent?: string; light?: ThemeColorMode; dark?: ThemeColorMode }
 	typography?: { bodyFont?: string; headingFont?: string }
 	glass?: { blurPx?: number; cardRadiusPx?: number; lightOpacity?: number; darkOpacity?: number; lightBorderOpacity?: number; darkBorderOpacity?: number; shadow?: "none" | "soft" | "balanced" | "bold" }
 }
@@ -249,6 +249,7 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	const darkScrollbar = scrollbarColors("dark")
 	return {
 	"--color-primary": hexToRgb(primary),
+	"--color-primary-light": overrides?.colors?.primaryLight || primary,
 	"--color-primary-dark": hexToRgb(primaryDark),
 	"--color-accent": hexToRgb(accent),
 	"--color-bg-light": hexToRgb(color("light", "background")),

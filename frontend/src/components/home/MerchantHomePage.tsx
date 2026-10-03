@@ -25,6 +25,7 @@ export default function MerchantHomePage({ featuredProducts }: { featuredProduct
 			<HeroBanner />
 			<CategoryGrid />
 			<FeaturedProducts products={featuredProducts} />
+			{store.homepage.bannerTitle && store.homepage.bannerContent && <section data-banner-style={store.themeLayout?.bannerStyle || "soft"} className="glass-card navy-glass p-8 text-center md:p-12"><h2 className="text-2xl font-bold md:text-3xl">{store.homepage.bannerTitle}</h2><p className="mx-auto mt-3 max-w-3xl text-gray-600 dark:text-gray-300">{store.homepage.bannerContent}</p></section>}
 			<Testimonials />
 			{store.features.showNewsletter && <Newsletter />}
 			<div className="mb-16 space-y-8">

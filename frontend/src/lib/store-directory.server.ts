@@ -32,6 +32,8 @@ export type PlatformDiscoveryStore = {
 	productCount: number
 	products: PlatformDiscoveryProduct[]
 	category: "TOP_RATED" | "MOST_REVIEWED" | "NEW_AND_GROWING"
+	industry: { name: string; slug: string } | null
+	isDemo: boolean
 }
 
 const jsonRecord = (value: unknown): Record<string, unknown> =>
@@ -113,6 +115,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				slug: true,
 				logoUrl: true,
 				homepageSettings: true,
+				industry: { select: { name: true, slug: true } },
 				tenant: {
 					select: {
 						id: true,
@@ -131,7 +134,12 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 			? await prisma.review.groupBy({ by: ["tenantId"], where: { tenantId: { in: tenantIds }, moderationStatus: "APPROVED" }, _avg: { rating: true }, _count: { _all: true } })
 			: []
 		const reviewByTenant = new Map(reviewGroups.map((group) => [group.tenantId, { averageRating: group._avg.rating || 0, reviewCount: group._count._all }]))
-		const maxReviewCount = Math.max(0, ...reviewGroups.map((group) => group._count._all))
+		const maxReviewByIndustry = new Map<string, number>()
+		for (const store of stores) {
+			const reviewCount = reviewByTenant.get(store.tenant.id)?.reviewCount || 0
+			const industryKey = store.industry?.slug || "unclassified"
+			maxReviewByIndustry.set(industryKey, Math.max(maxReviewByIndustry.get(industryKey) || 0, reviewCount))
+		}
 
 		return stores.map((store) => {
 			const homepage = jsonRecord(store.homepageSettings)
@@ -140,7 +148,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				? "NEW_AND_GROWING"
 				: review.averageRating >= 4.5 && review.reviewCount >= 3
 					? "TOP_RATED"
-					: review.reviewCount === maxReviewCount && maxReviewCount > 0
+					: review.reviewCount === (maxReviewByIndustry.get(store.industry?.slug || "unclassified") || 0) && review.reviewCount > 0
 						? "MOST_REVIEWED"
 						: "NEW_AND_GROWING"
 			return {
@@ -154,6 +162,8 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				productCount: store.tenant._count.products,
 				products: store.tenant.products.map((product) => ({ name: product.name, slug: product.slug, brand: product.brand, price: product.discountedPrice ?? product.price, image: product.images[0] || null })),
 				category,
+				industry: store.industry,
+				isDemo: ["nuravatech", "nurava-furnitures", "nurava-cakes"].includes(store.slug),
 			}
 		})
 	} catch (error) {

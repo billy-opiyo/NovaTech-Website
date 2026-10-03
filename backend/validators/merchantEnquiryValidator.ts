@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { cakeCustomizationsSchema } from "../lib/cake-customizations"
 
 export const merchantEnquirySchema = z.object({
 	customerName: z.string().trim().min(2).max(120),
@@ -11,6 +12,7 @@ export const merchantEnquirySchema = z.object({
 		productId: z.string().min(1),
 		quantity: z.number().int().min(1).max(99),
 		variant: z.string().trim().max(200).optional().nullable(),
+		customizations: cakeCustomizationsSchema.optional(),
 	})).min(1).max(50),
 })
 
