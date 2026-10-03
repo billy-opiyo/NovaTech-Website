@@ -261,7 +261,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 								{query && suggestions.length === 0 && (
 									<div className="text-center py-8">
 										<Search className="mx-auto mb-3 text-gray-400" size={32} />
-										<p className="text-gray-500">No results for "{query}"</p>
+										<p className="text-gray-500">No results for &quot;{query}&quot;</p>
 									</div>
 								)}
 
