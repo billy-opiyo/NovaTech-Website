@@ -158,7 +158,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 			{showTrigger && (
 				<button
 					onClick={() => setOpen(true)}
-					className={compactTrigger ? "inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-200" : "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"}
+					className={compactTrigger ? "inline-flex h-9 w-9 min-w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-200" : "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"}
 					aria-label="Open search"
 				>
 					<Search size={16} />
@@ -200,7 +200,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 											setSelectedIndex(-1)
 										}}
 										onKeyDown={handleKeyDown}
-										placeholder={store.isPlatformHome ? "Search available stores by name..." : 'Search... (e.g., "i7 laptop 16GB RAM")'}
+										placeholder={store.isPlatformHome ? "Search pages and stores..." : 'Search... (e.g., "i7 laptop 16GB RAM")'}
 										className="w-full pl-12 pr-12 py-4 text-lg bg-transparent border-none outline-none"
 									/>
 									<button
