@@ -19,13 +19,11 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const splashImages = splashSettings?.images || {}
 	const backgroundMode = splashSettings?.backgroundMode || "glass"
 	const useBackgroundImages = backgroundMode === "images"
-	const backgroundColor = splashSettings?.backgroundColor || "#071a2c"
-	const colorChannels = backgroundColor.match(/[\da-f]{2}/gi)?.map((channel) => Number.parseInt(channel, 16)) || [7, 26, 44]
+	const backgroundColor = splashSettings?.backgroundColor
+	const colorChannels = backgroundColor?.match(/[\da-f]{2}/gi)?.map((channel) => Number.parseInt(channel, 16)) || [7, 26, 44]
 	const splashForeground = colorChannels[0] * 0.299 + colorChannels[1] * 0.587 + colorChannels[2] * 0.114 > 150 ? "#0f172a" : "#ffffff"
 	const splashStyle = {
-		"--splash-background-color": backgroundColor,
-		"--splash-foreground": splashForeground,
-		"--splash-glass-opacity": `${Math.max(30, Math.min(100, splashSettings?.glassOpacity ?? 88))}%`,
+		...(backgroundColor ? { "--splash-background-color": backgroundColor, "--splash-foreground": splashForeground } : {}),
 		"--splash-dark-desktop": `url("${splashImages.darkDesktop || "/images/NovaTech cover desktop.png"}")`,
 		"--splash-dark-tablet": `url("${splashImages.darkTablet || "/images/NovaTech cover mobile.png"}")`,
 		"--splash-dark-mobile": `url("${splashImages.darkMobile || "/images/NovaTech cover mobile.png"}")`,
@@ -43,7 +41,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	// the platform homepage (especially OAuth). The user is already returning
 	// to the page they started from, so do not replay the platform splash.
 	const isLoginReturn = searchParams.get("login") === "success"
-	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage && !isLoginReturn
+	const shouldShowSplash = (splashSettings?.enabled ?? clientConfig.features.showSplashScreen) && isInitialPlatformHomepage && !isLoginReturn
 	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)

@@ -6,10 +6,10 @@ import type { ThemePresetId } from "./theme-presets"
  */
 export const clientConfig = {
 	brand: {
-		name: "Nurava Tech",
+		name: "Nurava HubStores",
 		shortName: "Nurava",
 		logo: "/images/NovaTech icon.png",
-		logoAlt: "Nurava Tech logo",
+		logoAlt: "Nurava HubStores logo",
 		favicon: "/images/NovaTech%20icon.png",
 		tagline: "Kenya's multi-industry commerce platform",
 	},
@@ -69,8 +69,8 @@ export const clientConfig = {
 		heroPrimaryHref: "/category/phones",
 		heroSecondaryLabel: "Today's Deals",
 		heroSecondaryHref: "/deals",
-		aboutTitle: "About Nurava Tech",
-		aboutDescription: "Nurava Tech helps shoppers discover independent stores and connect with merchants directly.",
+		aboutTitle: "About Nurava HubStores",
+		aboutDescription: "Nurava HubStores helps shoppers discover independent stores and connect with merchants directly.",
 		categoryTitle: "Shop by Category",
 		featuredTitle: "Featured Products",
 		bannerTitle: "",

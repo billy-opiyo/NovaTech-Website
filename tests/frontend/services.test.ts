@@ -130,6 +130,28 @@ test("platform store cards request a fresh tenant-scoped storefront page", () =>
 	const card = hero.slice(hero.indexOf("function StoreCard"), hero.indexOf("function TrustStrip"))
 	assert.match(card, /<a\s+href={store\.href}/)
 	assert.doesNotMatch(card, /<Link\s+href={store\.href}/)
+	assert.match(hero, /nurava-furnitures/)
+	assert.match(hero, /nurava-cakes/)
+	const seed = readFileSync("backend/prisma/seed.ts", "utf8")
+	assert.match(seed, /storeName: "Nurava Furnitures"[\s\S]*?storeSlug: "nurava-furnitures"/)
+	assert.match(seed, /storeName: "Nurava Cakes"[\s\S]*?storeSlug: "nurava-cakes"/)
+})
+
+test("storefront hero actions remain centered at mobile and desktop widths", () => {
+	const hero = readFileSync("frontend/src/components/home/HeroBanner.tsx", "utf8")
+	assert.match(hero, /mx-auto flex w-full flex-col items-center justify-center gap-3 sm:flex-row/)
+})
+
+test("platform header reuses search overlay with available-store suggestions", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const search = readFileSync("frontend/src/components/search/SearchOverlay.tsx", "utf8")
+	const endpoint = readFileSync("frontend/src/app/api/public/store-search/route.ts", "utf8")
+	assert.match(header, /store\.isPlatformHome && <SearchOverlay compactTrigger \/>/)
+	assert.match(search, /\/api\/public\/store-search\?q=/)
+	assert.match(search, /suggestions\[selectedIndex\]\.type === "store"\) window\.location\.assign/)
+	assert.match(search, /suggestion\.type === "store"[\s\S]*?<a key=\{i\} href=\{suggestion\.href\}/)
+	assert.match(endpoint, /getPublishedStores\(\)/)
+	assert.match(endpoint, /getStorePublicUrl\(store\.slug\)/)
 })
 
 test("merchant WhatsApp links normalize customer contact numbers", () => {

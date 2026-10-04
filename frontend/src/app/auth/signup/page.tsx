@@ -128,7 +128,7 @@ export default function SignUpPage() {
 					<AuthCloseButton fallback={getStoreHomeHref(store)} skipHistory />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
-						<p className="text-gray-500">Create an account to manage your Nurava Tech shopping experience.</p>
+						<p className="text-gray-500">Create an account to manage your {store.isPlatformHome ? "Nurava HubStores" : store.brand.name} shopping experience.</p>
 					</div>
 
 					{error && (

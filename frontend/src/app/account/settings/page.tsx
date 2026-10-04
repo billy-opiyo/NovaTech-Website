@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { CheckCircle2, Palette, Save, Bell, Megaphone, Camera, Upload, Loader2 } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
+import { useStoreContext } from "@/lib/store-context"
 import { useToast } from "@/components/ui/Toast"
 import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
 
@@ -20,6 +21,7 @@ type Settings = {
 const defaults: Settings = { name: "", email: "", image: null, emailVerified: null, marketingEmails: false, orderUpdates: true, preferredTheme: "dark" }
 
 export default function AccountSettingsPage() {
+	const store = useStoreContext()
 	const { theme, setTheme } = useTheme()
 	const { addToast } = useToast()
 	const [settings, setSettings] = useState<Settings>(defaults)
@@ -86,7 +88,7 @@ export default function AccountSettingsPage() {
 	if (loading) return <div className="py-20 text-center text-gray-500">Loading your settings…</div>
 
 	return <div className="mx-auto max-w-3xl space-y-8 py-6 sm:py-10">
-		<div><h1 className="text-3xl font-bold">Account settings</h1><p className="mt-2 text-gray-500">Choose how Nurava Tech looks and how we keep you informed.</p></div>
+		<div><h1 className="text-3xl font-bold">Account settings</h1><p className="mt-2 text-gray-500">Choose how {store.isPlatformHome ? "Nurava HubStores" : store.brand.name} looks and how we keep you informed.</p></div>
 		<form onSubmit={save} className="space-y-6">
 			<section className="glass-card p-6">
 				<h2 className="mb-5 flex items-center gap-2 text-xl font-semibold"><Palette className="text-primary" size={21} /> Profile and appearance</h2>

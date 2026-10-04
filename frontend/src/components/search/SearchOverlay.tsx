@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Search, X, TrendingUp, Clock, ArrowRight, Zap, FileText } from "lucide-react"
+import { Search, X, TrendingUp, Clock, ArrowRight, Zap, FileText, Store } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
@@ -13,7 +13,7 @@ import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 
 interface SearchSuggestion {
-	type: "product" | "page" | "category" | "brand" | "recent"
+	type: "product" | "page" | "category" | "brand" | "recent" | "store"
 	text: string
 	href: string
 	description?: string
@@ -40,9 +40,10 @@ interface SearchOverlayProps {
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
 	showTrigger?: boolean
+	compactTrigger?: boolean
 }
 
-export default function SearchOverlay({ open, onOpenChange, showTrigger = true }: SearchOverlayProps = {}) {
+export default function SearchOverlay({ open, onOpenChange, showTrigger = true, compactTrigger = false }: SearchOverlayProps = {}) {
 	const router = useRouter()
 	const store = useStoreContext()
 	const [internalOpen, setInternalOpen] = useState(false)
@@ -95,6 +96,18 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 
 		const controller = new AbortController()
 		const loadSuggestions = async () => {
+			if (store.isPlatformHome) {
+				try {
+					const response = await fetch(`/api/public/store-search?q=${encodeURIComponent(query)}`, { signal: controller.signal, cache: "no-store" })
+					if (!response.ok) throw new Error("Store search failed")
+					const data: { stores?: Array<{ name: string; href: string; tagline: string }> } = await response.json()
+					const storeSuggestions: SearchSuggestion[] = (data.stores || []).map((entry) => ({ type: "store", text: entry.name, href: entry.href, description: entry.tagline }))
+					setSuggestions([...pageSuggestions, ...storeSuggestions].slice(0, 8))
+				} catch (error) {
+					if ((error as Error).name !== "AbortError") setSuggestions(pageSuggestions)
+				}
+				return
+			}
 			try {
 				const response = await fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(query)}&limit=6`), {
 					signal: controller.signal,
@@ -130,9 +143,10 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			setSelectedIndex((prev) => Math.max(prev - 1, -1))
 		} else if (e.key === "Enter") {
 			if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-				router.push(suggestions[selectedIndex].href)
+				if (suggestions[selectedIndex].type === "store") window.location.assign(suggestions[selectedIndex].href)
+				else router.push(suggestions[selectedIndex].href)
 				setOpen(false)
-			} else if (query) {
+			} else if (query && !store.isPlatformHome) {
 				router.push(getStoreRouteHref(store, `/products?q=${encodeURIComponent(query)}`))
 				setOpen(false)
 			}
@@ -144,7 +158,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 			{showTrigger && (
 				<button
 					onClick={() => setOpen(true)}
-					className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"
+					className={compactTrigger ? "inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-200" : "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"}
 					aria-label="Open search"
 				>
 					<Search size={16} />
@@ -186,7 +200,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 											setSelectedIndex(-1)
 										}}
 										onKeyDown={handleKeyDown}
-										placeholder='Search... (e.g., "i7 laptop 16GB RAM")'
+										placeholder={store.isPlatformHome ? "Search available stores by name..." : 'Search... (e.g., "i7 laptop 16GB RAM")'}
 										className="w-full pl-12 pr-12 py-4 text-lg bg-transparent border-none outline-none"
 									/>
 									<button
@@ -199,18 +213,9 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 
 								{suggestions.length > 0 && (
 									<div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2 max-h-96 overflow-y-auto">
-										{suggestions.map((suggestion, i) => (
-											<Link
-												key={i}
-												href={suggestion.href}
-												onClick={() => setOpen(false)}
-												className={clsx(
-													"flex items-center gap-3 px-4 py-3 rounded-lg transition",
-													i === selectedIndex
-														? "bg-primary/10"
-														: "hover:bg-black/5 dark:hover:bg-white/5",
-												)}
-											>
+										{suggestions.map((suggestion, i) => {
+											const className = clsx("flex items-center gap-3 rounded-lg px-4 py-3 transition", i === selectedIndex ? "bg-primary/10" : "hover:bg-black/5 dark:hover:bg-white/5")
+											const content = <>
 												{suggestion.type === "product" && suggestion.image && (
 													<div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
 														<Image
@@ -226,11 +231,11 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 														<FileText size={18} className="text-primary" />
 													</div>
 												)}
-												{suggestion.type === "category" && (
-													<div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-														<Search size={18} className="text-blue-500" />
-													</div>
-												)}
+													{(suggestion.type === "category" || suggestion.type === "store") && (
+														<div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+															{suggestion.type === "store" ? <Store size={18} className="text-blue-500" /> : <Search size={18} className="text-blue-500" />}
+														</div>
+													)}
 												{suggestion.type === "brand" && (
 													<div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
 														<Zap size={18} className="text-purple-500" />
@@ -243,7 +248,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 												)}
 												<div className="flex-1">
 													<p className="font-medium">{suggestion.text}</p>
-													{suggestion.type === "page" && (
+													{(suggestion.type === "page" || suggestion.type === "store") && (
 														<p className="text-sm text-gray-500">{suggestion.description}</p>
 													)}
 													{suggestion.price && (
@@ -253,8 +258,11 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true }
 													)}
 												</div>
 												<ArrowRight size={16} className="text-gray-400" />
-											</Link>
-										))}
+													</>
+											return suggestion.type === "store"
+												? <a key={i} href={suggestion.href} onClick={() => setOpen(false)} className={className}>{content}</a>
+												: <Link key={i} href={suggestion.href} onClick={() => setOpen(false)} className={className}>{content}</Link>
+										})}
 									</div>
 								)}
 
