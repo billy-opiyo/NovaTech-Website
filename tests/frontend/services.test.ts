@@ -160,6 +160,8 @@ test("platform header reuses search overlay with available-store suggestions", (
 	assert.match(header, /store\.isPlatformHome && <SearchOverlay compactTrigger \/>/)
 	assert.match(search, /\/api\/public\/store-search\?q=/)
 	assert.match(search, /h-9 w-9 min-w-9 shrink-0/)
+	assert.match(search, /!compactTrigger && <>[\s\S]*?Search pages &amp; products[\s\S]*?<kbd/)
+	assert.match(search, /Search size=\{compactTrigger \? 20 : 16\}/)
 	assert.match(search, /Search pages and stores\.\.\./)
 	assert.match(search, /\[\.\.\.pageSuggestions, \.\.\.storeSuggestions\]/)
 	assert.match(search, /suggestions\[selectedIndex\]\.type === "store"\) window\.location\.assign/)
