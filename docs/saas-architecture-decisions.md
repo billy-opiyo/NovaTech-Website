@@ -1,4 +1,4 @@
-# Nurava Tech SaaS architecture decisions
+# Nurava HubStores SaaS architecture decisions
 
 **Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
 **Date:** 2026-10-03 (positioning updated)
@@ -7,7 +7,7 @@ This document records implementation defaults for the first controlled beta. It 
 
 ## Product scope
 
-- Nurava Tech serves independent Kenyan merchants across diverse industries through configurable storefronts and catalog settings.
+- Nurava HubStores serves independent Kenyan merchants across diverse industries through configurable storefronts and catalog settings.
 - The platform serves diverse independent merchants through separate configured stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
 - The beta includes a hosted storefront, catalog discovery, staff memberships, theme/content controls, basic analytics, platform subdomains, merchant-routed shopper M-Pesa checkout with zero product commission, merchant-direct enquiry fallback, merchant SaaS billing, and platform support.
 - Advanced warehouse management, marketplace carts, custom application work, and enterprise database isolation remain later-stage work.
@@ -55,7 +55,7 @@ The following source-level behavior is now part of the `saas-staging` baseline:
 - Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
 - The platform homepage and directory may show approved review ratings, review volume, product counts, and catalogue image previews to support store choice, but they do not create a shared marketplace cart. Product browsing, checkout, and payment remain inside the selected store; a shopper can either use merchant-routed M-Pesa or contact that merchant directly.
 - Merchant store homepage component order and responsive layout remain shared across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`; these merchant sections are not rendered on the platform root homepage.
-- Merchant storefront action controls remain host-specific. The platform root focuses on discovery, while merchant footers link back to the canonical Nurava Tech homepage for choosing another store.
+- Merchant storefront action controls remain host-specific. The platform root focuses on discovery, while merchant footers link back to the canonical Nurava HubStores homepage for choosing another store.
 - A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The legacy preferred-store cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
 - `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
 
@@ -67,8 +67,8 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Launch commercial configuration is Kenya/KES, monthly billing, a six-month pilot (180 days by default, configurable via `NURAVA_MVP_PILOT_DAYS`) on the merchant-selected plan, a 14-day payment grace period, no automatic overages, and M-Pesa-only SaaS collection. A one-time setup fee must be paid before the pilot starts; the selected plan's monthly subscription becomes payable from month seven. The agreed SaaS billing policy is 16% VAT-inclusive pricing when enabled, no routine subscription refunds, conditional setup-fee refunds, and automatic outage credits; registration/classification, final legal/privacy wording, and provider identity remain launch gates.
 - Approved MVP billing policy: onboarding creates the selected-plan store workspace and pending billing records. A successful setup-fee M-Pesa callback starts the six-month pilot and sets its dates; zero-fee plans can start immediately. The lifecycle cron sends pilot-expiry reminders at 14, 7, and 1 day before the pilot ends and at the start and final days of the grace period (recorded as tenant notifications for idempotency). After the pilot, a 14-day grace period keeps the storefront available; if no monthly plan payment is received, the public storefront is paused while merchant data and workspace access are preserved. No automatic charges occur.
 - The source implementation now preserves public storefront access during `GRACE_PERIOD`, keeps M-Pesa add-ons pending until a successful invoice callback, enforces product-image storage and plan-aware analytics server-side, gates WhatsApp order updates by active add-on and shopper preference, records explicit tenant-scoped newsletter consent/unsubscribe state, and distinguishes billing pauses from platform suspensions for safe payment recovery. These schema-backed changes are represented by migrations `0015_commercial_alignment` and `0029_billing_suspension_reason` and still require deployment to the target database.
-- SaaS billing (merchant to Nurava Tech) remains separate from shopper commerce (customer to merchant), with separate ledgers, webhooks, credentials, and audit events.
-- The shopper model remains merchant-direct in ownership: each independent merchant is seller of record and handles payment, delivery, refunds, warranty, taxes, and customer support. In `MERCHANT_ROUTED` mode, M-Pesa STK requests use the merchant's self-declared PayBill/Till and tenant-scoped encrypted credentials. Provider responses determine acceptance; Nurava Tech does not receive product-sale funds or take commission.
+- SaaS billing (merchant to Nurava HubStores) remains separate from shopper commerce (customer to merchant), with separate ledgers, webhooks, credentials, and audit events.
+- The shopper model remains merchant-direct in ownership: each independent merchant is seller of record and handles payment, delivery, refunds, warranty, taxes, and customer support. In `MERCHANT_ROUTED` mode, M-Pesa STK requests use the merchant's self-declared PayBill/Till and tenant-scoped encrypted credentials. Provider responses determine acceptance; Nurava HubStores does not receive product-sale funds or take commission.
 - SaaS billing stores tenant billing references and uses invoice-driven M-Pesa setup-fee, first-subscription, and renewal collection at launch. Stripe remains provider-ready but is disabled by the launch billing configuration. Shopper card payment remains disabled; shopper M-Pesa initiation and verification are enabled only in `MERCHANT_ROUTED` mode and fail closed otherwise.
 
 ### Source-level SaaS billing behavior
@@ -86,7 +86,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 ### Shopper M-Pesa checkout decision (2026-09-06)
 
 - The merchant owner/admin configures their own PayBill or Till Daraja route at `/manage/payments`, without documentary verification in light-onboarding mode. They self-declare the account name and number; the server encrypts consumer key, consumer secret, and passkey and uses them only for that tenant's STK Push and callback reconciliation. Daraja responses, not onboarding documents, determine whether a payment can proceed.
-- Nurava Tech receives no product-sale commission and does not hold shopper funds. Merchant responsibility for payment, delivery, refunds, warranties, and the sale contract remains unchanged.
+- Nurava HubStores receives no product-sale commission and does not hold shopper funds. Merchant responsibility for payment, delivery, refunds, warranties, and the sale contract remains unchanged.
 - The checkout creates a pending tenant-scoped order, reserves stock atomically, starts M-Pesa, and confirms the order only after provider verification. Failed payments cancel the pending order and restore the reserved stock. The existing WhatsApp/email enquiry flow remains available as a merchant-direct alternative.
 - Migration `0030_merchant_shopper_payment_profiles` must be deployed before the merchant payment settings or shopper M-Pesa checkout can operate against a target database. Sandbox credentials, callback reachability, production Daraja approval, refund/dispute procedures, and legal/tax/privacy review remain launch gates.
 

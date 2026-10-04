@@ -1,10 +1,10 @@
-# Nurava Tech — Documentation
+# Nurava HubStores — Documentation
 
-This directory documents Nurava Tech, a multi-industry commerce platform for diverse independent stores in the Kenyan market. Merchants configure separate storefronts for their businesses; platform descriptions intentionally do not enumerate the industries hosted.
+This directory documents Nurava HubStores, a multi-industry commerce platform for diverse independent stores in the Kenyan market. Merchants configure separate storefronts for their businesses; platform descriptions intentionally do not enumerate the industries hosted.
 
 ## Project Overview
 
-Nurava Tech is a **monorepo** managed with **npm workspaces**, containing:
+Nurava HubStores is a **monorepo** managed with **npm workspaces**, containing:
 
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
@@ -17,7 +17,7 @@ The latest implementation updates include:
 
 - Added public company and customer-service pages for About, Blog, FAQs, Warranty, and Return Policy, linked through the footer's dynamic Customer Service and Quick Links sections.
 - Added direct `tel:` and `mailto:` links to the contact information shown on the home page.
-- Replaced the header's hardcoded logo with the Nurava Tech icon served through Next.js `Image`.
+- Replaced the header's hardcoded logo with the platform icon served through Next.js `Image`.
 - Added local product image assets and a shared `getProductImage` resolver, with fallback handling across product listings, product details, recommendations, wishlist, inventory, and admin product views.
 - Added `/admin/dashboard` as the canonical dashboard route; `/admin` now redirects to it, and the support tickets link uses `/admin/support`.
 - Improved select controls for light and dark themes and disabled the development indicator overlay.
@@ -69,7 +69,7 @@ The latest UI implementation updates include:
 - Added staging/preview Vercel project-host recognition and explicit `/store/{slug}` routing so merchant context remains distinct from the platform root. Custom subdomain DNS/SSL reachability remains a deployment concern.
 - Restricted `Browse Stores` to the SaaS platform homepage and directory; individual store desktop and mobile navigation no longer expose it.
 - Restructured the platform root homepage around social-proof store discovery, with approved ratings, review volume, product counts, catalogue image previews, and top-rated/most-reviewed/new-and-growing store groups.
-- Kept merchant homepage shopping sections and action controls on individual store hosts, and added a `Nurava Tech Homepage` footer link for returning to platform discovery.
+- Kept merchant homepage shopping sections and action controls on individual store hosts, and added a `Nurava HubStores Homepage` footer link for returning to platform discovery.
 - The merchant footer return link uses the canonical `https://nuravatech.com` platform host in deployed environments and the active local root during local subdomain previews. The server reserves both `nuravatech.com` and `www.nuravatech.com` for platform discovery before merchant domain lookup.
 - Restricted the branded splash to the platform homepage and protected `/platform` control plane; individual store routes and legacy `/admin` routes do not show it.
 - Platform footer support, FAQ, privacy, and terms surfaces target merchants. Individual store hosts retain shopper support links and shopper-facing policy variants.
@@ -121,9 +121,9 @@ Credentials are intentionally not documented here and must be configured only af
 
 Start the local server with `npm run dev`. The development server uses `http://localhost:3000`; the production base URL is `https://nuravatech.com`.
 
-The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. The canonical merchant admin workspace is `/manage` on the merchant's verified host, while the Nurava Tech platform control plane is `/platform` on the platform host. Both are server-protected and marked no-index. `/admin` is retained only as a legacy ADMIN/SUPERADMIN console and is not the merchant link to share.
+The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. The canonical merchant admin workspace is `/manage` on the merchant's verified host, while the Nurava HubStores platform control plane is `/platform` on the platform host. Both are server-protected and marked no-index. `/admin` is retained only as a legacy ADMIN/SUPERADMIN console and is not the merchant link to share.
 
-Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and direct merchant contact options. The merchant completes the shopper transaction outside Nurava Tech's payment flow.
+Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and direct merchant contact options. The merchant completes the shopper transaction outside Nurava HubStores' payment flow.
 
 ### Storefront
 

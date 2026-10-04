@@ -6,6 +6,7 @@ import PlatformHashScroll from "@/components/layout/PlatformHashScroll"
 import RouteScrollReset from "@/components/layout/RouteScrollReset"
 import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
 import SiteChrome from "@/components/layout/SiteChrome"
+import OfflineNotice from "@/components/layout/OfflineNotice"
 import { ToastProvider } from "@/components/ui/Toast"
 import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
 import { getStoreContext } from "@/lib/store-context.server"
@@ -75,6 +76,7 @@ export default async function RootLayout({
 							{store.isPlatformHome && <PlatformHashScroll />}
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							<SiteChrome>{children}</SiteChrome>
+							<OfflineNotice />
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>

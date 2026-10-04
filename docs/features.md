@@ -1,4 +1,4 @@
-# Nurava Tech — Features
+# Nurava HubStores — Features
 
 ## 🏠 Public Storefront
 
@@ -53,7 +53,7 @@
 | **Action Feedback** | Important asynchronous actions use loading spinners/disabled states and completion or failure notifications, including authentication, uploads, saves, deletes, invitations, and other protected mutations. |
 | **Onboarding Merchant Guide** | The platform homepage includes nine preview-only instructional cards that mirror the merchant store-creation path. Cards support timed advance, previous/next controls, pagination, touch swipes on smaller screens, light/dark preview alignment, and a final-step-only Create Store CTA. |
 | **Platform Access Invitations** | Super Admins can invite `PLATFORM_ADMIN`, `PLATFORM_SUPPORT`, and `PLATFORM_ANALYST` operators through `/platform/access`; links are invited-email-bound, one-time, and expire after seven days. |
-| **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Create Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava Tech Homepage` return link. |
+| **Responsive Navigation** | Merchant storefronts provide desktop/mobile search, cart, account, notification, and floating actions. The platform homepage provides `Home`, `Browse Stores`, and `Create Store` links plus theme control, while its footer provides merchant support links and merchant storefronts provide shopper service links plus a `Nurava HubStores Homepage` return link. |
 
 ## 👑 Admin Panel
 
@@ -152,7 +152,7 @@
 
 SaaS billing and shopper payments are separate. In `MERCHANT_ROUTED` mode,
 shopper M-Pesa requests use the selected merchant's configured, self-declared
-PayBill or Till credentials. Daraja responses determine payment success. Nurava Tech does not receive or hold product-sale funds,
+PayBill or Till credentials. Daraja responses determine payment success. Nurava HubStores does not receive or hold product-sale funds,
 does not act as merchant of record, and records zero product-sale commission.
 `MERCHANT_DIRECT` is the contact-only fallback and fails closed at the order
 and payment route boundaries.

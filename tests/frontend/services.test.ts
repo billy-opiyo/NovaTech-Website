@@ -7,7 +7,7 @@ import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from ".
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
-import { getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
+import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
 
 const originalFetch = globalThis.fetch
@@ -108,6 +108,8 @@ test("store navigation keeps merchant routes inside the active storefront", () =
 	const merchant = { isPlatformHome: false, storePathPrefix: "/store/demo", storeSlug: "demo" }
 	const platform = { isPlatformHome: true, storePathPrefix: "", storeSlug: "nuravatech" }
 	assert.equal(getStoreHomeHref(merchant), "/store/demo")
+	assert.equal(getMerchantStoreHomeHref(merchant), "/store/demo")
+	assert.equal(getMerchantStoreHomeHref(platform), "/store/nuravatech")
 	assert.equal(getStoreRouteHref(merchant, "/category/phones"), "/store/demo/category/phones")
 	assert.equal(getStoreRouteHref(merchant, "/store/demo/products"), "/store/demo/products")
 	assert.equal(getStoreRouteHref(platform, "/stores?all=1"), "/stores?all=1")

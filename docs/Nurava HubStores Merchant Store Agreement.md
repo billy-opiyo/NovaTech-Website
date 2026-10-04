@@ -1,12 +1,12 @@
-# NURAVA TECH
+# NURAVA HUBSTORES
 ## MERCHANT STORE HOSTING AND SAAS SERVICES AGREEMENT
 
 **Document status:** Commercial decisions recorded; pending professional legal, tax, and privacy review before signature  
 **Agreement version:** merchant-agreement-v1  
-**Prepared for:** Nurava Tech Platform and an independent merchant  
+**Prepared for:** Nurava HubStores and an independent merchant  
 **Prepared date:** ____________________
 
-> **Important notice:** The commercial and operating decisions recorded in the Nurava Tech questionnaires are included in this Agreement. The remaining step is professional legal, tax, and privacy review to confirm the wording, compliance, entity details, and contract protections. This document is not legal, tax, privacy, or regulatory advice. Items marked **[LEGAL REVIEW / CONFIRMATION]** identify matters for a qualified professional or the Platform Provider to confirm; they do not mean that the commercial questionnaire decisions are unfinished.
+> **Important notice:** The commercial and operating decisions recorded in the Nurava HubStores questionnaires are included in this Agreement. The remaining step is professional legal, tax, and privacy review to confirm the wording, compliance, entity details, and contract protections. This document is not legal, tax, privacy, or regulatory advice. Items marked **[LEGAL REVIEW / CONFIRMATION]** identify matters for a qualified professional or the Platform Provider to confirm; they do not mean that the commercial questionnaire decisions are unfinished.
 
 ---
 
@@ -16,8 +16,8 @@ This Merchant Store Hosting and SaaS Services Agreement (the **Agreement**) is m
 
 ### 1.1 Platform provider
 
-**Legal/entity name:** Nurava Tech / **[LEGAL/ENTITY DETAIL TO BE CONFIRMED]**  
-**Trading/platform name:** Nurava Tech Platform  
+**Legal/entity name:** Nurava HubStores / **[LEGAL/ENTITY DETAIL TO BE CONFIRMED]**  
+**Trading/platform name:** Nurava HubStores  
 **Represented by:** ____________________, Super Admin / authorized representative  
 **Address:** __________________________________________________________________  
 **Email:** ______________________________  **Telephone:** ______________________  
@@ -294,7 +294,7 @@ By signing below, the parties confirm that they have read the commercial schedul
 
 # Schedule A — Commercial decision record
 
-This Schedule records the launch decisions captured in the Nurava Tech commercial questionnaire and implementation alignment records.
+This Schedule records the launch decisions captured in the Nurava HubStores commercial questionnaire and implementation alignment records.
 
 | Decision area | Recorded answer |
 |---|---|
@@ -383,9 +383,9 @@ If the stricter verification policy is active, confirm the applicable items:
 
 # Signature page
 
-The parties sign this Agreement after professional review confirms the legal, privacy, tax, billing, refund, support, and dispute schedules and the parties complete the entity-specific fields. The commercial decisions themselves are recorded and are not being reopened by this review. The intended platform business identity is **Nurava Tech**; its registered business details and PayBill registration must be completed before live M-Pesa collection.
+The parties sign this Agreement after professional review confirms the legal, privacy, tax, billing, refund, support, and dispute schedules and the parties complete the entity-specific fields. The commercial decisions themselves are recorded and are not being reopened by this review. The intended platform trading identity is **Nurava HubStores**; its registered business details and PayBill registration must be completed before live M-Pesa collection.
 
-## For Nurava Tech Platform
+## For Nurava HubStores
 
 **Legal/entity name:** _________________________________________________________  
 **Authorized representative/Super Admin:** ____________________________________  
@@ -412,4 +412,4 @@ The parties sign this Agreement after professional review confirms the legal, pr
 
 ---
 
-**End of Agreement — Nurava Tech Merchant Store Hosting and SaaS Services Agreement, merchant-agreement-v1**
+**End of Agreement — Nurava HubStores Merchant Store Hosting and SaaS Services Agreement, merchant-agreement-v1**

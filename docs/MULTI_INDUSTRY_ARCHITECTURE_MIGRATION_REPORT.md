@@ -6,7 +6,7 @@ Current integration branch: `saas-staging`
 
 ## Executive summary
 
-Nurava Tech is a multi-industry commerce platform for diverse independent stores. Merchants configure separate storefronts, categories, themes, and product attributes for their businesses; the platform's general positioning does not enumerate the store types it hosts. The architecture supports tenant-scoped commerce, industry configuration, and store-specific discovery. The legacy Nurava Tech catalog and its electronics defaults remain as compatibility data, not as a limit on the platform's scope.
+Nurava HubStores is a multi-industry commerce platform for diverse independent stores. Merchants configure separate storefronts, categories, themes, and product attributes for their businesses; the platform's general positioning does not enumerate the store types it hosts. The architecture supports tenant-scoped commerce, industry configuration, and store-specific discovery. The legacy Nurava Tech demo-store catalog and its electronics defaults remain as compatibility data, not as a limit on the platform's scope.
 
 The safest conversion is additive. Existing `Product.specs`, electronics categories, store JSON settings, orders, users, and tenant records remain valid. New industry, theme, attribute-definition, and product-attribute-value records are introduced alongside the current fields. The existing electronics store is assigned the seeded Electronics configuration and continues to use its current content/settings as overrides. New stores select an industry and receive a snapshot of its categories, attribute definitions, theme, and homepage defaults.
 
@@ -32,7 +32,7 @@ The safest conversion is additive. Existing `Product.specs`, electronics categor
 ### Electronics-specific categories and defaults
 
 - `backend/lib/default-categories.ts` exports only Phones, Laptops, Tablets, Accessories, and Gaming.
-- `frontend/src/config/client.config.ts` hardcodes the Nurava Tech brand, electronics SEO copy, navigation, hero copy, category cards, featured products, and electronics contact/content defaults.
+- `frontend/src/config/client.config.ts` historically hardcoded the platform brand and electronics-specific SEO copy, navigation, hero copy, category cards, featured products, and contact/content defaults.
 - The onboarding route (`frontend/src/app/api/onboarding/store/route.ts`) always copies `DEFAULT_STORE_CATEGORIES` and accepts no industry selection.
 - The onboarding UI (`frontend/src/app/onboarding/page.tsx`) has no industry step.
 
@@ -140,7 +140,7 @@ The multi-industry source changes are integrated into `saas-staging`. Onboarding
 
 Migrations `0034_multi_industry_commerce` and `0035_industry_order_customizations` were deployed to the dedicated Neon database for this staging branch, `nuravatech-saas-staging`. No migration, database push, seed, or credential change was performed for this documentation and copy update.
 
-Public platform positioning is industry-neutral. Platform pages describe Nurava Tech as a multi-industry platform for diverse stores and do not enumerate the types of businesses it hosts. Industry names remain visible where needed for actual onboarding, store discovery, or platform administration.
+Public platform positioning is industry-neutral. Platform pages describe Nurava HubStores as a multi-industry platform for diverse stores and do not enumerate the types of businesses it hosts. Industry names remain visible where needed for actual onboarding, store discovery, or platform administration.
 
 Earlier verification results recorded below are historical snapshots, not evidence of the current staging deployment or browser rendering. Authenticated visual/browser verification and live Vercel runtime behavior must be checked separately.
 

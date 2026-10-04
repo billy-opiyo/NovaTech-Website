@@ -113,6 +113,7 @@ export const platformSiteSettingsPatchSchema = z.object({
 		loadingText: optionalText(120),
 		backgroundMode: z.enum(["images", "color", "glass"]).optional(),
 		backgroundColor: hexColor,
+		centerContentOnColor: z.boolean().optional(),
 		glassOpacity: z.number().int().min(0).max(100).optional(),
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),

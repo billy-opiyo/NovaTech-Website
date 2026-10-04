@@ -1,6 +1,6 @@
-# Nurava Tech SaaS Switch Plan
+# Nurava HubStores SaaS Switch Plan
 
-> Current product direction: Nurava Tech is a multi-industry commerce platform for diverse independent stores. Dated planning notes below are historical unless explicitly updated; technical references to legacy catalog data describe compatibility, not a limit on platform scope.
+> Current product direction: Nurava HubStores is a multi-industry commerce platform for diverse independent stores. Dated planning notes below are historical unless explicitly updated; technical references to legacy catalog data describe compatibility, not a limit on platform scope.
 
 ## Current implementation status (2026-08-21)
 
@@ -95,7 +95,7 @@ pre-billing state.
 
 - Completed every remaining source-level SaaS feature identified in this execution that does not require live billing, payment-provider credentials, DNS/SSL control, or legal/commercial decisions: tenant isolation hardening, membership authorization, local design preview, staff invitations, domain onboarding state, entitlement/usage visibility, protected API error handling, tenant data export, payment tenant matching, and store settings rollback.
 - Final verification passed: full test suite 44/44, frontend TypeScript, backend TypeScript, and `git diff --check`.
-- Local preview is running on `http://localhost:3000`; homepage probe returned HTTP 200 with Nurava Tech content. Database-backed routes correctly remain unavailable against the unreachable configured Neon database.
+- Local preview is running on `http://localhost:3000`; homepage probe returned HTTP 200 with platform content. Database-backed routes correctly remain unavailable against the unreachable configured Neon database.
 - Remaining launch gates are intentionally untouched: database migration/restore verification, live SaaS billing and shopper payment providers, DNS/SSL automation, provider webhooks in production, and legal/tax/privacy/commercial decisions.
 
 ### 2026-08-19 — Store settings rollback
@@ -239,13 +239,13 @@ pre-billing state.
 - The shared homepage order is preserved for every store while hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links are read from the active `StoreContext`.
 - Added authenticated `User.preferredStoreId` persistence plus a legacy preferred-store browser fallback. Store visits update the preference only after host-based tenant resolution; the preference never authorizes access or replaces tenant scoping. The existing cookie key is retained for compatibility.
 
-### 2026-08-20 — Nurava Tech brand and documentation migration
+### 2026-08-20 — Legacy Nurava Tech platform-brand migration
 
 - Updated current Markdown documentation, platform copy, metadata, public URLs, and operational messaging to use the Nurava Tech brand.
 - Set the canonical platform domain to `nuravatech.com` and documented the production DNS/SSL target as `nuravatech.com` with `*.nuravatech.com` for tenant subdomains.
 - Standardized platform email usage to `hello@nuravatech.com` for outbound mail and `support@nuravatech.com` for support routing.
 - Preserved internal migration names, legacy browser keys, seeded compatibility identifiers, asset filenames, and historical repository paths so existing data and runtime lookups remain safe.
-- Verification: Markdown-wide old-brand scan now finds only documented compatibility/history identifiers; documentation links and current brand/domain references use Nurava Tech.
+- Verification at that time: documentation links and current platform-brand/domain references used Nurava Tech. The current platform trading brand is Nurava HubStores; references in this dated section record the former branding.
 
 ### 2026-08-20 — Preferred-store cookie compatibility migration
 
@@ -263,7 +263,7 @@ pre-billing state.
 
 ### 2026-08-20 — Merchant-direct shopper commerce model
 
-- Revised the shopper experience so Nurava Tech provides store discovery, storefront hosting, product marketing, and merchant SaaS tools, while each independent merchant remains responsible for its own customer transaction.
+- Revised the shopper experience so the platform provides store discovery, storefront hosting, product marketing, and merchant SaaS tools, while each independent merchant remains responsible for its own customer transaction.
 - Replaced platform shopper checkout with a merchant handoff page that sends the selected products to the store through WhatsApp or email; the merchant confirms availability, delivery, payment, refunds, taxes, and warranty directly.
 - Disabled new platform shopper order creation, shopper Stripe/M-Pesa initiation and verification, and new transaction commission creation with a fail-closed `MERCHANT_DIRECT` boundary. Existing historical order/payment records and webhook code remain available for data continuity.
 - Kept merchant SaaS billing separate and active: platform subscriptions, setup fees, add-ons, Stripe billing, and invoice-driven M-Pesa billing are unaffected.
@@ -272,7 +272,7 @@ pre-billing state.
 ### 2026-08-20 — Merchant-direct implementation verification
 
 - Updated README and feature/architecture/billing documentation to describe merchant handoff rather than platform shopper checkout.
-- Updated merchant and platform billing/admin wording so commission data is identified as historical and SaaS billing remains the active Nurava Tech billing flow.
+- Updated merchant and platform billing/admin wording so commission data is identified as historical and SaaS billing remains the active Nurava HubStores billing flow.
 - Verified frontend and backend TypeScript checks, `git diff --check`, and all 46 repository tests.
 - Verified the local preview at `http://localhost:3002`: the home page returns 200, the merchant handoff page returns 200, and shopper order/card/M-Pesa endpoints return 410 `MERCHANT_DIRECT_SALES`.
 - Local store previews support `{slug}.localhost`; production directory links use `{slug}.{PLATFORM_DOMAIN}`. The existing mobile artwork remains the storefront background for tablet/iPad widths.
@@ -288,18 +288,18 @@ pre-billing state.
 
 - Restructured the platform root homepage so first-time shoppers see store discovery instead of merchant shopping sections. It now groups published stores as Top Rated, Most Reviewed, and New and Growing using approved review ratings/review volume, product counts, and catalogue image previews.
 - Kept merchant hero, shop-by-category, featured products, testimonials, newsletter, contact/map sections, and merchant search/cart/account/mobile/floating actions on individual store hosts only.
-- Added a `Nurava Tech Homepage` quick link to merchant-store footers. It returns to the canonical platform homepage and uses the local platform host during `{slug}.localhost` previews.
+- Added a `Nurava HubStores Homepage` quick link to merchant-store footers. It returns to the canonical platform homepage and uses the local platform host during `{slug}.localhost` previews.
 - The platform discovery ranking is based only on stored approved reviews and catalogue data; stores without review history are labeled as new/growing rather than assigned an unsupported quality claim.
 
 ### 2026-08-20 — Canonical platform footer navigation fix
 
-- Corrected the merchant-store `Nurava Tech Homepage` footer link so it always targets the canonical platform host `https://nuravatech.com` in deployed environments, rather than inheriting an individual store URL.
+- Corrected the merchant-store `Nurava HubStores Homepage` footer link so it always targets the canonical platform host `https://nuravatech.com` in deployed environments, rather than inheriting an individual store URL.
 - Local merchant previews now target the platform root on the active local port, and the link uses a normal browser navigation to switch hosts reliably.
 
 ### 2026-08-20 — Canonical platform host resolution fix
 
 - Updated server host resolution so `nuravatech.com` and `www.nuravatech.com` are recognized as platform hosts before any merchant `Domain` record is consulted.
-- Platform-root store context now uses Nurava Tech platform defaults and loads the discovery directory separately, preventing a stale or misassigned domain row from rendering an individual merchant homepage after the footer navigation.
+- Platform-root store context now uses Nurava HubStores platform defaults and loads the discovery directory separately, preventing a stale or misassigned domain row from rendering an individual merchant homepage after the footer navigation.
 - Merchant subdomains and verified custom domains retain their tenant-specific resolution; only the canonical platform hosts bypass merchant-domain lookup.
 - Verification: frontend and backend TypeScript checks passed.
 
@@ -323,12 +323,12 @@ pre-billing state.
 - Remaining pre-launch work still includes payment-provider setup, custom-domain verification, preview routing, unscoped legacy admin/API paths, DNS/SSL, and legal/tax/privacy review.
 
 **Date:** 18 August 2026 (original plan; current product scope updated 3 October 2026)
-**Current implementation:** Nurava Tech is a multi-industry commerce platform with tenant-scoped storefronts, industry configuration, and platform discovery.
+**Current implementation:** Nurava HubStores is a multi-industry commerce platform with tenant-scoped storefronts, industry configuration, and platform discovery.
 **Target product:** A multi-tenant SaaS platform that lets diverse independent merchants create, brand, manage, and publish their own online stores.
 
 ## 1. Recommended product direction
 
-Nurava Tech is a hosted multi-industry commerce platform for diverse independent stores, rather than a collection of separately configured Nurava Tech websites.
+Nurava HubStores is a hosted multi-industry commerce platform for diverse independent stores, rather than a collection of separately configured branded websites.
 
 Each paying client should be able to:
 
@@ -357,7 +357,7 @@ The current implementation is a good commerce engine for one store, but it is no
 | `frontend/src/config/client.config.ts` | Prototype deployment configuration | Move client branding, SEO, navigation, homepage content, commerce defaults, and feature flags into database-backed store settings. Keep code defaults only as safe fallbacks. |
 | `frontend/src/config/theme-presets.ts` | Reusable foundation | Expose approved presets in a tenant theme editor with validation and preview. Do not allow arbitrary CSS or unsafe HTML. |
 | M-Pesa and Stripe shopper payments | Existing integration | Make provider selection and credentials tenant-aware. Define whether the platform or each merchant is the merchant of record before enabling live payments. |
-| Admin routes under `/admin` | Existing single-store admin | Split into `/platform/*` for Nurava Tech staff and `/manage/*` for each merchant. |
+| Admin routes under `/admin` | Existing single-store admin | Split into `/platform/*` for Nurava HubStores staff and `/manage/*` for each merchant. |
 | R2 storage | Existing foundation | Add tenant-prefixed object keys, ownership checks, quotas, deletion rules, and signed URL controls. |
 | Staging, migrations, CI, tests, health checks, backups | Existing readiness foundation | Add tenant-isolation tests, subscription webhook tests, domain tests, and cross-tenant security tests. |
 
@@ -403,10 +403,10 @@ The final prices, currency, tax treatment, trial length, overage rules, grace pe
 
 Separate these two payment flows:
 
-1. **SaaS billing:** the merchant pays Nurava Tech for use of the platform.
+1. **SaaS billing:** the merchant pays Nurava HubStores for use of the platform.
 2. **Shopper checkout:** a shopper pays for products sold by that merchant.
 
-The platform must decide whether it processes shopper money on behalf of merchants or whether each merchant connects its own M-Pesa/Stripe account. This affects contracts, refunds, settlements, chargebacks, tax, KYC, reporting, and compliance. Do not silently reuse Nurava Tech's current payment credentials for every merchant.
+The platform must decide whether it processes shopper money on behalf of merchants or whether each merchant connects its own M-Pesa/Stripe account. This affects contracts, refunds, settlements, chargebacks, tax, KYC, reporting, and compliance. Do not silently reuse the platform's current payment credentials for every merchant.
 
 ## 4. Tenant and URL architecture
 
@@ -753,7 +753,7 @@ Once this slice is verified, billing, onboarding, custom domains, and merchant s
 - `SHOPPER_COMMERCE_MODEL=MERCHANT_ROUTED` enables the shopper order flow in staging. `MERCHANT_DIRECT` remains the contact-only fallback.
 - Merchant payment credentials are stored encrypted and scoped to the merchant tenant. Shortcode and account type must match the approved merchant verification details before the route becomes active.
 - Checkout creates a pending order, reserves stock, initiates STK Push, and confirms only after provider verification. Failed payment cancels the pending order and restores stock.
-- Nurava Tech receives no product-sale funds and creates no product-sale commission. SaaS billing to Nurava remains a separate invoice-driven flow.
+- Nurava HubStores receives no product-sale funds and creates no product-sale commission. SaaS billing to Nurava HubStores remains a separate invoice-driven flow.
 - Added migration `0030_merchant_shopper_payment_profiles`; it must be deployed to a target database before this feature can run there. Daraja sandbox/production credentials, reachable callbacks, payment/refund procedures, and legal/tax/privacy review remain rollout gates.
 ### 2026-08-22 — Credential-free legal acceptance and retention boundary
 

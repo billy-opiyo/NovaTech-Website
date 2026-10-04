@@ -1,4 +1,4 @@
-# Nurava Tech Future Updates
+# Nurava HubStores Future Updates
 
 **Purpose:** implementation guide for advanced features and operational hardening  
 **Repository baseline:** 3 September 2026

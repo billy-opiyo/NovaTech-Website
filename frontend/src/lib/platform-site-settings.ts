@@ -97,6 +97,7 @@ export type PlatformSiteSettings = {
 		loadingText?: string
 		backgroundMode?: "images" | "color" | "glass"
 		backgroundColor?: string
+		centerContentOnColor?: boolean
 		glassOpacity?: number
 		images?: PlatformResponsiveAssets
 	}
@@ -151,6 +152,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			welcomeText: "Welcome to",
 			loadingText: "Preparing your store",
 			backgroundMode: "glass",
+			centerContentOnColor: true,
 			images: {
 				darkDesktop: "/images/NovaTech cover desktop.png",
 				darkTablet: "/images/NovaTech cover mobile.png",
