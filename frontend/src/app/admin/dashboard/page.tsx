@@ -9,7 +9,7 @@ import RecentOrders from "@/components/dashboard/RecentOrders"
 import TopProducts from "@/components/dashboard/TopProducts"
 import QuickActions from "@/components/dashboard/QuickActions"
 import { useStoreContext } from "@/lib/store-context"
-import { getStoreHomeHref } from "@/lib/store-home"
+import { getMerchantStoreHomeHref } from "@/lib/store-home"
 
 export default function AdminDashboardPage() {
 	const pathname = usePathname()
@@ -25,7 +25,7 @@ export default function AdminDashboardPage() {
 					<p className="text-gray-500 mt-1">Welcome back, Admin! Here&apos;s what&apos;s happening.</p>
 				</div>
 				<div className="flex flex-wrap gap-3">
-					<Link href={getStoreHomeHref(store)} className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">
+					<Link href={getMerchantStoreHomeHref(store)} className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700">
 						<Eye size={18} /> View Store
 					</Link>
 					<Link href={`${basePath}/analytics`} className="btn-primary flex items-center gap-2">

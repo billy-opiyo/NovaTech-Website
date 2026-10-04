@@ -148,7 +148,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	if (!readyToReveal) {
 		return (
 			<div
-				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}`}
+				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? `splash-screen--solid${splashSettings?.centerContentOnColor !== false ? " splash-screen--centered-content" : ""}` : "splash-screen--glass"}`}
 				style={splashStyle}
 				role="status"
 				aria-live="polite"

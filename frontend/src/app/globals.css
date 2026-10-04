@@ -648,6 +648,36 @@ html:not(.dark) .splash-screen {
   animation-delay: 320ms;
 }
 
+/* Solid-color splash screens have no artwork to position content around. */
+.splash-screen--centered-content > .splash-content {
+	display: flex;
+	width: 100%;
+	height: auto;
+	max-width: 28rem;
+	padding: 0 2rem;
+	align-items: center;
+	justify-content: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-welcome,
+.splash-screen.splash-screen--centered-content .splash-wordmark,
+.splash-screen.splash-screen--centered-content .splash-loading {
+	position: static;
+	inset: auto;
+	width: 100%;
+	margin-top: 0;
+	margin-right: 0;
+	margin-left: 0;
+}
+
+.splash-screen.splash-screen--centered-content .splash-welcome {
+	margin-bottom: 0.75rem;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading {
+	margin-top: 2.5rem;
+}
+
 /* Merchant guide previews mirror the dark workspace UI, but must follow the
    active global theme so a light-mode platform does not contain dark cards. */
 .merchant-guide-preview[data-preview-theme="light"] [class*="bg-[#0f172a]"] {

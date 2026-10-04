@@ -126,7 +126,7 @@ const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Nurava Tech Merchant Store Hosting and SaaS Services Agreement</title>
+<title>Nurava HubStores Merchant Store Hosting and SaaS Services Agreement</title>
 <style>
   @page { size: A4; margin: 17mm 16mm 18mm; }
   :root { color-scheme: light; }

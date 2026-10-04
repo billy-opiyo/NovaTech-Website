@@ -1,6 +1,6 @@
-# Nurava Tech SaaS User Manual
+# Nurava HubStores SaaS User Manual
 
-**Product:** Nurava Tech multi-industry commerce platform for diverse independent stores
+**Product:** Nurava HubStores multi-industry commerce platform for diverse independent stores
 **Primary domain:** https://nuravatech.com  
 **Market defaults:** Kenya, English, en-KE, KES, Africa/Nairobi  
 **Repository audit:** 3 October 2026
@@ -13,7 +13,7 @@ gated, historical, or a known gap.
 
 ## 1. Product model and the most important boundary
 
-Nurava Tech is a multi-industry SaaS platform that gives diverse independent
+Nurava HubStores is a multi-industry SaaS platform that gives diverse independent
 merchants their own configurable storefronts and business tools. It has four
 distinct experiences:
 

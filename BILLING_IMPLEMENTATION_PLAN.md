@@ -7,7 +7,7 @@ separate rollout step.
 
 ## Current architecture audit
 
-Nurava Tech is a Next.js App Router monorepo with shared server-side code under
+Nurava HubStores is a Next.js App Router monorepo with shared server-side code under
 `backend/`. Prisma/PostgreSQL is the system of record. Merchant workspaces use
 `/manage`, platform operators use `/platform`, and storefront requests resolve
 their tenant through `resolveTenantFromRequest()` before tenant-owned queries.
@@ -84,7 +84,7 @@ second payment architecture.
   status, and audited suspension/reactivation controls.
 - Keep the existing admin shell, tenant resolver, and visual language. The
   shopper surface uses product selection and direct merchant WhatsApp/email
-  handoff; Nurava Tech does not collect shopper payments.
+  handoff; Nurava HubStores does not collect shopper payments.
 
 ## Configuration and rollout
 

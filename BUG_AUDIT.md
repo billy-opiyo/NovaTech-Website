@@ -275,7 +275,7 @@ The pre-repair ledger was frozen before application changes. Subsequent changes 
 #### BUG-029 — Stale product/support branding and inconsistent copy remain in user-facing paths
 
 - **File path:** `backend/services/support.service.ts` and related product/support UI paths
-- **Description:** Support confirmation copy still refers to “ElectroBuy” while the current platform branding is Nurava Tech. This creates customer-facing trust and consistency issues.
+- **Description:** Support confirmation copy still refers to “ElectroBuy” while the current platform branding is Nurava HubStores. This creates customer-facing trust and consistency issues.
 - **Root cause:** Legacy copy was not included in the rebrand sweep.
 - **Recommended fix:** Perform a repository-wide visible-copy review, preserve intentional historical identifiers, and add copy checks for public branding.
 - **Status:** Pending
@@ -330,7 +330,7 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-026 | Verified | Managed Playwright server lifecycle, warm navigation timeout, and smoke run pass. |
 | BUG-027 | Verified | Root lint/type-check scripts and actual Next ESLint configuration exist; lint passes with 150 warnings. |
 | BUG-028 | Verified | Payment/provider/API boundaries now use narrow interfaces, `unknown` guards, Prisma input types, and typed UI/API response contracts; compiler and lint pass with no errors. A small legacy presentation-only admin state backlog still emits explicit lint warnings and is non-blocking. |
-| BUG-029 | Verified | Repository-visible support confirmation copy now uses Nurava Tech. |
+| BUG-029 | Verified | Repository-visible support confirmation copy now uses Nurava HubStores. |
 | BUG-030 | Verified | Analytics overview, growth, sales periods, categories, top products, regions, payment methods, and customer reporting now use tenant-scoped database aggregation; top-product output is bounded to 100 rows. |
 | BUG-031 | Verified | Updated direct-merchant assertion; Playwright smoke passes. |
 | BUG-032 | Verified | VerificationToken now records delivery status, attempts, deliveredAt, and bounded delivery errors for register/resend recovery. A full external outbox remains a future scale enhancement. |

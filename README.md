@@ -1,6 +1,6 @@
-# Nurava Tech — Multi-Industry Commerce Platform (Kenya)
+# Nurava HubStores — Multi-Industry Commerce Platform (Kenya)
 
-Nurava Tech is a multi-industry commerce platform for diverse independent stores in the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate their own storefronts, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
+Nurava HubStores is a multi-industry commerce platform for diverse independent stores in the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate their own storefronts, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -71,7 +71,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - **Launch Readiness** — `/manage/readiness` provides server-backed publication checks and blocks publishing while required tenant, verification, legal, contact, settings, or canonical-domain checks are incomplete.
 - **Centralized Store Permissions** — A server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports.
 - **Operational Observability** — Critical operational responses include request IDs, structured safe failure events, and database-aware `/api/health` output.
-- **Platform boundary** — `MERCHANT_ROUTED` enables tenant-scoped shopper M-Pesa orders routed to the merchant's verified account; `MERCHANT_DIRECT` keeps contact-only checkout. Nurava Tech does not receive product-sale funds or charge a product commission in either mode.
+- **Platform boundary** — `MERCHANT_ROUTED` enables tenant-scoped shopper M-Pesa orders routed to the merchant's verified account; `MERCHANT_DIRECT` keeps contact-only checkout. Nurava HubStores does not receive product-sale funds or charge a product commission in either mode.
 
 ### 👤 Authentication
 
@@ -373,7 +373,7 @@ NovaTech Website/
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
 | `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
 | `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
-| `MPESA_BUSINESS_NAME`                | Platform SaaS billing descriptor; production must be `Nurava Tech` |
+| `MPESA_BUSINESS_NAME`                | Registered platform SaaS billing business name; must match the name verified by M-Pesa |
 | `SHOPPER_PAYMENTS_TEST_MODE`         | Explicit staging-only test switch for the Nurava Tech demo store; keep `false` in production |
 | `SHOPPER_PAYMENTS_TEST_TENANT_SLUG`  | Must be `nuravatech` for the staging-only test switch to activate |
 | `NURAVA_DEPLOYMENT_TIER`              | Deployment identity used by the staging Vercel Production environment; set `staging` only on the staging deployment |
@@ -535,7 +535,7 @@ npm run dev:open
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
 - ✔️ **Payments** — Merchant-routed shopper M-Pesa STK Push uses each configured merchant's self-declared PayBill/Till; Daraja confirms payment and Nurava product commission remains zero; SaaS billing is separate
 - ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility
-- ✔️ **Merchant settlement boundary** — Product-sale funds are routed to the independent merchant's configured M-Pesa account; Nurava Tech is not merchant of record and receives no product-sale commission
+- ✔️ **Merchant settlement boundary** — Product-sale funds are routed to the independent merchant's configured M-Pesa account; Nurava HubStores is not merchant of record and receives no product-sale commission
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 - ✔️ **Inventory service** — Complete inventory management backend with:
   - Low stock and out-of-stock product detection
@@ -609,4 +609,4 @@ The implementation is feature-complete at code level, but production launch rema
 
 ---
 
-© Nurava Tech — Built with Next.js, Prisma & Tailwind CSS
+© Nurava HubStores — Built with Next.js, Prisma & Tailwind CSS

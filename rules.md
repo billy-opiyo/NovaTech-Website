@@ -1,6 +1,6 @@
-# Nurava Tech — Project Architecture Rules
+# Nurava HubStores — Project Architecture Rules
 
-Production-grade web application development rules and standards for the Nurava Tech e-commerce platform.
+Production-grade web application development rules and standards for the Nurava HubStores commerce platform.
 
 ---
 
