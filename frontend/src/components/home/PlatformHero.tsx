@@ -7,7 +7,7 @@ import { useTheme } from "@/components/providers/ThemeProvider"
 import { useStoreContext } from "@/lib/store-context"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 
-type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
+type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
 	href: string
 	productCount?: number
 	fallbackColor?: string
@@ -24,8 +24,12 @@ const trustItems = [
 function getHeroStores(stores: HeroStore[]): HeroStore[] {
 	if (!stores.length) return []
 
+	const demoOrder = new Map([["nuravatech", 0], ["nurava-furnitures", 1], ["nurava-cakes", 2]])
 	return [...stores]
-		.sort((left, right) => Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0))
+		.sort((left, right) => {
+			if (left.isDemo && right.isDemo) return (demoOrder.get(left.slug) ?? 99) - (demoOrder.get(right.slug) ?? 99)
+			return Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0)
+		})
 		.slice(0, 3)
 }
 
@@ -66,7 +70,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 	const storeContext = useStoreContext()
 	const isLight = theme === "light"
 	const hero = storeContext.isPlatformHome ? storeContext.platformSettings?.hero : undefined
-	const heroTitle = hero?.title?.trim() || "Nurava Tech is the technology platform"
+	const heroTitle = hero?.title?.trim() || "Nurava HubStores is the technology platform"
 	const heroHighlight = hero?.highlight?.trim() || "connecting you with trusted stores"
 	const heroDescription = hero?.description?.trim() || "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya."
 	const [industrySlug, setIndustrySlug] = useState("all")

@@ -79,7 +79,7 @@ const quickLinks = [
 
 const platformQuickLinks = [
 	{ label: "Browse Stores", href: "/stores?all=1" },
-	{ label: "About Nurava Tech", href: "/about" },
+	{ label: "About Nurava HubStores", href: "/about" },
 	{ label: "Contact Platform", href: "/contact" },
 	{ label: "Blog", href: "/blog" },
 ]
@@ -135,7 +135,7 @@ export default function Footer() {
 					<h4 className="font-semibold mb-3">Quick Links</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
 						{!store.isPlatformHome && <>
-							<li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Nurava Tech Homepage</a></li>
+							<li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Nurava HubStores Homepage</a></li>
 							<li><a href={platformBrowseStoresLink} className="hover:text-primary transition-colors">Browse Stores</a></li>
 						</>}
 						{(store.isPlatformHome ? platformQuickLinks : quickLinks).map(({ label, href }) => (

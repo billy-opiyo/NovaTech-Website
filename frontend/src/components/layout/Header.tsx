@@ -67,6 +67,7 @@ export default function Header() {
 
 					{/* Right side icons */}
 					<div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-4">
+						{store.isPlatformHome && <SearchOverlay compactTrigger />}
 						<button
 							onClick={toggleTheme}
 							className="hidden rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:inline-flex"

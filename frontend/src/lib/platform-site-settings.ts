@@ -91,6 +91,7 @@ export type PlatformSiteSettings = {
 		showContactCards?: boolean
 	}
 	splash?: {
+		enabled?: boolean
 		showProgress?: boolean
 		welcomeText?: string
 		loadingText?: string
@@ -129,7 +130,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			phoneDisplay: clientConfig.contact.phoneDisplay,
 			email: clientConfig.contact.email,
 			whatsappNumber: clientConfig.contact.whatsappNumber,
-			whatsappFloatingMessage: "Hello Nurava Tech, I am a merchant and would like to learn more about creating a store on the platform.",
+			whatsappFloatingMessage: "Hello Nurava HubStores, I am a merchant and would like to learn more about creating a store on the platform.",
 			whatsappMessage: clientConfig.contact.whatsappMessage,
 			addressLine: clientConfig.contact.addressLine,
 			cityCountry: clientConfig.contact.cityCountry,
@@ -145,12 +146,11 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showContactCards: clientConfig.features.showContactCards,
 		},
 		splash: {
+			enabled: true,
 			showProgress: true,
 			welcomeText: "Welcome to",
 			loadingText: "Preparing your store",
 			backgroundMode: "glass",
-			backgroundColor: "#071a2c",
-			glassOpacity: 88,
 			images: {
 				darkDesktop: "/images/NovaTech cover desktop.png",
 				darkTablet: "/images/NovaTech cover mobile.png",
@@ -161,32 +161,32 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			},
 		},
 		hero: {
-			title: "Nurava Tech is the technology platform",
+			title: "Nurava HubStores is the technology platform",
 			highlight: "connecting you with trusted stores",
 			description: "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya.",
 		},
 		design: { themePreset: "nova-blue-orange" },
 		legal: {
-			terms: "Nurava Tech provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
-			privacy: "Nurava Tech processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
-			cookies: "Nurava Tech uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
+			terms: "Nurava HubStores provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
+			privacy: "Nurava HubStores processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
+			cookies: "Nurava HubStores uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
 		},
 		team: [
 			{
 				id: "founder-developer",
-				name: "Nurava Tech Founder",
+				name: "Nurava HubStores Founder",
 				role: "Founder & Developer",
 				bio: "Leads the product vision and builds the technology that helps independent stores serve shoppers better.",
 			},
 			{
 				id: "platform-operations",
-				name: "Nurava Tech Operations",
+				name: "Nurava HubStores Operations",
 				role: "Platform Operations",
 				bio: "Keeps the platform reliable and coordinates the systems that support merchants and shoppers.",
 			},
 			{
 				id: "merchant-success",
-				name: "Nurava Tech Team",
+				name: "Nurava HubStores Team",
 				role: "Merchant Success",
 				bio: "Helps store partners present their products clearly and grow with dependable storefront tools.",
 			},
@@ -213,7 +213,7 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 	if (patch.contact?.whatsappFloatingMessage === undefined && patch.contact?.whatsappMessage !== undefined) {
 		contact.whatsappFloatingMessage = patch.contact.whatsappMessage
 	}
-	return {
+	const merged: PlatformSiteSettings = {
 		...safeBase,
 		...safePatch,
 		brand: { ...base.brand, ...patch.brand },
@@ -242,4 +242,13 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		},
 		legal: { ...base.legal, ...patch.legal },
 	}
+	// Normalize older platform-owned copy in memory. Merchant storefront settings
+	// and demo-store records are loaded through a separate context.
+	const rebrand = (value: unknown): unknown => {
+		if (typeof value === "string") return value.replaceAll("Nurava Tech", "Nurava HubStores")
+		if (Array.isArray(value)) return value.map(rebrand)
+		if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rebrand(item)]))
+		return value
+	}
+	return rebrand(merged) as PlatformSiteSettings
 }

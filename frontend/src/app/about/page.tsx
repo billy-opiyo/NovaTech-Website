@@ -15,13 +15,13 @@ export default async function AboutPage() {
 	return (
 		<>
 			<InfoPage
-				title="About Nurava Tech"
-				description="Nurava Tech is a multi-industry platform that helps diverse independent stores reach and serve shoppers across Kenya."
+				title="About Nurava HubStores"
+				description="Nurava HubStores is a multi-industry platform that helps diverse independent stores reach and serve shoppers across Kenya."
 				sections={[
 					{
 						title: "Who we are",
 						content:
-							"Nurava Tech provides independent merchants with flexible storefronts, product and business tools, and a shared way to connect with shoppers. The platform is designed for diverse stores across multiple industries.",
+							"Nurava HubStores provides independent merchants with flexible storefronts, product and business tools, and a shared way to connect with shoppers. The platform is designed for diverse stores across multiple industries.",
 					},
 					{
 						title: "What we value",

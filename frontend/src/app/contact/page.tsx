@@ -89,8 +89,8 @@ const shopperFaqs: FAQ[] = [
 const merchantFaqs: FAQ[] = [
 	{
 		category: "Platform & onboarding",
-		question: "What does Nurava Tech provide to merchants?",
-		answer: "Nurava Tech provides store discovery, storefront technology, hosting, merchant tools, and platform support. Each merchant remains responsible for its own products and customer relationships.",
+		question: "What does Nurava HubStores provide to merchants?",
+		answer: "Nurava HubStores provides store discovery, storefront technology, hosting, merchant tools, and platform support. Each merchant remains responsible for its own products and customer relationships.",
 	},
 	{
 		category: "Platform & onboarding",
@@ -105,12 +105,12 @@ const merchantFaqs: FAQ[] = [
 	{
 		category: "Plans & billing",
 		question: "Who handles shopper payments, refunds, and warranties?",
-		answer: "The individual merchant handles product sales, shopper payments, delivery, refunds, replacements, warranties, and related customer support. Nurava Tech provides the platform connection and merchant technology.",
+		answer: "The individual merchant handles product sales, shopper payments, delivery, refunds, replacements, warranties, and related customer support. Nurava HubStores provides the platform connection and merchant technology.",
 	},
 	{
 		category: "Platform support",
 		question: "What can merchant support help with?",
-		answer: "Nurava Tech support can help with platform access, store setup, hosting, domains, subscription billing, and technical issues. Product and shopper issues should be handled by the merchant that made the sale.",
+		answer: "Nurava HubStores support can help with platform access, store setup, hosting, domains, subscription billing, and technical issues. Product and shopper issues should be handled by the merchant that made the sale.",
 	},
 ]
 
@@ -118,6 +118,7 @@ export default function ContactPage() {
 	const store = useStoreContext()
 	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
+	const platformName = "Nurava HubStores"
 	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
 	const showContactCards = store.features.showContactCards as boolean
 	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
@@ -182,7 +183,7 @@ export default function ContactPage() {
 				<h1 className="text-4xl font-bold mb-4">{isPlatformHome ? "Merchant Support" : "How Can We Help?"}</h1>
 				<p className="text-lg text-gray-500 max-w-2xl mx-auto">
 					{isPlatformHome
-						? "Contact Nurava Tech about store setup, platform access, subscriptions, domains, hosting, or technical support."
+					? `Contact ${platformName} about store setup, platform access, subscriptions, domains, hosting, or technical support.`
 						: "Get in touch with the store's support team about products, orders, delivery, returns, warranties, or other shopper questions."}
 				</p>
 			</motion.div>

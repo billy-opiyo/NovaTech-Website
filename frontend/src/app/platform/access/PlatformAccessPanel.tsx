@@ -62,7 +62,7 @@ export default function PlatformAccessPanel() {
 	if (!data) return <div className="glass-card p-6"><p>{message}</p><p className="mt-2 text-sm text-amber-700">Platform access management is restricted to super administrators.</p></div>
 
 	return <div className="space-y-6">
-		<div><h2 className="text-3xl font-bold">Platform access</h2><p className="mt-2 text-gray-600 dark:text-gray-300">Invite trusted team members to the Nurava Tech control plane with the least privilege they need.</p></div>
+		<div><h2 className="text-3xl font-bold">Platform access</h2><p className="mt-2 text-gray-600 dark:text-gray-300">Invite trusted team members to the Nurava HubStores control plane with the least privilege they need.</p></div>
 		<form onSubmit={invite} className="glass-card space-y-4 p-6">
 			<div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><MailPlus size={22} /></div><div><h3 className="text-xl font-semibold">Invite a platform operator</h3><p className="text-sm text-gray-500">The invitation expires after seven days and can only be accepted by the invited email.</p></div></div>
 			<label className="block"><span className="text-sm font-medium">Email address</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="operator@example.com" /></label>

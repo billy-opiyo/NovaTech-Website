@@ -21,7 +21,7 @@ function planDescription(key: string) {
 	if (key === "STARTER") return "The essentials for launching your first online store."
 	if (key === "BUSINESS") return "More capacity and advanced tools for a growing operation."
 	if (key === "ENTERPRISE") return "Higher limits and multi-domain support for established teams."
-	return "A flexible Nurava Tech plan for your store."
+	return "A flexible Nurava HubStores plan for your store."
 }
 
 function PlanCard({ plan, featured }: { plan: PublicPlan; featured: boolean }) {
@@ -51,11 +51,11 @@ export default function PlatformPlans({ plans, unavailable, source }: { plans: P
 				<p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Plans for store partners</p>
 				<h2 id="platform-plans-title" className="mt-2 text-3xl font-extrabold sm:text-4xl">Simple billing, clear capacity</h2>
 				<p className="mt-3 font-semibold text-primary">Choose your plan and pay its one-time setup fee to start a six-month pilot.</p>
-				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. From month seven, you can manually renew it monthly through M-Pesa. Nurava Tech does not automatically charge your account.</p>
-				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : "Prices shown from Nurava Tech's approved launch catalog; live billing is confirmed during setup."}</p>
+				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. From month seven, you can manually renew it monthly through M-Pesa. Nurava HubStores does not automatically charge your account.</p>
+				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : "Prices shown from the approved Nurava HubStores launch catalog; live billing is confirmed during setup."}</p>
 			</div>
 			{unavailable ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">Plan pricing is temporarily unavailable while the billing catalog is being connected. Please try again shortly.</div> : plans.length === 0 ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">No public plans are currently configured.</div> : <div className="mt-8 grid gap-5 lg:grid-cols-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} featured={plan.key === "BUSINESS"} />)}</div>}
-			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">The one-time setup fee is paid before the pilot starts. Your selected plan's monthly subscription becomes payable from month seven and is renewed manually. Optional add-ons are billed according to the active catalog.</p>
+			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">The one-time setup fee is paid before the pilot starts. Your selected plan&apos;s monthly subscription becomes payable from month seven and is renewed manually. Optional add-ons are billed according to the active catalog.</p>
 		</section>
 	)
 }

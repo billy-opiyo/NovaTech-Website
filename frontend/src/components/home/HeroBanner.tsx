@@ -41,7 +41,7 @@ export default function HeroBanner() {
 				<p className="mb-8 mx-auto max-w-2xl text-base text-gray-600 dark:text-gray-300 sm:text-lg md:text-xl">
 					{copy.description}
 				</p>
-				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+				<div className="mx-auto flex w-full flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
 					<Link
 						href={getStoreRouteHref(store, copy.primaryHref)}
 						className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
