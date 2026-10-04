@@ -734,3 +734,11 @@ html:not(.dark) .splash-screen {
 [data-product-grid-style="soft-cards"] article {
 	border-radius: 1.5rem;
 }
+
+/* Keep interactive controls consistently discoverable across every page.
+   Disabled controls and explicitly aria-disabled actions retain their own cursor. */
+a[href]:not([aria-disabled="true"]):hover,
+button:not(:disabled):not([aria-disabled="true"]):hover,
+[role="button"]:not(button):not([aria-disabled="true"]):hover {
+	cursor: pointer;
+}

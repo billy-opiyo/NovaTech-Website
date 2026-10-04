@@ -142,6 +142,17 @@ test("storefront hero actions remain centered at mobile and desktop widths", () 
 	assert.match(hero, /mx-auto flex w-full flex-col items-center justify-center gap-3 sm:flex-row/)
 })
 
+test("storefront footer copy is store-specific while platform footer copy remains configurable", () => {
+	const footer = readFileSync("frontend/src/components/layout/Footer.tsx", "utf8")
+	assert.match(footer, /store\.isPlatformHome[\s\S]*?store\.site\.footerDescription[\s\S]*?: store\.homepage\.heroDescription/)
+	assert.match(footer, /Explore the products and offers available from \$\{store\.brand\.name\}/)
+})
+
+test("interactive links and enabled buttons show pointer cursors site-wide", () => {
+	const styles = readFileSync("frontend/src/app/globals.css", "utf8")
+	assert.match(styles, /a\[href\]:not\(\[aria-disabled="true"\]\):hover,[\s\S]*?button:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover,[\s\S]*?cursor: pointer/)
+})
+
 test("platform header reuses search overlay with available-store suggestions", () => {
 	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
 	const search = readFileSync("frontend/src/components/search/SearchOverlay.tsx", "utf8")

@@ -94,6 +94,9 @@ export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
 	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
+	const footerDescription = store.isPlatformHome
+		? store.site.footerDescription || `${store.brand.tagline}. Discover independent stores and contact merchants directly.`
+		: store.homepage.heroDescription?.trim() || `Explore the products and offers available from ${store.brand.name}. Contact the store directly for assistance.`
 	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
 
@@ -114,7 +117,7 @@ export default function Footer() {
 				<div className="mx-auto max-w-xs lg:mx-0">
 					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						{store.isPlatformHome && store.site.footerDescription ? store.site.footerDescription : `${store.brand.tagline}. Discover independent stores and contact merchants directly.`}
+						{footerDescription}
 					</p>
 				</div>
 
