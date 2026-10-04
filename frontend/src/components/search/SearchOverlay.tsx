@@ -161,11 +161,11 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 					className={compactTrigger ? "inline-flex h-9 w-9 min-w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-200" : "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"}
 					aria-label="Open search"
 				>
-					<Search size={16} />
-					<span className="hidden flex-1 text-left md:block">Search pages &amp; products...</span>
-					<kbd className="hidden rounded bg-gray-200 px-2 py-0.5 text-xs dark:bg-gray-700 md:block">
-						⌘K
-					</kbd>
+					<Search size={compactTrigger ? 20 : 16} aria-hidden="true" />
+					{!compactTrigger && <>
+						<span className="hidden flex-1 text-left md:block">Search pages &amp; products...</span>
+						<kbd className="hidden rounded bg-gray-200 px-2 py-0.5 text-xs dark:bg-gray-700 md:block">⌘K</kbd>
+					</>}
 				</button>
 			)}
 
