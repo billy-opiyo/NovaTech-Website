@@ -18,6 +18,8 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
 	const splashImages = splashSettings?.images || {}
 	const backgroundMode = splashSettings?.backgroundMode || "glass"
+	const centerSplashContent = backgroundMode === "glass"
+		|| (backgroundMode === "color" && splashSettings?.centerContentOnColor !== false)
 	const useBackgroundImages = backgroundMode === "images"
 	const backgroundColor = splashSettings?.backgroundColor
 	const colorChannels = backgroundColor?.match(/[\da-f]{2}/gi)?.map((channel) => Number.parseInt(channel, 16)) || [7, 26, 44]
@@ -148,7 +150,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	if (!readyToReveal) {
 		return (
 			<div
-				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? `splash-screen--solid${splashSettings?.centerContentOnColor !== false ? " splash-screen--centered-content" : ""}` : "splash-screen--glass"}`}
+				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}${centerSplashContent ? " splash-screen--centered-content" : ""}`}
 				style={splashStyle}
 				role="status"
 				aria-live="polite"
