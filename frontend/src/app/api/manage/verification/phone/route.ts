@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
-import { decryptMerchantVerificationDetails, hashMerchantVerificationOtp } from "backend/lib/merchant-verification-secrets"
+import { decryptMerchantVerificationDetails } from "backend/lib/merchant-verification-secrets"
 import { sendSmsMessage } from "backend/lib/sms"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { isMerchantVerificationRequired } from "backend/lib/merchant-verification"
+import {
+	sendMerchantPhoneOtp,
+	verifyMerchantPhoneOtp,
+} from "backend/lib/merchant-phone-otp"
+import { createPrismaMerchantPhoneOtpStore } from "backend/lib/merchant-phone-otp-store"
 
 async function access() {
 	const session = await auth()
@@ -20,24 +24,29 @@ async function access() {
 	return { context }
 }
 
+const merchantPhoneOtpStore = createPrismaMerchantPhoneOtpStore(prisma.merchantVerificationProfile)
+
 export async function POST(request: NextRequest) {
 	if (!isMerchantVerificationRequired()) return NextResponse.json({ message: "Merchant phone OTP is not required under the current light-onboarding policy.", code: "VERIFICATION_NOT_REQUIRED" }, { status: 410 })
 	const limited = await rateLimiter(request, "merchant-verification-phone")
 	if (limited) return limited
 	try {
 		const { context } = await access()
-		const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: context.tenantId }, select: { id: true, sensitiveDetailsCiphertext: true, phoneOtpSentAt: true } })
+		const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: context.tenantId }, select: { id: true, sensitiveDetailsCiphertext: true } })
 		if (!profile) return NextResponse.json({ message: "Save the merchant verification details first." }, { status: 409 })
-		if (profile.phoneOtpSentAt && Date.now() - profile.phoneOtpSentAt.getTime() < 60_000) return NextResponse.json({ message: "Wait one minute before requesting another code." }, { status: 429 })
 		const details = decryptMerchantVerificationDetails(profile.sensitiveDetailsCiphertext)
 		if (!details.phone) return NextResponse.json({ message: "A merchant phone number is required." }, { status: 409 })
-		const code = crypto.randomInt(100000, 1000000).toString()
-		const salt = crypto.randomBytes(16).toString("base64url")
-		await sendSmsMessage({ to: details.phone, message: `Nurava Tech verification code: ${code}. It expires in 10 minutes. Do not share this code.` })
-		await prisma.merchantVerificationProfile.update({ where: { id: profile.id }, data: { phoneOtpHash: hashMerchantVerificationOtp(code, salt), phoneOtpSalt: salt, phoneOtpExpiresAt: new Date(Date.now() + 10 * 60_000), phoneOtpAttempts: 0, phoneOtpSentAt: new Date() } })
+
+		const sent = await sendMerchantPhoneOtp({
+			store: merchantPhoneOtpStore,
+			profileId: profile.id,
+			phone: details.phone,
+			sendSms: (to, message) => sendSmsMessage({ to, message }),
+		})
+		if (sent === "cooldown") return NextResponse.json({ message: "Wait one minute before requesting another code." }, { status: 429 })
 		return NextResponse.json({ message: "A verification code was sent to the merchant phone.", phoneVerification: "CODE_SENT" })
-	} catch (error: any) {
-		return apiErrorResponse(error, "Unable to send phone verification code")
+	} catch (error: unknown) {
+		return apiErrorResponse(error, "Unable to send verification code. Please try again.")
 	}
 }
 
@@ -49,18 +58,15 @@ export async function PATCH(request: NextRequest) {
 		const { context } = await access()
 		const parsed = z.object({ code: z.string().regex(/^\d{6}$/) }).safeParse(await request.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Enter the six-digit verification code." }, { status: 400 })
-		const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: context.tenantId }, select: { id: true, phoneOtpHash: true, phoneOtpSalt: true, phoneOtpExpiresAt: true, phoneOtpAttempts: true } })
-		if (!profile?.phoneOtpHash || !profile.phoneOtpSalt || !profile.phoneOtpExpiresAt || profile.phoneOtpExpiresAt < new Date()) return NextResponse.json({ message: "That verification code has expired. Request a new one." }, { status: 400 })
-		if (profile.phoneOtpAttempts >= 5) return NextResponse.json({ message: "Too many incorrect attempts. Request a new code." }, { status: 429 })
-		const expected = Buffer.from(profile.phoneOtpHash, "hex")
-		const actual = Buffer.from(hashMerchantVerificationOtp(parsed.data.code, profile.phoneOtpSalt), "hex")
-		if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
-			await prisma.merchantVerificationProfile.update({ where: { id: profile.id }, data: { phoneOtpAttempts: { increment: 1 } } })
-			return NextResponse.json({ message: "The verification code is incorrect." }, { status: 400 })
-		}
-		await prisma.merchantVerificationProfile.update({ where: { id: profile.id }, data: { phoneVerifiedAt: new Date(), phoneOtpHash: null, phoneOtpSalt: null, phoneOtpExpiresAt: null, phoneOtpAttempts: 0 } })
+		const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: context.tenantId }, select: { id: true } })
+		if (!profile) return NextResponse.json({ message: "That verification code has expired. Request a new one." }, { status: 400 })
+
+		const result = await verifyMerchantPhoneOtp({ store: merchantPhoneOtpStore, profileId: profile.id, code: parsed.data.code })
+		if (result === "expired") return NextResponse.json({ message: "That verification code has expired. Request a new one." }, { status: 400 })
+		if (result === "too_many_attempts") return NextResponse.json({ message: "Too many incorrect attempts. Request a new code." }, { status: 429 })
+		if (result === "invalid") return NextResponse.json({ message: "The verification code is incorrect." }, { status: 400 })
 		return NextResponse.json({ message: "Merchant phone verified.", phoneVerification: "VERIFIED" })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to verify merchant phone")
 	}
 }

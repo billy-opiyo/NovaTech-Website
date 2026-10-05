@@ -676,6 +676,23 @@ html:not(.dark) .splash-screen {
 
 .splash-screen.splash-screen--centered-content .splash-loading {
 	margin-top: 2.5rem;
+	display: flex;
+	width: min(100%, 26rem);
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child {
+	width: 100%;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.25rem 0.75rem;
+	text-align: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div[aria-hidden="true"] {
+	width: 100%;
 }
 
 /* Merchant guide previews mirror the dark workspace UI, but must follow the

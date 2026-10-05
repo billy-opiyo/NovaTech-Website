@@ -42,6 +42,7 @@ Production-grade web application development rules and standards for the Nurava 
 | **Payments** | M-Pesa Daraja API |
 | **Email** | Resend |
 | **Messaging** | WhatsApp Cloud APIs |
+| **SMS** | Africa's Talking [default sms provider] & Twilio [optional sms provider] |
 | **Database URL** | When setting up Database URL in Prisma, use Neon's Pooled Connection string (`-pooler` in the host address) rather than the direct connection string |
 
 ---

@@ -16,7 +16,7 @@
 - Vercel Hosting
 - Resend For Emails
 - WhatsApp Cloud APIs for Messaging
-- Twilio for SMS
+- Africa's Talking for SMS by default; Twilio remains an optional provider selected by configuration
 - Mpesa Daraja API for Payments
 - Modern responsive web application
 
