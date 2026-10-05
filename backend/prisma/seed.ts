@@ -18,7 +18,7 @@ type DemoProductSeed = {
 }
 
 async function seedIndustryDemoStore(input: {
-	adminUserId: string
+	adminUserId?: string
 	planId: string
 	industrySlug: "furniture" | "cakes"
 	storeName: string
@@ -57,11 +57,13 @@ async function seedIndustryDemoStore(input: {
 		update: { tenantId: tenant.id, industryId: industry.id, storeTypeId: industry.storeTypes[0]?.id, name: input.storeName, slug: input.storeSlug, publicationStatus: "PUBLISHED", publishedAt: new Date(), homepageSettings: homepage, themeSettings },
 		create: { id: input.storeId, tenantId: tenant.id, industryId: industry.id, storeTypeId: industry.storeTypes[0]?.id, name: input.storeName, slug: input.storeSlug, publicationStatus: "PUBLISHED", publishedAt: new Date(), homepageSettings: homepage, themeSettings },
 	})
-	await prisma.membership.upsert({
-		where: { tenantId_userId: { tenantId: tenant.id, userId: input.adminUserId } },
-		update: { role: "STORE_OWNER", active: true, acceptedAt: new Date() },
-		create: { tenantId: tenant.id, userId: input.adminUserId, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
-	})
+	if (input.adminUserId) {
+		await prisma.membership.upsert({
+			where: { tenantId_userId: { tenantId: tenant.id, userId: input.adminUserId } },
+			update: { role: "STORE_OWNER", active: true, acceptedAt: new Date() },
+			create: { tenantId: tenant.id, userId: input.adminUserId, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
+		})
+	}
 	const categoryBySlug = new Map<string, string>()
 	for (const template of industry.categoryTemplates) {
 		const category = await prisma.category.upsert({
@@ -103,59 +105,94 @@ async function seedIndustryDemoStore(input: {
 	}
 }
 
+async function seedIndustryDemoStores(planId: string, adminUserId?: string) {
+	await seedIndustryDemoStore({
+		adminUserId,
+		planId,
+		industrySlug: "furniture",
+		storeName: "Nurava Furnitures",
+		storeSlug: "nurava-furnitures",
+		tenantId: "demo-furniture-tenant",
+		storeId: "demo-furniture-store",
+		products: [
+			{ name: "Walnut Haven Bed", slug: "walnut-haven-bed", sku: "DEMO-FUR-BED-01", categorySlug: "beds", description: "A calm, well-proportioned solid-wood bed with a warm walnut finish, made for restorative nights and timeless bedrooms.", price: 68500, stock: 8, image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Solid walnut wood", width: 160, height: 110, color: "Walnut" } },
+			{ name: "Sunday Lounge Sofa", slug: "sunday-lounge-sofa", sku: "DEMO-FUR-SOFA-01", categorySlug: "sofas", description: "Sink into generous cushions, soft neutral upholstery, and a hand-finished wood frame made for slow Sundays and everyday company.", price: 92500, stock: 6, image: "https://images.unsplash.com/photo-1709746837880-f96b4f588ce5?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Walnut frame · linen blend", width: 220, height: 86, color: "Oatmeal" } },
+			{ name: "Gather Walnut Dining Set", slug: "gather-walnut-dining-set", sku: "DEMO-FUR-DINING-01", categorySlug: "dining-tables", description: "A welcoming dining table with considered natural-grain detailing, sized for family meals, long conversations, and lasting memories.", price: 74500, stock: 5, image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Solid walnut wood", width: 180, height: 76, color: "Walnut" } },
+		],
+	})
+	await seedIndustryDemoStore({
+		adminUserId,
+		planId,
+		industrySlug: "cakes",
+		storeName: "Nurava Cakes",
+		storeSlug: "nurava-cakes",
+		tenantId: "demo-cakes-tenant",
+		storeId: "demo-cakes-store",
+		products: [
+			{ name: "Chocolate Celebration Cake", slug: "chocolate-celebration-cake", sku: "DEMO-CAKE-CHOC-01", categorySlug: "birthday-cakes", description: "A rich cocoa sponge layered with silky chocolate cream and finished by hand. Add your celebration message and finishing notes at checkout.", price: 2800, stock: 20, image: "https://images.unsplash.com/photo-1762267660021-8f501db38ee1?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Chocolate", weight: 1, layers: 2 }, variants: [{ name: "Servings", value: "6 slices", priceModifier: 0, stock: 8, sku: "DEMO-CAKE-CHOC-06" }, { name: "Servings", value: "12 slices", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CHOC-12" }, { name: "Servings", value: "20 slices", priceModifier: 3200, stock: 4, sku: "DEMO-CAKE-CHOC-20" }] },
+			{ name: "Vanilla Berry Layer Cake", slug: "vanilla-berry-layer-cake", sku: "DEMO-CAKE-BERRY-01", categorySlug: "wedding-cakes", description: "Light vanilla layers, berry compote, and smooth cream make a bright centrepiece for showers, anniversaries, and intimate celebrations.", price: 3600, stock: 12, image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 1.5, layers: 3 }, variants: [{ name: "Servings", value: "6 slices", priceModifier: 0, stock: 4, sku: "DEMO-CAKE-BERRY-06" }, { name: "Servings", value: "12 slices", priceModifier: 1900, stock: 5, sku: "DEMO-CAKE-BERRY-12" }, { name: "Servings", value: "20 slices", priceModifier: 3800, stock: 3, sku: "DEMO-CAKE-BERRY-20" }] },
+			{ name: "Little Joy Cupcake Box", slug: "little-joy-cupcake-box", sku: "DEMO-CAKE-CUP-01", categorySlug: "cupcakes", description: "A gift-ready box of soft vanilla and cocoa cupcakes topped with our signature buttercream. Add a note for the baker when you order.", price: 1800, stock: 24, image: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 0.6, layers: 1 }, variants: [{ name: "Servings", value: "6 cupcakes", priceModifier: 0, stock: 12, sku: "DEMO-CAKE-CUP-06" }, { name: "Servings", value: "12 cupcakes", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CUP-12" }, { name: "Servings", value: "24 cupcakes", priceModifier: 3600, stock: 4, sku: "DEMO-CAKE-CUP-24" }] },
+		],
+	})
+}
+
 async function main() {
+	const demoIndustryStoresOnly = process.argv.includes("--industry-demo-stores-only")
 	if (process.env.NODE_ENV === "production") {
 		throw new Error("The development seed is disabled in production. Use db:init-admin with explicit credentials.")
 	}
 	const seedPassword = process.env.SEED_ADMIN_PASSWORD
-	if (!seedPassword || seedPassword.length < 16) {
+	if (!demoIndustryStoresOnly && (!seedPassword || seedPassword.length < 16)) {
 		throw new Error("SEED_ADMIN_PASSWORD must be set to a random value of at least 16 characters for development seeding.")
 	}
 	console.log("🌱 Seeding database...")
 
-	const adminHash = await bcrypt.hash(seedPassword, 12)
-	const admin = await prisma.user.upsert({
-		where: { email: "admin@nuravatech.com" },
-		update: {},
-		create: {
-			name: "Admin User",
-			email: "admin@nuravatech.com",
-			passwordHash: adminHash,
-			emailVerified: new Date(),
-			role: "SUPERADMIN",
-			platformRole: "PLATFORM_OWNER",
-		},
-	})
-	console.log("✅ Admin user created:", admin.email)
+	let adminUserId: string | undefined
+	if (demoIndustryStoresOnly) {
+		const admin = await prisma.user.findFirst({ where: { platformRole: "PLATFORM_OWNER" }, select: { id: true }, orderBy: { createdAt: "asc" } })
+		adminUserId = admin?.id
+	} else {
+		const adminHash = await bcrypt.hash(seedPassword!, 12)
+		const admin = await prisma.user.upsert({
+			where: { email: "admin@nuravatech.com" },
+			update: {},
+			create: {
+				name: "Admin User",
+				email: "admin@nuravatech.com",
+				passwordHash: adminHash,
+				emailVerified: new Date(),
+				role: "SUPERADMIN",
+				platformRole: "PLATFORM_OWNER",
+			},
+		})
+		adminUserId = admin.id
+		console.log("✅ Admin user created:", admin.email)
+	}
 
-	const trialPlan = await prisma.plan.upsert({
-		where: { key: "TRIAL" },
-		update: {},
-		create: { key: "TRIAL", name: "Trial", currency: "KES", active: true },
-	})
-	await prisma.plan.upsert({
-		where: { key: "STARTER" },
-		update: {},
-		create: { key: "STARTER", name: "Starter", price: 1500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 50, staffAccounts: 3, storageGb: 2, analyticsLevel: "basic", customDomain: false, whatsappNotifications: false } },
-	})
-	await prisma.plan.upsert({
-		where: { key: "BUSINESS" },
-		update: {},
-		create: { key: "BUSINESS", name: "Business", price: 3500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 250, staffAccounts: 15, storageGb: 10, analyticsLevel: "advanced", customDomain: true, whatsappNotifications: false } },
-	})
-	await prisma.plan.upsert({
-		where: { key: "ENTERPRISE" },
-		update: {},
-		create: { key: "ENTERPRISE", name: "Enterprise", price: 8500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 1500, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 1000, staffAccounts: 100, storageGb: 50, analyticsLevel: "advanced", customDomain: true, customDomainCount: 5, whatsappNotifications: false } },
-	})
-	await prisma.addon.createMany({
-		data: [
-			{ key: "whatsapp-notifications", name: "WhatsApp notifications", description: "Automated order and customer notifications.", price: 1000, currency: "KES", billingInterval: "MONTH", active: true },
-			{ key: "advanced-analytics", name: "Advanced analytics", description: "Extended reports and operational insights.", price: 2500, currency: "KES", billingInterval: "MONTH", active: true },
-			{ key: "extra-staff", name: "Extra staff accounts", description: "Additional team seats beyond the plan allowance.", price: 1500, currency: "KES", billingInterval: "MONTH", active: true },
-		],
-		skipDuplicates: true,
-	})
+	const trialPlan = demoIndustryStoresOnly
+		? await prisma.plan.findUnique({ where: { key: "TRIAL" } })
+		: await prisma.plan.upsert({ where: { key: "TRIAL" }, update: {}, create: { key: "TRIAL", name: "Trial", currency: "KES", active: true } })
+	if (!trialPlan) throw new Error("The TRIAL plan is missing; run the standard staging bootstrap before demo-store seeding.")
+
+	if (!demoIndustryStoresOnly) {
+		await prisma.plan.upsert({ where: { key: "STARTER" }, update: {}, create: { key: "STARTER", name: "Starter", price: 1500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 50, staffAccounts: 3, storageGb: 2, analyticsLevel: "basic", customDomain: false, whatsappNotifications: false } } })
+		await prisma.plan.upsert({ where: { key: "BUSINESS" }, update: {}, create: { key: "BUSINESS", name: "Business", price: 3500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 5000, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 250, staffAccounts: 15, storageGb: 10, analyticsLevel: "advanced", customDomain: true, whatsappNotifications: false } } })
+		await prisma.plan.upsert({ where: { key: "ENTERPRISE" }, update: {}, create: { key: "ENTERPRISE", name: "Enterprise", price: 8500, currency: "KES", billingInterval: "MONTH", setupFeeAmount: 1500, transactionFeePercent: 0, active: true, entitlementsJson: { productLimit: 1000, staffAccounts: 100, storageGb: 50, analyticsLevel: "advanced", customDomain: true, customDomainCount: 5, whatsappNotifications: false } } })
+		await prisma.addon.createMany({
+			data: [
+				{ key: "whatsapp-notifications", name: "WhatsApp notifications", description: "Automated order and customer notifications.", price: 1000, currency: "KES", billingInterval: "MONTH", active: true },
+				{ key: "advanced-analytics", name: "Advanced analytics", description: "Extended reports and operational insights.", price: 2500, currency: "KES", billingInterval: "MONTH", active: true },
+				{ key: "extra-staff", name: "Extra staff accounts", description: "Additional team seats beyond the plan allowance.", price: 1500, currency: "KES", billingInterval: "MONTH", active: true },
+			],
+			skipDuplicates: true,
+		})
+	}
+	if (demoIndustryStoresOnly) {
+		await seedIndustryDemoStores(trialPlan.id, adminUserId)
+		console.log("✅ Only Nurava Furnitures and Nurava Cakes demo stores were seeded.")
+		return
+	}
+	if (!adminUserId) throw new Error("The platform seed administrator could not be resolved.")
 	const tenant = await prisma.tenant.upsert({
 		where: { id: "novatech-tenant" },
 		update: { planId: trialPlan.id, status: "ACTIVE", verificationStatus: "APPROVED", verificationReviewedAt: new Date() },
@@ -167,9 +204,9 @@ async function main() {
 		create: { id: "novatech-store", tenantId: tenant.id, industryId: "industry-electronics", storeTypeId: "store-type-electronics-retail", name: "Nurava Tech", slug: "nuravatech", publicationStatus: "PUBLISHED", publishedAt: new Date() },
 	})
 	await prisma.membership.upsert({
-		where: { tenantId_userId: { tenantId: tenant.id, userId: admin.id } },
+		where: { tenantId_userId: { tenantId: tenant.id, userId: adminUserId } },
 		update: { role: "STORE_OWNER", active: true, acceptedAt: new Date() },
-		create: { tenantId: tenant.id, userId: admin.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
+		create: { tenantId: tenant.id, userId: adminUserId, role: "STORE_OWNER", active: true, acceptedAt: new Date() },
 	})
 	console.log("✅ Nurava Tech tenant and store ready")
 
@@ -375,34 +412,7 @@ async function main() {
 	])
 	console.log("✅ Products created")
 
-	await seedIndustryDemoStore({
-		adminUserId: admin.id,
-		planId: trialPlan.id,
-		industrySlug: "furniture",
-		storeName: "Nurava Furnitures",
-		storeSlug: "nurava-furnitures",
-		tenantId: "demo-furniture-tenant",
-		storeId: "demo-furniture-store",
-		products: [
-			{ name: "Walnut Haven Bed", slug: "walnut-haven-bed", sku: "DEMO-FUR-BED-01", categorySlug: "beds", description: "A calm, well-proportioned solid-wood bed with a warm walnut finish, made for restorative nights and timeless bedrooms.", price: 68500, stock: 8, image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Solid walnut wood", width: 160, height: 110, color: "Walnut" } },
-			{ name: "Sunday Lounge Sofa", slug: "sunday-lounge-sofa", sku: "DEMO-FUR-SOFA-01", categorySlug: "sofas", description: "Sink into generous cushions, soft neutral upholstery, and a hand-finished wood frame made for slow Sundays and everyday company.", price: 92500, stock: 6, image: "https://images.unsplash.com/photo-1709746837880-f96b4f588ce5?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Walnut frame · linen blend", width: 220, height: 86, color: "Oatmeal" } },
-			{ name: "Gather Walnut Dining Set", slug: "gather-walnut-dining-set", sku: "DEMO-FUR-DINING-01", categorySlug: "dining-tables", description: "A welcoming dining table with considered natural-grain detailing, sized for family meals, long conversations, and lasting memories.", price: 74500, stock: 5, image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85", attributes: { material: "Solid walnut wood", width: 180, height: 76, color: "Walnut" } },
-		],
-	})
-	await seedIndustryDemoStore({
-		adminUserId: admin.id,
-		planId: trialPlan.id,
-		industrySlug: "cakes",
-		storeName: "Nurava Cakes",
-		storeSlug: "nurava-cakes",
-		tenantId: "demo-cakes-tenant",
-		storeId: "demo-cakes-store",
-		products: [
-			{ name: "Chocolate Celebration Cake", slug: "chocolate-celebration-cake", sku: "DEMO-CAKE-CHOC-01", categorySlug: "birthday-cakes", description: "A rich cocoa sponge layered with silky chocolate cream and finished by hand. Add your celebration message and finishing notes at checkout.", price: 2800, stock: 20, image: "https://images.unsplash.com/photo-1762267660021-8f501db38ee1?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Chocolate", weight: 1, layers: 2 }, variants: [{ name: "Servings", value: "6 slices", priceModifier: 0, stock: 8, sku: "DEMO-CAKE-CHOC-06" }, { name: "Servings", value: "12 slices", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CHOC-12" }, { name: "Servings", value: "20 slices", priceModifier: 3200, stock: 4, sku: "DEMO-CAKE-CHOC-20" }] },
-			{ name: "Vanilla Berry Layer Cake", slug: "vanilla-berry-layer-cake", sku: "DEMO-CAKE-BERRY-01", categorySlug: "wedding-cakes", description: "Light vanilla layers, berry compote, and smooth cream make a bright centrepiece for showers, anniversaries, and intimate celebrations.", price: 3600, stock: 12, image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 1.5, layers: 3 }, variants: [{ name: "Servings", value: "6 slices", priceModifier: 0, stock: 4, sku: "DEMO-CAKE-BERRY-06" }, { name: "Servings", value: "12 slices", priceModifier: 1900, stock: 5, sku: "DEMO-CAKE-BERRY-12" }, { name: "Servings", value: "20 slices", priceModifier: 3800, stock: 3, sku: "DEMO-CAKE-BERRY-20" }] },
-			{ name: "Little Joy Cupcake Box", slug: "little-joy-cupcake-box", sku: "DEMO-CAKE-CUP-01", categorySlug: "cupcakes", description: "A gift-ready box of soft vanilla and cocoa cupcakes topped with our signature buttercream. Add a note for the baker when you order.", price: 1800, stock: 24, image: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 0.6, layers: 1 }, variants: [{ name: "Servings", value: "6 cupcakes", priceModifier: 0, stock: 12, sku: "DEMO-CAKE-CUP-06" }, { name: "Servings", value: "12 cupcakes", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CUP-12" }, { name: "Servings", value: "24 cupcakes", priceModifier: 3600, stock: 4, sku: "DEMO-CAKE-CUP-24" }] },
-		],
-	})
+	await seedIndustryDemoStores(trialPlan.id, adminUserId)
 	console.log("✅ Furniture and cake demo stores ready")
 
 	await prisma.deliveryRegion.createMany({
