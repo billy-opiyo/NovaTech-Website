@@ -90,7 +90,10 @@ const imageBySourceId: Record<string, string> = {
 	"1695048133142-1a20484d2569": productImageByName["iphone 15 pro max"],
 }
 
-export function getProductImage(source: string | undefined, name?: string) {
+export function getProductImage(source: string | undefined, name?: string, industrySlug?: string | null) {
+	const isNonElectronicsStore = Boolean(industrySlug && industrySlug !== "electronics")
+	if (isNonElectronicsStore) return source?.trim() || "/images/product-placeholder.svg"
+
 	const normalizedName = name?.trim().toLowerCase()
 	if (normalizedName && productImageByName[normalizedName]) {
 		return productImageByName[normalizedName]

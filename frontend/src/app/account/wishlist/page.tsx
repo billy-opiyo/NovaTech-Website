@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Heart, Share2, ShoppingCart, Star, Trash2 } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
@@ -20,6 +20,7 @@ type WishlistItem = {
 
 export default function WishlistPage() {
 	const store = useStoreContext()
+	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
 	const { addToast } = useToast()
 	const [items, setItems] = useState<WishlistItem[]>([])
 	const [sortBy, setSortBy] = useState("recent")

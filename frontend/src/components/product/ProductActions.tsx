@@ -39,7 +39,7 @@ export default function ProductActions({ productId, name, brand, image, price, s
 			addToast("This product is currently out of stock.", "error")
 			return
 		}
-		addItem({ productId, name, brand, image: getProductImage(image, name), price, quantity: 1, maxStock: stock, slug })
+		addItem({ productId, name, brand, image: getProductImage(image, name, store.industry?.slug), price, quantity: 1, maxStock: stock, slug })
 		addToast(`${name} added to cart.`, "success")
 	}
 

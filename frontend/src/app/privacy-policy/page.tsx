@@ -15,7 +15,7 @@ export default async function PrivacyPolicyPage() {
 
 	return <InfoPage title="Privacy Policy" description="How this independent store collects, uses, and protects shopper information." sections={[
 		{ title: "Information we collect", content: "This store may collect details you provide when you create an account, contact the merchant, request product information, or subscribe to updates. This can include your name, email address, phone number, delivery details, and order information." },
-		{ title: "How the store uses information", content: "The independent merchant uses your information to respond to enquiries, arrange purchases and delivery directly, provide support, protect accounts, and send marketing messages when you have chosen to receive them. Nurava Tech provides the platform and is not the seller of the merchant's products." },
+		{ title: "How the store uses information", content: "This store uses your information to respond to enquiries, arrange purchases and delivery, provide support, protect accounts, and send marketing messages when you have chosen to receive them. The merchant operating this store is responsible for its products and orders." },
 		{ title: "Your choices", content: "Contact the merchant that operates this store to update your details, change communication preferences, or ask about access or deletion of information held for your shopper relationship." },
 	]} />
 }

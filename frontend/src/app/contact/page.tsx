@@ -86,6 +86,31 @@ const shopperFaqs: FAQ[] = [
 	},
 ]
 
+function getStoreFaqs(industrySlug?: string | null): FAQ[] {
+	if (!industrySlug || industrySlug === "electronics") return shopperFaqs
+
+	const commonFaqs: FAQ[] = [
+		{ category: "Orders & Delivery", question: "How do I arrange delivery or collection?", answer: "Delivery and collection options are set by the store. Contact the merchant to confirm availability, timing, and any related costs before placing your order." },
+		{ category: "Orders & Delivery", question: "How can I check my order status?", answer: "The store provides order updates directly. Contact the merchant using the details on this page if you need help with an order." },
+		{ category: "Payments", question: "Which payment methods can I use?", answer: "Payment options are selected by the store and shown or confirmed by the merchant during ordering. Contact the store if you need clarification before paying." },
+		{ category: "Store policies", question: "Can I change or cancel an order?", answer: "Change and cancellation options depend on the order and the store's policy. Contact the merchant as soon as possible to discuss your request." },
+	]
+
+	if (industrySlug === "cakes") return [
+		...commonFaqs,
+		{ category: "Cakes & Celebrations", question: "Can I request a custom cake?", answer: "Contact the store with your preferred flavour, size, design, date, and any dietary requirements. The merchant will confirm what can be prepared and the price." },
+		{ category: "Cakes & Celebrations", question: "How far in advance should I order?", answer: "Preparation times vary by design and availability. Contact the store with your event date so the merchant can confirm a suitable order deadline." },
+	]
+
+	if (industrySlug === "furniture") return [
+		...commonFaqs,
+		{ category: "Furniture & Home", question: "How can I confirm dimensions and materials?", answer: "Check the product details and contact the store to confirm measurements, materials, finishes, and any options before ordering." },
+		{ category: "Furniture & Home", question: "Does the store offer assembly?", answer: "Assembly and delivery arrangements vary by item and location. Ask the merchant to confirm the available service and any extra cost." },
+	]
+
+	return commonFaqs
+}
+
 const merchantFaqs: FAQ[] = [
 	{
 		category: "Platform & onboarding",
@@ -119,7 +144,7 @@ export default function ContactPage() {
 	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
 	const platformName = "Nurava HubStores"
-	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
+	const faqs = isPlatformHome ? merchantFaqs : getStoreFaqs(store.industry?.slug)
 	const showContactCards = store.features.showContactCards as boolean
 	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
 	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
@@ -526,9 +551,9 @@ export default function ContactPage() {
 						<Shield className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">Trust & Security</h3>
 						<p className="text-sm text-gray-500">
-							{isPlatformHome ? "Secure platform • Merchant-first support" : "SSL Encrypted • Genuine Products"}
+							{isPlatformHome ? "Secure platform • Merchant-first support" : store.industry?.slug === "cakes" ? "Made-to-order details confirmed by the store" : store.industry?.slug === "furniture" ? "Product details confirmed by the store" : "SSL Encrypted • Genuine Products"}
 							<br />
-							{isPlatformHome ? "Store sales remain the merchant's responsibility" : "Merchant-set warranty • Direct payment with store"}
+							{isPlatformHome ? "Store sales remain the merchant's responsibility" : store.industry?.slug === "cakes" ? "Flavours • ingredients • collection details" : store.industry?.slug === "furniture" ? "Materials • dimensions • delivery details" : "Merchant-set warranty • Direct payment with store"}
 						</p>
 					</div>
 				</div>

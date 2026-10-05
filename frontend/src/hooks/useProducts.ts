@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { getProducts, type Product, type ProductQuery } from "@/services/products"
+import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 interface UseProductsOptions {
 	initialQuery?: ProductQuery
@@ -9,6 +11,8 @@ interface UseProductsOptions {
 }
 
 export function useProducts({ initialQuery = {}, enabled = true }: UseProductsOptions = {}) {
+	const store = useStoreContext()
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
 	const [products, setProducts] = useState<Product[]>([])
 	const [total, setTotal] = useState(0)
 	const [totalPages, setTotalPages] = useState(0)
@@ -21,7 +25,7 @@ export function useProducts({ initialQuery = {}, enabled = true }: UseProductsOp
 		setIsLoading(true)
 		setError(null)
 		try {
-			const data = await getProducts(query)
+			const data = await getProducts(query, productsEndpoint)
 			setProducts(data.products)
 			setTotal(data.total)
 			setTotalPages(data.totalPages)
@@ -30,7 +34,7 @@ export function useProducts({ initialQuery = {}, enabled = true }: UseProductsOp
 		} finally {
 			setIsLoading(false)
 		}
-	}, [query, enabled])
+	}, [query, enabled, productsEndpoint])
 
 	useEffect(() => {
 		fetchProducts()

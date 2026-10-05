@@ -362,7 +362,7 @@ export default function CartPage() {
 						<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Shield size={14} className="text-green-500" />
-								Secure browsing on Nurava Tech
+								Secure shopping with {store.brand.name}
 							</div>
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Truck size={14} className="text-primary" />

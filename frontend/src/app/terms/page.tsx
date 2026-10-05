@@ -21,7 +21,7 @@ export default async function TermsPage() {
 
 	return <InfoPage title="Terms and Conditions" description="The terms that apply when you use this independent store or contact its merchant about a product." sections={[
 		{ title: "Using the store", content: "Please provide accurate information, keep your login details secure, and use the store only for lawful purposes. The merchant may suspend access involved in fraud, abuse, or attempts to compromise the service." },
-		{ title: "Products and orders", content: "The independent merchant controls product availability, prices, delivery estimates, promotions, order acceptance, and customer communications. Nurava Tech provides the underlying discovery and storefront technology." },
+		{ title: "Products and orders", content: "This store controls product availability, prices, delivery estimates, promotions, order acceptance, and customer communications. Contact the store directly with questions about a product or order." },
 		{ title: "Support, returns, and warranties", content: "The merchant that sells a product is responsible for delivery, refunds, replacements, warranty claims, taxes, and customer support. Contact the merchant directly about a purchase or product issue. Nothing in these terms limits rights that cannot legally be excluded." },
 	]} />
 }

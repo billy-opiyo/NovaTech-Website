@@ -20,9 +20,9 @@ export default async function ReturnPolicyPage() {
 						"Contact this store directly with your order details and a description of the issue. The merchant will confirm whether the request qualifies and provide the next steps.",
 				},
 				{
-					title: "Platform role",
+					title: "Store responsibility",
 					content:
-						"Nurava Tech provides the storefront technology. It does not collect shopper payments or replace the merchant's own return and refund obligations.",
+						"This store handles its own orders and return requests. Contact the store directly to confirm payment, delivery, refund, replacement, and warranty arrangements.",
 				},
 			]}
 		/>

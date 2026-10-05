@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/Toast"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 export default function Newsletter() {
 	const [email, setEmail] = useState("")
@@ -20,7 +21,7 @@ export default function Newsletter() {
 
 		setStatus("loading")
 		try {
-			const res = await fetch("/api/newsletter", {
+			const res = await fetch(getStoreRouteHref(store, "/api/newsletter"), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email, consent }),
