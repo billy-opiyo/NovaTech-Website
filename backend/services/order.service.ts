@@ -415,7 +415,8 @@ export async function updateOrderStatus(
 				status,
 			)
 		} catch (error) {
-			console.error("Failed to send SMS notification:", error)
+			// The SMS boundary records provider, status, and error code without PII.
+			console.error("Failed to send SMS notification")
 		}
 	}
 

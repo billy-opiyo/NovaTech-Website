@@ -198,7 +198,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - `POST /api/payments/webhooks/mpesa/stk-callback` — M-Pesa STK callback.
   - `POST /api/payments/webhooks/mpesa/c2b` — M-Pesa C2B callback.
 - **Resend** (`backend/notifications/resend/`) — Real Resend email sending (re-exports from `lib/email.ts`).
-- **SMS** (`backend/notifications/sms/`) — Real Twilio SMS integration with order confirmation, status updates, payment requests, and support messages.
+- **SMS** (`backend/notifications/sms/`) — Provider-based SMS delivery. Africa's Talking is the default; the retained Twilio provider is activated only with `SMS_PROVIDER=twilio`.
 - **WhatsApp** (`backend/notifications/whatsapp/`) — Real WhatsApp Cloud API integration with order confirmation, status updates, payment requests, and support messages. Wired into `order.service.ts` for automated order status notifications.
 
 ### 🗄 Database (Prisma Schema)
@@ -301,7 +301,7 @@ NovaTech Website/
 │   │   └── webhooks/            # Stripe + M-Pesa webhook handlers
 │   ├── notifications/
 │   │   ├── resend/              # Real Resend email sending
-│   │   ├── sms/                 # Real Twilio SMS integration
+│   │   ├── sms/                 # Provider-based SMS (Africa's Talking default, Twilio optional)
 │   │   └── whatsapp/            # Real WhatsApp Cloud API integration
 │   ├── security/                # Sanitization utilities
 │   ├── actions/                 # AdminLog audit + background task queue
@@ -523,13 +523,15 @@ npm run dev:open
   - Payment method breakdown (M-Pesa, Card, COD)
 - ✔️ **Rate limiting** — PostgreSQL-backed distributed buckets with a 60 req/min per-IP limit on sensitive endpoints
 - ✔️ **Email** — Resend integration with branded order-confirmation template
-- ✔️ **SMS notifications** — Real Twilio SMS integration with:
+- ✔️ **SMS notifications** — Africa's Talking by default, with Twilio available by explicit configuration:
   - Order confirmation SMS
   - Order status update SMS (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)
   - Payment request SMS
   - Support message SMS
-  - Graceful "not configured" behavior when `TWILIO_*` env vars are absent
-  - Kenyan phone number formatting (+254 prefix)
+  - `SMS_PROVIDER` selects `africastalking` (default) or `twilio`; provider failures never fall back to another provider
+  - Kenyan and international phone number normalization to E.164
+  - Merchant phone OTPs retain expiry, one-use verification, resend cooldown, attempt limits, and rate limiting
+  - See [SMS provider setup](docs/sms-providers.md) for sandbox, production, and Vercel configuration
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
@@ -582,7 +584,7 @@ The backend service layer is fully implemented with proper separation of concern
 
 - **`backend/payments/`** — M-Pesa (Daraja STK Push), Stripe Cards, and Webhook handlers with order confirmation emails
 
-- **`backend/notifications/`** — Real WhatsApp Cloud API, Twilio SMS, and Resend email integrations
+- **`backend/notifications/`** — Real WhatsApp Cloud API, provider-based SMS, and Resend email integrations
 
 **Note:** The Next.js App Router API routes in `frontend/src/app/api/` are the primary API interface. The backend services are shared modules used by these routes.
 

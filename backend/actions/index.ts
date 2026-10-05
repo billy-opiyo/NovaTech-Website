@@ -42,7 +42,11 @@ export async function queueBackgroundTask(
 ): Promise<ActionResult> {
 	// This is an explicit synchronous dispatch boundary. Durable work must be
 	// handed to the provider/worker responsible for the task before returning.
-	console.log(`[Background Task] Dispatching: ${taskName}`, payload || {})
+	if (taskName === "send-sms") {
+		console.log("[Background Task] Dispatching SMS task")
+	} else {
+		console.log(`[Background Task] Dispatching: ${taskName}`, payload || {})
+	}
 
 	// Execute lightweight notification tasks immediately
 	try {
@@ -67,7 +71,12 @@ export async function queueBackgroundTask(
 			await sendWhatsAppMessage(whatsappData)
 		}
 	} catch (error) {
-		console.error(`Background task ${taskName} failed:`, error)
+		if (taskName === "send-sms") {
+			// SMS provider diagnostics are already safely recorded by the SMS boundary.
+			console.error("Background SMS task failed")
+		} else {
+			console.error(`Background task ${taskName} failed:`, error)
+		}
 	}
 
 	return {
@@ -75,9 +84,6 @@ export async function queueBackgroundTask(
 		action: "queue_background_task",
 		message: `${taskName} dispatched successfully.`,
 		createdAt: new Date().toISOString(),
-		metadata: {
-			taskName,
-			payload,
-		},
+		metadata: taskName === "send-sms" ? { taskName } : { taskName, payload },
 	}
 }

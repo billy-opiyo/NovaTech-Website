@@ -242,12 +242,13 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 | **Email** | Resend |
 | **Storage** | Cloudflare R2 (AWS SDK v3) |
 | **Payments** | Merchant-direct shopper handoff plus Stripe Billing and invoice-driven M-Pesa SaaS billing |
-| **Notifications** | Twilio SMS, WhatsApp Cloud API |
+| **Notifications** | Africa's Talking SMS (default), optional Twilio SMS, WhatsApp Cloud API |
 | **Monorepo** | npm workspaces (`frontend` + `backend`) |
 
 ## Quick Links
 
 - [Features](features.md) — Complete list of implemented features
+- [SMS provider setup](sms-providers.md) — Africa's Talking default, Twilio configuration, and sandbox/production environment setup
 - [Client customization](client-customization.md) — Branding, themes, content, and client setup
 - [User Manual](User%20Manual.md) — Full operating guide
 - [Future Updates](Future%20Updates.md) — Advanced feature and implementation roadmap

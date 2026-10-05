@@ -592,7 +592,8 @@ an active approved payment profile.
 | PostgreSQL/Neon | Prisma data, tenant isolation, rate-limit buckets, webhook receipts |
 | Resend | Verification, recovery, order, and support email |
 | Cloudflare R2 | Public product/profile files and private verification evidence |
-| Twilio | SMS order, support, and verification messages |
+| Africa's Talking | Default SMS delivery for order, support, and verification messages; configure with server-side credentials |
+| Twilio | Optional SMS provider, enabled only by setting `SMS_PROVIDER=twilio` |
 | WhatsApp Cloud API | Customer/merchant notifications and enquiry support |
 | M-Pesa Daraja | SaaS invoice STK plus tenant-scoped merchant shopper STK and callbacks |
 | Stripe | Provider-ready SaaS Checkout/portal/webhooks |

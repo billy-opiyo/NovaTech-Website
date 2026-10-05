@@ -200,7 +200,7 @@ and payment route boundaries.
 | Provider | Features |
 |----------|----------|
 | **Resend** (`backend/notifications/resend/`) | Real Resend email sending (re-exports from `lib/email.ts`). |
-| **SMS** (`backend/notifications/sms/`) | Real Twilio SMS integration with:<br>- Order confirmation SMS<br>- Order status update SMS (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)<br>- Payment request SMS<br>- Support message SMS<br>- Graceful "not configured" behavior when `TWILIO_*` env vars are absent<br>- Kenyan phone number formatting (+254 prefix) |
+| **SMS** (`backend/notifications/sms/`) | Provider-based SMS delivery with Africa's Talking as the default and Twilio available through `SMS_PROVIDER=twilio`.<br>- Order confirmation, order status, payment-request, and support message helpers<br>- No automatic fallback to another provider on failure<br>- Kenyan and international phone number normalization to E.164<br>- OTP expiry, one-time use, resend cooldown, attempt limits, and IP rate limiting retained<br>- See [SMS provider setup](sms-providers.md). |
 | **WhatsApp** (`backend/notifications/whatsapp/`) | Real WhatsApp Cloud API integration with order confirmation, status, payment-request, and support messages. Automated order-status WhatsApp messages are gated by the active paid add-on and the customer's order-update preference. |
 
 ## 🗄 Database (Prisma Schema)
@@ -267,7 +267,7 @@ Core models:
 | **Password Strength Check** | Validates password complexity. |
 | **Object Sanitization** | Sanitizes incoming objects for security. |
 | **Cloudflare R2 Storage** | Upload, delete, signed URL utilities for product images. |
-| **Twilio SMS Integration** | Real SMS sending with Kenyan number formatting. |
+| **SMS Provider Integration** | Africa's Talking is the default provider; Twilio remains available by explicit configuration, with Kenyan/international number formatting. |
 | **WhatsApp Cloud API** | Real WhatsApp messaging integration. |
 | **Resend Email** | Branded order-confirmation email templates. |
 | **Prisma Schema** | Complete relational data model with proper relationships. |
