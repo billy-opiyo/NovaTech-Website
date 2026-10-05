@@ -26,7 +26,7 @@ export function getMerchantWhatsAppHref(input: {
 		const price = typeof item.price === "number" ? ` - KES ${item.price.toLocaleString()}` : ""
 		return `- ${item.name}${variant}${quantity}${price}`
 	}).join("\n")
-	const text = `Hello ${input.storeName}, I found these products on Nurava Tech and would like to enquire about availability, delivery, warranty, and payment:\n${itemLines}`
+	const text = `Hello ${input.storeName}, I found these products at your store and would like to enquire about availability, delivery, warranty, and payment:\n${itemLines}`
 	return getWhatsAppChatHref(input.number, text)
 }
 

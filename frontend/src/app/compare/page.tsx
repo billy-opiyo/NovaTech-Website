@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Minus, Plus, Search, Star, X } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 
@@ -20,10 +20,17 @@ type CompareProduct = {
 	specs: Record<string, unknown>
 }
 
-const allSpecs = ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"]
+const electronicsSpecs = ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"]
 
 export default function ComparePage() {
 	const store = useStoreContext()
+	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
+	const compareStorageKey = store.industry?.slug === "electronics" ? "novatech-compare" : `compare:${store.storeId}`
+	const allSpecs = store.industry?.slug === "cakes"
+		? ["Flavor", "Weight", "Layers", "Servings", "Dietary details"]
+		: store.industry?.slug === "furniture"
+			? ["Material", "Width", "Height", "Depth", "Color", "Finish"]
+			: electronicsSpecs
 	const [compareItems, setCompareItems] = useState<CompareProduct[]>([])
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [searchQuery, setSearchQuery] = useState("")
@@ -33,15 +40,15 @@ export default function ComparePage() {
 
 	useEffect(() => {
 		try {
-			const saved = localStorage.getItem("novatech-compare")
+			const saved = localStorage.getItem(compareStorageKey)
 			if (saved) setCompareItems(JSON.parse(saved))
 		} catch { /* Ignore invalid client storage and start empty. */ }
 		setHydrated(true)
-	}, [])
+	}, [compareStorageKey])
 
 	useEffect(() => {
-		if (hydrated) localStorage.setItem("novatech-compare", JSON.stringify(compareItems))
-	}, [compareItems, hydrated])
+		if (hydrated) localStorage.setItem(compareStorageKey, JSON.stringify(compareItems))
+	}, [compareItems, compareStorageKey, hydrated])
 
 	useEffect(() => {
 		if (!searchOpen || searchQuery.trim().length < 2) {

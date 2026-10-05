@@ -33,7 +33,7 @@ export default function CategoryGrid() {
 								<img
 									src={
 										cat.image?.startsWith("https://images.unsplash.com/")
-											? getProductImage(cat.image)
+											? getProductImage(cat.image, cat.name, store.industry?.slug)
 											: cat.image
 									}
 									alt={cat.name}

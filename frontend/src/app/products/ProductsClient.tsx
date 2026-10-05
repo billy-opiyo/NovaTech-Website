@@ -21,6 +21,7 @@ import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getProductImage } from "@/constants/productImages"
+import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import ProductActions from "@/components/product/ProductActions"
 
 // Types
@@ -51,7 +52,7 @@ interface FilterState {
 	trending: boolean
 }
 
-const brands = [
+const electronicsBrands = [
 	"Apple",
 	"Samsung",
 	"Sony",
@@ -73,6 +74,7 @@ const sortOptions = [
 export default function ProductsClient() {
 	const searchParams = useSearchParams()
 	const store = useStoreContext()
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
 	const categories = [{ name: "All Categories", slug: "" }, ...store.homepage.categories.map(({ name, slug }) => ({ name, slug }))]
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -88,8 +90,23 @@ export default function ProductsClient() {
 		trending: searchParams.get("trending") === "true",
 	})
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+	const [catalogBrands, setCatalogBrands] = useState<string[]>([])
 	const [isLoading, setIsLoading] = useState(false)
 	const searchParamsKey = searchParams.toString()
+	const brands = store.industry?.slug === "electronics" ? electronicsBrands : catalogBrands
+
+	useEffect(() => {
+		let current = true
+		getProducts({ limit: 100 }, productsEndpoint)
+			.then(({ products }) => {
+				if (!current) return
+				setCatalogBrands(Array.from(new Set(products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
+			})
+			.catch(() => {
+				if (current) setCatalogBrands([])
+			})
+		return () => { current = false }
+	}, [productsEndpoint])
 
 	useEffect(() => {
 		if (filters.category && !store.homepage.categories.some((category) => category.slug === filters.category)) {
@@ -126,7 +143,7 @@ export default function ProductsClient() {
 			trending: filters.trending ? true : undefined,
 			sortBy: filters.sortBy,
 			limit: 100,
-		})
+		}, productsEndpoint)
 			.then((response) => {
 				const products = response.products.map((product) => {
 					const productWithMetrics = product as typeof product & { averageRating?: number }
@@ -143,7 +160,7 @@ export default function ProductsClient() {
 			})
 			.catch(() => setFilteredProducts([]))
 			.finally(() => setIsLoading(false))
-	}, [searchQuery, filters])
+	}, [searchQuery, filters, productsEndpoint])
 
 	useEffect(() => {
 		applyFilters()
@@ -199,7 +216,7 @@ export default function ProductsClient() {
 						/>
 						<input
 							type="text"
-							placeholder='Search products... e.g., "i7 laptop 16GB RAM"'
+							placeholder={getProductSearchPlaceholder(store.industry?.slug)}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary transition"
@@ -649,7 +666,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 				>
 					<div className="product-media relative mb-4 flex h-52 w-full items-center justify-center overflow-hidden rounded-xl">
 					<Image
-						src={getProductImage(product.images[0], product.name)}
+						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
@@ -744,7 +761,7 @@ function ProductListItem({
 				>
 					<div className="product-media relative flex h-40 w-40 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl">
 					<Image
-						src={getProductImage(product.images[0], product.name)}
+						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"

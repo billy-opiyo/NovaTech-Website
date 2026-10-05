@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -51,7 +51,7 @@ type CategoryProduct = {
 	reviewCount?: number
 }
 
-type StoreLinkContext = Pick<StoreContext, "isPlatformHome" | "storePathPrefix" | "storeSlug" | "contact" | "brand">
+type StoreLinkContext = Pick<StoreContext, "isPlatformHome" | "storePathPrefix" | "storeSlug" | "contact" | "brand" | "industry">
 
 function ProductCard({ product, store }: { product: CategoryProduct; store: StoreLinkContext }) {
 	const price = product.discountedPrice ?? product.price
@@ -66,7 +66,7 @@ function ProductCard({ product, store }: { product: CategoryProduct; store: Stor
 			<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group block pb-24">
 				<div className="product-media relative flex aspect-square items-center justify-center overflow-hidden rounded-xl">
 					<Image
-						src={getProductImage(product.images[0], product.name)}
+						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
 						fill
 						className="object-contain transition-transform duration-500 group-hover:scale-105"
@@ -106,12 +106,24 @@ function ProductCard({ product, store }: { product: CategoryProduct; store: Stor
 export default function CategoryPage() {
 	const { slug } = useParams<{ slug: string }>()
 	const store = useStoreContext()
-	const category = categoryData[slug]
-	const categoryIsEnabled = store.homepage.categories.some((item) => item.slug === slug)
+	const categorySlug = slug.trim().toLowerCase()
+	const category = useMemo(() => {
+		const selectedCategory = store.homepage.categories.find((item) => item.slug.trim().toLowerCase() === categorySlug)
+		const navigationCategory = store.navigation.find((link) => link.href.match(/^\/category\/([^/?#]+)/)?.[1]?.toLowerCase() === categorySlug)
+		if (store.industry?.slug === "electronics" && categoryData[categorySlug]) return categoryData[categorySlug]
+
+		const title = selectedCategory?.name || navigationCategory?.name || categorySlug.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+		if (store.industry?.slug === "cakes") return { title, description: `Explore ${title.toLowerCase()} from ${store.brand.name}. Check each listing for flavours, sizes, and order details.` }
+		if (store.industry?.slug === "furniture") return { title, description: `Explore ${title.toLowerCase()} from ${store.brand.name}. Check each listing for materials, dimensions, and delivery details.` }
+		return { title, description: `Browse ${title.toLowerCase()} available from ${store.brand.name}.` }
+	}, [categorySlug, store.brand.name, store.homepage.categories, store.industry?.slug, store.navigation])
+	const categoryIsEnabled = store.industry?.slug === "electronics"
+		? Boolean(store.homepage.categories.some((item) => item.slug.trim().toLowerCase() === categorySlug))
+		: /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(categorySlug)
 	const [catalogProducts, setCatalogProducts] = useState<CategoryProduct[]>([])
 	const [trendingProducts, setTrendingProducts] = useState<CategoryProduct[]>([])
 	const [loadingProducts, setLoadingProducts] = useState(true)
-	const query = `category=${encodeURIComponent(slug)}&limit=4&sortBy=newest`
+	const query = `category=${encodeURIComponent(categorySlug)}&limit=4&sortBy=newest`
 	const catalogUrl = getStoreRouteHref(store, `/api/products?${query}`)
 	const trendingUrl = getStoreRouteHref(store, `/api/products?${query}&trending=true`)
 
@@ -136,7 +148,7 @@ export default function CategoryPage() {
 				if (!controller.signal.aborted) setLoadingProducts(false)
 			})
 		return () => controller.abort()
-	}, [category, slug, catalogUrl, trendingUrl])
+	}, [category, catalogUrl, trendingUrl])
 
 	if (!category || !categoryIsEnabled) return <NotFoundState title="Category not found" description="That product category is not available in this store. Browse the store's available products instead." />
 
@@ -145,7 +157,7 @@ export default function CategoryPage() {
 			<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card mb-12 p-8 text-center md:p-16">
 				<h1 className="mb-4 text-3xl font-bold md:text-5xl">{category.title}</h1>
 				<p className="mx-auto mb-8 max-w-2xl text-lg text-gray-600 dark:text-gray-300">{category.description}</p>
-				<Link href={getStoreRouteHref(store, `/products?category=${slug}`)} className="btn-primary inline-flex items-center gap-2">
+				<Link href={getStoreRouteHref(store, `/products?category=${encodeURIComponent(categorySlug)}`)} className="btn-primary inline-flex items-center gap-2">
 					Browse All <ArrowRight size={18} />
 				</Link>
 			</motion.div>
@@ -153,7 +165,7 @@ export default function CategoryPage() {
 			<section className="mb-16">
 				<div className="mb-8 flex items-center justify-between gap-4">
 					<h2 className="text-2xl font-bold">Latest in {category.title}</h2>
-					<Link href={getStoreRouteHref(store, `/products?category=${slug}`)} className="flex items-center gap-1 text-primary hover:underline">
+					<Link href={getStoreRouteHref(store, `/products?category=${encodeURIComponent(categorySlug)}`)} className="flex items-center gap-1 text-primary hover:underline">
 						View All <ArrowRight size={16} />
 					</Link>
 				</div>
@@ -163,7 +175,7 @@ export default function CategoryPage() {
 			<section>
 				<div className="mb-8 flex items-center justify-between gap-4">
 					<h2 className="text-2xl font-bold">Trending in {category.title}</h2>
-					<Link href={getStoreRouteHref(store, `/products?category=${slug}&trending=true`)} className="flex items-center gap-1 text-primary hover:underline">
+					<Link href={getStoreRouteHref(store, `/products?category=${encodeURIComponent(categorySlug)}&trending=true`)} className="flex items-center gap-1 text-primary hover:underline">
 						View All <ArrowRight size={16} />
 					</Link>
 				</div>

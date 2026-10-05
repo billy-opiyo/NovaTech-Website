@@ -23,6 +23,14 @@ const platformNavigation = [
 	{ name: "Create Store", href: "/onboarding" },
 ]
 
+function getStoreNavigationFontSize(label: string, itemCount: number): string {
+	const normalizedLabel = label.trim()
+	const longestWord = Math.max(0, ...normalizedLabel.split(/\s+/).map((word) => word.length))
+	const lengthPenalty = Math.max(0, longestWord - 10) * 0.45 + Math.max(0, normalizedLabel.length - 12) * 0.25
+	const itemCountPenalty = Math.max(0, itemCount - 5) * 0.5
+	return `${Math.max(11, 15.5 - lengthPenalty - itemCountPenalty)}px`
+}
+
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
 	const { itemCount } = useCart()
@@ -53,12 +61,13 @@ export default function Header() {
 							{store.brand.name}
 						</span>
 					</Link>
-				<nav className="hidden gap-3 lg:flex lg:gap-6">
+				<nav className="hidden min-w-0 flex-1 items-center justify-center gap-x-[clamp(0.35rem,0.7vw,0.9rem)] overflow-x-auto px-1 lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 					{navigation.map((link) => (
 							<Link
 								key={link.href}
 								href={link.href}
-								className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+								className="shrink-0 whitespace-nowrap text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+								style={!store.isPlatformHome ? { fontSize: getStoreNavigationFontSize(link.name, navigation.length) } : undefined}
 							>
 								{link.name}
 							</Link>

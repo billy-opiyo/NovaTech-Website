@@ -47,15 +47,15 @@ export interface ProductListResponse {
 	totalPages: number
 }
 
-export async function getProducts(query: ProductQuery = {}): Promise<ProductListResponse> {
+export async function getProducts(query: ProductQuery = {}, endpoint = "/api/products"): Promise<ProductListResponse> {
 	const qs = buildQueryString(query)
-	return apiFetch<ProductListResponse>(`/api/products${qs}`)
+	return apiFetch<ProductListResponse>(`${endpoint}${qs}`)
 }
 
-export async function getProductBySlug(slug: string): Promise<Product> {
-	return apiFetch<Product>(`/api/products/${slug}`)
+export async function getProductBySlug(slug: string, endpoint = "/api/products"): Promise<Product> {
+	return apiFetch<Product>(`${endpoint}/${encodeURIComponent(slug)}`)
 }
 
-export async function searchProducts(q: string): Promise<Product[]> {
-	return apiFetch<Product[]>(`/api/products?q=${encodeURIComponent(q)}`)
+export async function searchProducts(q: string, endpoint = "/api/products"): Promise<Product[]> {
+	return apiFetch<Product[]>(`${endpoint}?q=${encodeURIComponent(q)}`)
 }

@@ -117,10 +117,20 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
 		const socialSettings = record(contact.social)
-		const homepage = {
-			...defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset),
-			...record(store.homepageSettings),
+		const storedHomepage = record(store.homepageSettings)
+		const industryHomepage = defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset)
+		const homepageDefaults: Record<string, unknown> = store.industry?.slug === "electronics" ? clientConfig.homepage : {
+			...clientConfig.homepage,
+			...industryHomepage,
+			aboutTitle: `About ${store.name}`,
+			aboutDescription: `${store.name} is an independent ${store.industry?.name.toLowerCase() || "retail"} store. Contact the store directly for product details, availability, orders, delivery, and support.`,
+			categories: [],
+			featuredProducts: [],
+			testimonials: [],
+			newsletterTitle: `Updates from ${store.name}`,
+			newsletterDescription: `Sign up for occasional updates about new arrivals, offers, and news from ${store.name}.`,
 		}
+		const homepage: Record<string, unknown> = { ...homepageDefaults, ...(store.industry?.slug === "electronics" ? {} : industryHomepage), ...storedHomepage }
 		delete homepage.heroImage
 		delete homepage.heroImageAlt
 		const legalSettings = record(homepage.legal)
@@ -128,7 +138,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
-		const persistedCategories = Array.isArray(homepage.categories) ? homepage.categories.flatMap((value) => {
+		const persistedCategories = Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
 			const fallback = store.industry?.slug === "electronics" ? clientConfig.homepage.categories.find((item) => item.slug === category.slug) : undefined
@@ -144,16 +154,16 @@ export async function getStoreContext(): Promise<StoreContext> {
 				? { ...category, image: configuredImage }
 				: category
 		})
-		const defaultNavigation = store.industry?.slug && store.industry.slug !== "electronics"
+		const defaultNavigation: Array<{ name: string; href: string }> = store.industry?.slug && store.industry.slug !== "electronics"
 			? [{ name: "Home", href: "/" }, ...categories.map((category) => ({ name: category.name, href: `/category/${category.slug}` })), { name: "All Products", href: "/products" }]
-			: clientConfig.navigation
-		const configuredNavigation = Array.isArray(homepage.navigation) ? homepage.navigation.flatMap((value) => {
+			: [...clientConfig.navigation]
+		const configuredNavigation: Array<{ name: string; href: string }> = Array.isArray(storedHomepage.navigation) ? storedHomepage.navigation.flatMap((value: unknown) => {
 			const link = record(value)
 			return typeof link.name === "string" && typeof link.href === "string" ? [{ name: link.name, href: link.href }] : []
 		}) : defaultNavigation
 		const navigation = configuredNavigation.filter((link) => {
 			const categorySlug = link.href.match(/^\/category\/([^/?#]+)/)?.[1]
-			return !categorySlug || categoryAvailability[categorySlug] !== false
+			return !categorySlug || (categories.some((category) => category.slug === categorySlug) && categoryAvailability[categorySlug] !== false)
 		})
 		const configuredHeroHref = typeof homepage.heroPrimaryHref === "string" ? homepage.heroPrimaryHref : clientConfig.homepage.heroPrimaryHref
 		const hiddenHeroCategory = configuredHeroHref.match(/^\/category\/([^/?#]+)/)?.[1]
@@ -204,7 +214,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : merchantSocialDefaults.instagram,
 				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : merchantSocialDefaults.tiktok,
 			},
-			homepage: { ...clientConfig.homepage, ...homepage, heroPrimaryHref, categories },
+			homepage: { ...homepageDefaults, ...homepage, heroPrimaryHref, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
 			legal: { ...merchantLegalDefaults(store.name), terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : merchantLegalDefaults(store.name).terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : merchantLegalDefaults(store.name).privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : merchantLegalDefaults(store.name).cookies },

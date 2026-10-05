@@ -2,11 +2,12 @@ import Link from "next/link"
 import { ArrowRight, Percent, ShieldCheck, Truck } from "lucide-react"
 import { getDeals } from "backend/services/recommendation.service"
 import { getStoreContext } from "@/lib/store-context.server"
-import { getProductImage } from "@/constants/productImages"
+import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { getStoreRouteHref } from "@/lib/store-home"
 
 export default async function DealsPage() {
 	const store = await getStoreContext()
+	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
 	const deals = store.isPlatformHome ? [] : await getDeals(store.tenantId, 24).catch(() => [])
 
 	return <div className="space-y-10"><section className="glass-card rounded-3xl p-6 text-center sm:p-8 md:p-12"><div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary"><Percent size={16} />Current store deals</div><h1 className="mb-4 text-3xl font-bold md:text-5xl">Savings from {store.brand.name}</h1><p className="mx-auto max-w-2xl text-gray-600 dark:text-gray-300">These offers are controlled by this merchant and reflect products currently marked with a sale price.</p></section>

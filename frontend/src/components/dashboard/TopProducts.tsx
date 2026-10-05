@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { getProductImage } from "@/constants/productImages"
+import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 
 interface TopProduct {
@@ -22,7 +22,9 @@ export default function TopProducts() {
 	const [state, setState] = useState<"loading" | "ready" | "error">("loading")
 	const pathname = usePathname()
 	const basePath = pathname.startsWith("/manage") ? "/manage" : "/admin"
-	const { storeSlug } = useStoreContext()
+	const store = useStoreContext()
+	const { storeSlug } = store
+	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
 
 	useEffect(() => {
 		fetch("/api/analytics?timeRange=30d")

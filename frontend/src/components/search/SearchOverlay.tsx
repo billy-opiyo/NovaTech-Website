@@ -8,6 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
 import { getProductImage } from "@/constants/productImages"
+import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import { publicPages } from "@/constants/publicPages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
@@ -200,7 +201,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 											setSelectedIndex(-1)
 										}}
 										onKeyDown={handleKeyDown}
-										placeholder={store.isPlatformHome ? "Search pages and stores..." : 'Search... (e.g., "i7 laptop 16GB RAM")'}
+										placeholder={store.isPlatformHome ? "Search pages and stores..." : getProductSearchPlaceholder(store.industry?.slug)}
 										className="w-full pl-12 pr-12 py-4 text-lg bg-transparent border-none outline-none"
 									/>
 									<button
@@ -219,7 +220,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 												{suggestion.type === "product" && suggestion.image && (
 													<div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
 														<Image
-									src={getProductImage(suggestion.image, suggestion.text)}
+									src={getProductImage(suggestion.image, suggestion.text, store.industry?.slug)}
 															alt=""
 															fill
 															className="object-cover"
