@@ -648,7 +648,7 @@ html:not(.dark) .splash-screen {
   animation-delay: 320ms;
 }
 
-/* Solid-color splash screens have no artwork to position content around. */
+/* Image-free splash modes keep their welcome stack centered on every viewport. */
 .splash-screen--centered-content > .splash-content {
 	display: flex;
 	width: 100%;
