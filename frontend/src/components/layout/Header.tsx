@@ -212,8 +212,8 @@ function StoreAccountMenu({
 				{!isSignedIn && <span className="text-[9px] leading-tight sm:text-xs">Sign in</span>}
 			</button>
 			{open && (
-				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
-					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-gray-100 dark:hover:bg-gray-800">
+				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-theme-border bg-theme-surface p-2 text-theme-text shadow-xl sm:right-0">
+					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-theme-bg">
 						<UserRound size={17} aria-hidden="true" />
 						Account
 					</Link>

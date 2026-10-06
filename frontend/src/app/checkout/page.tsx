@@ -8,6 +8,7 @@ import { useState } from "react"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
+import { getProductEnquiryTopics } from "@/lib/industry-copy"
 import { useToast } from "@/components/ui/Toast"
 import { getStoreRouteHref } from "@/lib/store-home"
 
@@ -34,7 +35,7 @@ export default function CheckoutPage() {
 
 	const customizationText = (item: (typeof items)[number]) => Object.entries(item.customizations || {}).map(([key, value]) => `${key.replaceAll(/([A-Z])/g, " $1")}: ${value}`).join(", ")
 	const inquiryItems = items.map((item) => ({ name: item.name, quantity: item.quantity, variant: [item.variant, customizationText(item)].filter(Boolean).join(" · ") || undefined, price: item.price * item.quantity }))
-	const whatsappHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: inquiryItems })
+	const whatsappHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: inquiryItems })
 	const emailHref = getMerchantEmailHref(store.contact.email, store.brand.name, inquiryItems)
 	const enquiryItems = items.map((item) => ({ productId: item.productId, quantity: item.quantity, ...(item.variant ? { variant: item.variant } : {}), ...(item.customizations ? { customizations: item.customizations } : {}) }))
 
@@ -89,17 +90,24 @@ export default function CheckoutPage() {
 
 	async function continueToMerchant(contactMethod: "WHATSAPP" | "EMAIL") {
 		setError("")
+		if (contactMethod === "WHATSAPP" && !whatsappHref) { setError("This store has not configured a WhatsApp number. Choose email or another checkout option."); return }
 		const validationError = validateContactDetails(false)
 		if (validationError) { setError(validationError); return }
+		let whatsappWindow: Window | null = null
+		if (contactMethod === "WHATSAPP") {
+			whatsappWindow = window.open("about:blank", "_blank")
+			if (!whatsappWindow) { setError("Allow pop-ups for this site to continue to WhatsApp."); return }
+			whatsappWindow.opener = null
+		}
 		setBusy(contactMethod)
 		try {
 			const response = await fetch(getStoreRouteHref(store, "/api/enquiries"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customerName, customerEmail, customerPhone, message, contactMethod, consent, items: enquiryItems }) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
 			addToast("Your enquiry was sent successfully. The merchant will follow up shortly.", "success")
-			if (contactMethod === "WHATSAPP") window.open(whatsappHref, "_blank", "noopener,noreferrer")
+			if (contactMethod === "WHATSAPP") { if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappHref }
 			else window.location.href = emailHref
-		} catch (reason) { const text = reason instanceof Error ? reason.message : "Unable to save enquiry"; setError(text); addToast(text, "error") } finally { setBusy(null) }
+		} catch (reason) { whatsappWindow?.close(); const text = reason instanceof Error ? reason.message : "Unable to save enquiry"; setError(text); addToast(text, "error") } finally { setBusy(null) }
 	}
 
 	return (
@@ -115,9 +123,9 @@ export default function CheckoutPage() {
 							<button type="button" disabled={busy !== null} onClick={() => void payWithMpesa()} className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50 sm:text-base"><Image src="/images/Mpesa_logo_image.png" alt="M-Pesa" width={72} height={24} className="h-6 w-[4.5rem] shrink-0 object-contain" />{busy === "MPESA" && <Loader2 size={18} className="animate-spin" />}{busy === "MPESA" ? "Starting…" : "Pay with M-Pesa"}</button>
 							<button type="button" disabled={busy !== null} onClick={() => void payOnDelivery()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50 sm:text-base">{busy === "COD" && <Loader2 size={18} className="animate-spin" />}{busy === "COD" ? "Placing order…" : "Pay on Delivery"}</button>
 						</div>
-						<p className="text-center text-xs text-gray-500">M-Pesa requests are routed to the merchant’s configured Paybill or Till. The merchant handles delivery, warranty, refunds, and disputes.</p>
+						<p className="text-center text-xs text-gray-500">Payment requests go to the merchant’s configured provider. The merchant confirms {getProductEnquiryTopics(store.industry?.slug)}.</p>
 						<p className="text-center text-xs text-gray-500">Pay the merchant when your order is delivered. The merchant confirms delivery terms directly.</p>
-						<div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy !== null} onClick={() => void continueToMerchant("WHATSAPP")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50 sm:text-base">{busy === "WHATSAPP" ? <Loader2 size={18} className="animate-spin" /> : <FaWhatsapp size={18} />} {busy === "WHATSAPP" ? "Saving…" : "Message on WhatsApp instead"}</button><button type="button" disabled={busy !== null} onClick={() => void continueToMerchant("EMAIL")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50 sm:text-base">{busy === "EMAIL" ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />} {busy === "EMAIL" ? "Saving…" : "Email the store instead"}</button></div>
+						<div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy !== null || !whatsappHref} title={!whatsappHref ? "Store WhatsApp number not configured" : undefined} onClick={() => void continueToMerchant("WHATSAPP")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:text-base">{busy === "WHATSAPP" ? <Loader2 size={18} className="animate-spin" /> : <FaWhatsapp size={18} />} {busy === "WHATSAPP" ? "Saving…" : "Message on WhatsApp instead"}</button><button type="button" disabled={busy !== null} onClick={() => void continueToMerchant("EMAIL")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50 sm:text-base">{busy === "EMAIL" ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />} {busy === "EMAIL" ? "Saving…" : "Email the store instead"}</button></div>
 					</div>
 				</>}
 			</div>

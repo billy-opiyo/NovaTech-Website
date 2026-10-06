@@ -4,7 +4,7 @@ export const INDUSTRY_UNSPLASH_IMAGES = {
 	furnitureSofa: "https://images.unsplash.com/photo-1709746837880-f96b4f588ce5?auto=format&fit=crop&w=1000&q=80",
 	furnitureDining: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1000&q=80",
 	cakeBirthday: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1000&q=80",
-	cakeWedding: "https://images.unsplash.com/photo-1519655272701-6c23d7e9ad40?auto=format&fit=crop&w=1000&q=80",
+	cakeWedding: "https://images.unsplash.com/photo-1676734626918-b0663902259f?auto=format&fit=crop&w=1000&q=80",
 	cakeCupcakes: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1000&q=80",
 	electronicsCategory: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=1000&q=80",
 } as const
@@ -72,7 +72,11 @@ export function defaultIndustryHomepage(industry: IndustryIdentity, storedPreset
 export function defaultCategoryImage(industrySlug: string, categoryName: string, imageUrl?: string | null): string {
 	if (imageUrl) {
 		try {
-			if (new URL(imageUrl).protocol === "https:") return imageUrl
+			const parsedImageUrl = new URL(imageUrl)
+			const isBrokenWeddingCakeImage = parsedImageUrl.hostname === "images.unsplash.com"
+				&& parsedImageUrl.pathname === "/photo-1519655272701-6c23d7e9ad40"
+			if (isBrokenWeddingCakeImage) return INDUSTRY_UNSPLASH_IMAGES.cakeWedding
+			if (parsedImageUrl.protocol === "https:") return imageUrl
 		} catch {
 			// Use an industry-safe default if a malformed image value was stored.
 		}
