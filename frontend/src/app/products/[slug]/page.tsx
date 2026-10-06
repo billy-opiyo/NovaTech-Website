@@ -16,6 +16,7 @@ import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
 import type { CakeCustomizations } from "backend/lib/cake-customizations"
+import { getProductSupportDescription } from "@/lib/industry-copy"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -51,6 +52,8 @@ type Product = {
 export default function ProductDetailPage() {
 	const { slug } = useParams<{ slug: string }>()
 	const store = useStoreContext()
+	const productEndpoint = getStoreRouteHref(store, `/api/products/${encodeURIComponent(slug)}`)
+	const wishlistEndpoint = getStoreRouteHref(store, "/api/wishlist")
 	const { data: session } = useSession()
 	const { addItem } = useCart()
 	const { addToast } = useToast()
@@ -70,27 +73,32 @@ export default function ProductDetailPage() {
 
 	useEffect(() => {
 		if (!slug) return
+		const controller = new AbortController()
 		setError("")
-		fetch(getStoreRouteHref(store, `/api/products/${encodeURIComponent(slug)}`), { cache: "no-store" })
+		setProduct(null)
+		setSelectedVariants({})
+		setQuantity(1)
+		fetch(productEndpoint, { cache: "no-store", signal: controller.signal })
 			.then(async (response) => {
 				if (!response.ok) throw new Error("Product not found")
 				return response.json()
 			})
 			.then((data) => setProduct(data))
-			.catch((reason) => setError(reason.message || "Unable to load product"))
-	}, [slug, store])
+			.catch((reason) => { if (reason.name !== "AbortError") setError(reason.message || "Unable to load product") })
+		return () => controller.abort()
+	}, [productEndpoint, slug])
 
 	useEffect(() => {
 		if (!session?.user?.id || !product?.id) return
 		let cancelled = false
-		fetch(getStoreRouteHref(store, "/api/wishlist"), { cache: "no-store" })
+		fetch(wishlistEndpoint, { cache: "no-store" })
 			.then((response) => response.ok ? response.json() : [])
 			.then((items: { productId: string }[]) => {
 				if (!cancelled) setIsInWishlist(items.some((item) => item.productId === product.id))
 			})
 			.catch(() => undefined)
 		return () => { cancelled = true }
-	}, [product?.id, session?.user?.id, store])
+	}, [product?.id, session?.user?.id, wishlistEndpoint])
 
 	if (error) return <NotFoundState title="Product not found" description="We could not find that product. It may have been removed or the link may be out of date." />
 	if (!product) return <div className="mx-auto max-w-7xl py-20 text-center text-gray-500">Loading product…</div>
@@ -106,16 +114,23 @@ export default function ProductDetailPage() {
 		return groups
 	}, {})
 	const hasCompleteVariantSelection = Object.keys(groupedVariants).every((name) => Boolean(selectedVariants[name]))
+	const hasAvailableVariant = product.variants.some((variant) => variant.stock > 0)
 	const selectedStock = product.variants
 		.filter((variant) => selectedVariants[variant.name] === variant.value)
 		.reduce((stock, variant) => Math.min(stock, variant.stock), product.variants.length > 0 && !hasCompleteVariantSelection ? 0 : product.stock)
+	const displayedStock = product.variants.length > 0 && !hasCompleteVariantSelection
+		? Math.max(0, ...product.variants.map((variant) => variant.stock))
+		: selectedStock
+	const addToCartDisabled = product.variants.length > 0 ? !hasAvailableVariant || (hasCompleteVariantSelection && selectedStock < 1) : selectedStock < 1
 
 	const cakePreferenceText = [cakeMessage.trim() ? `Message: ${cakeMessage.trim()}` : "", cakeIcing ? `Icing: ${cakeIcing}` : "", cakeEventDate ? `Event date: ${cakeEventDate}` : "", cakeDietaryNotes.trim() ? `Notes: ${cakeDietaryNotes.trim()}` : ""].filter(Boolean).join(", ")
-	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: loadedProduct.name, quantity, variant: [Object.entries(selectedVariants).map(([name, value]) => `${name}: ${value}`).join(" / "), store.industry?.slug === "cakes" ? cakePreferenceText : ""].filter(Boolean).join(" · ") || undefined, price: currentPrice }] })
+	const selectedOptionsText = Object.entries(selectedVariants).map(([name, value]) => `${name}: ${value}`).join(" / ")
+	const merchantOrderHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: [{ name: loadedProduct.name, quantity, variant: [selectedOptionsText, store.industry?.slug === "cakes" ? cakePreferenceText : ""].filter(Boolean).join(" · ") || undefined, price: currentPrice }] })
 
 	function addToCart() {
 		if (loadedProduct.variants.length > 0 && !hasCompleteVariantSelection) {
-			addToast("Select the product options first.", "error")
+			document.getElementById("product-variant-options")?.scrollIntoView({ behavior: "smooth", block: "center" })
+			addToast("Choose the available product options to continue.", "info")
 			return
 		}
 		if (selectedStock < 1) {
@@ -180,14 +195,14 @@ export default function ProductDetailPage() {
 					<p className="text-sm text-gray-500">SKU: {product.sku}</p>
 					<div className="flex items-center gap-2"><Star size={18} className="fill-yellow-500 text-yellow-500" /><span>{product.averageRating.toFixed(1)}</span><span className="text-gray-500">({product.reviewCount} reviews)</span></div>
 					<div className="flex items-baseline gap-3"><span className="text-3xl font-bold text-primary">KES {currentPrice.toLocaleString()}</span>{product.discountedPrice && <span className="text-lg text-gray-400 line-through">KES {product.price.toLocaleString()}</span>}</div>
-					<p className="flex items-center gap-2 text-sm">{selectedStock > 0 ? <><span className="h-2 w-2 rounded-full bg-green-500" />{selectedStock} available</> : <><AlertCircle size={16} className="text-red-500" />Out of stock</>}</p>
+					<p className="flex items-center gap-2 text-sm">{product.variants.length > 0 && !hasCompleteVariantSelection ? hasAvailableVariant ? <><span className="h-2 w-2 rounded-full bg-green-500" />Up to {displayedStock} available across options</> : <><AlertCircle size={16} className="text-red-500" />Out of stock</> : selectedStock > 0 ? <><span className="h-2 w-2 rounded-full bg-green-500" />{selectedStock} available</> : <><AlertCircle size={16} className="text-red-500" />Out of stock</>}</p>
 
-					{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} disabled={variant.stock < 1} onClick={() => setSelectedVariants({ ...selectedVariants, [name]: variant.value })} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}
+					{Object.entries(groupedVariants).length > 0 && <div id="product-variant-options" className="space-y-3">{Object.entries(groupedVariants).map(([name, variants]) => <div key={name}><h2 className="mb-2 font-semibold">{name}</h2><div className="flex flex-wrap gap-2">{variants.map((variant) => <button key={variant.value} type="button" disabled={variant.stock < 1} aria-pressed={selectedVariants[name] === variant.value} onClick={() => { setSelectedVariants({ ...selectedVariants, [name]: variant.value }); setQuantity((current) => Math.min(current, variant.stock)) }} className={`rounded-lg border px-3 py-2 text-sm transition ${selectedVariants[name] === variant.value ? "border-primary bg-primary text-white" : "border-gray-300 hover:border-primary"} disabled:cursor-not-allowed disabled:opacity-40`}>{variant.value}</button>)}</div></div>)}</div>}
 
 					{store.industry?.slug === "cakes" && <fieldset className="glass-card space-y-3 p-4"><legend className="px-2 font-semibold text-primary">Make it yours</legend><p className="text-sm text-gray-500">Optional preferences are sent with this cake line for the baker to confirm.</p><label className="block text-sm">Message on the cake<input maxLength={50} value={cakeMessage} onChange={(event) => setCakeMessage(event.target.value)} placeholder="e.g. Happy birthday, Amina!" className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="block text-sm">Icing preference<select value={cakeIcing || ""} onChange={(event) => setCakeIcing((event.target.value || undefined) as CakeCustomizations["icing"])} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface"><option value="">Let the baker recommend</option><option value="chocolate-buttercream">Chocolate buttercream</option><option value="vanilla-buttercream">Vanilla buttercream</option><option value="whipped-cream">Whipped cream</option><option value="fondant">Fondant finish</option><option value="no-preference">No preference</option></select></label><label className="block text-sm">Celebration date<input type="date" value={cakeEventDate} onChange={(event) => setCakeEventDate(event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="block text-sm">Dietary needs or design notes<textarea maxLength={300} value={cakeDietaryNotes} onChange={(event) => setCakeDietaryNotes(event.target.value)} rows={3} placeholder="Allergies, colours, or a detail to discuss with the baker" className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label></fieldset>}
 
-					<div className="flex flex-wrap items-center gap-3"><div className="flex items-center rounded-lg border"><button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button aria-label="Increase quantity" onClick={() => setQuantity(Math.min(selectedStock, quantity + 1))} className="p-3"><Plus size={16} /></button></div><button type="button" onClick={addToCart} disabled={selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection)} className="btn-primary inline-flex flex-1 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"><ShoppingCart size={18} />{product.variants.length > 0 && !hasCompleteVariantSelection ? "Select options" : "Add to cart"}</button><button type="button" onClick={() => void toggleWishlist()} disabled={wishlistBusy} aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} className="inline-flex items-center justify-center rounded-lg border p-3 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"><LoaderCircle size={18} className={wishlistBusy ? "animate-spin" : "hidden"} aria-hidden="true" /><Heart size={18} className={`${wishlistBusy ? "hidden" : ""} ${isInWishlist ? "fill-current" : ""}`} aria-hidden="true" /></button><a href={merchantOrderHref} target="_blank" rel="noreferrer" aria-disabled={selectedStock < 1} className={`inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1e8e3e] px-4 py-3 text-center font-semibold text-white transition hover:bg-[#25D366] sm:w-auto ${selectedStock < 1 || (product.variants.length > 0 && !hasCompleteVariantSelection) ? "pointer-events-none opacity-50" : ""}`}><FaWhatsapp size={18} aria-hidden="true" />Order via WhatsApp</a></div>
-					<p className="text-xs text-gray-500">{store.brand.name} confirms product availability, delivery, payment, returns, and any applicable warranty directly with shoppers.</p>
+					<div className="flex flex-wrap items-center gap-3"><div className="flex items-center rounded-lg border"><button type="button" aria-label="Decrease quantity" disabled={quantity <= 1} onClick={() => setQuantity((current) => Math.max(1, current - 1))} className="p-3 disabled:cursor-not-allowed disabled:opacity-40"><Minus size={16} /></button><span className="w-10 text-center">{quantity}</span><button type="button" aria-label="Increase quantity" disabled={!hasCompleteVariantSelection || quantity >= selectedStock} onClick={() => setQuantity((current) => Math.min(selectedStock, current + 1))} className="p-3 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={16} /></button></div><button type="button" onClick={addToCart} disabled={addToCartDisabled} className="btn-primary inline-flex flex-1 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"><ShoppingCart size={18} />{product.variants.length > 0 && !hasCompleteVariantSelection ? "Select options" : selectedStock < 1 ? "Out of stock" : "Add to cart"}</button><button type="button" onClick={() => void toggleWishlist()} disabled={wishlistBusy} aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"} className="inline-flex items-center justify-center rounded-lg border p-3 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"><LoaderCircle size={18} className={wishlistBusy ? "animate-spin" : "hidden"} aria-hidden="true" /><Heart size={18} className={`${wishlistBusy ? "hidden" : ""} ${isInWishlist ? "fill-current" : ""}`} aria-hidden="true" /></button><a href={merchantOrderHref || "#"} target={merchantOrderHref ? "_blank" : undefined} rel={merchantOrderHref ? "noreferrer" : undefined} aria-disabled={!merchantOrderHref} title={merchantOrderHref ? "Order or ask about this product on WhatsApp" : "This store has not configured a WhatsApp number"} onClick={(event) => { if (!merchantOrderHref) { event.preventDefault(); addToast("This store has not configured a WhatsApp number yet.", "info") } }} className={`inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1e8e3e] px-4 py-3 text-center font-semibold text-white transition hover:bg-[#25D366] sm:w-auto ${merchantOrderHref ? "" : "opacity-60"}`}><FaWhatsapp size={18} aria-hidden="true" />Order via WhatsApp</a></div>
+					<p className="text-xs text-gray-500">{getProductSupportDescription(store.industry?.slug)}</p>
 					<p className="text-gray-600 dark:text-gray-300">{product.description}</p>
 				</div>
 			</section>

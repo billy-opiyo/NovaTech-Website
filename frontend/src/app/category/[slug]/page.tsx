@@ -58,6 +58,7 @@ function ProductCard({ product, store }: { product: CategoryProduct; store: Stor
 	const merchantHref = getMerchantWhatsAppHref({
 		number: store.contact.whatsappNumber,
 		storeName: store.brand.name,
+		industrySlug: store.industry?.slug,
 		items: [{ name: product.name, price }],
 	})
 
@@ -117,9 +118,7 @@ export default function CategoryPage() {
 		if (store.industry?.slug === "furniture") return { title, description: `Explore ${title.toLowerCase()} from ${store.brand.name}. Check each listing for materials, dimensions, and delivery details.` }
 		return { title, description: `Browse ${title.toLowerCase()} available from ${store.brand.name}.` }
 	}, [categorySlug, store.brand.name, store.homepage.categories, store.industry?.slug, store.navigation])
-	const categoryIsEnabled = store.industry?.slug === "electronics"
-		? Boolean(store.homepage.categories.some((item) => item.slug.trim().toLowerCase() === categorySlug))
-		: /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(categorySlug)
+	const categoryIsEnabled = Boolean(store.homepage.categories.some((item) => item.slug.trim().toLowerCase() === categorySlug))
 	const [catalogProducts, setCatalogProducts] = useState<CategoryProduct[]>([])
 	const [trendingProducts, setTrendingProducts] = useState<CategoryProduct[]>([])
 	const [loadingProducts, setLoadingProducts] = useState(true)
@@ -148,7 +147,7 @@ export default function CategoryPage() {
 				if (!controller.signal.aborted) setLoadingProducts(false)
 			})
 		return () => controller.abort()
-	}, [category, catalogUrl, trendingUrl])
+	}, [category, slug, catalogUrl, trendingUrl])
 
 	if (!category || !categoryIsEnabled) return <NotFoundState title="Category not found" description="That product category is not available in this store. Browse the store's available products instead." />
 

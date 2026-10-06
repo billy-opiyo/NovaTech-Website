@@ -9,6 +9,7 @@ import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type Platfo
 import { isVercelProjectHostname } from "./platform-store-route"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
 import { themeOverridesFromIndustry } from "./industry-theme"
+import { resolveStoreWhatsAppNumber } from "./demo-store-config"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
@@ -143,7 +144,8 @@ export async function getStoreContext(): Promise<StoreContext> {
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
 			const fallback = store.industry?.slug === "electronics" ? clientConfig.homepage.categories.find((item) => item.slug === category.slug) : undefined
 			const categoryTemplate = industryCategories.find((item) => item.slug === category.slug)
-			const image = typeof category.image === "string" && category.image ? category.image : typeof category.imageUrl === "string" && category.imageUrl ? category.imageUrl : categoryTemplate?.imageUrl || fallback?.image || defaultCategoryImage(store.industry?.slug || "", category.name)
+			const configuredImage = typeof category.image === "string" && category.image ? category.image : typeof category.imageUrl === "string" && category.imageUrl ? category.imageUrl : categoryTemplate?.imageUrl || fallback?.image
+			const image = defaultCategoryImage(store.industry?.slug || "", category.name, configuredImage)
 			return [{ name: category.name, slug: category.slug, image }]
 		}) : industryCategories.length
 			? industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
@@ -192,6 +194,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			? contact.whatsappFloatingMessage
 			: `Hello ${store.name}, I need help with my order.`
 		const whatsappMessage = `Hello ${store.name}, I need help with my order.`
+		const configuredWhatsappNumber = resolveStoreWhatsAppNumber(store.slug, typeof contact.whatsappNumber === "string" ? contact.whatsappNumber : undefined)
 		return {
 			...fallbackStoreContext(),
 			tenantId: store.tenantId,
@@ -207,7 +210,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			navigation,
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
-			contact: { ...merchantContactDefaults, ...contact, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
+			contact: { ...merchantContactDefaults, ...contact, whatsappNumber: configuredWhatsappNumber, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
 			social: {
 				...merchantSocialDefaults,
 				facebook: typeof socialSettings.facebook === "string" ? socialSettings.facebook : merchantSocialDefaults.facebook,

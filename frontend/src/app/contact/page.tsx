@@ -21,6 +21,7 @@ import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getWhatsAppChatHref } from "@/lib/merchant-contact"
 import { useToast } from "@/components/ui/Toast"
 
 interface FAQ {
@@ -147,7 +148,7 @@ export default function ContactPage() {
 	const faqs = isPlatformHome ? merchantFaqs : getStoreFaqs(store.industry?.slug)
 	const showContactCards = store.features.showContactCards as boolean
 	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
-	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
+	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage)
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -239,7 +240,7 @@ export default function ContactPage() {
 						href: whatsappHref,
 						color: "bg-green-600",
 					},
-				].filter((card) => card.title !== "WhatsApp" || showWhatsAppContact !== false).map((card, index) => (
+				].filter((card) => card.title !== "WhatsApp" || (showWhatsAppContact !== false && Boolean(whatsappHref))).map((card, index) => (
 					<motion.div
 						key={card.title}
 						initial={{ opacity: 0, y: 20 }}

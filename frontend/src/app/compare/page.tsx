@@ -7,6 +7,7 @@ import { ArrowLeft, Minus, Plus, Search, Star, X } from "lucide-react"
 import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getProductSpecsWithAttributes } from "@/lib/product-specs"
 
 type CompareProduct = {
 	id: string
@@ -17,7 +18,8 @@ type CompareProduct = {
 	price: number
 	discountedPrice?: number | null
 	averageRating: number
-	specs: Record<string, unknown>
+	specs?: Record<string, unknown> | null
+	attributeValues?: { definition?: { name?: string | null; key?: string | null }; displayValue?: string | null; value?: unknown }[]
 }
 
 const electronicsSpecs = ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"]
@@ -26,6 +28,7 @@ export default function ComparePage() {
 	const store = useStoreContext()
 	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
 	const compareStorageKey = store.industry?.slug === "electronics" ? "novatech-compare" : `compare:${store.storeId}`
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
 	const allSpecs = store.industry?.slug === "cakes"
 		? ["Flavor", "Weight", "Layers", "Servings", "Dietary details"]
 		: store.industry?.slug === "furniture"
@@ -57,17 +60,17 @@ export default function ComparePage() {
 		}
 		const controller = new AbortController()
 		setLoading(true)
-		fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(searchQuery)}&limit=8`), { signal: controller.signal, cache: "no-store" })
+		fetch(`${productsEndpoint}?q=${encodeURIComponent(searchQuery)}&limit=8`, { signal: controller.signal, cache: "no-store" })
 			.then((response) => response.ok ? response.json() : Promise.reject(new Error("Search failed")))
-			.then((data) => setResults(data.products || []))
+			.then((data) => setResults((data.products || []).map((product: CompareProduct) => ({ ...product, specs: getProductSpecsWithAttributes(product.specs, product.attributeValues) }))))
 			.catch((error) => { if (error.name !== "AbortError") setResults([]) })
 			.finally(() => setLoading(false))
 		return () => controller.abort()
-	}, [searchOpen, searchQuery, store])
+	}, [productsEndpoint, searchOpen, searchQuery])
 
 	const addToCompare = (product: CompareProduct) => {
 		if (compareItems.length < 4 && !compareItems.some((item) => item.id === product.id)) {
-			setCompareItems((items) => [...items, product])
+			setCompareItems((items) => [...items, { ...product, specs: getProductSpecsWithAttributes(product.specs, product.attributeValues) }])
 		}
 		setSearchOpen(false)
 		setSearchQuery("")
