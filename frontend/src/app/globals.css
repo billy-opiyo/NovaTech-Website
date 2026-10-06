@@ -685,10 +685,20 @@ html:not(.dark) .splash-screen {
 
 .splash-screen.splash-screen--centered-content .splash-loading > div:first-child {
 	width: 100%;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 0.25rem 0.75rem;
-	text-align: center;
+	flex-wrap: nowrap;
+	justify-content: space-between;
+	gap: 0.75rem;
+	text-align: left;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child > span:first-child {
+	min-width: 0;
+	text-align: left;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child > span:last-child {
+	flex-shrink: 0;
+	text-align: right;
 }
 
 .splash-screen.splash-screen--centered-content .splash-loading > div[aria-hidden="true"] {
