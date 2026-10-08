@@ -6,7 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation"
 import { AlertCircle, ChevronLeft, ChevronRight, Heart, LoaderCircle, Minus, Plus, ShoppingCart, Star } from "lucide-react"
 import { FaWhatsapp } from "react-icons/fa"
 import { useSession } from "next-auth/react"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import NotFoundState from "@/components/content/NotFoundState"
 import Recommendations from "@/components/product/Recommendations"
 import ProductReviewForm from "@/components/product/ProductReviewForm"
@@ -178,14 +178,14 @@ export default function ProductDetailPage() {
 				<div>
 					<div className="product-detail-media relative flex min-h-[18rem] items-center justify-center sm:min-h-[26rem] lg:min-h-[34rem]">
 						{/* Keep the source aspect ratio: no forced square crop or letterbox frame. */}
-						<img src={getProductImage(product.images[selectedImage], product.name, store.industry?.slug)} alt={product.name} className="block h-auto w-auto max-h-[min(70vh,42rem)] max-w-full rounded-md object-contain" fetchPriority="high" decoding="async" />
+						<img src={getProductImage(product.images[selectedImage], product.name, store.industry?.slug)} alt={product.name} onError={fallbackToProductPlaceholder} className="block h-auto w-auto max-h-[min(70vh,42rem)] max-w-full rounded-md object-contain" fetchPriority="high" decoding="async" />
 						{product.images.length > 1 && <>
 							<button aria-label="Previous image" onClick={() => setSelectedImage((selectedImage + product.images.length - 1) % product.images.length)} className="absolute left-3 top-1/2 rounded-full bg-black/40 p-2 text-white"><ChevronLeft /></button>
 							<button aria-label="Next image" onClick={() => setSelectedImage((selectedImage + 1) % product.images.length)} className="absolute right-3 top-1/2 rounded-full bg-black/40 p-2 text-white"><ChevronRight /></button>
 						</>}
 					</div>
 					<div className="mt-3 flex gap-3 overflow-auto">
-						{product.images.map((image, index) => <button key={image} type="button" onClick={() => setSelectedImage(index)} aria-label={`View ${product.name} image ${index + 1}`} aria-current={selectedImage === index ? "true" : undefined} className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-visible rounded-lg bg-transparent p-0 transition-opacity ${selectedImage === index ? "opacity-100" : "opacity-60 hover:opacity-100"}`}><img src={getProductImage(image, product.name, store.industry?.slug)} alt={`${product.name} ${index + 1}`} className="block h-auto w-auto max-h-full max-w-full rounded-md object-contain" loading="lazy" decoding="async" /></button>)}
+						{product.images.map((image, index) => <button key={image} type="button" onClick={() => setSelectedImage(index)} aria-label={`View ${product.name} image ${index + 1}`} aria-current={selectedImage === index ? "true" : undefined} className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-visible rounded-lg bg-transparent p-0 transition-opacity ${selectedImage === index ? "opacity-100" : "opacity-60 hover:opacity-100"}`}><img src={getProductImage(image, product.name, store.industry?.slug)} alt={`${product.name} ${index + 1}`} onError={fallbackToProductPlaceholder} className="block h-auto w-auto max-h-full max-w-full rounded-md object-contain" loading="lazy" decoding="async" /></button>)}
 					</div>
 				</div>
 

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
@@ -40,6 +40,7 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 								<img
 									src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 									alt={product.name}
+									onError={fallbackToProductPlaceholder}
 									className="block h-full w-full rounded-xl object-contain transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>

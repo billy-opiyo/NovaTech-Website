@@ -1,4 +1,4 @@
-const DEMO_STORE_SLUGS = new Set(["nurava-furnitures", "nurava-cakes"])
+const DEMO_STORE_SLUGS = new Set(["nurava-furnitures", "nurava-cakes", "nurava-boutiques"])
 
 export const DEMO_STORE_WHATSAPP_NUMBER = "254740470381"
 

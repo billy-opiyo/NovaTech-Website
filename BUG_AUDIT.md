@@ -1,6 +1,6 @@
 # Project Bug Audit
 
-Status: cycles 12 and 13 complete; all 49 recorded source findings verified; live Neon/provider gates remain unverified
+Status: fresh audit cycle 14 in progress; 49 prior findings verified; seven new security/integrity findings recorded pre-repair
 Audit started: 2026-10-08
 Repository: NovaTech Website
 Branch: saas-staging
@@ -13,6 +13,75 @@ This file is the source of truth for the project-wide audit and repair cycle. Fi
 - A passing source check does not prove a live Neon database, payment provider, email/SMS/WhatsApp provider, scheduler, backup, DNS, or production deployment.
 - Browser findings will identify the exact URL, viewport, console/network evidence, and whether the result was locally reproducible.
 - Application repairs were performed only after the pre-repair issue report was frozen below.
+
+## Fresh full audit cycle 14 — 2026-10-08 (pre-repair)
+
+This independent audit began on a clean `saas-staging` worktree at `2d2f8f8`. The repository inventory covers 531 non-ignored files and 98 API route files. Source review is rechecking the full application, service/controller, Prisma/migration, security, multi-industry, billing/payment, user-flow, test, and documentation surfaces. The baseline automated checks are running before any application-source edits.
+
+### Newly confirmed finding (recorded before repair)
+
+#### BUG-050 — Payment and pending-order cancellation can race into inconsistent payment, order, and inventory state
+
+- **File paths:** `backend/payments/mpesa/index.ts`, `backend/payments/cards/index.ts`, `backend/payments/webhooks/index.ts`, `backend/services/order.service.ts`
+- **Description:** Successful verification/webhook paths can persist a payment as `COMPLETED` before a conditional pending-order claim. If cancellation wins that claim, the payment may remain completed while the endpoint reports failure and the order is cancelled. Conversely, `cancelPendingOrder` reads a pending order, restores its stock, then updates its status without a `status: PENDING` compare-and-set; a concurrent successful confirmation can therefore race with inventory restoration and cancellation. This contradicts the payment/order/inventory state invariant even though the successful path itself uses an atomic order claim.
+- **Root cause:** Payment state, order transition, and stock restoration are not reconciled in a single transaction with a guarded legal state transition; the pending-cancellation helper has a read-then-unconditional-write window.
+- **Recommended fix:** Reconcile payment/order/commission state transactionally or with durable, retry-safe compensation; use conditional state transitions before restoring stock; make callback, verify, and cancellation races converge to one invariant-preserving terminal state. Add concurrent success-vs-cancel regression coverage for both stock and payment state.
+- **Severity:** High
+- **Status:** Pending
+
+#### BUG-051 — Order idempotency-key replay can disclose another shopper's order and shipping details
+
+- **File paths:** `backend/controllers/orderController.ts`, `backend/services/order.service.ts`
+- **Description:** `POST /api/orders` accepts a caller-controlled `Idempotency-Key`. When a matching key already exists in the same tenant, `createOrder` returns that order before comparing its `userId`, guest email, or request payload. The controller returns the full order to the caller, including the shipping-address PII. An unauthenticated guest can replay a key if learned or reused and receive another shopper's order response.
+- **Root cause:** Idempotency-key lookup is tenant-scoped but is treated as authorization; the replay path does not bind the key to the authenticated user/guest identity or verify the order owner before returning it.
+- **Recommended fix:** Bind order idempotency to a normalized authenticated-user or guest identity, reject replay by a different owner, and ensure the replay response only returns an order the caller is authorized to see. Add guest and authenticated cross-owner replay tests.
+- **Severity:** High
+- **Status:** Pending
+
+#### BUG-052 — Card payment intent accepts a caller-selected currency for an existing order
+
+- **File paths:** `frontend/src/app/api/payments/card/create-intent/route.ts`, `backend/payments/cards/index.ts`, `backend/prisma/schema.prisma` (`Store.currency`)
+- **Description:** The public card-intent schema accepts any three-character currency. For an order, the service checks only that the numeric amount equals `Order.total`; it does not bind the requested currency to the resolved store's currency. The resulting Stripe intent is then associated with the order and successful verification can confirm it, allowing a different currency/value basis to settle a store-priced order.
+- **Root cause:** Order currency is not carried into the order/payment contract, and card intent validation treats amount equality as sufficient while trusting the caller's currency.
+- **Recommended fix:** Derive currency server-side from the store/order, reject caller mismatches, and use a tested currency-minor-unit conversion for Stripe amount construction. Ensure verification/webhook reconciliation checks provider amount/currency against the persisted payment contract before finalizing an order.
+- **Severity:** High
+- **Status:** Pending
+
+#### BUG-053 — Card payment can be attached to an order that did not select card payment
+
+- **File paths:** `frontend/src/app/api/payments/card/create-intent/route.ts`, `backend/payments/cards/index.ts`, `backend/validators/orderValidator.ts`
+- **Description:** When `orderId` is supplied, the card route checks tenant and shopper identity, and the service checks that the order is pending and the amount matches, but neither checks the order's `paymentMethod`. Meanwhile the order validator only permits `MPESA` and `PAY_ON_DELIVERY`. Thus a Stripe payment may complete an order whose stored method says M-Pesa or pay-on-delivery, bypassing the method selected by the shopper and leaving order/payment reporting inconsistent.
+- **Root cause:** Card-intent eligibility is not integrated with the order payment-method state machine; payment-method validation and provider initiation use separate contracts.
+- **Recommended fix:** Add a single explicit allowed-method contract (including CARD only if shopper card payments are intended), enforce it at order creation and provider initiation/verification, and reject card intents for orders with another method. Add tests for every allowed and rejected method.
+- **Severity:** Medium
+- **Status:** Pending
+
+#### BUG-054 — Checkout generates a new idempotency key for every order attempt
+
+- **File path:** `frontend/src/app/checkout/page.tsx`
+- **Description:** `createOrder()` calls `crypto.randomUUID()` while constructing every POST. A retry after a timeout/reload or another invocation therefore uses a new key, so the backend cannot recognize the request as a retry and may create a second order/reserve stock again. The server-side idempotency mechanism is not effective for normal checkout retries.
+- **Root cause:** The key is generated per request rather than once per logical checkout and retained across retry attempts until the order result is known.
+- **Recommended fix:** Create and retain an idempotency key per checkout submission (scoped to the cart/request), reuse it for network retries, clear it only after a confirmed response or cart change, and test duplicate retry behavior.
+- **Severity:** Medium
+- **Status:** Pending
+
+#### BUG-055 — Card verification retrieves a caller-supplied Stripe intent when no local tenant payment matches
+
+- **File paths:** `backend/payments/cards/index.ts`, `frontend/src/app/api/payments/card/verify/route.ts`
+- **Description:** When the tenant-scoped payment lookup returns no row, `verifyCardPayment` uses the caller's `reference` directly as a Stripe PaymentIntent ID and returns provider status, amount, currency, and receipt email. This permits cross-tenant/payment-reference probing and leaks transaction metadata for any known Stripe intent. The local lookup also omits a `provider: "stripe"` predicate.
+- **Root cause:** Provider lookup and ownership validation are optional; external provider retrieval is performed before proving that the reference belongs to a Stripe payment in the resolved tenant.
+- **Recommended fix:** Require a local payment row scoped by tenant and Stripe provider before contacting Stripe; return a uniform not-found response otherwise. Never retrieve an untrusted provider ID from the public request, and test cross-tenant and cross-provider references.
+- **Severity:** High
+- **Status:** Pending
+
+#### BUG-056 — M-Pesa verification can select and mutate another provider's payment row
+
+- **File paths:** `backend/payments/mpesa/index.ts`, `frontend/src/app/api/payments/mpesa/verify/route.ts`
+- **Description:** The M-Pesa route accepts a tenant payment with `kind === ORDER` without checking its provider, and `verifyMpesaPayment` looks up by provider reference or metadata reference without `provider: "mpesa"`. It can query Daraja using a non-M-Pesa reference and write the returned status onto that unrelated payment record.
+- **Root cause:** Payment verification uses a tenant/reference match as the full identity and does not include the provider discriminator in the preflight and service queries.
+- **Recommended fix:** Require the M-Pesa provider at the route boundary and in every service lookup/update; bind payment/provider/order/tenant together and reject mismatches before provider calls. Add cross-provider collision tests.
+- **Severity:** High
+- **Status:** Pending
 
 ## Fresh full audit cycle 11 — 2026-10-08 (pre-repair)
 
@@ -431,6 +500,13 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-047 | Verified | Unauthenticated checkout smoke now asserts the expected sign-in gate and preserved checkout callback. |
 | BUG-048 | Verified | Current-cycle metadata and final audit report were reconciled to this `saas-staging` audit; previous cycle records remain historical. |
 | BUG-049 | Verified | Shared catalog CSV cell encoding neutralizes formula-like text, including control/space-prefixed values, with regression coverage. |
+| BUG-050 | Pending | Payment success, pending-order CAS, cancellation, and inventory restoration are not one invariant-preserving race-safe reconciliation path. |
+| BUG-051 | Pending | Idempotency replay returns an existing order without verifying caller ownership, exposing the full order response if a key is reused/learned. |
+| BUG-052 | Pending | Card intent currency is caller-controlled rather than bound to the store/order currency; provider minor-unit conversion is not currency-aware. |
+| BUG-053 | Pending | Card intent creation does not validate the order's selected payment method against the provider. |
+| BUG-054 | Pending | Checkout creates a fresh idempotency UUID for each POST, so request retries do not deduplicate. |
+| BUG-055 | Pending | Stripe verification contacts Stripe and returns intent details before proving a tenant-scoped Stripe payment owns the supplied reference. |
+| BUG-056 | Pending | M-Pesa verification omits the provider discriminator in its tenant payment preflight and service lookup. |
 
 ## Newly observed operational verification gap
 

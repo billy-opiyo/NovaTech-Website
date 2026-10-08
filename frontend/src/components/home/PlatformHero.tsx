@@ -24,13 +24,13 @@ const trustItems = [
 function getHeroStores(stores: HeroStore[]): HeroStore[] {
 	if (!stores.length) return []
 
-	const demoOrder = new Map([["nuravatech", 0], ["nurava-furnitures", 1], ["nurava-cakes", 2]])
+	const demoOrder = new Map([["nuravatech", 0], ["nurava-furnitures", 1], ["nurava-cakes", 2], ["nurava-boutiques", 3]])
 	return [...stores]
 		.sort((left, right) => {
 			if (left.isDemo && right.isDemo) return (demoOrder.get(left.slug) ?? 99) - (demoOrder.get(right.slug) ?? 99)
 			return Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0)
 		})
-		.slice(0, 3)
+		.slice(0, 4)
 }
 
 function StoreCard({ store }: { store: HeroStore }) {
@@ -111,7 +111,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 						</span>
 					</label>
 				</div>
-				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
+				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">{heroStores.map((store) => <StoreCard key={store.id} store={store} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
 			</section>
 		</section>

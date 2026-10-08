@@ -13,14 +13,14 @@ type DemoProductSeed = {
 	price: number
 	stock: number
 	image: string
-	attributes?: Record<string, string | number | boolean>
+	attributes?: Record<string, string | number | boolean | string[]>
 	variants?: Array<{ name: string; value: string; priceModifier: number; stock: number; sku: string }>
 }
 
 async function seedIndustryDemoStore(input: {
 	adminUserId?: string
 	planId: string
-	industrySlug: "furniture" | "cakes"
+	industrySlug: "furniture" | "cakes" | "boutiques"
 	storeName: string
 	storeSlug: string
 	tenantId: string
@@ -134,6 +134,23 @@ async function seedIndustryDemoStores(planId: string, adminUserId?: string) {
 			{ name: "Little Joy Cupcake Box", slug: "little-joy-cupcake-box", sku: "DEMO-CAKE-CUP-01", categorySlug: "cupcakes", description: "A gift-ready box of soft vanilla and cocoa cupcakes topped with our signature buttercream. Add a note for the baker when you order.", price: 1800, stock: 24, image: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 0.6, layers: 1 }, variants: [{ name: "Servings", value: "6 cupcakes", priceModifier: 0, stock: 12, sku: "DEMO-CAKE-CUP-06" }, { name: "Servings", value: "12 cupcakes", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CUP-12" }, { name: "Servings", value: "24 cupcakes", priceModifier: 3600, stock: 4, sku: "DEMO-CAKE-CUP-24" }] },
 		],
 	})
+	await seedIndustryDemoStore({
+		adminUserId,
+		planId,
+		industrySlug: "boutiques",
+		storeName: "Nurava Boutiques",
+		storeSlug: "nurava-boutiques",
+		tenantId: "demo-boutiques-tenant",
+		storeId: "demo-boutiques-store",
+		products: [
+			{ name: "Everyday Linen Shirt", slug: "everyday-linen-shirt", sku: "DEMO-BOUTIQUE-SHIRT-01", categorySlug: "mens-clothing", description: "An easy-fitting linen blend shirt with a clean silhouette for workdays and weekends. Available in a considered range of sizes and colours.", price: 3200, stock: 15, image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Men", clothing_size: ["S", "M", "L", "XL"], color: ["White", "Blue", "Beige"], material: "Linen blend" }, variants: [{ name: "Size", value: "S", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SHIRT-S" }, { name: "Size", value: "M", priceModifier: 0, stock: 5, sku: "DEMO-BOUTIQUE-SHIRT-M" }, { name: "Size", value: "L", priceModifier: 0, stock: 4, sku: "DEMO-BOUTIQUE-SHIRT-L" }, { name: "Size", value: "XL", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SHIRT-XL" }] },
+			{ name: "City Walk Sneakers", slug: "city-walk-sneakers", sku: "DEMO-BOUTIQUE-SNEAKER-01", categorySlug: "womens-shoes", description: "Versatile everyday sneakers with a cushioned sole and a clean finish, ready for long city days and casual outings.", price: 5800, stock: 13, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Women", shoe_size: ["37", "38", "39", "40", "41"], color: ["White", "Red"], material: "Synthetic leather" }, variants: [{ name: "EU Size", value: "37", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-SNEAKER-37" }, { name: "EU Size", value: "38", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SNEAKER-38" }, { name: "EU Size", value: "39", priceModifier: 0, stock: 4, sku: "DEMO-BOUTIQUE-SNEAKER-39" }, { name: "EU Size", value: "40", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SNEAKER-40" }, { name: "EU Size", value: "41", priceModifier: 0, stock: 1, sku: "DEMO-BOUTIQUE-SNEAKER-41" }] },
+			{ name: "Little Explorer Rain Jacket", slug: "little-explorer-rain-jacket", sku: "DEMO-BOUTIQUE-KIDS-JACKET-01", categorySlug: "childrens-clothing", description: "A lightweight, colourful layer for school runs and weekend adventures, with room to move and easy-care fabric.", price: 2600, stock: 12, image: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Children", clothing_size: ["4-5 years", "6-7 years", "8-9 years"], color: ["Blue", "Red"], material: "Water-resistant polyester" }, variants: [{ name: "Age", value: "4-5 years", priceModifier: 0, stock: 4, sku: "DEMO-BOUTIQUE-KIDS-JACKET-4-5" }, { name: "Age", value: "6-7 years", priceModifier: 0, stock: 5, sku: "DEMO-BOUTIQUE-KIDS-JACKET-6-7" }, { name: "Age", value: "8-9 years", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-KIDS-JACKET-8-9" }] },
+			{ name: "Soft Knit Weekend Dress", slug: "soft-knit-weekend-dress", sku: "DEMO-BOUTIQUE-WOMEN-DRESS-01", categorySlug: "womens-clothing", description: "A soft, versatile dress with an easy drape for relaxed days and smart-casual plans.", price: 4200, stock: 10, image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Women", clothing_size: ["S", "M", "L", "XL"], color: ["Black", "Blue"], material: "Cotton blend" }, variants: [{ name: "Size", value: "S", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-WOMEN-DRESS-S" }, { name: "Size", value: "M", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-WOMEN-DRESS-M" }, { name: "Size", value: "L", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-WOMEN-DRESS-L" }, { name: "Size", value: "XL", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-WOMEN-DRESS-XL" }] },
+			{ name: "Classic Weekend Trainers", slug: "classic-weekend-trainers", sku: "DEMO-BOUTIQUE-MENS-SHOES-01", categorySlug: "mens-shoes", description: "Comfortable everyday trainers with a supportive sole and a bright accent for casual outfits.", price: 6100, stock: 10, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Men", shoe_size: ["40", "41", "42", "43", "44"], color: ["Red", "White"], material: "Textile and synthetic" }, variants: [{ name: "EU Size", value: "40", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-MENS-SHOE-40" }, { name: "EU Size", value: "41", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-MENS-SHOE-41" }, { name: "EU Size", value: "42", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-MENS-SHOE-42" }, { name: "EU Size", value: "43", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-MENS-SHOE-43" }, { name: "EU Size", value: "44", priceModifier: 0, stock: 1, sku: "DEMO-BOUTIQUE-MENS-SHOE-44" }] },
+			{ name: "Little Steps School Shoes", slug: "little-steps-school-shoes", sku: "DEMO-BOUTIQUE-KIDS-SHOES-01", categorySlug: "childrens-shoes", description: "Lightweight, sturdy shoes for active school days, with a comfortable fit for growing feet.", price: 2400, stock: 12, image: "https://images.unsplash.com/photo-1514989940723-e8e51635b782?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Children", shoe_size: ["28", "29", "30", "31", "32"], color: ["Black", "Blue"], material: "Synthetic leather" }, variants: [{ name: "EU Size", value: "28", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-KIDS-SHOE-28" }, { name: "EU Size", value: "29", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-KIDS-SHOE-29" }, { name: "EU Size", value: "30", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-KIDS-SHOE-30" }, { name: "EU Size", value: "31", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-KIDS-SHOE-31" }, { name: "EU Size", value: "32", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-KIDS-SHOE-32" }] },
+		],
+	})
 }
 
 async function main() {
@@ -189,7 +206,7 @@ async function main() {
 	}
 	if (demoIndustryStoresOnly) {
 		await seedIndustryDemoStores(trialPlan.id, adminUserId)
-		console.log("✅ Only Nurava Furnitures and Nurava Cakes demo stores were seeded.")
+		console.log("✅ Nurava Furnitures, Nurava Cakes, and Nurava Boutiques demo stores were seeded.")
 		return
 	}
 	if (!adminUserId) throw new Error("The platform seed administrator could not be resolved.")
@@ -413,7 +430,7 @@ async function main() {
 	console.log("✅ Products created")
 
 	await seedIndustryDemoStores(trialPlan.id, adminUserId)
-	console.log("✅ Furniture and cake demo stores ready")
+	console.log("✅ Furniture, cake, and boutique demo stores ready")
 
 	await prisma.deliveryRegion.createMany({
 		data: [

@@ -167,7 +167,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				products: store.tenant.products.map((product) => ({ name: product.name, slug: product.slug, brand: product.brand, price: product.discountedPrice ?? product.price, image: product.images[0] || null })),
 				category,
 				industry: store.industry,
-				isDemo: ["nuravatech", "nurava-furnitures", "nurava-cakes"].includes(store.slug),
+				isDemo: ["nuravatech", "nurava-furnitures", "nurava-cakes", "nurava-boutiques"].includes(store.slug),
 			}
 		})
 	} catch (error) {
