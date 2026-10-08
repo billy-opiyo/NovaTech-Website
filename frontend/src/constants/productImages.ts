@@ -105,6 +105,24 @@ export function getProductImage(source: string | undefined, name?: string, indus
 	return (sourceId && imageBySourceId[sourceId]) || source || productImageByName["macbook"]
 }
 
+export function getCategoryCardImage(source: string | undefined, name?: string, industrySlug?: string | null) {
+	const imageSource = getProductImage(source, name, industrySlug)
+	try {
+		const url = new URL(imageSource, typeof window === "undefined" ? "https://nurava.local" : window.location.origin)
+		if (url.hostname === "images.unsplash.com") {
+			url.searchParams.set("auto", "format")
+			url.searchParams.set("fit", "crop")
+			url.searchParams.set("w", "1000")
+			url.searchParams.set("h", "750")
+			url.searchParams.set("q", "80")
+			return url.toString()
+		}
+	} catch {
+		// Keep local, uploaded, and otherwise valid image sources unchanged.
+	}
+	return imageSource
+}
+
 export function fallbackToProductPlaceholder(event: SyntheticEvent<HTMLImageElement>) {
 	const imageElement = event.currentTarget
 	if (imageElement.dataset.fallbackApplied === "true") return

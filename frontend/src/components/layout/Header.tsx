@@ -62,17 +62,19 @@ export default function Header() {
 							{store.brand.name}
 						</span>
 					</Link>
-				<nav className="hidden min-w-0 flex-1 items-center justify-center gap-x-[clamp(0.35rem,0.7vw,0.9rem)] overflow-x-auto px-1 lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-					{navigation.map((link) => (
-							<Link
-								key={link.href}
-								href={link.href}
-								className="shrink-0 whitespace-nowrap text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
-								style={!store.isPlatformHome ? { fontSize: getStoreNavigationFontSize(link.name, navigation.length) } : undefined}
-							>
-								{link.name}
-							</Link>
-						))}
+					<nav aria-label={store.isPlatformHome ? "Platform navigation" : `${store.brand.name} navigation`} className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain px-1 py-1 lg:block">
+						<div className="flex w-max min-w-full items-center justify-center gap-x-[clamp(0.35rem,0.7vw,0.9rem)]">
+							{navigation.map((link) => (
+								<Link
+									key={link.href}
+									href={link.href}
+									className="shrink-0 whitespace-nowrap text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+									style={!store.isPlatformHome ? { fontSize: getStoreNavigationFontSize(link.name, navigation.length) } : undefined}
+								>
+									{link.name}
+								</Link>
+							))}
+						</div>
 					</nav>
 
 					{/* Right side icons */}
