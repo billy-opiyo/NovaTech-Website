@@ -157,7 +157,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 				aria-label={`Loading ${splashName}`}
 			>
 				<div className="splash-content relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-blue-700 dark:text-blue-200">
+					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-primary">
 						{splashSettings?.welcomeText || "Welcome to"}
 					</p>
 					<h1 className="splash-wordmark" aria-label={splashName}>
@@ -171,7 +171,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 						))}
 					</h1>
 					{showProgress && <div className="splash-loading mt-10 w-full">
-						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-blue-700 dark:text-blue-200">
+						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
 							<span>{splashSettings?.loadingText || "Preparing your store"}</span>
 							<span className="tabular-nums">
 								{progress}%

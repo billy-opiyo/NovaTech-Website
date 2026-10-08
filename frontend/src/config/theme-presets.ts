@@ -25,6 +25,7 @@ export type ThemePreset = {
 	name: string
 	description: string
 	primary: string
+	primaryLight?: string
 	primaryDark: string
 	accent: string
 	light: ThemeModeColors
@@ -55,6 +56,20 @@ export const THEME_PRESETS = {
 		accent: "#f97316",
 		light: mode({ background: "#dbe6f4", surface: "#eaf1f8", text: "#102858", muted: "#536b8f", border: "#c1d1e6", glassBackground: "rgba(239, 245, 252, 0.64)", glassBorder: "rgba(255, 255, 255, 0.72)", glassShadow: "0 8px 32px rgba(42, 74, 121, 0.15)", scrollbarTrack: "rgba(126, 155, 196, 0.2)", scrollbarThumb: "rgba(27, 65, 126, 0.62)", scrollbarThumbHover: "rgba(16, 50, 106, 0.8)" }),
 		dark: mode({ background: "#0f172a", surface: "#1e293b", text: "#e2e8f0", muted: "#94a3b8", border: "#334155", glassBackground: "rgba(0, 0, 0, 0.3)", glassBorder: "rgba(255, 255, 255, 0.1)", glassShadow: "0 8px 32px rgba(0, 0, 0, 0.4)", scrollbarTrack: "rgba(15, 23, 42, 0.8)", scrollbarThumb: "rgba(59, 130, 246, 0.75)", scrollbarThumbHover: "rgba(96, 165, 250, 0.95)" }),
+		fontBody: "Inter, ui-sans-serif, system-ui, sans-serif",
+		fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif",
+		cardRadius: "1rem",
+	},
+	"nova-orange-navy-blue": {
+		id: "nova-orange-navy-blue",
+		name: "Nova Orange & navy Blue",
+		description: "Warm orange actions balanced by confident navy surfaces and text.",
+		primary: "#c2410c",
+		primaryLight: "#fb923c",
+		primaryDark: "#9a3412",
+		accent: "#f97316",
+		light: mode({ background: "#eef3f9", surface: "#ffffff", text: "#10243b", muted: "#52677f", border: "#cbd7e5", glassBackground: "rgba(255, 255, 255, 0.76)", glassBorder: "rgba(23, 59, 99, 0.2)", glassShadow: "0 8px 32px rgba(12, 35, 61, 0.14)", scrollbarTrack: "rgba(23, 59, 99, 0.12)", scrollbarThumb: "rgba(194, 65, 12, 0.72)", scrollbarThumbHover: "rgba(154, 52, 18, 0.95)" }),
+		dark: mode({ background: "#08182a", surface: "#10243b", text: "#edf4fc", muted: "#a9bbcf", border: "#29435f", glassBackground: "rgba(4, 15, 28, 0.72)", glassBorder: "rgba(249, 115, 22, 0.2)", glassShadow: "0 8px 32px rgba(0, 0, 0, 0.46)", scrollbarTrack: "rgba(8, 24, 42, 0.9)", scrollbarThumb: "rgba(249, 115, 22, 0.72)", scrollbarThumbHover: "rgba(251, 146, 60, 0.95)" }),
 		fontBody: "Inter, ui-sans-serif, system-ui, sans-serif",
 		fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif",
 		cardRadius: "1rem",
@@ -249,7 +264,7 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	const darkScrollbar = scrollbarColors("dark")
 	return {
 	"--color-primary": hexToRgb(primary),
-	"--color-primary-light": overrides?.colors?.primaryLight || primary,
+	"--color-primary-light": overrides?.colors?.primaryLight || theme.primaryLight || primary,
 	"--color-primary-dark": hexToRgb(primaryDark),
 	"--color-accent": hexToRgb(accent),
 	"--color-bg-light": hexToRgb(color("light", "background")),
