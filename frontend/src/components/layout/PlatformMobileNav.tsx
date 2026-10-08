@@ -2,29 +2,17 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
-import { CreditCard, Home, PlusCircle, Store } from "lucide-react"
+import { Home, PlusCircle, Store } from "lucide-react"
 import clsx from "clsx"
 
 const baseNavItems = [
 	{ icon: Home, label: "Home", href: "/" },
-	{ icon: Store, label: "Browse Stores", href: "/stores?all=1", match: "/stores" },
-	{ icon: CreditCard, label: "Plans", href: "/#plans" },
-	{ icon: PlusCircle, label: "Create Store", href: "/onboarding", match: "/onboarding" },
+	{ icon: Store, label: "Stores", href: "/stores?all=1", match: "/stores" },
+	{ icon: PlusCircle, label: "Start Selling", href: "/onboarding", match: "/onboarding" },
 ]
 
 export default function PlatformMobileNav() {
 	const pathname = usePathname()
-	const [hash, setHash] = useState("")
-
-	useEffect(() => {
-		const updateHash = () => setHash(window.location.hash)
-		updateHash()
-		window.addEventListener("hashchange", updateHash)
-		return () => window.removeEventListener("hashchange", updateHash)
-	}, [pathname])
-
-	const isPlansHash = pathname === "/" && hash === "#plans"
 
 	return (
 		<>
@@ -34,11 +22,7 @@ export default function PlatformMobileNav() {
 			>
 				<div className="mx-auto flex max-w-2xl items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
 					{baseNavItems.map(({ icon: Icon, label, href, match }) => {
-						const isActive = label === "Plans"
-							? isPlansHash
-							: label === "Home"
-								? pathname === "/" && !isPlansHash
-								: match ? pathname.startsWith(match) : pathname === href
+						const isActive = match ? pathname.startsWith(match) : pathname === href
 						return (
 							<Link
 								key={label}

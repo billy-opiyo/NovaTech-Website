@@ -18,9 +18,9 @@ const platformNavigation = [
 	// Explicitly select the platform context so a remembered merchant store
 	// cannot turn these links into the merchant homepage.
 	{ name: "Home", href: "/?platformHome=1" },
-	{ name: "Browse Stores", href: "/stores?all=1" },
+	{ name: "Stores", href: "/stores?all=1" },
 	{ name: "Plans", href: "/?platformHome=1#plans" },
-	{ name: "Create Store", href: "/onboarding" },
+	{ name: "Start Selling", href: "/onboarding" },
 ]
 
 function getStoreNavigationFontSize(label: string, itemCount: number): string {
@@ -39,6 +39,7 @@ export default function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
+	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
 	const logoSource = theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo
 	const isRemoteLogo = logoSource.startsWith("https://")
 	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
@@ -134,7 +135,7 @@ export default function Header() {
 								{theme === "dark" ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
 								<span>{theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}</span>
 							</button>
-						{navigation.map((link) => (
+							{mobileMenuNavigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}
