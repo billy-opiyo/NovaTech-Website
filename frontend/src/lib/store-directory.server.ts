@@ -10,6 +10,7 @@ export type PublishedStoreDirectoryEntry = {
 	slug: string
 	logoUrl: string | null
 	tagline: string
+	industry: { name: string; slug: string } | null
 	featuredProduct: { name: string; slug: string; price: number; image: string | null } | null
 }
 
@@ -53,6 +54,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				slug: true,
 				logoUrl: true,
 				homepageSettings: true,
+				industry: { select: { name: true, slug: true } },
 				tenant: {
 					select: {
 						products: {
@@ -76,6 +78,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				slug: store.slug,
 				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
 				tagline,
+				industry: store.industry,
 				featuredProduct: product ? {
 					name: product.name,
 					slug: product.slug,
@@ -96,6 +99,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 			slug: "nuravatech",
 			logoUrl: clientConfig.brand.logo,
 			tagline: clientConfig.homepage.heroDescription,
+			industry: null,
 			featuredProduct: null,
 		}]
 	}
