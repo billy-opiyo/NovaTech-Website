@@ -14,8 +14,8 @@ type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl"
 }
 
 const trustItems = [
-	{ title: "We don't sell.", text: "We empower stores to sell better.", icon: Store },
-	{ title: "Discover", text: "Explore products from multiple trusted stores.", icon: Search },
+	{ title: "For Businesses", text: "Create, Manage and Grow your Online Store", icon: Store },
+	{ title: "For Customers", text: "Discover products from trusted businesses", icon: Search },
 	{ title: "Compare", text: "Compare prices, offers and store ratings.", icon: ArrowLeftRight },
 	{ title: "Choose", text: "Select the best store that suits you.", icon: ShoppingCart },
 	{ title: "Buy from Store", text: "Complete your purchase directly on the store's site.", icon: ShoppingBag },
