@@ -8,6 +8,7 @@ import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
+const NOVA_ORANGE_SPLASH_COLOR = "#c2410c"
 const visualSlots = [
 	["darkDesktop", "Dark desktop"],
 	["darkTablet", "Dark tablet"],
@@ -296,7 +297,23 @@ export default function PlatformSiteSettingsPanel() {
 				<div className="grid gap-4 md:grid-cols-2">
 					<label className="block"><span className="text-sm font-medium">Splash background style</span><select className={inputClass} value={draft.splash?.backgroundMode || "glass"} onChange={(event) => updateVisualText("splash", "backgroundMode", event.target.value)}><option value="glass">Platform glass theme</option><option value="color">Solid background color</option><option value="images">Responsive background images</option></select><span className="mt-1 block text-xs text-gray-500">Color and glass modes override images on every device and in both theme modes.</span></label>
 					{draft.splash?.backgroundMode === "color" && <>
-						<label className="block"><span className="text-sm font-medium">Splash background color</span><div className="mt-2 flex items-center gap-3"><input aria-label="Splash background color" type="color" className="h-12 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-white/10 dark:bg-dark-surface" value={draft.splash?.backgroundColor || "#071a2c"} onChange={(event) => updateVisualText("splash", "backgroundColor", event.target.value)} /><span className="text-sm text-gray-500">{draft.splash?.backgroundColor || "#071a2c"}</span></div></label>
+						<label className="block">
+							<span className="text-sm font-medium">Splash background color</span>
+							<div className="mt-2 flex items-center gap-3">
+								<input aria-label="Splash background color" type="color" className="h-12 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-white/10 dark:bg-dark-surface" value={draft.splash?.backgroundColor || "#071a2c"} onChange={(event) => updateVisualText("splash", "backgroundColor", event.target.value)} />
+								<span className="text-sm text-gray-500">{draft.splash?.backgroundColor || "#071a2c"}</span>
+							</div>
+							<button
+								type="button"
+								aria-label={`Use Nova Orange ${NOVA_ORANGE_SPLASH_COLOR} for the splash background`}
+								aria-pressed={(draft.splash?.backgroundColor || "").toLowerCase() === NOVA_ORANGE_SPLASH_COLOR}
+								onClick={() => updateVisualText("splash", "backgroundColor", NOVA_ORANGE_SPLASH_COLOR)}
+								className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium transition hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 dark:border-white/15"
+							>
+								<span aria-hidden="true" className="h-4 w-4 rounded-full border border-black/15" style={{ backgroundColor: NOVA_ORANGE_SPLASH_COLOR }} />
+								Use Nova Orange <span className="text-gray-500">{NOVA_ORANGE_SPLASH_COLOR}</span>
+							</button>
+						</label>
 						<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.centerContentOnColor !== false} onChange={(event) => updateVisualText("splash", "centerContentOnColor", event.target.checked)} /><span>Center welcome content on the solid-color splash</span></label>
 					</>}
 				</div>
