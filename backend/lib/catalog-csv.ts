@@ -22,6 +22,7 @@ export function parseCsv(input: string): CatalogCsvRow[] {
 }
 
 export function csvCell(value: unknown) {
-	const text = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value)
+	const raw = value == null ? "" : typeof value === "string" ? value : JSON.stringify(value)
+	const text = /^[\u0000-\u0020]*[=+\-@]/.test(raw) ? `'${raw}` : raw
 	return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
