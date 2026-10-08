@@ -140,10 +140,11 @@ test("OTP expiry, wrong-code attempt cap, and one-time consumption are enforced"
 		generateCode: () => ({ code: "123456", salt: "attempt-salt" }),
 		sendSms: async () => undefined,
 	})
+	const attemptNow = new Date("2026-10-05T09:01:00.000Z")
 	for (let attempt = 1; attempt < MERCHANT_PHONE_OTP_MAX_ATTEMPTS; attempt++) {
-		assert.equal(await verifyMerchantPhoneOtp({ store: attempts.store, profileId: "attempts", code: "000000" }), "invalid")
+		assert.equal(await verifyMerchantPhoneOtp({ store: attempts.store, profileId: "attempts", code: "000000", now: attemptNow }), "invalid")
 	}
-	assert.equal(await verifyMerchantPhoneOtp({ store: attempts.store, profileId: "attempts", code: "000000" }), "too_many_attempts")
+	assert.equal(await verifyMerchantPhoneOtp({ store: attempts.store, profileId: "attempts", code: "000000", now: attemptNow }), "too_many_attempts")
 	assert.equal((await attempts.store.find("attempts"))?.phoneOtpAttempts, MERCHANT_PHONE_OTP_MAX_ATTEMPTS)
 
 	const valid = createMemoryStore()
@@ -155,9 +156,10 @@ test("OTP expiry, wrong-code attempt cap, and one-time consumption are enforced"
 		generateCode: () => ({ code: "987654", salt: "valid-salt" }),
 		sendSms: async () => undefined,
 	})
-	assert.equal(await verifyMerchantPhoneOtp({ store: valid.store, profileId: "valid", code: "987654" }), "verified")
+	const validNow = new Date("2026-10-05T09:01:00.000Z")
+	assert.equal(await verifyMerchantPhoneOtp({ store: valid.store, profileId: "valid", code: "987654", now: validNow }), "verified")
 	assert.equal(valid.wasVerified(), true)
-	assert.equal(await verifyMerchantPhoneOtp({ store: valid.store, profileId: "valid", code: "987654" }), "expired")
+	assert.equal(await verifyMerchantPhoneOtp({ store: valid.store, profileId: "valid", code: "987654", now: validNow }), "expired")
 })
 
 test("parallel valid OTP submissions can consume a code only once", async () => {

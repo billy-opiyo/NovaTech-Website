@@ -1,11 +1,11 @@
 # Project Bug Audit
 
-Status: fresh audit cycle 7 repaired and recursively source-verified; live-environment gates remain
-Audit started: 2026-08-31
+Status: cycles 12 and 13 complete; all 49 recorded source findings verified; live Neon/provider gates remain unverified
+Audit started: 2026-10-08
 Repository: NovaTech Website
-Branch: main
+Branch: saas-staging
 
-This file is the source of truth for the project-wide audit and repair cycle. Findings are recorded before their fixes begin and use the statuses `Pending`, `In Progress`, `Fixed`, or `Verified`.
+This file is the source of truth for the project-wide audit and repair cycle. Findings are recorded before their fixes begin; the authoritative status register below records current statuses (`Pending`, `In Progress`, `Fixed`, or `Verified`). Historical cycle summaries retain the statuses and evidence that applied at the time.
 
 ## Scope and evidence limits
 
@@ -13,6 +13,86 @@ This file is the source of truth for the project-wide audit and repair cycle. Fi
 - A passing source check does not prove a live Neon database, payment provider, email/SMS/WhatsApp provider, scheduler, backup, DNS, or production deployment.
 - Browser findings will identify the exact URL, viewport, console/network evidence, and whether the result was locally reproducible.
 - Application repairs were performed only after the pre-repair issue report was frozen below.
+
+## Fresh full audit cycle 11 — 2026-10-08 (pre-repair)
+
+This is a new source audit of the current `saas-staging` tree after the multi-industry, demo-store, and platform UI refactors. No application source fixes have started in this cycle. The review rechecked industry selection and defaults, tenant/store catalog context, dynamic attribute validation and storage, onboarding, seed idempotency, public catalog/search/product/category/deals/compare surfaces, relevant platform industry APIs, and the current unit/browser/build evidence. The earlier 42-item register is retained as historical work, but it is not treated as proof that later refactors are defect-free.
+
+### Newly confirmed findings (recorded before repair)
+
+#### BUG-043 — Catalog CSV import/export drops dynamic industry attributes and import bypasses required-attribute validation
+
+- **File paths:** `frontend/src/app/api/manage/catalog/import/route.ts`, `frontend/src/app/api/manage/catalog/export/route.ts`, `backend/lib/industry.ts`
+- **Description:** Catalog export omits `Product.attributeValues`; import has no attribute column/parser and writes products directly with Prisma instead of calling `validateAndNormalizeProductAttributes`. Thus CSV round-trips lose industry-specific data, and a store with required product attributes can create products through CSV without those values.
+- **Root cause:** The bulk catalog path predates the dynamic industry-attribute model and does not share the product service's normalization/validation transaction.
+- **Recommended fix:** Define a bounded, documented CSV representation for industry attributes; resolve definitions from the request's store industry; validate required and typed values on preview and commit; create/update product attribute values atomically; export the values in a reversible format.
+- **Severity:** Medium
+- **Status:** Verified
+
+#### BUG-044 — Store catalog, cart, and contact surfaces expose warranty-only copy across industries
+
+- **File paths:** `frontend/src/components/manage/ManageProductsPage.tsx`, `frontend/src/app/deals/page.tsx`, `frontend/src/app/cart/page.tsx`, `frontend/src/app/contact/page.tsx`
+- **Description:** The product editor and deals page expose warranty copy regardless of industry. The cart unconditionally tells shoppers the merchant handles warranties, and the storefront contact form always offers a “Warranty Claim” subject. These expose electronics-oriented concepts in cake, furniture, and future storefronts despite existing industry-aware support copy.
+- **Root cause:** Storefront surfaces do not consistently condition warranty controls/topics on the resolved industry or use shared industry-specific product-support copy.
+- **Recommended fix:** Use industry-aware support copy on cart/deals, and only show warranty-specific controls/topics where the platform or industry supports them; keep existing stored warranty values for compatibility.
+- **Severity:** Medium
+- **Status:** Verified
+
+#### BUG-045 — OTP wrong-attempt unit test mixes a fixed send time with the wall clock
+
+- **File path:** `tests/backend/merchant-phone-otp.test.ts`
+- **Description:** The test sends the OTP at `2026-10-05T09:00:00Z` but omits `now` from the wrong-code verification calls. On the current date those calls correctly return `expired`, while the assertion expects `invalid`.
+- **Root cause:** The test does not use one deterministic simulated clock for the expiry and attempt-cap scenario.
+- **Recommended fix:** Pass a fixed in-window `now` to each wrong-code verification call, with a separate explicit post-expiry time for the expiry assertion.
+- **Severity:** Low
+- **Status:** Verified
+
+#### BUG-046 — Platform hero test asserts a removed `TrustStrip` prop
+
+- **File path:** `tests/core/platform-design.test.ts`
+- **Description:** The multi-industry platform hero regression test requires `TrustStrip isLight={isLight}`, but current `PlatformHero.tsx` correctly renders `<TrustStrip />`; this obsolete source-string assertion causes the test suite to fail.
+- **Root cause:** The test was not updated after the component stopped consuming the light-mode prop.
+- **Recommended fix:** Assert the current `TrustStrip` contract and the behavior actually required (presence and platform copy), not the removed prop spelling.
+- **Severity:** Low
+- **Status:** Verified
+
+#### BUG-047 — Checkout browser smoke expects checkout copy instead of the protected-route sign-in gate
+
+- **File path:** `tests/e2e/checkout.spec.ts`
+- **Description:** The smoke navigates to `/checkout` without a session and expects checkout/empty-cart text. Middleware intentionally protects `/checkout`; the browser displays the sign-in dialog with a callback to `/checkout`, so the current assertion fails even though route protection is active.
+- **Root cause:** The smoke's expected state does not account for the unauthenticated route contract.
+- **Recommended fix:** Assert the sign-in gate and preserved checkout callback for the unauthenticated smoke; keep checkout form/payment flow assertions in a separately authenticated test when safe seeded credentials are available.
+- **Severity:** Low
+- **Status:** Verified
+
+#### BUG-048 — Historical audit summary and issue register contradict current source evidence
+
+- **File paths:** `BUG_AUDIT.md`, `FINAL_AUDIT_REPORT.md`
+- **Description:** The header still identifies this as cycle 7 on `main`, while the final report claims all 42 issues are verified and the register still marks BUG-016 pending. Current `schema.prisma` includes tenant-scoped category/product/variant unique constraints and migration 0022 is present. The old metadata/status makes the audit register unreliable for the active `saas-staging` audit.
+- **Root cause:** Historical audit results were appended without refreshing the current-cycle metadata and reconciling the BUG-016 status.
+- **Recommended fix:** Preserve historical cycle notes, add a dated current-cycle section, correct the current BUG-016 status using source evidence, and publish a fresh final report only after this cycle's repairs and gates complete.
+- **Severity:** Low
+- **Status:** Verified
+
+#### BUG-049 — Catalog CSV export does not neutralize spreadsheet formula cells
+
+- **File paths:** `backend/lib/catalog-csv.ts`, `frontend/src/app/api/manage/catalog/export/route.ts`
+- **Description:** Catalog export encodes delimiters/quotes but leaves user-controlled cells beginning with `=`, `+`, `-`, or `@` unchanged. A merchant or imported catalog value can therefore be interpreted as a formula by spreadsheet software when an administrator opens the downloaded export.
+- **Root cause:** The catalog CSV encoder handles CSV syntax but does not apply spreadsheet formula-injection neutralization.
+- **Recommended fix:** Prefix formula-like cells with a safe text marker before quoting and add regression coverage for leading whitespace/control characters and each formula prefix.
+- **Severity:** Medium
+- **Status:** Verified
+
+### Current-cycle automated evidence before repairs
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| `npm test` | FAIL | 123 tests: 121 passed, 2 failed (BUG-045 and BUG-046). Webhook tests emit expected connection errors because test `DATABASE_URL` resolves to unavailable `localhost:5432`; those tests pass their fallback assertions. |
+| `npm run test:e2e` | FAIL / provider test skipped | Catalog and initial search assertions passed; checkout assertion failed because the unauthenticated route renders the intended sign-in gate (BUG-047). Provider sandbox test skipped because no `E2E_PAYMENT_PROVIDER` was configured. |
+| `npm run build` | PASS WITH WARNINGS | Prisma client generated; Next compiled and generated all 166 pages. Lint/type validation passed within build. The static store-directory query logged that configured Neon was unreachable and used its fallback; no migration/write was run. Node `url.parse` deprecation and webpack cache snapshot warnings remain. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors; 85 warnings (primarily unused symbols, `any`, hook dependency, and image optimization warnings). |
+| `npm run type-check` | PASS | Frontend TypeScript and backend TypeScript checks returned exit code 0 in this clean, unchanged tree. |
+| Worktree / database safety | PASS | Audit started on clean `saas-staging`; no Prisma migration, seed, database write, push, or deploy was run. |
 
 ## Audit method and evidence boundary
 
@@ -317,7 +397,7 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-013 | Verified | CSV cell encoder and formula-injection regression test added. |
 | BUG-014 | Verified | Cart add operations now serialize the tenant/user/product/variant logical key with a PostgreSQL transaction lock; a future uniqueness migration remains recommended for legacy duplicate cleanup. |
 | BUG-015 | Verified | Product uploads reserve quota under a tenant advisory transaction lock; failed uploads compensate, and product replacement/deletion retires obsolete R2 objects and asset rows. Live R2/Neon execution remains unverified. |
-| BUG-016 | Pending | Fresh cycle 7 confirmed that Category name/slug, Product slug/SKU, and Variant SKU remain globally unique in the Prisma schema; tenant-consistency triggers do not resolve legitimate cross-tenant identifier collisions. |
+| BUG-016 | Verified | Current schema has tenant-scoped uniqueness for Category name/slug, Product slug/SKU, and Variant SKU; migration 0022 adds the scoped constraints after duplicate preflight checks. Live migration state remains unverified. |
 | BUG-017 | Verified | Analytics top-product payload now includes and uses `slug`; source compilation passed. |
 | BUG-018 | Verified | Product cards, wishlist, enquiry, and checkout-facing selection paths now use variant-aware availability; source checks and tests pass. |
 | BUG-019 | Verified | Platform discovery validates remote media origins and uses optimized `next/image` rendering with configured R2 host patterns. Other non-catalog legacy image warnings remain outside this finding. |
@@ -344,10 +424,17 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-040 | Verified | Inventory alerts now emit one record for every affected tenant variant. |
 | BUG-041 | Verified | Reorder reporting stores selected variant IDs on new order items, uses variant velocity, and avoids misleading base-product suggestions for variant products. |
 | BUG-042 | Verified | Card, M-Pesa, and webhook order finalization now claims only still-pending orders atomically before sending confirmation. |
+| BUG-043 | Verified | Industry attributes round-trip in catalog CSV; import validates required/typed values and persists attribute replacements atomically, with tenant/store-scoped reads and existing-value preservation when the column is absent. |
+| BUG-044 | Verified | Warranty controls and copy are electronics-specific; cart/deals support text is industry-aware and the contact warranty topic is conditional. |
+| BUG-045 | Verified | OTP attempt/success assertions now use an explicit in-window simulated time, making the test deterministic. |
+| BUG-046 | Verified | Platform hero regression now checks the current `TrustStrip` contract. |
+| BUG-047 | Verified | Unauthenticated checkout smoke now asserts the expected sign-in gate and preserved checkout callback. |
+| BUG-048 | Verified | Current-cycle metadata and final audit report were reconciled to this `saas-staging` audit; previous cycle records remain historical. |
+| BUG-049 | Verified | Shared catalog CSV cell encoding neutralizes formula-like text, including control/space-prefixed values, with regression coverage. |
 
 ## Newly observed operational verification gap
 
-- Local `.env.local` points at an unavailable/uninitialized local PostgreSQL database. Browser/server logs reported Prisma `P2021` for missing `Store`, `Plan`, and `Domain` tables and `/api/products` returned 500. No migration was run because the database target was not confirmed safe. This blocks authenticated, seeded SaaS-flow, and live data-integrity verification; it is not counted as a source-code defect.
+- The configured Neon endpoint was unreachable during the current build and browser smoke. Earlier browser diagnostics also observed missing-table `P2021` responses against a local database configuration; that earlier condition is retained as historical evidence, not asserted as the current connection target. No migration or seed was run because the database target was not confirmed safe. Live authenticated/seeded SaaS flows and current demo catalog contents remain unverified; this is an environment gate, not a source-code finding.
 
 ## Areas reviewed with no confirmed source defect at audit freeze
 
@@ -631,3 +718,30 @@ The fresh scan found only previously documented non-blocking signals:
 ### Cycle 10 conclusion
 
 The source audit is clean for new findings, and cycles 8, 9, and 10 are consecutive no-new-source-finding audits. This does not establish that the deployed SaaS is bug-free: live Neon migration/schema verification, seeded cross-tenant attack tests, provider callbacks, storage policy, email/SMS/WhatsApp delivery, and authenticated browser workflows still require an available staging environment.
+
+## Fresh post-repair full audit cycles 12 and 13 — 2026-10-08
+
+### Cycle 12 — repaired-path and repository-wide verification
+
+The post-repair scan re-read every changed implementation and its callers, reviewed the complete `saas-staging` source/test/docs inventory, and repeated checks of tenant scoping, industry-specific copy/controls, CSV import/export transaction and validation paths, spreadsheet formula handling, authentication route contracts, build/lint/type/test scripts, and known API/payment/auth boundaries. No new confirmed source finding was discovered. BUG-043 through BUG-049 were verified against the implementation and regression evidence.
+
+### Cycle 13 — independent repeat scan
+
+The source inventory, API authorization and tenant-access delegation, product/catalog mutations, active-industry behavior, payment and webhook state transitions, authentication/token paths, upload boundaries, schema/migration alignment, regression tests, and changed-file consumers were scanned again without application-source edits. No new confirmed source finding was discovered and no finding was reopened. Cycles 12 and 13 are the required two consecutive post-repair full audits with no new findings.
+
+### Post-repair verification evidence
+
+| Check | Result | Evidence / limitation |
+|---|---|---|
+| `npm test` | PASS | 128 passed, 0 failed, 0 skipped. Expected provider-not-configured and unreachable localhost PostgreSQL logs came from fallback/webhook tests. |
+| Focused regression suite | PASS | 22 passed, 0 failed, covering industry CSV attributes, formula neutralization, warranty/copy isolation, OTP timing, and current platform hero contract. |
+| `npm run lint` | PASS WITH WARNINGS | 0 errors, 83 existing warnings (unused symbols, legacy hook dependencies, explicit `any` in presentation/admin UI, and image optimization suggestions). |
+| `npm run type-check` | PASS | Frontend TypeScript and backend `tsc` completed successfully. |
+| `npm run build` | PASS WITH WARNINGS | Prisma client generated and all 166 pages/routes built. Configured Neon was unreachable during static store-directory data access; fallback behavior allowed build completion. Webpack cache and Node `url.parse()` warnings remain. |
+| `npm run test:e2e` | PASS / provider test skipped | With the dev server started separately, Playwright exited cleanly: 1 Chromium catalog/search/checkout-auth-gate smoke passed; provider sandbox test skipped because `E2E_PAYMENT_PROVIDER` is unset. Database-backed product requests returned fallback/unavailable responses because Neon was unreachable. |
+| `git diff --check` | PASS | No whitespace errors. Windows line-ending conversion notices only. |
+| Database/deployment boundary | PASS | No migration, seed, database write, push, or deploy was run. |
+
+### Remaining operational verification gates
+
+The code audit is complete, but a live database/provider production gate is not claimed. The configured Neon endpoint was unreachable; migration application, live catalog/demo-store contents, authenticated cross-tenant browser attacks, provider callbacks/delivery, R2 access policy, and production deployment remain unverified. Provider E2E coverage was skipped as configured. The 83 lint warnings and build deprecation/cache warnings are non-blocking recorded debt, not newly confirmed defects.

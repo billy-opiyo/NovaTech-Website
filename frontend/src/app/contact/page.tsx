@@ -400,7 +400,7 @@ export default function ContactPage() {
 						</> : <>
 							<option value="order">Order Inquiry</option>
 							<option value="product">Product Question</option>
-							<option value="warranty">Warranty Claim</option>
+							{store.industry?.slug === "electronics" && <option value="warranty">Warranty Claim</option>}
 							<option value="return">Return Request</option>
 							<option value="payment">Payment Issue</option>
 						</>}
@@ -554,7 +554,7 @@ export default function ContactPage() {
 						<p className="text-sm text-gray-500">
 							{isPlatformHome ? "Secure platform • Merchant-first support" : store.industry?.slug === "cakes" ? "Made-to-order details confirmed by the store" : store.industry?.slug === "furniture" ? "Product details confirmed by the store" : "SSL Encrypted • Genuine Products"}
 							<br />
-							{isPlatformHome ? "Store sales remain the merchant's responsibility" : store.industry?.slug === "cakes" ? "Flavours • ingredients • collection details" : store.industry?.slug === "furniture" ? "Materials • dimensions • delivery details" : "Merchant-set warranty • Direct payment with store"}
+							{isPlatformHome ? "Store sales remain the merchant's responsibility" : store.industry?.slug === "cakes" ? "Flavours • ingredients • collection details" : store.industry?.slug === "furniture" ? "Materials • dimensions • delivery details" : store.industry?.slug === "electronics" ? "Merchant-set warranty • Direct payment with store" : "Product support • Direct payment with store"}
 						</p>
 					</div>
 				</div>

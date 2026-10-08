@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { defaultCategoryImage, defaultIndustryHomepage } from "../../backend/lib/industry-content"
 import { cakeCustomizationsSchema, normalizeIndustryCustomizations } from "../../backend/lib/cake-customizations"
 import { DEMO_STORE_WHATSAPP_NUMBER, resolveStoreWhatsAppNumber } from "../../frontend/src/lib/demo-store-config"
@@ -40,6 +41,18 @@ test("industry support and enquiry copy avoids irrelevant electronics wording", 
 	assert.doesNotMatch(getProductEnquiryTopics("cakes"), /warranty/i)
 	assert.match(getProductSupportDescription("furniture"), /materials.*dimensions.*assembly/i)
 	assert.doesNotMatch(getProductSupportDescription("furniture"), /warranty/i)
+})
+
+test("warranty controls and deal copy respect the active storefront industry", () => {
+	const productManager = readFileSync("frontend/src/components/manage/ManageProductsPage.tsx", "utf8")
+	const dealsPage = readFileSync("frontend/src/app/deals/page.tsx", "utf8")
+	const cartPage = readFileSync("frontend/src/app/cart/page.tsx", "utf8")
+	const contactPage = readFileSync("frontend/src/app/contact/page.tsx", "utf8")
+	assert.match(productManager, /industry\?\.slug === "electronics" && <label className="text-sm">Warranty/)
+	assert.match(dealsPage, /getProductSupportDescription\(store\.industry\?\.slug\)/)
+	assert.doesNotMatch(dealsPage, /Store-managed warranty/)
+	assert.match(cartPage, /getProductSupportDescription\(store\.industry\?\.slug\)/)
+	assert.match(contactPage, /store\.industry\?\.slug === "electronics" && <option value="warranty">Warranty Claim/)
 })
 
 test("product comparison includes industry-defined attributes such as cake flavour and furniture dimensions", () => {

@@ -8,7 +8,9 @@ test("catalog search and checkout form are browser-accessible", async ({ page })
 	await expect(page.locator("body")).toContainText(/iphone|no products|0 products found/i)
 
 	await page.goto("/checkout", { waitUntil: "domcontentloaded" })
-	await expect(page.locator("body")).toContainText(/checkout|cart is empty|no products selected/i)
+	await expect(page.getByRole("dialog", { name: /authentication required/i })).toBeVisible()
+	await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible()
+	await expect(page.getByRole("link", { name: /sign up/i })).toHaveAttribute("href", /checkout/)
 })
 
 test("payment verification and webhook sandbox contracts respond", async ({ request }) => {
