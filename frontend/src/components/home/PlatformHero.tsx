@@ -33,32 +33,32 @@ function getHeroStores(stores: HeroStore[]): HeroStore[] {
 		.slice(0, 3)
 }
 
-function StoreCard({ store, isLight }: { store: HeroStore; isLight: boolean }) {
+function StoreCard({ store }: { store: HeroStore }) {
 	const initials = store.name.split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase()
 	return (
 		<a
 			href={store.href}
-			className={`group flex min-h-28 items-center gap-4 rounded-2xl border p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg ${isLight ? "border-blue-200 bg-white" : "border-white/15 bg-[#061427]"}`}
+			className="group flex min-h-28 items-center gap-4 rounded-2xl border border-theme-border bg-theme-surface p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg"
 		>
 			<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 dark:bg-white/10">
 				{store.logoUrl ? <img src={store.logoUrl} alt="" className="h-full w-full object-contain" /> : <span className="text-lg font-extrabold" style={{ color: store.fallbackColor }}>{initials}</span>}
 			</div>
 			<div className="min-w-0">
-				<h3 className={`break-words text-lg font-bold leading-tight group-hover:text-primary ${isLight ? "text-[#172554]" : "text-white"}`}>{store.name}</h3>
-				<p className={`mt-2 flex items-center gap-1 text-sm ${isLight ? "text-[#172554]/75" : "text-white/75"}`}><Star size={14} className="fill-current text-yellow-400" /> {store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}{store.industry && ` · ${store.industry.name}`}</p>
+				<h3 className="break-words text-lg font-bold leading-tight text-theme-text group-hover:text-primary">{store.name}</h3>
+				<p className="mt-2 flex items-center gap-1 text-sm text-theme-muted"><Star size={14} className="fill-current text-yellow-400" /> {store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}{store.industry && ` · ${store.industry.name}`}</p>
 				{store.isDemo && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Platform demo</span>}
 			</div>
 		</a>
 	)
 }
 
-function TrustStrip({ isLight }: { isLight: boolean }) {
+function TrustStrip() {
 	return (
 		<div className="grid gap-3 lg:grid-cols-5">
 			{trustItems.map(({ title, text, icon: Icon }) => (
-				<div key={title} className={`flex items-start gap-3 rounded-xl border p-4 ${isLight ? "border-blue-200 bg-white/70" : "border-white/10 bg-white/[0.04]"}`}>
+				<div key={title} className="flex items-start gap-3 rounded-xl border border-theme-border bg-theme-surface/80 p-4">
 					<Icon className="mt-0.5 shrink-0 text-primary" size={24} />
-					<div><p className="font-bold text-primary">{title}</p><p className={`mt-1 text-sm leading-5 ${isLight ? "text-[#172554]" : "text-white/80"}`}>{text}</p></div>
+					<div><p className="font-bold text-primary">{title}</p><p className="mt-1 text-sm leading-5 text-theme-text">{text}</p></div>
 				</div>
 			))}
 		</div>
@@ -87,21 +87,21 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 				</h1>
 				<p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-gray-600 dark:text-gray-300 sm:text-lg lg:text-xl">{heroDescription}</p>
 			</div>
-			<TrustStrip isLight={isLight} />
-			<section className={`rounded-3xl border p-5 shadow-xl sm:p-8 ${isLight ? "border-blue-200 bg-[#edf6ff]" : "border-white/15 bg-[#071a2c]"}`}>
+			<TrustStrip />
+			<section className="rounded-3xl border border-theme-border bg-theme-surface p-5 shadow-xl sm:p-8">
 				<div className="text-center">
-					<h2 className={`text-2xl font-extrabold sm:text-3xl ${isLight ? "text-[#172554]" : "text-white"}`}>Top Available Stores</h2>
-					<p className={`mx-auto mt-2 max-w-2xl text-sm sm:text-base ${isLight ? "text-[#172554]/75" : "text-white/75"}`}>Browse verified independent stores by the kind of products they offer.</p>
+					<h2 className="text-2xl font-extrabold text-theme-text sm:text-3xl">Top Available Stores</h2>
+					<p className="mx-auto mt-2 max-w-2xl text-sm text-theme-muted sm:text-base">Browse verified independent stores by the kind of products they offer.</p>
 				</div>
 				<div className="mt-5 flex justify-center">
-					<label className={`inline-flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm backdrop-blur-xl transition focus-within:ring-2 focus-within:ring-primary/35 ${isLight ? "border-blue-200 bg-white/80 text-[#172554]" : "border-white/15 bg-[#041326]/75 text-white"}`}>
+					<label className="inline-flex items-center gap-3 rounded-2xl border border-theme-border bg-theme-bg/80 px-4 py-3 text-theme-text shadow-sm backdrop-blur-xl transition focus-within:ring-2 focus-within:ring-primary/35">
 						<span className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Industry</span>
 						<span className="relative">
 							<select
 								aria-label="Filter top available stores by industry"
 								value={industrySlug}
 								onChange={(event) => setIndustrySlug(event.target.value)}
-								className={`min-w-36 appearance-none rounded-xl border px-4 py-2.5 pr-10 text-sm font-semibold shadow-inner outline-none transition focus:border-primary ${isLight ? "border-blue-200 bg-[#f5f9ff] text-[#172554] hover:bg-blue-50" : "border-white/15 bg-white/[0.07] text-white hover:bg-white/[0.12]"}`}
+								className="min-w-36 appearance-none rounded-xl border border-theme-border bg-theme-surface px-4 py-2.5 pr-10 text-sm font-semibold text-theme-text shadow-inner outline-none transition hover:border-primary focus:border-primary"
 								style={{ colorScheme: isLight ? "light" : "dark" }}
 							>
 								<option value="all">All industries</option>
@@ -111,7 +111,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 						</span>
 					</label>
 				</div>
-				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} isLight={isLight} />)}</div> : <p className="mt-6 rounded-xl border border-white/10 p-6 text-center text-sm text-gray-500">No stores are available in this industry yet.</p>}
+				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-3">{heroStores.map((store) => <StoreCard key={store.id} store={store} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
 			</section>
 		</section>

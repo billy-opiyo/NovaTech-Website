@@ -37,7 +37,7 @@ export default function PlatformNavigation({ isSuperAdmin, canManageContent }: {
 			})}
 			<Link
 				href="/?platformHome=1"
-				className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-2 text-center text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/20 sm:px-3 sm:text-sm dark:text-blue-200"
+				className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-2 text-center text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/20 sm:px-3 sm:text-sm"
 			>
 				<House size={16} aria-hidden="true" />
 				<span>Platform home</span>

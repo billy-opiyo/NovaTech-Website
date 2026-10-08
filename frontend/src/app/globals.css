@@ -108,7 +108,7 @@
   }
 
   .dark select option:checked {
-    background-color: #0070f3;
+    background-color: rgb(var(--color-primary));
     color: #ffffff;
   }
 
