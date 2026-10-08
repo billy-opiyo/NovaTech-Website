@@ -20,7 +20,7 @@ import { getProducts } from "@/services/products"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import ProductActions from "@/components/product/ProductActions"
 
@@ -668,6 +668,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 					<Image
 						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
+						onError={fallbackToProductPlaceholder}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>
@@ -763,6 +764,7 @@ function ProductListItem({
 					<Image
 						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
+						onError={fallbackToProductPlaceholder}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>

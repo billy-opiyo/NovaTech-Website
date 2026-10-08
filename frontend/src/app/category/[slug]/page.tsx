@@ -6,7 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ArrowRight, Star } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import NotFoundState from "@/components/content/NotFoundState"
 import ProductActions from "@/components/product/ProductActions"
 import { useStoreContext } from "@/lib/store-context"
@@ -69,6 +69,7 @@ function ProductCard({ product, store }: { product: CategoryProduct; store: Stor
 					<Image
 						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
+						onError={fallbackToProductPlaceholder}
 						fill
 						className="object-contain transition-transform duration-500 group-hover:scale-105"
 					/>

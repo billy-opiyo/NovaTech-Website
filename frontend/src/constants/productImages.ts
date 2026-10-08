@@ -1,3 +1,5 @@
+import type { SyntheticEvent } from "react"
+
 const image = (fileName: string) => `/images/${fileName}.jpg`
 
 export const productImageByName: Record<string, string> = {
@@ -101,4 +103,12 @@ export function getProductImage(source: string | undefined, name?: string, indus
 
 	const sourceId = source?.match(/photo-([\w-]+)/)?.[1]
 	return (sourceId && imageBySourceId[sourceId]) || source || productImageByName["macbook"]
+}
+
+export function fallbackToProductPlaceholder(event: SyntheticEvent<HTMLImageElement>) {
+	const imageElement = event.currentTarget
+	if (imageElement.dataset.fallbackApplied === "true") return
+	imageElement.dataset.fallbackApplied = "true"
+	imageElement.removeAttribute("srcset")
+	imageElement.src = "/images/product-placeholder.svg"
 }

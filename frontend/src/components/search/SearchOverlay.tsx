@@ -7,7 +7,7 @@ import { Search, X, TrendingUp, Clock, ArrowRight, Zap, FileText, Store } from "
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import { publicPages } from "@/constants/publicPages"
 import { useStoreContext } from "@/lib/store-context"
@@ -221,6 +221,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 													<div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
 														<Image
 									src={getProductImage(suggestion.image, suggestion.text, store.industry?.slug)}
+									onError={fallbackToProductPlaceholder}
 															alt=""
 															fill
 															className="object-cover"
