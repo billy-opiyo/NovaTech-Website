@@ -11,6 +11,7 @@ import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
 import { useToast } from "@/components/ui/Toast"
 import { getStoreHomeHref } from "@/lib/store-home"
+import { openNativeGoogleSignIn } from "@/lib/mobile-google-auth"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")
@@ -119,7 +120,16 @@ export default function SignUpPage() {
 		const callbackUrl = requestedCallbackUrl.startsWith("/") && !requestedCallbackUrl.startsWith("//") && !requestedCallbackUrl.includes("\\")
 			? requestedCallbackUrl
 			: "/"
-		await signIn("google", { callbackUrl: withLoginSuccess(callbackUrl) })
+		try {
+			if (await openNativeGoogleSignIn(withLoginSuccess(callbackUrl))) {
+				setIsLoading(false)
+				return
+			}
+			await signIn("google", { callbackUrl: withLoginSuccess(callbackUrl) })
+		} catch {
+			setError("Unable to open secure Google sign-in. Please try again.")
+			setIsLoading(false)
+		}
 	}
 
 	return (

@@ -10,6 +10,7 @@ import { FcGoogle } from "react-icons/fc"
 import AuthCloseButton from "@/components/auth/AuthCloseButton"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreHomeHref } from "@/lib/store-home"
+import { openNativeGoogleSignIn } from "@/lib/mobile-google-auth"
 
 function withLoginSuccess(url: string) {
 	const target = new URL(url, "http://nurava-auth.local")
@@ -81,7 +82,17 @@ function SignInForm() {
 
 	const handleGoogleSignIn = async () => {
 		setIsLoading(true)
-		await signIn("google", { callbackUrl: withLoginSuccess(callbackUrl) })
+		setError("")
+		try {
+			if (await openNativeGoogleSignIn(withLoginSuccess(callbackUrl))) {
+				setIsLoading(false)
+				return
+			}
+			await signIn("google", { callbackUrl: withLoginSuccess(callbackUrl) })
+		} catch {
+			setError("Unable to open secure Google sign-in. Please try again.")
+			setIsLoading(false)
+		}
 	}
 
 	return (
