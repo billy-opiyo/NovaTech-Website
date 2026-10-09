@@ -222,12 +222,12 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 	}
 	const defaultDiscoveryCards = getPlatformSiteSettingsDefaults().discoveryCards!
 	const discoveryCards = Object.fromEntries(PLATFORM_DISCOVERY_CARD_KEYS.map((key) => {
-		const fallback = defaultDiscoveryCards[key]
+		const fallback = defaultDiscoveryCards[key] ?? { title: "", text: "" }
 		const copyValue = (patchValue: string | undefined, baseValue: string | undefined, defaultValue: string) =>
 			patchValue === undefined ? nonBlank(baseValue, defaultValue) : nonBlank(patchValue, defaultValue)
 		return [key, {
-			title: copyValue(patch.discoveryCards?.[key]?.title, base.discoveryCards?.[key]?.title, fallback.title!),
-			text: copyValue(patch.discoveryCards?.[key]?.text, base.discoveryCards?.[key]?.text, fallback.text!),
+			title: copyValue(patch.discoveryCards?.[key]?.title, base.discoveryCards?.[key]?.title, fallback.title ?? ""),
+			text: copyValue(patch.discoveryCards?.[key]?.text, base.discoveryCards?.[key]?.text, fallback.text ?? ""),
 		}]
 	})) as PlatformSiteSettings["discoveryCards"]
 	const contact = { ...base.contact, ...patch.contact }
