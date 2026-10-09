@@ -55,7 +55,7 @@ export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPl
 	return (
 		<aside
 			aria-label="Download the Nurava HubStores Android app"
-			className="fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md rounded-2xl border border-primary/20 bg-white/95 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl dark:bg-neutral-950/95 sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
+			className="glass-card navy-glass fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
 		>
 			<div className="flex items-center gap-2">
 				<a
@@ -69,12 +69,12 @@ export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPl
 					type="button"
 					aria-label="Close app download prompt"
 					onClick={() => setVisible(false)}
-					className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/10"
+					className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-theme-border text-theme-muted transition hover:bg-theme-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 				>
 					<X size={18} aria-hidden="true" />
 				</button>
 			</div>
-			<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+			<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 text-sm text-theme-muted">
 				<input
 					type="checkbox"
 					className="h-4 w-4 accent-primary"
