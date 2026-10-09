@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { createCardPaymentIntent, verifyCardPayment } from "../../backend/payments/cards"
+import { createCardPaymentIntent, shouldCancelOrderAfterCardVerification, verifyCardPayment } from "../../backend/payments/cards"
 
 test("createCardPaymentIntent returns not-configured result when Stripe is unset", async () => {
 	// Ensure STRIPE_SECRET_KEY is not set for this test
@@ -37,4 +37,12 @@ test("verifyCardPayment returns not-configured result when Stripe is unset", asy
 	} finally {
 		if (original) process.env.STRIPE_SECRET_KEY = original
 	}
+})
+
+test("pending Stripe verification never cancels an order", () => {
+	assert.equal(shouldCancelOrderAfterCardVerification("PENDING"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("PROCESSING"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("COMPLETED"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("FAILED"), true)
+	assert.equal(shouldCancelOrderAfterCardVerification("CANCELLED"), true)
 })

@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useToast } from "@/components/ui/Toast"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 
 type Enquiry = { id: string; customerName: string; customerEmail: string; customerPhone?: string | null; message?: string | null; contactMethod: string; estimatedTotal: number; status: string; notes?: string | null; items: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number; variant?: string | null }>; createdAt: string; quotes: Array<{ quoteNumber: string; status: string; total: number; createdAt: string }> }
 
@@ -18,17 +19,26 @@ export default function EnquiriesPage() {
 	const [terms, setTerms] = useState("")
 	const [message, setMessage] = useState("Loading enquiries…")
 	const [busy, setBusy] = useState(false)
+	const [requestGuard] = useState(createLatestRequestGuard)
 
-	async function load() {
+	const load = useCallback(async (rethrowOnCurrentError = false) => {
+		const requestId = requestGuard.begin()
 		const params = new URLSearchParams({ status, search })
-		const response = await fetch(`/api/manage/enquiries?${params}`, { cache: "no-store" })
-		const data = await response.json().catch(() => ({}))
-		if (!response.ok) throw new Error(data.message || "Unable to load enquiries")
-		setEnquiries(data.enquiries || [])
-		setMessage("")
-	}
+		try {
+			const response = await fetch(`/api/manage/enquiries?${params}`, { cache: "no-store" })
+			const data = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(data.message || "Unable to load enquiries")
+			if (!requestGuard.isCurrent(requestId)) return
+			setEnquiries(data.enquiries || [])
+			setMessage("")
+		} catch (error) {
+			if (!requestGuard.isCurrent(requestId)) return
+			setMessage(error instanceof Error ? error.message : "Unable to load enquiries")
+			if (rethrowOnCurrentError) throw error
+		}
+	}, [status, search, requestGuard])
 
-	useEffect(() => { load().catch((error) => setMessage(error.message)) }, [status])
+	useEffect(() => { void load(); return () => requestGuard.invalidate() }, [load, requestGuard])
 	const visible = useMemo(() => enquiries.filter((item) => `${item.customerName} ${item.customerEmail}`.toLowerCase().includes(search.toLowerCase())), [enquiries, search])
 
 	function select(item: Enquiry) { setSelected(item); setNotes(item.notes || "") }
@@ -40,7 +50,7 @@ export default function EnquiriesPage() {
 			const response = await fetch(`/api/manage/enquiries?id=${selected.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to update enquiry")
-			await load(); setSelected(result.enquiry); setNotes(result.enquiry.notes || ""); addToast("Enquiry updated successfully", "success")
+			await load(true); setSelected(result.enquiry); setNotes(result.enquiry.notes || ""); addToast("Enquiry updated successfully", "success")
 		} catch (error: unknown) { const text = error instanceof Error ? error.message : "Unable to update enquiry"; setMessage(text); addToast(text, "error") } finally { setBusy(false) }
 	}
 
@@ -51,7 +61,7 @@ export default function EnquiriesPage() {
 			const response = await fetch(`/api/manage/enquiries/${selected.id}/quote`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryFee: Number(deliveryFee) || 0, terms: terms || null }) })
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to create quote")
-			setMessage(`Quote ${result.quote.quoteNumber} created; email delivery was attempted.`); await load(); addToast(`Quote ${result.quote.quoteNumber} created successfully`, "success")
+			setMessage(`Quote ${result.quote.quoteNumber} created; email delivery was attempted.`); await load(true); addToast(`Quote ${result.quote.quoteNumber} created successfully`, "success")
 		} catch (error: unknown) { const text = error instanceof Error ? error.message : "Unable to create quote"; setMessage(text); addToast(text, "error") } finally { setBusy(false) }
 	}
 

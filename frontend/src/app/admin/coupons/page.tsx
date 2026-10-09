@@ -1,15 +1,27 @@
 "use client"
-import { FormEvent, useEffect, useState } from "react"
+import { FormEvent, useCallback, useEffect, useState } from "react"
 import { Loader2, Plus, Search, Trash2 } from "lucide-react"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 interface Coupon { id: string; code: string; discountPercent?: number | null; discountAmount?: number | null; usedCount: number; usageLimit?: number | null; expiresAt: string; isActive: boolean }
 
 export default function AdminCouponsPage() {
 	const { addToast } = useToast()
 	const [coupons, setCoupons] = useState<Coupon[]>([]); const [search, setSearch] = useState(""); const [form, setForm] = useState({ code: "", discountPercent: "", discountAmount: "", expiresAt: "", usageLimit: "" }); const [message, setMessage] = useState(""); const [couponToDelete, setCouponToDelete] = useState<Coupon | null>(null); const [deleting, setDeleting] = useState(false); const [busy, setBusy] = useState<"create" | "toggle" | null>(null)
-	const load = () => fetch(`/api/admin/coupons?search=${encodeURIComponent(search)}`, { cache: "no-store" }).then((r) => r.json()).then((data) => setCoupons(data.coupons || []))
-	useEffect(() => { load() }, [search])
+	const [requestGuard] = useState(createLatestRequestGuard)
+	const load = useCallback(async () => {
+		const requestId = requestGuard.begin()
+		try {
+			const response = await fetch(`/api/admin/coupons?search=${encodeURIComponent(search)}`, { cache: "no-store" })
+			if (!response.ok) throw new Error("Unable to load coupons")
+			const data = await response.json()
+			if (requestGuard.isCurrent(requestId)) setCoupons(data.coupons || [])
+		} catch (error) {
+			if (requestGuard.isCurrent(requestId)) setMessage(error instanceof Error ? error.message : "Unable to load coupons")
+		}
+	}, [search, requestGuard])
+	useEffect(() => { void load(); return () => requestGuard.invalidate() }, [load, requestGuard])
 	const create = async (event: FormEvent) => { event.preventDefault(); setMessage(""); setBusy("create"); try { const response = await fetch("/api/admin/coupons", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, discountPercent: form.discountPercent ? Number(form.discountPercent) : null, discountAmount: form.discountAmount ? Number(form.discountAmount) : null, usageLimit: form.usageLimit ? Number(form.usageLimit) : null }) }); const data = await response.json(); if (!response.ok) { const text = data.message || "Unable to create coupon"; setMessage(text); addToast(text, "error"); return }; setForm({ code: "", discountPercent: "", discountAmount: "", expiresAt: "", usageLimit: "" }); setMessage("Coupon created"); await load(); addToast("Coupon created successfully", "success") } catch { setMessage("Unable to create coupon"); addToast("Unable to create coupon", "error") } finally { setBusy(null) } }
 	const toggle = async (coupon: Coupon) => { setBusy("toggle"); try { const response = await fetch("/api/admin/coupons", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: coupon.id, isActive: !coupon.isActive }) }); if (!response.ok) { setMessage("Unable to update coupon"); addToast("Unable to update coupon", "error"); return }; await load(); addToast(`Coupon ${coupon.isActive ? "disabled" : "enabled"} successfully`, "success") } catch { setMessage("Unable to update coupon"); addToast("Unable to update coupon", "error") } finally { setBusy(null) } }
 	const remove = async () => { if (!couponToDelete) return; setDeleting(true); try { const response = await fetch(`/api/admin/coupons?id=${couponToDelete.id}`, { method: "DELETE" }); if (!response.ok) { setMessage("Unable to delete coupon"); addToast("Unable to delete coupon", "error"); return }; setCouponToDelete(null); await load(); addToast("Coupon deleted successfully", "success") } catch { setMessage("Unable to delete coupon"); addToast("Unable to delete coupon", "error") } finally { setDeleting(false) } }

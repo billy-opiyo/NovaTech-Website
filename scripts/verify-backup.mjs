@@ -2,11 +2,19 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
+import { assertDistinctPostgresDatabases } from "./postgres-database-identity.mjs"
 
 const source = process.env.BACKUP_DATABASE_URL
 const restore = process.env.RESTORE_DATABASE_URL
 if (!source || !restore) {
 	console.error("BACKUP_DATABASE_URL and RESTORE_DATABASE_URL are required")
+	process.exit(1)
+}
+
+try {
+	assertDistinctPostgresDatabases(source, restore)
+} catch (error) {
+	console.error(error instanceof Error ? error.message : "Could not validate database identities; refusing to restore.")
 	process.exit(1)
 }
 

@@ -5,9 +5,12 @@ import { verifyCardPayment } from "backend/payments/cards"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getServerSession } from "@/lib/auth"
+import prisma from "backend/lib/db"
 
 const cardVerifySchema = z.object({
 	reference: z.string().min(3),
+	customerEmail: z.string().trim().email().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -19,6 +22,11 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = cardVerifySchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
+		const payment = await prisma.payment.findFirst({ where: { tenantId: context.tenantId, provider: "stripe", OR: [{ providerReference: validated.reference }, { metadata: { path: ["reference"], equals: validated.reference } }] }, select: { orderId: true, customerEmail: true, order: { select: { userId: true, guestEmail: true } } } })
+		const session = await getServerSession()
+		if (!payment?.orderId || !payment.order || (payment.order.userId ? payment.order.userId !== session?.user?.id : (validated.customerEmail || "").toLowerCase() !== (payment.order.guestEmail || payment.customerEmail || "").toLowerCase())) {
+			return NextResponse.json({ message: "Card payment request not found for this shopper in this store." }, { status: 404 })
+		}
 		const result = await verifyCardPayment(validated.reference, context.tenantId)
 
 		return NextResponse.json(result)

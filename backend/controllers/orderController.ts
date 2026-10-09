@@ -10,6 +10,7 @@ import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
 import { getMerchantMpesaConfig } from "../payments/merchant-mpesa"
+import { createOrderIdempotencyKey } from "../lib/order-idempotency"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -40,6 +41,11 @@ export async function createOrder(req: NextRequest) {
 		const context = await resolveTenantFromRequest(req)
 		if (validated.paymentMethod === "MPESA" && !await getMerchantMpesaConfig(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
 
+		const rawIdempotencyKey = req.headers.get("idempotency-key")?.trim()
+		const ownerScope = session?.user?.id ? `user:${session.user.id}` : `guest:${validated.shippingAddress.email.trim().toLowerCase()}`
+		const idempotencyKey = rawIdempotencyKey
+			? createOrderIdempotencyKey({ tenantId: context.tenantId, ownerScope, clientKey: rawIdempotencyKey, checkout: validated })
+			: undefined
 		const order = await orderService.createOrder({
 			tenantId: context.tenantId,
 			userId: session?.user?.id || undefined,
@@ -50,8 +56,23 @@ export async function createOrder(req: NextRequest) {
 			paymentMethod: validated.paymentMethod,
 			couponCode: validated.couponCode,
 			notes: validated.notes,
-			idempotencyKey: req.headers.get("idempotency-key") || undefined,
+			idempotencyKey,
 		})
+
+		const ownsOrder = session?.user?.id
+			? order.userId === session.user.id
+			: !order.userId && order.guestEmail?.trim().toLowerCase() === validated.shippingAddress.email.trim().toLowerCase()
+		if (!ownsOrder) return NextResponse.json({ message: "This idempotency key is already associated with another checkout." }, { status: 409 })
+		const storedShipping = order.shippingAddress as typeof validated.shippingAddress
+		const shippingMatches = ["fullName", "phone", "email", "county", "town", "address", "landmark"].every((key) => {
+			const storedValue = storedShipping?.[key as keyof typeof validated.shippingAddress] || ""
+			const requestedValue = validated.shippingAddress[key as keyof typeof validated.shippingAddress] || ""
+			return String(storedValue).trim().toLowerCase() === String(requestedValue).trim().toLowerCase()
+		})
+		const itemFingerprint = (items: Array<{ productId: string; quantity: number; variant?: string | null }>) => items.map((item) => `${item.productId}:${item.quantity}:${item.variant || ""}`).sort().join("|")
+		if (order.paymentMethod !== validated.paymentMethod || !shippingMatches || itemFingerprint(order.items) !== itemFingerprint(validated.items)) {
+			return NextResponse.json({ message: "This idempotency key was already used for different checkout details." }, { status: 409 })
+		}
 
 		return NextResponse.json(order, { status: 201 })
 	} catch (error: unknown) {

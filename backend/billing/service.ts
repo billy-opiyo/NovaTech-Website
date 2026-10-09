@@ -48,10 +48,11 @@ export function isMpesaOnlySaasBilling() {
 	return saasBillingProvider === "mpesa"
 }
 
-function stripeAmount(amount: number, currency: string) {
-	// Nurava Tech stores customer-facing amounts in currency units. Stripe's
-	// Checkout price_data expects the smallest currency unit.
-	return Math.round(amount * (currency.toUpperCase() === "JPY" ? 1 : 100))
+export function stripeAmount(amount: number, currency: string) {
+	// Platform billing is configured and displayed in KES. Do not silently apply
+	// a two-decimal conversion to currencies with different minor-unit rules.
+	if (currency.toUpperCase() !== "KES") throw new BillingError("Stripe platform billing currently supports KES only", 400, "UNSUPPORTED_BILLING_CURRENCY")
+	return Math.round(amount * 100)
 }
 
 export function calculateCommission(grossAmount: number, percentage: number) {
@@ -162,6 +163,15 @@ async function getPlanAndAddons(planKey: string, addonKeys: string[]) {
 	return { plan, addons }
 }
 
+async function verifyStripePriceConfiguration(priceId: string | null, amount: number, currency: string, interval: "month" | "year") {
+	if (currency.toUpperCase() !== "KES") throw new BillingError("Platform billing currently supports KES only", 400, "UNSUPPORTED_BILLING_CURRENCY")
+	if (!priceId) return
+	const price = await getStripeClient().prices.retrieve(priceId)
+	if (price.currency.toUpperCase() !== "KES" || price.unit_amount !== stripeAmount(amount, "KES") || price.recurring?.interval !== interval) {
+		throw new BillingError("The configured Stripe price does not match its KES amount and billing interval", 409, "STRIPE_PRICE_MISMATCH")
+	}
+}
+
 async function ensureStripeCustomer(tenantId: string, ownerUserId: string, email: string) {
 	const { customer } = await ensureBillingRecords(tenantId, ownerUserId)
 	if (customer.stripeCustomerId) return customer.stripeCustomerId
@@ -182,6 +192,8 @@ export async function createStripeCheckoutSession(input: { tenantId: string; own
 	if (isMpesaOnlySaasBilling()) throw new BillingError("M-Pesa is the only supported Nurava billing method at launch", 409, "MPESA_ONLY_BILLING")
 	if (!isStripeConfigured()) throw new BillingError("Stripe is not configured", 503, "STRIPE_NOT_CONFIGURED")
 	const { plan, addons } = await getPlanAndAddons(input.planKey, input.addonKeys || [])
+	await verifyStripePriceConfiguration(plan.stripePriceId, plan.price || 0, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month")
+	for (const addon of addons) await verifyStripePriceConfiguration(addon.stripePriceId, addon.price, addon.currency, addon.billingInterval === "YEAR" ? "year" : "month")
 	const billing = await ensureBillingRecords(input.tenantId, input.ownerUserId)
 	const existing = await prisma.subscription.findFirst({ where: { tenantId: input.tenantId, status: { in: [...paidSubscriptionStatuses] } }, orderBy: { createdAt: "desc" } })
 	if (existing && existing.planId === plan.id && billing.record.setupFeeStatus !== BillingRecordStatus.PENDING) throw new BillingError("This plan is already active", 409, "PLAN_ALREADY_ACTIVE")
@@ -223,6 +235,8 @@ export async function changeSubscriptionPlan(input: { tenantId: string; ownerUse
 	}
 	if (current.provider !== "stripe" || !current.providerSubscriptionId || !isStripeConfigured()) throw new BillingError("This subscription uses invoice-driven billing. Request an M-Pesa renewal after the platform configures the target plan price.", 409, "PLAN_CHANGE_REQUIRES_PROVIDER")
 	if (!plan.stripePriceId) throw new BillingError("The target plan needs a Stripe price ID before an existing subscription can be changed", 409, "PLAN_PRICE_NOT_CONFIGURED")
+	if (!plan.price || !plan.billingInterval) throw new BillingError("The target plan is not configured for paid billing", 409, "PLAN_NOT_BILLABLE")
+	await verifyStripePriceConfiguration(plan.stripePriceId, plan.price, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month")
 	const stripe = getStripeClient()
 	const remote = await stripe.subscriptions.retrieve(current.providerSubscriptionId)
 	const baseItem = remote.items?.data?.[0]

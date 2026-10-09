@@ -61,6 +61,10 @@ export default function SignUpPage() {
 			setError("Password must be at least 8 characters")
 			return
 		}
+		if (!formData.acceptedTerms) {
+			setError("Please agree to the Terms and Conditions, Privacy Policy, and Cookie Policy first")
+			return
+		}
 
 		setIsLoading(true)
 
@@ -72,6 +76,7 @@ export default function SignUpPage() {
 					name: formData.name,
 					email: formData.email,
 					password: formData.password,
+					acceptedTerms: formData.acceptedTerms,
 					callbackUrl: (() => {
 						const value = new URLSearchParams(window.location.search).get("callbackUrl")
 						return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined
@@ -261,7 +266,7 @@ export default function SignUpPage() {
 								checked={formData.acceptedTerms}
 								onChange={(e) => setFormData({ ...formData, acceptedTerms: e.target.checked })}
 								className="mt-1 accent-primary"
-								required
+								aria-required="true"
 							/>
 							<span>
 								I agree to the <Link href="/terms" className="text-primary hover:underline">Terms and Conditions</Link>, <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>, and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.

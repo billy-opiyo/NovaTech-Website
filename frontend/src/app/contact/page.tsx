@@ -109,6 +109,12 @@ function getStoreFaqs(industrySlug?: string | null): FAQ[] {
 		{ category: "Furniture & Home", question: "Does the store offer assembly?", answer: "Assembly and delivery arrangements vary by item and location. Ask the merchant to confirm the available service and any extra cost." },
 	]
 
+	if (industrySlug === "boutiques") return [
+		...commonFaqs,
+		{ category: "Clothing & Style", question: "How can I choose the right size or fit?", answer: "Review the product's size and fit details, then contact the store if you need measurements or help choosing an option." },
+		{ category: "Clothing & Style", question: "Can I ask about colours or materials?", answer: "Contact the store to confirm the available colours, fabric or material details, and current stock before ordering." },
+	]
+
 	return commonFaqs
 }
 

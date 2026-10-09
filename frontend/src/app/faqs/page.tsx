@@ -21,6 +21,10 @@ export default async function FaqsPage() {
 		{ title: "How can I confirm dimensions and materials?", content: "Review the product listing and contact the store to confirm measurements, materials, finish, and any custom options before ordering." },
 		{ title: "Does the store offer delivery or assembly?", content: "Delivery coverage, assembly, and related costs vary by item and location. Ask the merchant to confirm the available arrangements." },
 		{ title: "How do I ask about an order or return?", content: "The store confirms delivery and handles order changes, returns, and after-sales support under its current policies. Contact the merchant directly." },
+	] : industrySlug === "boutiques" ? [
+		{ title: "How can I choose the right size or fit?", content: "Review the product's available size and fit details, then contact the store for measurements or help choosing an option." },
+		{ title: "Can I confirm colours and materials before ordering?", content: "Contact the store to confirm available colours, fabric or material details, and current stock." },
+		{ title: "How do I arrange delivery or request a return?", content: "Delivery, exchanges, and returns follow the store's policies. Contact the merchant to confirm the options for your order." },
 	] : [
 		{ title: "How long does delivery take?", content: "Delivery times are set and confirmed by the store. Ask the merchant for current delivery options and timing." },
 		{ title: "What payment methods can I use?", content: `Payment options are selected by ${store.brand.name} and confirmed by the merchant during ordering. Contact the store if you need clarification before paying.` },
@@ -30,7 +34,7 @@ export default async function FaqsPage() {
 	return (
 		<InfoPage
 			title="Frequently Asked Questions"
-			description={industrySlug === "cakes" ? `Answers about custom orders, flavours, timing, and collection from ${store.brand.name}.` : industrySlug === "furniture" ? `Answers about product details, delivery, assembly, and support from ${store.brand.name}.` : `Quick answers about products, delivery, payment, returns, and store support at ${store.brand.name}.`}
+			description={industrySlug === "cakes" ? `Answers about custom orders, flavours, timing, and collection from ${store.brand.name}.` : industrySlug === "furniture" ? `Answers about product details, delivery, assembly, and support from ${store.brand.name}.` : industrySlug === "boutiques" ? `Answers about clothing sizes, fit, colours, materials, and store policies at ${store.brand.name}.` : `Quick answers about products, delivery, payment, returns, and store support at ${store.brand.name}.`}
 			sections={storeSections}
 		/>
 	)

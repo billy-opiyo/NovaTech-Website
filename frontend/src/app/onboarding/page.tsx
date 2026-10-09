@@ -16,7 +16,9 @@ export default function OnboardingPage() {
 	const [stores, setStores] = useState<ExistingStore[]>([])
 	const [plans, setPlans] = useState<Plan[]>([])
 	const [industries, setIndustries] = useState<Industry[]>([])
-	const [industrySlug, setIndustrySlug] = useState("electronics")
+	const [industrySlug, setIndustrySlug] = useState("")
+	const [industriesLoading, setIndustriesLoading] = useState(true)
+	const [industriesError, setIndustriesError] = useState("")
 	const [planKey, setPlanKey] = useState("STARTER")
 	const [plansLoading, setPlansLoading] = useState(true)
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
@@ -45,14 +47,16 @@ export default function OnboardingPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Industries are unavailable")
 			const options = Array.isArray(data.industries) ? data.industries as Industry[] : []
+			if (!options.length) throw new Error("No industries are currently available. Please try again shortly.")
 			setIndustries(options)
-			if (options.length && !options.some((industry) => industry.slug === "electronics")) setIndustrySlug(options[0].slug)
-		}).catch(() => setIndustries([{ id: "electronics-fallback", name: "Electronics", slug: "electronics", description: "Phones, computers, and technology products.", icon: "cpu" }]))
+			setIndustrySlug((current) => options.some((industry) => industry.slug === current) ? current : options.find((industry) => industry.slug === "electronics")?.slug || options[0].slug)
+		}).catch((reason: unknown) => setIndustriesError(reason instanceof Error ? reason.message : "Industries are unavailable. Please try again.")).finally(() => setIndustriesLoading(false))
 	}, [])
 
 	async function submit(event: FormEvent) {
 		event.preventDefault()
 		if (!selectedPlan) { setError("Choose an available monthly plan before creating the store."); return }
+		if (!industries.some((industry) => industry.slug === industrySlug)) { setError(industriesError || "Choose an available industry before creating the store."); return }
 		setSaving(true)
 		setError("")
 		const response = await fetch("/api/onboarding/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, slug: slug || undefined, industrySlug, planKey: selectedPlan.key, acceptLegalTerms }) })
@@ -81,9 +85,11 @@ export default function OnboardingPage() {
 		<div className="rounded-xl border border-primary/40 bg-primary/5 p-5"><p className="font-semibold">One-time setup fee, then six months to grow</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">The setup fee is paid once when you create your store. It starts a six-month pilot on the plan you choose. From month seven, you can manually renew that plan by M-Pesa; Nurava HubStores does not automatically charge your account.</p></div>
 		{stores.length > 0 && <div className="glass-card p-5"><p className="font-semibold">Your stores</p>{stores.map((store) => <button key={store.slug} onClick={() => router.push(`/manage?store=${store.slug}`)} className="mt-3 block text-left text-primary hover:underline">{store.name} <span className="text-sm text-gray-500">({store.publicationStatus})</span></button>)}</div>}
 		<form onSubmit={submit} className="glass-card space-y-5 p-6">
-			<fieldset disabled={!industries.length}>
+			<fieldset disabled={industriesLoading || Boolean(industriesError) || !industries.length}>
 				<legend className="font-semibold">Choose your industry</legend>
 				<p className="mt-1 text-sm text-gray-500">We’ll prepare relevant categories, product fields, theme, and homepage content for your store.</p>
+				{industriesLoading && <p className="mt-3 text-sm text-gray-500">Loading available industries…</p>}
+				{industriesError && <p role="alert" className="mt-3 text-sm text-red-600">{industriesError} Refresh the page to try again.</p>}
 				<div className="mt-3 grid gap-3 sm:grid-cols-3">{industries.map((industry) => <label key={industry.id} className={`cursor-pointer rounded-xl border p-4 transition ${industrySlug === industry.slug ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"}`}><span className="flex items-start gap-3"><input type="radio" name="industry" value={industry.slug} checked={industrySlug === industry.slug} onChange={() => setIndustrySlug(industry.slug)} className="mt-1 accent-primary"/><span><span className="block font-semibold">{industry.name}</span><span className="mt-1 block text-xs text-gray-500">{industry.description}</span></span></span></label>)}</div>
 			</fieldset>
 			<fieldset disabled={plansLoading || !availablePlans.length}>

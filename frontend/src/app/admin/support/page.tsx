@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
 	Ticket,
@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 
 interface SupportTicket {
 	id: string
@@ -80,13 +81,10 @@ export default function AdminSupportPage() {
 	const [updatingTicket, setUpdatingTicket] = useState(false)
 	const [replying, setReplying] = useState(false)
 	const [exporting, setExporting] = useState(false)
+	const [requestGuard] = useState(createLatestRequestGuard)
 
-	useEffect(() => {
-		fetchTickets()
-		fetchStats()
-	}, [statusFilter, priorityFilter, categoryFilter, searchQuery])
-
-	const fetchTickets = async () => {
+	const fetchTickets = useCallback(async () => {
+		const requestId = requestGuard.begin()
 		try {
 			setLoading(true)
 			const params = new URLSearchParams({
@@ -102,6 +100,7 @@ export default function AdminSupportPage() {
 			}
 
 			const data = await response.json()
+			if (!requestGuard.isCurrent(requestId)) return
 			setTickets(
 				data.tickets.map((t: SupportTicket) => ({
 					...t,
@@ -110,11 +109,18 @@ export default function AdminSupportPage() {
 				})),
 			)
 		} catch (err) {
+			if (!requestGuard.isCurrent(requestId)) return
 			console.error("Error fetching tickets:", err)
 		} finally {
-			setLoading(false)
+			if (requestGuard.isCurrent(requestId)) setLoading(false)
 		}
-	}
+	}, [statusFilter, priorityFilter, categoryFilter, searchQuery, requestGuard])
+
+	useEffect(() => {
+		void fetchTickets()
+		void fetchStats()
+		return () => requestGuard.invalidate()
+	}, [fetchTickets, requestGuard])
 
 	const fetchStats = async () => {
 		try {

@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Loader2, Mail, MapPin, Store } from "lucide-react"
 import { FaWhatsapp } from "react-icons/fa"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
@@ -30,6 +30,7 @@ export default function CheckoutPage() {
 	const [error, setError] = useState("")
 	const [success, setSuccess] = useState("")
 	const [busy, setBusy] = useState<BusyMethod>(null)
+	const orderAttempt = useRef<{ fingerprint: string; key: string; storageKey: string } | null>(null)
 
 	if (items.length === 0 && !success) return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-3xl font-bold">No products selected</h1><p className="mt-3 text-gray-500">Choose a product first, then return here to pay or contact the store.</p><Link href={getStoreRouteHref(store, "/products")} className="btn-primary mt-8 inline-flex">Browse products</Link></div>
 
@@ -47,7 +48,28 @@ export default function CheckoutPage() {
 	}
 
 	async function createOrder(paymentMethod: "MPESA" | "PAY_ON_DELIVERY") {
-		return fetch(getStoreRouteHref(store, "/api/orders"), { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ items: enquiryItems, shippingAddress: { fullName: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim().toLowerCase(), county: county.trim(), town: town.trim(), address: address.trim(), landmark: landmark.trim() || undefined }, deliveryMethod: "standard", paymentMethod, notes: message.trim() || undefined }) })
+		const payload = { items: enquiryItems, shippingAddress: { fullName: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim().toLowerCase(), county: county.trim(), town: town.trim(), address: address.trim(), landmark: landmark.trim() || undefined }, deliveryMethod: "standard", paymentMethod, notes: message.trim() || undefined }
+		const body = JSON.stringify(payload)
+		const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${store.storeId}:${body}`))
+		const fingerprint = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
+		const storageKey = `checkout-order-key:${store.storeId}:${fingerprint}`
+		if (orderAttempt.current?.fingerprint !== fingerprint) {
+			let key = ""
+			try { key = sessionStorage.getItem(storageKey) || "" } catch { /* Fall back to this mounted checkout attempt. */ }
+			if (!key) {
+				key = crypto.randomUUID()
+				try { sessionStorage.setItem(storageKey, key) } catch { /* The ref still preserves retries until this page unmounts. */ }
+			}
+			orderAttempt.current = { fingerprint, key, storageKey }
+		}
+		return fetch(getStoreRouteHref(store, "/api/orders"), { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": orderAttempt.current.key }, body })
+	}
+
+	function clearCheckoutAttempt() {
+		if (orderAttempt.current) {
+			try { sessionStorage.removeItem(orderAttempt.current.storageKey) } catch { /* Storage can be unavailable in private browsing contexts. */ }
+			orderAttempt.current = null
+		}
 	}
 
 	async function payWithMpesa() {
@@ -68,7 +90,7 @@ export default function CheckoutPage() {
 				await new Promise((resolve) => window.setTimeout(resolve, 3500))
 				const verifyResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/verify"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference }) })
 				const verification = await verifyResponse.json().catch(() => ({}))
-				if (verification.status === "COMPLETED") { clearCart(); setSuccess(`Payment received. Order #${String(order.id).slice(-8).toUpperCase()} is confirmed by ${store.brand.name}.`); addToast("M-Pesa payment completed successfully.", "success"); return }
+				if (verification.status === "COMPLETED") { clearCheckoutAttempt(); clearCart(); setSuccess(`Payment received. Order #${String(order.id).slice(-8).toUpperCase()} is confirmed by ${store.brand.name}.`); addToast("M-Pesa payment completed successfully.", "success"); return }
 				if (verification.status === "FAILED" || verification.status === "CANCELLED") throw new Error(verification.message || "M-Pesa payment was not completed")
 			}
 			setSuccess(`Your M-Pesa request is still pending. Order #${String(order.id).slice(-8).toUpperCase()} will be confirmed automatically after provider confirmation.`)
@@ -84,7 +106,7 @@ export default function CheckoutPage() {
 			const response = await createOrder("PAY_ON_DELIVERY")
 			const order = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(order.message || "Unable to place the order")
-			clearCart(); setSuccess(`Order #${String(order.id).slice(-8).toUpperCase()} was placed with pay on delivery. ${store.brand.name} will contact you to confirm delivery.`); addToast("Order placed successfully.", "success")
+			clearCheckoutAttempt(); clearCart(); setSuccess(`Order #${String(order.id).slice(-8).toUpperCase()} was placed with pay on delivery. ${store.brand.name} will contact you to confirm delivery.`); addToast("Order placed successfully.", "success")
 		} catch (reason) { const text = reason instanceof Error ? reason.message : "Unable to place the order"; setError(text); addToast(text, "error") } finally { setBusy(null) }
 	}
 
