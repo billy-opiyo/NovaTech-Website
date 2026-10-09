@@ -26,12 +26,14 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = cardIntentSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
-		if (validated.orderId) {
-			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, guestEmail: true } })
+		if (!validated.orderId) return NextResponse.json({ message: "A store order is required for card payment." }, { status: 400 })
+		{
+			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, guestEmail: true, paymentMethod: true } })
 			const session = await getServerSession()
 			if (!order || (order.userId && order.userId !== session?.user?.id) || (!order.userId && order.guestEmail !== validated.customerEmail.trim().toLowerCase())) {
 				return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
 			}
+			if (order.paymentMethod !== "CARD") return NextResponse.json({ message: "This order was not created for card payment." }, { status: 409 })
 		}
 
 		const result = await createCardPaymentIntent({

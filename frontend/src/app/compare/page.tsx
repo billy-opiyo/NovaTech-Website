@@ -8,6 +8,7 @@ import { getProductImage as getProductImageForIndustry } from "@/constants/produ
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getProductSpecsWithAttributes } from "@/lib/product-specs"
+import { getIndustryComparisonFields, getStoreCompareStorageKey } from "@/lib/industry-compare"
 
 type CompareProduct = {
 	id: string
@@ -22,18 +23,12 @@ type CompareProduct = {
 	attributeValues?: { definition?: { name?: string | null; key?: string | null }; displayValue?: string | null; value?: unknown }[]
 }
 
-const electronicsSpecs = ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"]
-
 export default function ComparePage() {
 	const store = useStoreContext()
 	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
-	const compareStorageKey = store.industry?.slug === "electronics" ? "novatech-compare" : `compare:${store.storeId}`
+	const compareStorageKey = getStoreCompareStorageKey(store.storeId)
 	const productsEndpoint = getStoreRouteHref(store, "/api/products")
-	const allSpecs = store.industry?.slug === "cakes"
-		? ["Flavor", "Weight", "Layers", "Servings", "Dietary details"]
-		: store.industry?.slug === "furniture"
-			? ["Material", "Width", "Height", "Depth", "Color", "Finish"]
-			: electronicsSpecs
+	const allSpecs = getIndustryComparisonFields(store.industry?.slug)
 	const [compareItems, setCompareItems] = useState<CompareProduct[]>([])
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [searchQuery, setSearchQuery] = useState("")

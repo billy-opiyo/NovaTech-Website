@@ -2,19 +2,15 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import prisma from "../../backend/lib/db"
 import { getFeaturedProducts, getSimilarProducts } from "../../backend/services/recommendation.service"
+import { mockPrismaMethod } from "./mock-prisma-method"
 
 test("recommendation reads stay inside the resolved tenant", async () => {
-	const productFindMany = prisma.product.findMany
-	const productFindFirst = prisma.product.findFirst
-	const storeFindFirst = prisma.store.findFirst
-	const storeFindUnique = prisma.store.findUnique
-	const categoryFindMany = prisma.category.findMany
 	const calls: Array<{ method: string; where: unknown }> = []
-	;(prisma.product.findMany as any) = async ({ where }: any) => { calls.push({ method: "findMany", where }); return [] }
-	;(prisma.product.findFirst as any) = async ({ where }: any) => { calls.push({ method: "findFirst", where }); return null }
-	;(prisma.store.findFirst as any) = async ({ where }: any) => { calls.push({ method: "store.findFirst", where }); return { commerceSettings: {} } }
-	;(prisma.store.findUnique as any) = async ({ where }: any) => { calls.push({ method: "store.findUnique", where }); return { id: "store-a", commerceSettings: {} } }
-	;(prisma.category.findMany as any) = async ({ where }: any) => { calls.push({ method: "category.findMany", where }); return [] }
+	const restoreProductFindMany = mockPrismaMethod(prisma.product, "findMany", async ({ where }: { where: unknown }) => { calls.push({ method: "findMany", where }); return [] })
+	const restoreProductFindFirst = mockPrismaMethod(prisma.product, "findFirst", async ({ where }: { where: unknown }) => { calls.push({ method: "findFirst", where }); return null })
+	const restoreStoreFindFirst = mockPrismaMethod(prisma.store, "findFirst", async ({ where }: { where: unknown }) => { calls.push({ method: "store.findFirst", where }); return { commerceSettings: {} } })
+	const restoreStoreFindUnique = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: unknown }) => { calls.push({ method: "store.findUnique", where }); return { id: "store-a", commerceSettings: {} } })
+	const restoreCategoryFindMany = mockPrismaMethod(prisma.category, "findMany", async ({ where }: { where: unknown }) => { calls.push({ method: "category.findMany", where }); return [] })
 	try {
 		assert.deepEqual(await getFeaturedProducts("tenant-a", 4), [])
 		assert.deepEqual(await getSimilarProducts("product-b", "tenant-a", 4), [])
@@ -28,10 +24,10 @@ test("recommendation reads stay inside the resolved tenant", async () => {
 			{ method: "findFirst", where: { id: "product-b", tenantId: "tenant-a" } },
 		])
 	} finally {
-		;(prisma.product.findMany as any) = productFindMany
-		;(prisma.product.findFirst as any) = productFindFirst
-		;(prisma.store.findFirst as any) = storeFindFirst
-		;(prisma.store.findUnique as any) = storeFindUnique
-		;(prisma.category.findMany as any) = categoryFindMany
+		restoreProductFindMany()
+		restoreProductFindFirst()
+		restoreStoreFindFirst()
+		restoreStoreFindUnique()
+		restoreCategoryFindMany()
 	}
 })

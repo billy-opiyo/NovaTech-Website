@@ -23,6 +23,7 @@ import { getStoreRouteHref } from "@/lib/store-home"
 import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import ProductActions from "@/components/product/ProductActions"
+import { getProductCardHighlights } from "@/lib/product-card-highlights"
 
 // Types
 interface Product {
@@ -40,6 +41,7 @@ interface Product {
 	variants?: { stock: number }[]
 	availableStock: number
 	specs?: Record<string, string>
+	attributeValues?: { displayValue?: string | null; value?: unknown; definition?: { name?: string | null } }[]
 }
 
 interface FilterState {
@@ -749,6 +751,7 @@ function ProductListItem({
 }) {
 	const store = useStoreContext()
 	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
+	const highlights = getProductCardHighlights(store.industry?.slug, product.specs, product.attributeValues)
 	return (
 		<motion.div
 			initial={{ opacity: 0, x: -20 }}
@@ -795,11 +798,9 @@ function ProductListItem({
 								({product.reviewCount} reviews)
 							</span>
 						</div>
-						<p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-							{Object.entries(product.specs || {})
-								.map(([key, val]) => `${key}: ${val}`)
-								.join(" | ")}
-						</p>
+						{highlights.length > 0 && <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+							{highlights.map(({ label, value }) => `${label}: ${value}`).join(" | ")}
+						</p>}
 					</div>
 					<div className="flex items-baseline gap-2 mt-2">
 						{product.discountedPrice ? (

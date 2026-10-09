@@ -551,6 +551,8 @@ export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 			},
 		})
 		if (!order || order.status !== "PENDING") return order
+		const claimed = await tx.order.updateMany({ where: { id: orderId, tenantId: order.tenantId, status: "PENDING" }, data: { status: "CANCELLED" } })
+		if (claimed.count !== 1) return tx.order.findUnique({ where: { id: orderId, tenantId: order.tenantId } })
 
 		for (const item of order.items) {
 			const selectedVariant = resolveVariantSelection(item.product.variants, item.variant)
@@ -564,7 +566,7 @@ export async function cancelPendingOrder(orderId: string, tenantId?: string) {
 				await tx.product.updateMany({ where: { id: item.productId, tenantId: order.tenantId }, data: { stock: { increment: item.quantity } } })
 			}
 		}
-		return tx.order.update({ where: { id: orderId, ...(tenantId ? { tenantId } : {}) }, data: { status: "CANCELLED" } })
+		return tx.order.findUnique({ where: { id: orderId, tenantId: order.tenantId } })
 	})
 }
 
@@ -575,5 +577,36 @@ export async function confirmPendingOrder(orderId: string, tenantId?: string) {
 	return prisma.order.findFirst({
 		where,
 		include: { items: { include: { product: { select: { name: true, slug: true, images: true } } } } },
+	})
+}
+
+export async function finalizePendingOrderPayment(input: { paymentId: string; orderId: string; tenantId: string; metadata?: Record<string, unknown> }) {
+	return prisma.$transaction(async (tx) => {
+		const [payment, order] = await Promise.all([
+			tx.payment.findFirst({ where: { id: input.paymentId, orderId: input.orderId, tenantId: input.tenantId, kind: "ORDER" } }),
+			tx.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, select: { id: true, status: true } }),
+		])
+		if (!payment || !order) throw new Error("Payment order is not available in this store")
+
+		const claimed = await tx.order.updateMany({ where: { id: input.orderId, tenantId: input.tenantId, status: "PENDING" }, data: { status: "CONFIRMED" } })
+		const settledOrderStatus = claimed.count === 1
+			? "CONFIRMED"
+			: (await tx.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, select: { id: true, status: true } }))?.status
+		const refundRequired = claimed.count !== 1 && settledOrderStatus === "CANCELLED"
+		const updatedPayment = await tx.payment.update({
+			where: { id: payment.id },
+			data: {
+				status: "COMPLETED",
+				metadata: {
+					...((payment.metadata && typeof payment.metadata === "object" && !Array.isArray(payment.metadata)) ? payment.metadata as Record<string, unknown> : {}),
+					...(input.metadata || {}),
+					orderSettlement: refundRequired ? "REFUND_REQUIRED_ORDER_CANCELLED" : settledOrderStatus && settledOrderStatus !== "PENDING" ? "ORDER_CONFIRMED" : "REVIEW_REQUIRED",
+				},
+			},
+		})
+		const confirmedOrder = claimed.count === 1 || (settledOrderStatus !== undefined && settledOrderStatus !== "PENDING" && settledOrderStatus !== "CANCELLED")
+			? await tx.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, include: { items: { where: { tenantId: input.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
+			: null
+		return { payment: updatedPayment, order: confirmedOrder, refundRequired, reviewRequired: !confirmedOrder && !refundRequired }
 	})
 }

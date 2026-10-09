@@ -43,7 +43,7 @@ export async function GET() {
 		const tenant = await prisma.tenant.findUnique({ where: { id: context.tenantId }, select: { id: true, verificationStatus: true, verificationSubmittedAt: true, verificationReviewedAt: true, verificationNotes: true, verificationProfile: { select: { businessType: true, taxStatus: true, locationType: true, settlementAccountType: true, phoneVerifiedAt: true, updatedAt: true } }, verificationEvidence: { orderBy: { createdAt: "desc" }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, reviewedAt: true, reviewNote: true, createdAt: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant workspace not found" }, { status: 404 })
 		return NextResponse.json({ verification: tenant, verificationRequired: isMerchantVerificationRequired() })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Verification status unavailable")
 	}
 }
@@ -90,8 +90,8 @@ export async function POST(request: Request) {
 		}
 		const verification = await prisma.tenant.update({ where: { id: context.tenantId }, data: { verificationStatus: "PENDING_REVIEW", verificationSubmittedAt: new Date(), verificationReviewedAt: null, verificationReviewerId: null, verificationNotes: null }, select: { verificationStatus: true, verificationSubmittedAt: true } })
 		return NextResponse.json({ message: "Verification request submitted for Nurava review.", verification })
-	} catch (error: any) {
-		if (error.message === "Invalid Kenyan phone number format") return NextResponse.json({ message: error.message }, { status: 400 })
+	} catch (error: unknown) {
+		if (error instanceof Error && error.message === "Invalid Kenyan phone number format") return NextResponse.json({ message: error.message }, { status: 400 })
 		return apiErrorResponse(error, "Unable to submit verification")
 	}
 }

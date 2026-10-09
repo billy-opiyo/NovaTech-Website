@@ -9,7 +9,7 @@ import type {
 	MpesaC2BPayload,
 	WebhookResult,
 } from "../../types/payments"
-import { cancelPendingOrder } from "../../services/order.service"
+import { cancelPendingOrder, finalizePendingOrderPayment } from "../../services/order.service"
 import { applyStripeCheckoutCompleted, applyStripeInvoiceEvent, applyStripeSubscriptionEvent, markBillingPaymentFromMpesa, recordOrderCommission } from "../../billing/service"
 import { z } from "zod"
 import { getMerchantMpesaConfig } from "../merchant-mpesa"
@@ -334,7 +334,12 @@ async function updatePaymentByProviderReference(
 		})
 
 	if (!payment) return null
-	if (payment.status === status || (payment.status === "COMPLETED" && status !== "REFUNDED")) return payment
+	if (payment.status === status || (payment.status === "COMPLETED" && status !== "REFUNDED")) {
+		if (payment.status === "COMPLETED" && status === "COMPLETED" && payment.kind === "ORDER" && payment.orderId && payment.tenantId) {
+			return (await finalizePendingOrderPayment({ paymentId: payment.id, orderId: payment.orderId, tenantId: payment.tenantId })).payment
+		}
+		return payment
+	}
 		if (extra.amount !== undefined && Math.abs(payment.amount - extra.amount) > 0.01) {
 			console.error(`Webhook amount mismatch for ${providerReference}`)
 			return null
@@ -350,10 +355,6 @@ async function updatePaymentByProviderReference(
 				console.error(`Webhook tenant mismatch or missing tenant for ${providerReference}`)
 				return null
 			}
-			if (status === "COMPLETED" && order.status !== "PENDING") {
-				console.error(`Webhook payment arrived for non-pending order ${payment.orderId}`)
-				return null
-			}
 		}
 
 		const existingMetadata =
@@ -367,56 +368,33 @@ async function updatePaymentByProviderReference(
 			...(extra.metadata || {}),
 		}
 
-		const updatedPayment = await prisma.payment.update({
-			where: { id: payment.id },
-			data: {
-				status,
-				...(extra.phoneNumber ? { phoneNumber: extra.phoneNumber } : {}),
-				...(extra.amount ? { amount: extra.amount } : {}),
-				metadata: newMetadata,
-			},
-		})
+		let updatedPayment
+		let updatedOrder = null
+		if (payment.orderId && payment.kind === "ORDER" && status === "COMPLETED" && payment.tenantId) {
+			const settlement = await finalizePendingOrderPayment({ paymentId: payment.id, orderId: payment.orderId, tenantId: payment.tenantId, metadata: newMetadata as Record<string, unknown> })
+			updatedPayment = settlement.payment
+			updatedOrder = settlement.order
+			if (settlement.refundRequired) console.error(`Payment ${payment.id} completed after order cancellation; refund review is required.`)
+			if (settlement.reviewRequired) console.error(`Payment ${payment.id} completed but its order requires reconciliation.`)
+		} else {
+			updatedPayment = await prisma.payment.update({
+				where: { id: payment.id },
+				data: {
+					status,
+					...(extra.phoneNumber ? { phoneNumber: extra.phoneNumber } : {}),
+					...(extra.amount ? { amount: extra.amount } : {}),
+					metadata: newMetadata,
+				},
+			})
+		}
 		if (payment.kind !== "ORDER") await markBillingPaymentFromMpesa({ id: updatedPayment.id, status, kind: updatedPayment.kind, invoiceId: updatedPayment.invoiceId, subscriptionId: updatedPayment.subscriptionId, billingRecordId: updatedPayment.billingRecordId, failureReason: extra.metadata?.resultDesc as string | undefined })
 
 		if (payment.orderId && status === "COMPLETED") {
 			await recordOrderCommission(payment.id)
-			const claimed = await prisma.order.updateMany({ where: { id: payment.orderId, ...(payment.tenantId ? { tenantId: payment.tenantId } : {}), status: "PENDING" }, data: { status: "CONFIRMED" } })
-			if (claimed.count !== 1) return updatedPayment
-			const updatedOrder = await prisma.order.update({
-				where: { id: payment.orderId },
-				data: { status: "CONFIRMED" },
-				include: {
-					items: {
-						include: {
-							product: {
-								select: {
-									name: true,
-									slug: true,
-									images: true,
-								},
-							},
-						},
-					},
-				},
-			})
-
-			// Send order confirmation email (non-blocking)
-			try {
-				const email = updatedOrder.userId
-					? (
-							await prisma.user.findUnique({
-								where: { id: updatedOrder.userId },
-								select: { email: true },
-							})
-						)?.email
-					: shippingAddressEmail(updatedOrder.shippingAddress)
-
-				if (email) {
-					await sendOrderConfirmationEmail(email, updatedOrder)
-				}
-			} catch (emailError) {
-				console.error("Failed to send order confirmation email:", emailError)
-			}
+			if (updatedOrder) try {
+				const email = updatedOrder.userId ? (await prisma.user.findUnique({ where: { id: updatedOrder.userId }, select: { email: true } }))?.email : shippingAddressEmail(updatedOrder.shippingAddress)
+				if (email) await sendOrderConfirmationEmail(email, updatedOrder)
+			} catch (emailError) { console.error("Failed to send order confirmation email:", emailError) }
 		}
 		if (payment.orderId && status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 

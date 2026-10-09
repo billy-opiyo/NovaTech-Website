@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = mpesaVerifySchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
-		const payment = await prisma.payment.findFirst({ where: { tenantId: context.tenantId, OR: [{ providerReference: validated.reference }, { metadata: { path: ["reference"], equals: validated.reference } }] } })
+		const payment = await prisma.payment.findFirst({ where: { tenantId: context.tenantId, provider: "mpesa", OR: [{ providerReference: validated.reference }, { metadata: { path: ["reference"], equals: validated.reference } }] } })
 		if (!payment || payment.kind !== "ORDER" || !payment.orderId) return NextResponse.json({ message: "Shopper payment request not found in this store." }, { status: 404 })
 		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
 		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })

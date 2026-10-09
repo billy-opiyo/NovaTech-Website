@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 import { useStoreContext } from "@/lib/store-context"
+import { getStoreDesignDraftStorageKey } from "@/lib/store-design-draft"
 
 type Draft = {
 	name?: string
@@ -23,11 +24,9 @@ type BusyAction = "saving" | "publishing" | "rollback" | null
 
 type CategorySlot = string
 
-const LOCAL_DRAFT_KEY = "novatech-store-design-draft"
-
-function readLocalDraft(): Draft {
+function readLocalDraft(storageKey: string): Draft {
 	try {
-		const value = JSON.parse(window.localStorage.getItem(LOCAL_DRAFT_KEY) || "null")
+		const value = JSON.parse(window.localStorage.getItem(storageKey) || "null")
 		return value && typeof value === "object" ? value as Draft : {}
 	} catch {
 		return {}
@@ -63,11 +62,14 @@ export default function StoreDesignPage() {
 	const previewBorder = industryPalette?.light?.border || preset.light.border
 
 	useEffect(() => {
-		const localDraft = readLocalDraft()
+		let active = true
+		const storageKey = getStoreDesignDraftStorageKey(store.storeId)
+		const localDraft = readLocalDraft(storageKey)
 		fetch("/api/manage/store/settings", { cache: "no-store" })
 			.then(async (response) => {
 				if (!response.ok) throw new Error("Store settings unavailable")
 				const data = await response.json()
+				if (!active) return
 				const store = data.store || {}
 				setVersions(data.versions || [])
 					const savedDraft = store.draftSettings || {}
@@ -88,11 +90,13 @@ export default function StoreDesignPage() {
 					})
 			})
 			.catch(() => {
+				if (!active) return
 				setDraft(localDraft)
 				setLocalPreview(true)
 				setError("Database unavailable. You can continue in local preview mode; publication is disabled.")
 			})
-	}, [])
+		return () => { active = false }
+	}, [store.storeId])
 
 	function updateDraft(patch: Partial<Draft>) {
 		setDraft((current) => ({ ...current, ...patch }))
@@ -119,7 +123,7 @@ export default function StoreDesignPage() {
 
 	function saveLocalDraft() {
 		try {
-			window.localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(draft))
+			window.localStorage.setItem(getStoreDesignDraftStorageKey(store.storeId), JSON.stringify(draft))
 		} catch {
 			// The editor remains usable if browser storage is disabled.
 		}

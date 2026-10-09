@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs"
 import { defaultCategoryImage, defaultIndustryHomepage } from "../../backend/lib/industry-content"
 import { cakeCustomizationsSchema, normalizeIndustryCustomizations } from "../../backend/lib/cake-customizations"
 import { DEMO_STORE_WHATSAPP_NUMBER, resolveStoreWhatsAppNumber } from "../../frontend/src/lib/demo-store-config"
-import { getProductEnquiryTopics, getProductSupportDescription } from "../../frontend/src/lib/industry-copy"
+import { getProductEnquiryTopics, getProductSearchPlaceholder, getProductSupportDescription } from "../../frontend/src/lib/industry-copy"
 import { getProductSpecsWithAttributes } from "../../frontend/src/lib/product-specs"
+import { getIndustryComparisonFields, getStoreCompareStorageKey } from "../../frontend/src/lib/industry-compare"
+import { getStoreDesignDraftStorageKey } from "../../frontend/src/lib/store-design-draft"
 
 test("industry homepage defaults provide relevant copy without hero artwork", () => {
 	const furniture = defaultIndustryHomepage({ name: "Furniture", slug: "furniture" })
@@ -29,9 +31,10 @@ test("category defaults select artwork by industry and category instead of blank
 	assert.equal(defaultCategoryImage("furniture", "Beds", "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"), "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85")
 })
 
-test("only the demo furniture and cake stores use the explicitly approved WhatsApp fallback", () => {
+test("the industry demo stores use the explicitly approved shared WhatsApp fallback", () => {
 	assert.equal(resolveStoreWhatsAppNumber("nurava-cakes", ""), DEMO_STORE_WHATSAPP_NUMBER)
 	assert.equal(resolveStoreWhatsAppNumber("nurava-furnitures", undefined), DEMO_STORE_WHATSAPP_NUMBER)
+	assert.equal(resolveStoreWhatsAppNumber("nurava-boutiques", undefined), DEMO_STORE_WHATSAPP_NUMBER)
 	assert.equal(resolveStoreWhatsAppNumber("merchant-store", ""), "")
 	assert.equal(resolveStoreWhatsAppNumber("nurava-cakes", "254711111111"), "254711111111")
 })
@@ -41,6 +44,55 @@ test("industry support and enquiry copy avoids irrelevant electronics wording", 
 	assert.doesNotMatch(getProductEnquiryTopics("cakes"), /warranty/i)
 	assert.match(getProductSupportDescription("furniture"), /materials.*dimensions.*assembly/i)
 	assert.doesNotMatch(getProductSupportDescription("furniture"), /warranty/i)
+})
+
+test("boutique search, enquiry, and support copy is tailored to apparel and accessories", () => {
+	assert.match(getProductSearchPlaceholder("boutiques"), /clothing.*shoes.*sizes.*colours/i)
+	assert.match(getProductEnquiryTopics("boutiques"), /sizes.*fit.*colours.*materials/i)
+	assert.match(getProductSupportDescription("boutiques"), /sizing.*fit.*colours.*materials/i)
+	assert.doesNotMatch(`${getProductSearchPlaceholder("boutiques")} ${getProductEnquiryTopics("boutiques")} ${getProductSupportDescription("boutiques")}`, /laptop|processor|warranty|electronics/i)
+})
+
+test("comparison fields match all four supported store industries", () => {
+	assert.deepEqual(getIndustryComparisonFields("electronics"), ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"])
+	assert.deepEqual(getIndustryComparisonFields("cakes"), ["Flavor", "Weight", "Layers", "Servings", "Dietary details"])
+	assert.deepEqual(getIndustryComparisonFields("furniture"), ["Material", "Width", "Height", "Depth", "Color", "Finish"])
+	const boutiqueFields = getIndustryComparisonFields("boutiques")
+	assert.deepEqual(boutiqueFields, ["For", "Available clothing sizes", "Available shoe sizes", "Color", "Material"])
+	assert.doesNotMatch(boutiqueFields.join(" "), /Processor|RAM|Camera|GPU|Ports/)
+	assert.deepEqual(getIndustryComparisonFields("florist"), ["Brand", "Category", "Availability"])
+})
+
+test("comparison selections and offline design drafts are isolated by store", () => {
+	assert.equal(getStoreCompareStorageKey("store-a"), "compare:store-a")
+	assert.notEqual(getStoreCompareStorageKey("store-a"), getStoreCompareStorageKey("store-b"))
+	assert.notEqual(getStoreCompareStorageKey("electronics-a"), "novatech-compare")
+	assert.equal(getStoreDesignDraftStorageKey("store-a"), "nurava-store-design-draft:store-a")
+	assert.notEqual(getStoreDesignDraftStorageKey("store-a"), getStoreDesignDraftStorageKey("store-b"))
+})
+
+test("boutique contact and FAQ pages offer store-specific apparel guidance", () => {
+	const contactPage = readFileSync("frontend/src/app/contact/page.tsx", "utf8")
+	const faqsPage = readFileSync("frontend/src/app/faqs/page.tsx", "utf8")
+	assert.match(contactPage, /industrySlug === "boutiques"[\s\S]*Clothing & Style[\s\S]*size or fit/i)
+	assert.match(faqsPage, /industrySlug === "boutiques"[\s\S]*size or fit[\s\S]*colours and materials/i)
+})
+
+test("merchant onboarding never disguises an industry API failure as electronics-only availability", () => {
+	const onboardingPage = readFileSync("frontend/src/app/onboarding/page.tsx", "utf8")
+	assert.match(onboardingPage, /industriesError/)
+	assert.match(onboardingPage, /Choose an available industry before creating the store/)
+	assert.match(onboardingPage, /options\.find\(\(industry\) => industry\.slug === "electronics"\)/)
+	assert.doesNotMatch(onboardingPage, /setIndustries\(\[\{ id: "electronics-fallback"/)
+})
+
+test("checkout reuses a PII-free hashed idempotency key across reloads and clears it after success", () => {
+	const checkoutPage = readFileSync("frontend/src/app/checkout/page.tsx", "utf8")
+	assert.match(checkoutPage, /crypto\.subtle\.digest\("SHA-256"/)
+	assert.match(checkoutPage, /sessionStorage\.getItem\(storageKey\)/)
+	assert.match(checkoutPage, /sessionStorage\.setItem\(storageKey, key\)/)
+	assert.match(checkoutPage, /sessionStorage\.removeItem\(orderAttempt\.current\.storageKey\)/)
+	assert.doesNotMatch(checkoutPage, /Idempotency-Key": crypto\.randomUUID\(\)/)
 })
 
 test("warranty controls and deal copy respect the active storefront industry", () => {
