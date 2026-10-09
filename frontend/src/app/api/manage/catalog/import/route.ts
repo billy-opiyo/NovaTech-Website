@@ -28,7 +28,7 @@ function parseAttributes(row: CatalogCsvRow): Record<string, unknown> | undefine
 	}
 }
 
-function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string, string>) {
+function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string, string>, isElectronics: boolean) {
 	for (const field of REQUIRED) if (!row[field]?.trim()) throw new Error(`Missing ${field}`)
 	const name = row.name.trim()
 	const slug = (row.slug || slugify(name)).trim()
@@ -45,7 +45,8 @@ function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string,
 	if (discountedPrice !== null && discountedPrice <= 0) throw new Error("discountedPrice must be positive")
 	if (discountedPrice !== null && discountedPrice > price) throw new Error("discountedPrice cannot exceed price")
 	let specs: Record<string, string> | undefined
-	if (row.specs?.trim()) { try { const parsed = JSON.parse(row.specs); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); specs = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, String(value)])) } catch { throw new Error("specs must be a JSON object") } }
+	if (!isElectronics && (row.warranty?.trim() || row.specs?.trim())) throw new Error("Warranty and legacy specifications are only available for Electronics stores. Use the attributes column for this store's product details.")
+	if (isElectronics && row.specs?.trim()) { try { const parsed = JSON.parse(row.specs); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); specs = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, String(value)])) } catch { throw new Error("specs must be a JSON object") } }
 	let variants: Array<{ name: string; value: string; priceModifier?: number; stock?: number; sku?: string }> | undefined
 	if (row.variants?.trim()) {
 		try {
@@ -55,7 +56,7 @@ function parseRow(row: CatalogCsvRow, rowNumber: number, categories: Map<string,
 			if (variants.some((variant) => !variant.name || !variant.value || (variant.priceModifier !== undefined && !Number.isFinite(variant.priceModifier)) || (variant.stock !== undefined && (!Number.isInteger(variant.stock) || variant.stock < 0)))) throw new Error()
 		} catch { throw new Error("variants must be a valid JSON array with non-negative stock") }
 	}
-	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price, discountedPrice, stock, warranty: row.warranty?.trim() || null, categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), isTrending: bool(row.isTrending || ""), specs, variants, attributes: parseAttributes(row) }
+	return { rowNumber, name, slug, description: row.description.trim(), brand: row.brand.trim(), sku: row.sku.trim(), price, discountedPrice, stock, ...(isElectronics ? { warranty: row.warranty?.trim() || null, specs } : {}), categoryId, images, isFeatured: bool(row.isFeatured || ""), isNewArrival: bool(row.isNewArrival || ""), isTrending: bool(row.isTrending || ""), variants, attributes: parseAttributes(row) }
 }
 
 export async function POST(request: NextRequest) {
@@ -77,11 +78,12 @@ export async function POST(request: NextRequest) {
 			getStoreIndustry(context.storeId, context.tenantId),
 		])
 		const definitions = storeIndustry?.industry?.attributeDefinitions ?? []
+		const isElectronics = storeIndustry?.industry?.slug === "electronics"
 		const categoryMap = new Map(categories.flatMap((category) => [[category.name.toLowerCase(), category.id], [category.slug.toLowerCase(), category.id]]))
 		const seenSkus = new Set<string>()
 		const parsedRows: Array<ReturnType<typeof parseRow>> = []
 		const errors: Array<{ row: number; message: string }> = []
-		rows.forEach((row, index) => { try { const parsed = parseRow(row, index + 2, categoryMap); if (seenSkus.has(parsed.sku)) throw new Error("duplicate SKU in this file"); seenSkus.add(parsed.sku); parsedRows.push(parsed) } catch (error: unknown) { errors.push({ row: index + 2, message: error instanceof Error ? error.message : "Invalid row" }) } })
+		rows.forEach((row, index) => { try { const parsed = parseRow(row, index + 2, categoryMap, isElectronics); if (seenSkus.has(parsed.sku)) throw new Error("duplicate SKU in this file"); seenSkus.add(parsed.sku); parsedRows.push(parsed) } catch (error: unknown) { errors.push({ row: index + 2, message: error instanceof Error ? error.message : "Invalid row" }) } })
 		const existing = await prisma.product.findMany({
 			where: { tenantId: context.tenantId, storeId: context.storeId, sku: { in: parsedRows.map((row) => row.sku) } },
 			select: { id: true, sku: true, attributeValues: { select: { definitionId: true, value: true } } },
@@ -116,14 +118,14 @@ export async function POST(request: NextRequest) {
 				const current = existingBySku.get(row.sku)
 				await prisma.$transaction(async (transaction) => {
 					if (current) {
-						await transaction.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending, specs: row.specs } })
+						await transaction.product.update({ where: { id: current.id }, data: { name: row.name, slug: row.slug, description: row.description, brand: row.brand, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, ...(isElectronics ? { warranty: row.warranty, specs: row.specs } : {}), categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending } })
 						if (row.replaceAttributes) {
 							await transaction.productAttributeValue.deleteMany({ where: { productId: current.id } })
 							if (row.normalizedAttributes.length) await transaction.productAttributeValue.createMany({ data: row.normalizedAttributes.map((attribute) => ({ productId: current.id, definitionId: attribute.definitionId, value: attribute.value, displayValue: attribute.displayValue })) })
 						}
 					} else {
 						await assertTenantProductLimit(context.tenantId)
-						const product = await transaction.product.create({ data: { tenantId: context.tenantId, storeId: context.storeId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, warranty: row.warranty, categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending, specs: row.specs, variants: row.variants ? { create: row.variants.map((variant) => ({ tenantId: context.tenantId, ...variant })) } : undefined } })
+						const product = await transaction.product.create({ data: { tenantId: context.tenantId, storeId: context.storeId, name: row.name, slug: row.slug, description: row.description, brand: row.brand, sku: row.sku, price: row.price, discountedPrice: row.discountedPrice, stock: row.stock, ...(isElectronics ? { warranty: row.warranty, specs: row.specs } : {}), categoryId: row.categoryId, images: row.images, isFeatured: row.isFeatured, isNewArrival: row.isNewArrival, isTrending: row.isTrending, variants: row.variants ? { create: row.variants.map((variant) => ({ tenantId: context.tenantId, ...variant })) } : undefined } })
 						if (row.normalizedAttributes.length) await transaction.productAttributeValue.createMany({ data: row.normalizedAttributes.map((attribute) => ({ productId: product.id, definitionId: attribute.definitionId, value: attribute.value, displayValue: attribute.displayValue })) })
 					}
 				})

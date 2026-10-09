@@ -238,8 +238,9 @@ export async function searchProducts(query: string, tenantId: string) {
 
 export async function createProduct(data: ProductInput, tenantId: string) {
 	await assertTenantProductLimit(tenantId)
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
+	const isElectronics = store.industry?.slug === "electronics"
 	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId, storeId: store.id }, select: { id: true } })
 	if (!category) throw new Error("Category not found")
 	const attributes = await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
@@ -256,8 +257,8 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 			price: data.price,
 			discountedPrice: data.discountedPrice,
 			stock: data.stock,
-			warranty: data.warranty,
-			specs: data.specs,
+			warranty: isElectronics ? data.warranty : undefined,
+			specs: isElectronics ? data.specs : undefined,
 			images: data.images,
 			categoryId: data.categoryId,
 			isFeatured: data.isFeatured || false,
@@ -291,8 +292,12 @@ export async function updateProduct(slug: string, data: ProductUpdateInput, tena
 	if (update.stock !== undefined) update.stock = Number(update.stock)
 	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
 	if (!product) throw new Error("Product not found")
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
+	if (store.industry?.slug !== "electronics") {
+		delete update.warranty
+		delete update.specs
+	}
 	if (update.categoryId !== undefined) {
 		if (typeof update.categoryId !== "string") throw new Error("Invalid category")
 		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId, storeId: store.id }, select: { id: true } })
