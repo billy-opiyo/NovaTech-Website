@@ -7,6 +7,7 @@ import { useTheme } from "@/components/providers/ThemeProvider"
 import { useStoreContext } from "@/lib/store-context"
 import { useToast } from "@/components/ui/Toast"
 import { IMAGE_TOO_LARGE_MESSAGE, isImageTooLarge } from "@/lib/upload-limits"
+import { FONT_SIZE_LABELS, FONT_SIZE_OPTIONS, type FontSizePreference } from "@/lib/font-size-preference"
 
 type Settings = {
 	name: string
@@ -16,13 +17,14 @@ type Settings = {
 	marketingEmails: boolean
 	orderUpdates: boolean
 	preferredTheme: "light" | "dark"
+	preferredFontSize: FontSizePreference
 }
 
-const defaults: Settings = { name: "", email: "", image: null, emailVerified: null, marketingEmails: false, orderUpdates: true, preferredTheme: "dark" }
+const defaults: Settings = { name: "", email: "", image: null, emailVerified: null, marketingEmails: false, orderUpdates: true, preferredTheme: "dark", preferredFontSize: "site" }
 
 export default function AccountSettingsPage() {
 	const store = useStoreContext()
-	const { theme, setTheme } = useTheme()
+	const { theme, setTheme, setFontSizePreference } = useTheme()
 	const { addToast } = useToast()
 	const [settings, setSettings] = useState<Settings>(defaults)
 	const [loading, setLoading] = useState(true)
@@ -45,14 +47,15 @@ export default function AccountSettingsPage() {
 	function update<K extends keyof Settings>(key: K, value: Settings[K]) {
 		setSettings((current) => ({ ...current, [key]: value }))
 		if (key === "preferredTheme") setTheme(value as "light" | "dark")
+		if (key === "preferredFontSize") setFontSizePreference(value as FontSizePreference)
 	}
 
 	async function save(event: React.FormEvent) {
 		event.preventDefault(); setSaving(true); setMessage(""); setError("")
-		const response = await fetch("/api/account/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: settings.name, marketingEmails: settings.marketingEmails, orderUpdates: settings.orderUpdates, preferredTheme: settings.preferredTheme }) })
+		const response = await fetch("/api/account/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: settings.name, marketingEmails: settings.marketingEmails, orderUpdates: settings.orderUpdates, preferredTheme: settings.preferredTheme, preferredFontSize: settings.preferredFontSize }) })
 		const data = await response.json()
 		if (!response.ok) { const message = data.message || "Unable to save your settings."; setError(message); addToast(message, "error") }
-		else { setSettings({ ...defaults, ...data.user }); setTheme(data.user.preferredTheme); setMessage("Your preferences have been saved."); addToast("Your preferences have been saved.", "success") }
+		else { setSettings({ ...defaults, ...data.user }); setTheme(data.user.preferredTheme); setFontSizePreference(data.user.preferredFontSize); setMessage("Your preferences have been saved."); addToast("Your preferences have been saved.", "success") }
 		setSaving(false)
 	}
 
@@ -100,6 +103,7 @@ export default function AccountSettingsPage() {
 				</div>
 				<div className="grid gap-5 sm:grid-cols-2"><label className="block text-sm font-medium">Full name<input required minLength={2} value={settings.name} onChange={(event) => update("name", event.target.value)} className="mt-2 w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-primary" /></label><div><span className="block text-sm font-medium">Email address</span><p className="mt-2 rounded-lg bg-black/5 px-4 py-3 text-gray-500 dark:bg-white/5">{settings.email}</p><p className="mt-2 text-xs text-green-600">{settings.emailVerified ? "Email verified" : "Email not verified"}</p></div></div>
 				<div className="mt-5"><p className="mb-2 text-sm font-medium">Theme</p><div className="flex flex-wrap gap-3">{(["light", "dark"] as const).map((option) => <button type="button" key={option} onClick={() => update("preferredTheme", option)} className={`rounded-lg border px-4 py-2 text-sm capitalize transition ${settings.preferredTheme === option || (!settings.preferredTheme && theme === option) ? "border-primary bg-primary text-white" : "border-gray-300 dark:border-gray-600 hover:border-primary"}`}>{option}</button>)}</div></div>
+				<label className="mt-5 block max-w-md text-sm font-medium">Font size<select value={settings.preferredFontSize} onChange={(event) => update("preferredFontSize", event.target.value as FontSizePreference)} className="mt-2 w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-primary"><option value="site">Use site default</option>{FONT_SIZE_OPTIONS.map((option) => <option value={option} key={option}>{FONT_SIZE_LABELS[option]}</option>)}</select><span className="mt-1 block text-xs font-normal text-gray-500">Your choice follows your account across the platform, storefronts, and Android app.</span></label>
 			</section>
 			<section className="glass-card p-6"><h2 className="mb-5 flex items-center gap-2 text-xl font-semibold"><Bell className="text-primary" size={21} /> Notifications</h2><div className="space-y-4"><label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl bg-black/5 p-4 dark:bg-white/5"><span className="flex gap-3"><Bell className="mt-0.5 text-primary" size={19} /><span><span className="block font-medium">Order updates</span><span className="text-sm text-gray-500">Receive important updates about delivery and payment.</span></span></span><input type="checkbox" checked={settings.orderUpdates} onChange={(event) => update("orderUpdates", event.target.checked)} className="mt-1 h-5 w-5 accent-primary" /></label><label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl bg-black/5 p-4 dark:bg-white/5"><span className="flex gap-3"><Megaphone className="mt-0.5 text-accent" size={19} /><span><span className="block font-medium">Deals and product news</span><span className="text-sm text-gray-500">Get occasional offers, new arrivals, and useful store updates.</span></span></span><input type="checkbox" checked={settings.marketingEmails} onChange={(event) => update("marketingEmails", event.target.checked)} className="mt-1 h-5 w-5 accent-primary" /></label></div></section>
 			{error && <p className="text-sm text-red-500">{error}</p>}{message && <p className="flex items-center gap-2 text-sm text-green-600"><CheckCircle2 size={16} />{message}</p>}

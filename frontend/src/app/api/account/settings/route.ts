@@ -10,6 +10,7 @@ const settingsSchema = z.object({
 	marketingEmails: z.boolean(),
 	orderUpdates: z.boolean(),
 	preferredTheme: z.enum(["light", "dark"]),
+	preferredFontSize: z.enum(["site", "small", "normal", "large", "extraLarge"]).optional(),
 })
 
 const profileImageTypes = new Map<string, { extension: string; kind: ValidatedFileKind }>([
@@ -19,7 +20,7 @@ const profileImageTypes = new Map<string, { extension: string; kind: ValidatedFi
 	["image/gif", { extension: "gif", kind: "GIF" }],
 ])
 
-const userSelect = { id: true, name: true, email: true, image: true, emailVerified: true, marketingEmails: true, orderUpdates: true, preferredTheme: true } as const
+const userSelect = { id: true, name: true, email: true, image: true, emailVerified: true, marketingEmails: true, orderUpdates: true, preferredTheme: true, preferredFontSize: true } as const
 
 async function currentUser() {
 	const session = await getServerSession()

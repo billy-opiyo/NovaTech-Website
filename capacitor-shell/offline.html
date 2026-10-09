@@ -59,15 +59,32 @@
 			(() => {
 				const targetUrl = new URLSearchParams(window.location.search).get("url");
 				if (!targetUrl) return;
+				let checking = false;
+				let retryTimer;
 				const checkConnection = async () => {
+					if (checking) return;
+					checking = true;
 					try {
-						await fetch(targetUrl, { method: "HEAD", mode: "no-cors", cache: "no-store" });
+						const controller = new AbortController();
+						const timeout = window.setTimeout(() => controller.abort(), 8000);
+						await fetch(targetUrl, { method: "GET", mode: "no-cors", cache: "no-store", signal: controller.signal });
+						window.clearTimeout(timeout);
 						window.location.replace(targetUrl);
 					} catch {
-						window.setTimeout(checkConnection, 4000);
+						checking = false;
+						retryTimer = window.setTimeout(checkConnection, 2000);
 					}
 				};
-				window.setTimeout(checkConnection, 4000);
+				const retryWhenVisible = () => {
+					if (document.visibilityState === "visible") {
+						window.clearTimeout(retryTimer);
+						void checkConnection();
+					}
+				};
+				window.addEventListener("online", retryWhenVisible);
+				document.addEventListener("visibilitychange", retryWhenVisible);
+				window.addEventListener("pageshow", retryWhenVisible);
+				void checkConnection();
 			})();
 		</script>
 	</body>

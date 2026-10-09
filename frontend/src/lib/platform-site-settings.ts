@@ -1,4 +1,5 @@
 import { clientConfig } from "@/config/client.config"
+import type { FontSizeOption } from "@/lib/font-size-preference"
 
 export type PlatformTeamMember = {
 	id: string
@@ -39,6 +40,7 @@ export type PlatformDesignSettings = {
 	typography?: {
 		bodyFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
 		headingFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
+		fontSize?: FontSizeOption
 	}
 	glass?: {
 		blurPx?: number
@@ -179,7 +181,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			choose: { title: "Choose", text: "Select the best store that suits you." },
 			buyFromStore: { title: "Buy from Store", text: "Complete your purchase directly on the store's site." },
 		},
-		design: { themePreset: "nova-blue-orange" },
+		design: { themePreset: "nova-blue-orange", typography: { fontSize: "normal" } },
 		legal: {
 			terms: "Nurava HubStores provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
 			privacy: "Nurava HubStores processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",

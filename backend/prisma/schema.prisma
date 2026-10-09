@@ -20,6 +20,7 @@ model User {
   marketingEmails  Boolean       @default(false)
   orderUpdates     Boolean       @default(true)
   preferredTheme   String        @default("dark")
+  preferredFontSize String       @default("site")
   preferredStoreId String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
