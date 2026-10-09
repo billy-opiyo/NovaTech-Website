@@ -23,6 +23,10 @@ export type PlatformResponsiveAssets = {
 	lightMobile?: string
 }
 
+export const PLATFORM_DISCOVERY_CARD_KEYS = ["businesses", "customers", "compare", "choose", "buyFromStore"] as const
+export type PlatformDiscoveryCardKey = typeof PLATFORM_DISCOVERY_CARD_KEYS[number]
+export type PlatformDiscoveryCardCopy = { title?: string; text?: string }
+
 export type PlatformDesignSettings = {
 	themePreset?: string
 	colors?: {
@@ -108,6 +112,7 @@ export type PlatformSiteSettings = {
 		/** Legacy values are accepted when reading saved settings but are never merged or rendered. */
 		images?: PlatformResponsiveAssets
 	}
+	discoveryCards?: Partial<Record<PlatformDiscoveryCardKey, PlatformDiscoveryCardCopy>>
 	design?: PlatformDesignSettings
 	legal?: {
 		terms?: string
@@ -167,6 +172,13 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			highlight: "connecting you with trusted stores",
 			description: "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya.",
 		},
+		discoveryCards: {
+			businesses: { title: "For Businesses", text: "Create, Manage and Grow your Online Store" },
+			customers: { title: "For Customers", text: "Discover products from trusted businesses" },
+			compare: { title: "Compare", text: "Compare prices, offers and store ratings." },
+			choose: { title: "Choose", text: "Select the best store that suits you." },
+			buyFromStore: { title: "Buy from Store", text: "Complete your purchase directly on the store's site." },
+		},
 		design: { themePreset: "nova-blue-orange" },
 		legal: {
 			terms: "Nurava HubStores provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
@@ -208,6 +220,16 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		highlight: nonBlank(patch.hero?.highlight, nonBlank(base.hero?.highlight, defaults.highlight!)),
 		description: nonBlank(patch.hero?.description, nonBlank(base.hero?.description, defaults.description!)),
 	}
+	const defaultDiscoveryCards = getPlatformSiteSettingsDefaults().discoveryCards!
+	const discoveryCards = Object.fromEntries(PLATFORM_DISCOVERY_CARD_KEYS.map((key) => {
+		const fallback = defaultDiscoveryCards[key]
+		const copyValue = (patchValue: string | undefined, baseValue: string | undefined, defaultValue: string) =>
+			patchValue === undefined ? nonBlank(baseValue, defaultValue) : nonBlank(patchValue, defaultValue)
+		return [key, {
+			title: copyValue(patch.discoveryCards?.[key]?.title, base.discoveryCards?.[key]?.title, fallback.title!),
+			text: copyValue(patch.discoveryCards?.[key]?.text, base.discoveryCards?.[key]?.text, fallback.text!),
+		}]
+	})) as PlatformSiteSettings["discoveryCards"]
 	const contact = { ...base.contact, ...patch.contact }
 	// Before the dedicated field existed, the platform settings screen stored
 	// this value as whatsappMessage. Treat it as the floating/social message so
@@ -230,6 +252,7 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 			images: { ...base.splash?.images, ...patch.splash?.images },
 		},
 		hero,
+		discoveryCards,
 		design: {
 			...base.design,
 			...patch.design,

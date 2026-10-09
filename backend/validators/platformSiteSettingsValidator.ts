@@ -124,6 +124,13 @@ export const platformSiteSettingsPatchSchema = z.object({
 		// Legacy saved artwork remains parseable for compatibility; merge strips it.
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),
+	discoveryCards: z.object({
+		businesses: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		customers: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		compare: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		choose: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		buyFromStore: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+	}).strict().optional(),
 	design: platformDesignSchema.optional(),
 	legal: z.object({
 		terms: optionalText(12000),

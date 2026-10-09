@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeftRight, ArrowRight, ChevronDown, Search, ShoppingBag, ShoppingCart, Star, Store } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import { useStoreContext } from "@/lib/store-context"
+import type { PlatformDiscoveryCardKey } from "@/lib/platform-site-settings"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 
 type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
@@ -14,11 +15,11 @@ type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl"
 }
 
 const trustItems = [
-	{ title: "For Businesses", text: "Create, Manage and Grow your Online Store", icon: Store },
-	{ title: "For Customers", text: "Discover products from trusted businesses", icon: Search },
-	{ title: "Compare", text: "Compare prices, offers and store ratings.", icon: ArrowLeftRight },
-	{ title: "Choose", text: "Select the best store that suits you.", icon: ShoppingCart },
-	{ title: "Buy from Store", text: "Complete your purchase directly on the store's site.", icon: ShoppingBag },
+	{ id: "businesses", title: "For Businesses", text: "Create, Manage and Grow your Online Store", icon: Store },
+	{ id: "customers", title: "For Customers", text: "Discover products from trusted businesses", icon: Search },
+	{ id: "compare", title: "Compare", text: "Compare prices, offers and store ratings.", icon: ArrowLeftRight },
+	{ id: "choose", title: "Choose", text: "Select the best store that suits you.", icon: ShoppingCart },
+	{ id: "buyFromStore", title: "Buy from Store", text: "Complete your purchase directly on the store's site.", icon: ShoppingBag },
 ]
 
 function getHeroStores(stores: HeroStore[]): HeroStore[] {
@@ -53,14 +54,18 @@ function StoreCard({ store }: { store: HeroStore }) {
 }
 
 function TrustStrip() {
+	const { platformSettings } = useStoreContext()
 	return (
 		<div className="grid gap-3 lg:grid-cols-5">
-			{trustItems.map(({ title, text, icon: Icon }) => (
-				<div key={title} className="flex items-start gap-3 rounded-xl border border-theme-border bg-theme-surface/80 p-4">
+			{trustItems.map(({ id, title: fallbackTitle, text: fallbackText, icon: Icon }) => {
+				const copy = platformSettings?.discoveryCards?.[id as PlatformDiscoveryCardKey]
+				const title = copy?.title?.trim() || fallbackTitle
+				const text = copy?.text?.trim() || fallbackText
+				return <div key={id} className="flex items-start gap-3 rounded-xl border border-theme-border bg-theme-surface/80 p-4">
 					<Icon className="mt-0.5 shrink-0 text-primary" size={24} />
 					<div><p className="font-bold text-primary">{title}</p><p className="mt-1 text-sm leading-5 text-theme-text">{text}</p></div>
 				</div>
-			))}
+			})}
 		</div>
 	)
 }
