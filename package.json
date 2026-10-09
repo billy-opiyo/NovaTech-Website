@@ -9,6 +9,11 @@
 		"dev": "npm --workspace frontend run dev",
 		"dev:open": "start \"\" http://localhost:3000 && npm --workspace frontend run dev",
 		"build": "npm --workspace frontend run build",
+		"android:sync": "npx cap sync android",
+		"android:open": "npx cap open android",
+		"android:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+		"android:release:apk": "npm run android:sync && cd android && gradlew.bat copyReleaseApk",
+		"android:release:aab": "npm run android:sync && cd android && gradlew.bat bundleRelease",
 		"lint": "npm --workspace frontend run lint && npm --workspace backend run build",
 		"type-check": "npm --workspace frontend exec tsc -- --noEmit && npm --workspace backend run build",
 		"start": "npm --workspace frontend run start",
@@ -29,6 +34,8 @@
 		"twilio": "^6.0.2"
 	},
 	"devDependencies": {
+		"@capacitor/android": "^8.5.3",
+		"@capacitor/cli": "^8.5.3",
 		"@playwright/test": "^1.62.1"
 	}
 }
