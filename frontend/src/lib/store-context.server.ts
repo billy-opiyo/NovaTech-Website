@@ -139,17 +139,38 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
-		const persistedCategories = Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
+		const storedCategorySnapshots = Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
-			const fallback = store.industry?.slug === "electronics" ? clientConfig.homepage.categories.find((item) => item.slug === category.slug) : undefined
-			const categoryTemplate = industryCategories.find((item) => item.slug === category.slug)
-			const configuredImage = typeof category.image === "string" && category.image ? category.image : typeof category.imageUrl === "string" && category.imageUrl ? category.imageUrl : categoryTemplate?.imageUrl || fallback?.image
-			const image = defaultCategoryImage(store.industry?.slug || "", category.name, configuredImage)
-			return [{ name: category.name, slug: category.slug, image }]
-		}) : industryCategories.length
-			? industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
-			: store.industry?.slug === "electronics" ? clientConfig.homepage.categories : []
+			return [{ name: category.name, slug: category.slug, image: typeof category.image === "string" ? category.image : typeof category.imageUrl === "string" ? category.imageUrl : "" }]
+		}) : []
+		const nonElectronicsIndustry = store.industry?.slug !== "electronics"
+		const electronicsCategorySlugs = new Set<string>(clientConfig.homepage.categories.map((category) => category.slug))
+		const persistedCategories = nonElectronicsIndustry
+			? (() => {
+				const storedBySlug = new Map(storedCategorySnapshots.map((category) => [category.slug, category]))
+				const configuredCategories = industryCategories.map((category) => ({
+					name: category.name,
+					slug: category.slug,
+					image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl || storedBySlug.get(category.slug)?.image),
+				}))
+				const templateSlugs = new Set(industryCategories.map((category) => category.slug))
+				const customCategories = storedCategorySnapshots
+					.filter((category) => !templateSlugs.has(category.slug) && !electronicsCategorySlugs.has(category.slug))
+					.map((category) => ({ ...category, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.image) }))
+				return [...configuredCategories, ...customCategories]
+			})()
+			: storedCategorySnapshots.length
+				? storedCategorySnapshots.map((category) => {
+					const categoryTemplate = industryCategories.find((item) => item.slug === category.slug)
+					const fallback = clientConfig.homepage.categories.find((item) => item.slug === category.slug)
+					const configuredImage = category.image || categoryTemplate?.imageUrl || fallback?.image
+
+					return { ...category, image: defaultCategoryImage(store.industry?.slug || "", category.name, configuredImage) }
+				})
+				: store.industry?.slug === "electronics"
+					? clientConfig.homepage.categories
+					: industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
 		const categories = persistedCategories.filter((category) => categoryAvailability[category.slug] !== false).map((category) => {
 			const configuredImage = categoryImages[category.slug]
 			return typeof configuredImage === "string" && configuredImage.trim()

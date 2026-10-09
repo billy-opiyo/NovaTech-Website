@@ -44,7 +44,7 @@ type Product = {
 	averageRating: number
 	reviewCount: number
 	specs?: Record<string, unknown> | null
-	attributeValues?: { id: string; value: unknown; displayValue?: string | null; definition: { id: string; name: string; key: string } }[]
+	attributeValues?: { id: string; value: unknown; displayValue?: string | null; definition: { id: string; industryId: string; name: string; key: string } }[]
 	variants: Variant[]
 	reviews: Review[]
 }
@@ -122,6 +122,10 @@ export default function ProductDetailPage() {
 		? Math.max(0, ...product.variants.map((variant) => variant.stock))
 		: selectedStock
 	const addToCartDisabled = product.variants.length > 0 ? !hasAvailableVariant || (hasCompleteVariantSelection && selectedStock < 1) : selectedStock < 1
+	const electronicsStore = store.industry?.slug === "electronics"
+	const productDetailsTitle = electronicsStore ? "Specifications" : store.industry?.slug === "cakes" ? "Order Details" : store.industry?.slug === "furniture" ? "Furniture Details" : store.industry?.slug === "boutiques" ? "Style & Fit Details" : "Product Details"
+	const detailSpecifications = electronicsStore ? Object.entries(product.specs || {}) : []
+	const industryAttributes = (product.attributeValues || []).filter((attribute) => attribute.definition.industryId === store.industry?.id)
 
 	const cakePreferenceText = [cakeMessage.trim() ? `Message: ${cakeMessage.trim()}` : "", cakeIcing ? `Icing: ${cakeIcing}` : "", cakeEventDate ? `Event date: ${cakeEventDate}` : "", cakeDietaryNotes.trim() ? `Notes: ${cakeDietaryNotes.trim()}` : ""].filter(Boolean).join(", ")
 	const selectedOptionsText = Object.entries(selectedVariants).map(([name, value]) => `${name}: ${value}`).join(" / ")
@@ -208,7 +212,7 @@ export default function ProductDetailPage() {
 			</section>
 
 			<section className="grid gap-8 lg:grid-cols-2">
-				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">{store.industry?.slug === "cakes" ? "Order Details" : "Specifications"}</h2><dl className="divide-y divide-gray-200 dark:divide-gray-700">{Object.entries(product.specs || {}).map(([key, value]) => <div key={key} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{key}</dt><dd className="text-right text-gray-500">{String(value)}</dd></div>)}{(product.attributeValues || []).map((attribute) => <div key={attribute.id} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{attribute.definition.name}</dt><dd className="text-right text-gray-500">{attribute.displayValue || String(attribute.value)}</dd></div>)}</dl><p className="mt-5 text-sm text-gray-500">{store.industry?.slug === "electronics" ? `Warranty: ${product.warranty || "Contact us for warranty details"}` : store.industry?.slug === "cakes" ? "Share custom details with the store so the baker can confirm them before preparation." : store.industry?.slug === "furniture" ? "Contact the store to confirm materials, care, delivery, and any applicable after-sales support." : "Contact the store for product and after-sales details."}</p></div>
+				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">{productDetailsTitle}</h2><dl className="divide-y divide-gray-200 dark:divide-gray-700">{detailSpecifications.map(([key, value]) => <div key={key} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{key}</dt><dd className="text-right text-gray-500">{String(value)}</dd></div>)}{industryAttributes.map((attribute) => <div key={attribute.id} className="flex justify-between gap-4 py-3 text-sm"><dt className="font-medium">{attribute.definition.name}</dt><dd className="text-right text-gray-500">{attribute.displayValue || String(attribute.value)}</dd></div>)}</dl><p className="mt-5 text-sm text-gray-500">{electronicsStore ? `Warranty: ${product.warranty || "Contact us for warranty details"}` : store.industry?.slug === "cakes" ? "Share custom details with the store so the baker can confirm them before preparation." : store.industry?.slug === "furniture" ? "Contact the store to confirm materials, care, delivery, and any applicable after-sales support." : store.industry?.slug === "boutiques" ? "Check the available size, colour, and material details, and contact the store if you need help choosing." : "Contact the store for product and after-sales details."}</p></div>
 				<div className="glass-card p-6"><h2 className="mb-4 text-xl font-semibold">Customer reviews</h2>{product.reviews.length === 0 ? <p className="text-gray-500">No reviews yet.</p> : <div className="space-y-5">{product.reviews.map((review) => <article key={review.id} className="border-b border-gray-200 pb-5 last:border-0 dark:border-gray-700"><div className="flex items-center justify-between"><span className="font-medium">{review.user?.name || "Customer"}</span><span className="flex items-center gap-1 text-sm"><Star size={14} className="fill-yellow-500 text-yellow-500" />{review.rating}</span></div><h3 className="mt-2 font-semibold">{review.title}</h3><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{review.comment}</p>{review.isVerifiedPurchase && <span className="mt-2 inline-block text-xs text-green-600">Verified purchase</span>}</article>)}</div>}<ProductReviewForm productId={product.id} /></div>
 			</section>
 

@@ -60,7 +60,6 @@ const shopperServiceLinks = [
 	{ label: "Contact Us", href: "/contact" },
 	{ label: "FAQs", href: "/faqs" },
 	{ label: "Return Policy", href: "/return-policy" },
-	{ label: "Warranty", href: "/warranty" },
 ]
 
 const merchantServiceLinks = [
@@ -93,6 +92,10 @@ const legalLinks = [
 export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
+	const customerServiceLinks = [...shopperServiceLinks, {
+		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
+		href: "/warranty",
+	}]
 	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
 	const footerDescription = store.isPlatformHome
 		? store.site.footerDescription || `${store.brand.tagline}. Discover independent stores and contact merchants directly.`
@@ -124,7 +127,7 @@ export default function Footer() {
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">{store.isPlatformHome ? "Merchant Support" : "Customer Service"}</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{(store.isPlatformHome ? merchantServiceLinks : shopperServiceLinks).map(({ label, href }) => (
+						{(store.isPlatformHome ? merchantServiceLinks : customerServiceLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}
