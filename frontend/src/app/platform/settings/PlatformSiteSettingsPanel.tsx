@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
-import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
+import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
@@ -17,6 +17,13 @@ const visualSlots = [
 	["lightTablet", "Light tablet"],
 	["lightMobile", "Light mobile"],
 ] as const
+const discoveryCardFields: Array<{ id: PlatformDiscoveryCardKey; label: string }> = [
+	{ id: "businesses", label: "For Businesses" },
+	{ id: "customers", label: "For Customers" },
+	{ id: "compare", label: "Compare" },
+	{ id: "choose", label: "Choose" },
+	{ id: "buyFromStore", label: "Buy from Store" },
+]
 
 export default function PlatformSiteSettingsPanel() {
 	const [draft, setDraft] = useState<PlatformSiteSettings>(initialSettings)
@@ -46,6 +53,15 @@ export default function PlatformSiteSettingsPanel() {
 
 	const updateSection = <K extends keyof PlatformSiteSettings>(section: K, key: string, value: string | boolean) => {
 		setDraft((current) => ({ ...current, [section]: { ...(current[section] as Record<string, string | boolean> | undefined), [key]: value } }))
+	}
+	const updateDiscoveryCard = (id: PlatformDiscoveryCardKey, field: "title" | "text", value: string) => {
+		setDraft((current) => ({
+			...current,
+			discoveryCards: {
+				...current.discoveryCards,
+				[id]: { ...current.discoveryCards?.[id], [field]: value },
+			},
+		}))
 	}
 
 	const request = async (method: "PATCH" | "POST") => {
@@ -265,6 +281,17 @@ export default function PlatformSiteSettingsPanel() {
 					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: Nurava HubStores is the technology platform</span></label>
 					<label className="block"><span className="text-sm font-medium">Highlighted heading</span><input maxLength={120} className={inputClass} value={draft.hero?.highlight || ""} onChange={(event) => updateSection("hero", "highlight", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: connecting you with trusted stores</span></label>
 					<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={320} rows={3} className={inputClass} value={draft.hero?.description || ""} onChange={(event) => updateSection("hero", "description", event.target.value)} /></label>
+				</div>
+			</section>
+
+			<section className="glass-card space-y-5 p-6">
+				<div><h3 className="text-lg font-semibold">Platform homepage discovery cards</h3><p className="mt-1 text-sm text-gray-500">Edit the bold headings and supporting text shown beneath the homepage hero. The icons and card order stay fixed. Empty fields use the default wording.</p></div>
+				<div className="grid gap-5 lg:grid-cols-2">
+					{discoveryCardFields.map(({ id, label }) => <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-white/10" key={id}>
+						<h4 className="font-semibold">{label}</h4>
+						<label className="block"><span className="text-sm font-medium">Bold heading</span><input maxLength={120} className={inputClass} value={draft.discoveryCards?.[id]?.title || ""} onChange={(event) => updateDiscoveryCard(id, "title", event.target.value)} /></label>
+						<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={240} rows={2} className={inputClass} value={draft.discoveryCards?.[id]?.text || ""} onChange={(event) => updateDiscoveryCard(id, "text", event.target.value)} /></label>
+					</div>)}
 				</div>
 			</section>
 
