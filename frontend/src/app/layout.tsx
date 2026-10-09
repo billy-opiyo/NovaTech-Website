@@ -12,6 +12,7 @@ import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
 import { getStoreContext } from "@/lib/store-context.server"
 import { StoreContextProvider } from "@/lib/store-context"
 import AuthSessionProvider from "@/components/providers/AuthSessionProvider"
+import AndroidBackButtonHandler from "@/components/providers/AndroidBackButtonHandler"
 
 export async function generateMetadata(): Promise<Metadata> {
 	const store = await getStoreContext()
@@ -69,6 +70,7 @@ export default async function RootLayout({
 			>
 				<StoreContextProvider value={store}>
 				<AuthSessionProvider>
+					<AndroidBackButtonHandler />
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
