@@ -31,6 +31,7 @@ const platformDesignSchema = z.object({
 	typography: z.object({
 		bodyFont: z.enum(["system", "inter", "georgia", "trebuchet", "verdana"]).optional(),
 		headingFont: z.enum(["system", "inter", "georgia", "trebuchet", "verdana"]).optional(),
+		fontSize: z.enum(["small", "normal", "large", "extraLarge"]).optional(),
 	}).strict().optional(),
 	glass: z.object({
 		blurPx: z.number().int().min(0).max(32).optional(),

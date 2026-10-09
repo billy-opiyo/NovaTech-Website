@@ -220,7 +220,7 @@ const hexToRgb = (hex: string) => {
 type ThemeColorMode = Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
 export type PlatformThemeOverrides = {
 	colors?: { primary?: string; primaryLight?: string; primaryDark?: string; accent?: string; light?: ThemeColorMode; dark?: ThemeColorMode }
-	typography?: { bodyFont?: string; headingFont?: string }
+	typography?: { bodyFont?: string; headingFont?: string; fontSize?: "small" | "normal" | "large" | "extraLarge" }
 	glass?: { blurPx?: number; cardRadiusPx?: number; lightOpacity?: number; darkOpacity?: number; lightBorderOpacity?: number; darkBorderOpacity?: number; shadow?: "none" | "soft" | "balanced" | "bold" }
 }
 
@@ -232,6 +232,7 @@ const fontStacks: Record<string, string> = {
 	trebuchet: "'Trebuchet MS', sans-serif",
 	verdana: "Verdana, Geneva, sans-serif",
 }
+const fontSizeScales = { small: "90%", normal: "100%", large: "110%", extraLarge: "120%" } as const
 const shadowStyles = {
 	none: "none",
 	soft: "0 4px 18px rgba(15, 23, 42, 0.10)",
@@ -291,6 +292,7 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	"--theme-scrollbar-thumb-hover-dark": darkScrollbar.hover,
 	"--font-body": fontStacks[overrides?.typography?.bodyFont || ""] || theme.fontBody,
 	"--font-heading": fontStacks[overrides?.typography?.headingFont || ""] || theme.fontHeading,
+	"--site-font-size": fontSizeScales[overrides?.typography?.fontSize || "normal"],
 	"--radius-card": overrides?.glass?.cardRadiusPx === undefined ? theme.cardRadius : `${overrides.glass.cardRadiusPx}px`,
 	"--glass-blur": overrides?.glass?.blurPx === undefined ? "12px" : `${overrides.glass.blurPx}px`,
 }}

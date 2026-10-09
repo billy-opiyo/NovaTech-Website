@@ -6,6 +6,7 @@ import { THEME_PRESETS } from "@/config/theme-presets"
 import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
+import { FONT_SIZE_LABELS, FONT_SIZE_OPTIONS } from "@/lib/font-size-preference"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
 const NOVA_ORANGE_SPLASH_COLOR = "#c2410c"
@@ -131,7 +132,8 @@ export default function PlatformSiteSettingsPanel() {
 			const design = { ...current.design }
 			if (group === "typography") {
 				const typography = { ...design.typography }
-				if (value === "theme") delete typography[key as "bodyFont" | "headingFont"]
+				if (key === "fontSize") typography.fontSize = value as NonNullable<typeof typography.fontSize>
+				else if (value === "theme") delete typography[key as "bodyFont" | "headingFont"]
 				else if (key === "bodyFont") typography.bodyFont = value as NonNullable<typeof typography.bodyFont>
 				else typography.headingFont = value as NonNullable<typeof typography.headingFont>
 				design.typography = typography
@@ -362,8 +364,8 @@ export default function PlatformSiteSettingsPanel() {
 				</div>
 				<div className="grid gap-5 lg:grid-cols-2">
 					<div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-white/10">
-						<div><h4 className="font-semibold">Typography</h4><p className="text-xs text-gray-500">Choose readable font stacks without loading external fonts.</p></div>
-						<div className="grid gap-4 sm:grid-cols-2">{([ ["bodyFont", "Body font"], ["headingFont", "Heading font"] ] as const).map(([key, label]) => <label className="block text-sm font-medium" key={key}>{label}<select className={inputClass} value={draft.design?.typography?.[key] || "theme"} onChange={(event) => updateDesignField("typography", key, event.target.value)}><option value="theme">Theme default</option><option value="system">System sans-serif</option><option value="inter">Inter-style sans-serif</option><option value="georgia">Georgia serif</option><option value="trebuchet">Trebuchet MS</option><option value="verdana">Verdana</option></select></label>)}</div>
+						<div><h4 className="font-semibold">Typography</h4><p className="text-xs text-gray-500">Choose readable font stacks and a platform-wide text size. Size changes apply to the platform site; each signed-in account can choose its own size in account settings.</p></div>
+						<div className="grid gap-4 sm:grid-cols-2">{([ ["bodyFont", "Body font"], ["headingFont", "Heading font"] ] as const).map(([key, label]) => <label className="block text-sm font-medium" key={key}>{label}<select className={inputClass} value={draft.design?.typography?.[key] || "theme"} onChange={(event) => updateDesignField("typography", key, event.target.value)}><option value="theme">Theme default</option><option value="system">System sans-serif</option><option value="inter">Inter-style sans-serif</option><option value="georgia">Georgia serif</option><option value="trebuchet">Trebuchet MS</option><option value="verdana">Verdana</option></select></label>)}<label className="block text-sm font-medium">Platform font size<select className={inputClass} value={draft.design?.typography?.fontSize || "normal"} onChange={(event) => updateDesignField("typography", "fontSize", event.target.value)}>{FONT_SIZE_OPTIONS.map((option) => <option value={option} key={option}>{FONT_SIZE_LABELS[option]}</option>)}</select><span className="mt-1 block text-xs font-normal text-gray-500">This default is used unless an account has selected a personal font size.</span></label></div>
 					</div>
 					<div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-white/10">
 						<div><h4 className="font-semibold">Glassmorphism</h4><p className="text-xs text-gray-500">Tune transparency, edges, blur, card corners, and shadows.</p></div>
