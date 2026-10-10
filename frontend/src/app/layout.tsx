@@ -14,6 +14,7 @@ import { StoreContextProvider } from "@/lib/store-context"
 import AuthSessionProvider from "@/components/providers/AuthSessionProvider"
 import AndroidBackButtonHandler from "@/components/providers/AndroidBackButtonHandler"
 import AndroidAppUpdatePrompt from "@/components/providers/AndroidAppUpdatePrompt"
+import AndroidPullToRefresh from "@/components/providers/AndroidPullToRefresh"
 
 export async function generateMetadata(): Promise<Metadata> {
 	const store = await getStoreContext()
@@ -72,6 +73,7 @@ export default async function RootLayout({
 				<StoreContextProvider value={store}>
 				<AuthSessionProvider>
 					<AndroidBackButtonHandler />
+					<AndroidPullToRefresh />
 				<ThemeProvider>
 					<ToastProvider>
 						<CartProvider>
@@ -80,7 +82,7 @@ export default async function RootLayout({
 							<StorePreferenceTracker storeSlug={store.storeSlug} isPlatformHome={store.isPlatformHome} />
 							<SiteChrome>{children}</SiteChrome>
 							<OfflineNotice />
-							<AndroidAppUpdatePrompt />
+							<AndroidAppUpdatePrompt showOnPlatformHomepage={store.isPlatformHome} />
 						</CartProvider>
 					</ToastProvider>
 				</ThemeProvider>

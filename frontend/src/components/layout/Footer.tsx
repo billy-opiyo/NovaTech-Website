@@ -8,6 +8,7 @@ import { clientConfig } from "@/config/client.config"
 import { isVercelProjectHostname } from "@/lib/platform-store-route"
 import { getWhatsAppChatHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { APP_DOWNLOAD_FILENAME, APP_DOWNLOAD_PATH, handleAppDownloadClick } from "@/lib/android-app-download"
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
@@ -153,8 +154,9 @@ export default function Footer() {
 						))}
 						<li>
 							<a
-								href="/downloads/nurava-hubstores-staging.apk?v=3"
-								download="Nurava-HubStores-Android-Staging.apk"
+								href={APP_DOWNLOAD_PATH}
+								download={APP_DOWNLOAD_FILENAME}
+								onClick={handleAppDownloadClick}
 								className="font-semibold text-primary hover:underline"
 							>
 								Download App
