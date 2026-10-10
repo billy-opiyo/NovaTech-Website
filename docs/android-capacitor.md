@@ -73,7 +73,7 @@ Set-Location android
 ./gradlew.bat bundleRelease
 ```
 
-For signing, set `NURAVA_ANDROID_KEYSTORE`, `NURAVA_ANDROID_STORE_PASSWORD`, `NURAVA_ANDROID_KEY_ALIAS`, and `NURAVA_ANDROID_KEY_PASSWORD` in your local build environment. The Gradle release build applies that signing configuration only when all four values are present. Keep the keystore outside the repository and never commit signing values. The AAB is written to `android/app/build/outputs/bundle/release/app-release.aab`; the release APK is copied to `android/app/build/outputs/apk/release/nurava-hubstores.apk` for direct download.
+For signing, set `NURAVA_ANDROID_KEYSTORE`, `NURAVA_ANDROID_STORE_PASSWORD`, `NURAVA_ANDROID_KEY_ALIAS`, and `NURAVA_ANDROID_KEY_PASSWORD` in your local build environment. The Gradle release build applies that signing configuration only when all four values are present. Keep the keystore outside the repository and never commit signing values. The AAB is written to `android/app/build/outputs/bundle/release/app-release.aab`; when signing is configured, the signed release APK is copied to `android/app/build/outputs/apk/release/nurava-hubstores.apk` for direct download. Without signing credentials, `copyReleaseApk` stops instead of labeling an unsigned APK as installable. The debug-signed staging APK remains the sideload/update artifact for existing staging installs.
 
 ## Android-specific behavior and remaining release work
 

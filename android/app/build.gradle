@@ -66,13 +66,11 @@ tasks.register('copyReleaseApk') {
     dependsOn 'assembleRelease'
     doLast {
         def signedApk = file("$buildDir/outputs/apk/release/app-release.apk")
-        def unsignedApk = file("$buildDir/outputs/apk/release/app-release-unsigned.apk")
-        def releaseApk = signedApk.exists() ? signedApk : unsignedApk
-        if (!releaseApk.exists()) {
-            throw new GradleException('No release APK was produced.')
+        if (!signedApk.exists()) {
+            throw new GradleException('No signed release APK was produced. Configure all four NURAVA_ANDROID_* signing variables before building a distributable APK. For staging sideloads, build and use the debug APK instead.')
         }
         copy {
-            from releaseApk
+            from signedApk
             into "$buildDir/outputs/apk/release"
             rename { 'nurava-hubstores.apk' }
         }
