@@ -44,21 +44,21 @@ export function handleOpenAppClick(event: ReactMouseEvent<HTMLAnchorElement>) {
 	const appUrl = new URL("com.nurava.hubstores://open")
 	appUrl.searchParams.set("url", window.location.href)
 	const intentUrl = `intent://open?${appUrl.searchParams.toString()}#Intent;scheme=com.nurava.hubstores;package=com.nurava.hubstores;S.browser_fallback_url=${encodeURIComponent(downloadUrl)};end`
-	let fallbackTimer: number | undefined
+	const fallbackTimer: { current: number | undefined } = { current: undefined }
 	const clearFallbackTimer = () => {
-		if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+		if (fallbackTimer.current !== undefined) window.clearTimeout(fallbackTimer.current)
 		window.removeEventListener("pagehide", clearFallbackTimer)
 		window.removeEventListener("blur", clearFallbackTimer)
 	}
 	window.addEventListener("pagehide", clearFallbackTimer, { once: true })
 	window.addEventListener("blur", clearFallbackTimer, { once: true })
-	window.location.assign(intentUrl)
-	// Some Android browsers do not understand intent:// links. If the app was
-	// not opened and the browser stayed visible, fall back to the APK download.
-	fallbackTimer = window.setTimeout(() => {
+	fallbackTimer.current = window.setTimeout(() => {
 		if (document.visibilityState === "visible") window.location.assign(downloadUrl)
 		clearFallbackTimer()
 	}, 1500)
+	window.location.assign(intentUrl)
+	// Some Android browsers do not understand intent:// links. If the app was
+	// not opened and the browser stayed visible, fall back to the APK download.
 }
 
 /** Hand the current in-app route to the user's normal browser. */
