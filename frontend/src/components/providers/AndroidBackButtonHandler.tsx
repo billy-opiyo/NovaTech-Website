@@ -7,6 +7,7 @@ import { Browser } from "@capacitor/browser"
 import { X } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { getSafeLocalCallbackUrl, PENDING_MOBILE_GOOGLE_AUTH_KEY } from "@/lib/mobile-google-auth"
+import { useStoreContext } from "@/lib/store-context"
 
 type PendingMobileAuth = { state: string; callbackUrl: string }
 
@@ -41,6 +42,7 @@ async function completeMobileGoogleSignIn(url: string) {
 
 /** Keep Android's system back button aligned with the shared web route history. */
 export default function AndroidBackButtonHandler() {
+	const store = useStoreContext()
 	const [showExitDialog, setShowExitDialog] = useState(false)
 	const exitDialogOpen = useRef(false)
 
@@ -54,7 +56,10 @@ export default function AndroidBackButtonHandler() {
 				return
 			}
 
-			if (canGoBack || window.history.length > 1) window.history.back()
+			if (store.isPlatformHome) {
+				exitDialogOpen.current = true
+				setShowExitDialog(true)
+			} else if (canGoBack || window.history.length > 1) window.history.back()
 			else {
 				exitDialogOpen.current = true
 				setShowExitDialog(true)
@@ -86,7 +91,7 @@ export default function AndroidBackButtonHandler() {
 			void backButtonListener.then((handle) => handle.remove())
 			void urlOpenListener.then((handle) => handle.remove())
 		}
-	}, [])
+	}, [store.isPlatformHome])
 
 	if (!showExitDialog) return null
 

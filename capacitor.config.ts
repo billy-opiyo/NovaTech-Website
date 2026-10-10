@@ -19,11 +19,6 @@ const config: CapacitorConfig = {
 		cleartext: false,
 		appStartPath: `${parsedAppUrl.pathname}${parsedAppUrl.search}`,
 	},
-	plugins: {
-		App: {
-			disableBackButtonHandler: true,
-		},
-	},
 }
 
 export default config
