@@ -18,7 +18,21 @@ public class AppUpdaterPlugin extends Plugin {
     public void downloadUpdate(PluginCall call) {
         String url = call.getString("url");
         String versionName = call.getString("versionName", "latest");
-        Long targetVersionCode = call.getLong("versionCode");
+        Object versionCodeValue = call.getData().opt("versionCode");
+        Long targetVersionCode = null;
+        if (versionCodeValue instanceof Number) {
+            Number numericVersionCode = (Number) versionCodeValue;
+            long integralVersionCode = numericVersionCode.longValue();
+            if (numericVersionCode.doubleValue() == (double) integralVersionCode) {
+                targetVersionCode = integralVersionCode;
+            }
+        } else if (versionCodeValue instanceof String) {
+            try {
+                targetVersionCode = Long.parseLong((String) versionCodeValue);
+            } catch (NumberFormatException ignored) {
+                // Invalid version values are rejected below with the other incomplete details.
+            }
+        }
 
         if (url == null || targetVersionCode == null || targetVersionCode <= 0) {
             call.reject("The app update details are incomplete.");
