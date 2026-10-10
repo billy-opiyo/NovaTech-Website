@@ -35,14 +35,13 @@ function getHeroStores(stores: HeroStore[]): HeroStore[] {
 }
 
 function StoreCard({ store }: { store: HeroStore }) {
-	const initials = store.name.split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase()
 	return (
 		<a
 			href={store.href}
 			className="group flex min-h-28 items-center gap-4 rounded-2xl border border-theme-border bg-theme-surface p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg"
 		>
 			<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 dark:bg-white/10">
-				{store.logoUrl ? <img src={store.logoUrl} alt="" className="h-full w-full object-contain" /> : <span className="text-lg font-extrabold" style={{ color: store.fallbackColor }}>{initials}</span>}
+				{store.logoUrl ? <img src={store.logoUrl} alt="" className="h-full w-full object-contain" /> : <Store className="text-primary" size={28} aria-hidden="true" />}
 			</div>
 			<div className="min-w-0">
 				<h3 className="break-words text-lg font-bold leading-tight text-theme-text group-hover:text-primary">{store.name}</h3>

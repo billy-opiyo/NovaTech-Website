@@ -76,7 +76,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
+				logoUrl: resolveDirectoryStoreLogo(store.logoUrl),
 				tagline,
 				industry: store.industry,
 				featuredProduct: product ? {
@@ -159,7 +159,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
+				logoUrl: resolveDirectoryStoreLogo(store.logoUrl),
 				tagline: typeof homepage.heroDescription === "string" ? homepage.heroDescription : "Explore this store's catalogue and merchant offers.",
 				averageRating: Math.round(review.averageRating * 10) / 10,
 				reviewCount: review.reviewCount,

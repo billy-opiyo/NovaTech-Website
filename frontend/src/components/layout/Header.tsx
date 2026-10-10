@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import NotificationCenter from "@/components/notifications/NotificationCenter"
-import { Heart, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
+import { Heart, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, Store as StoreIcon, User, UserRound, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
@@ -40,7 +40,7 @@ export default function Header() {
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
-	const logoSource = theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo
+	const logoSource = store.brand.logo?.trim() || (store.isPlatformHome ? "/images/Nurava_HubStores_app_icon_logo.png" : "")
 	const isRemoteLogo = logoSource.startsWith("https://")
 	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
@@ -53,7 +53,7 @@ export default function Header() {
 					{/* Logo */}
 					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-									{isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />}
+			{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
 						<span
 							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
