@@ -2,7 +2,7 @@
 
 Nurava HubStores uses the existing Next.js deployment inside a Capacitor Android WebView. The web app remains the only UI and business-logic source. Its server-rendered App Router pages, route handlers, Auth.js sessions, and Prisma access continue to run on the deployed Next.js server; Android calls that same HTTPS origin and database through the existing server routes.
 
-When the remote app cannot load, the Android `MainActivity` WebView client catches main-frame DNS, connection, timeout, I/O, TLS handshake, and server 5xx errors and opens the bundled `capacitor-shell/offline.html` fallback instead of Android WebView's plain “Webpage not available” screen. The failing URL, including its route and query string, is passed to the fallback. It retries that exact URL immediately and every two seconds, retries when Android reports connectivity restored or the app returns to the foreground, and navigates back once reachable. The React `OfflineNotice` still handles connection loss after the website has loaded.
+When the remote app cannot load, the Android `MainActivity` WebView client catches main-frame DNS, connection, timeout, I/O, TLS handshake, and server 5xx errors and opens the bundled `capacitor-shell/offline.html` fallback from `file:///android_asset/public/` instead of requesting `/offline.html` from the remote Vercel host. The failing URL, including its route and query string, is passed to the fallback. It retries that exact URL immediately and every two seconds, retries when Android reports connectivity restored or the app returns to the foreground, and navigates back once reachable. The fallback mirrors the website's `OfflineNotice` dialog; the React component handles connection loss after the website has loaded.
 
 The Android app uses the same deployed site and signed-in account as the browser, so platform font-size defaults and each user's saved font-size preference apply in the WebView automatically; website deployments do not require rebuilding the APK. Deploy database migration `0036_user_font_size_preference` before deploying the account-settings API change.
 
@@ -47,14 +47,15 @@ Build a debug APK:
 ```powershell
 Set-Location "C:\Users\Billy\MY WEB PROJECTS\NovaTech Website"
 
-# This machine's system Java is newer than the Gradle wrapper supports.
-$env:JAVA_HOME = "C:\Users\Billy\AppData\Local\Temp\nurava-android-jdk21\jdk-21.0.12.1+1"
+# Point these at your installed JDK 21 and Android SDK.
+$env:JAVA_HOME = "C:\Path\To\JDK-21"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 
 npm run android:debug
 ```
 
-`npm run android:debug` syncs Capacitor and builds the APK. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. The commands above use the JDK 21 path currently available on this machine; if that directory is no longer present, set `JAVA_HOME` to another JDK 21 installation first. Alternatively, run `npm run android:sync`, then open the project in Android Studio and use **Build > Build APK(s)**.
+`npm run android:debug` syncs Capacitor and builds the APK. Sync must report both `@capacitor/app` and `@capacitor/browser` as Android plugins. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Alternatively, run `npm run android:sync`, then open the project in Android Studio and use **Build > Build APK(s)**.
 
 To replace the staging APK served by the website after a native change, copy the new build to the public download path and deploy that file with the website:
 
@@ -77,12 +78,12 @@ For signing, set `NURAVA_ANDROID_KEYSTORE`, `NURAVA_ANDROID_STORE_PASSWORD`, `NU
 
 ## Android-specific behavior and remaining release work
 
-`AndroidBackButtonHandler` listens only when running as Android and sends system back through browser history, exiting at the first page. No camera, location, notification, or storage plugins/permissions are added because current flows use ordinary WebView file inputs and the existing server APIs.
+`AndroidBackButtonHandler` listens only when running as Android and sends system back through browser history, exiting at the first page. The `@capacitor/app` and `@capacitor/browser` plugins provide Android app-link handling and the secure external-browser OAuth flow. No camera, location, notification, or storage plugins/permissions are added because current flows use ordinary WebView file inputs and the existing server APIs.
 
 The Android launcher icon density and adaptive-icon assets under `android/app/src/main/res/mipmap-*` are generated from `frontend/public/images/Nurava_HubStores_app_icon_logo.png`. The native launch window uses a matching dark background with a transparent center icon; when the WebView draws the platform homepage, the existing `SplashScreen` component takes over and uses the configured glass mode, progress bar, and percentage counter. Android's native launch window cannot render the React progress animation before the WebView is ready.
 
-Google sign-in in Android opens the staging website's Auth.js flow in a Chrome Custom Tab, so the OAuth state cookies are created and returned in the same browser context. After Google sign-in, `/api/auth/mobile-google/complete` issues a random, two-minute, single-use handoff ticket; Android receives it through `com.nurava.hubstores://auth/callback` and exchanges it through the existing Auth.js credentials flow to establish the normal app WebView session. The ticket is stored hashed in the existing `VerificationToken` table and consumed once; no separate account system or schema migration is used. Website sign-in continues using the ordinary Auth.js Google flow.
+Google sign-in in Android opens the staging website's Auth.js flow in a Chrome Custom Tab, so the OAuth state cookies are created and returned in the same browser context. Because `capacitor.config.ts` is at the repository root, keep `@capacitor/core`, `@capacitor/app`, and `@capacitor/browser` in the root `package.json` as well as the frontend dependencies; `npm run android:sync` must report both the App and Browser plugins before building. After Google sign-in, `/api/auth/mobile-google/complete` issues a random, two-minute, single-use handoff ticket; Android receives it through `com.nurava.hubstores://auth/callback` and exchanges it through the existing Auth.js credentials flow to establish the normal app WebView session. The ticket is stored hashed in the existing `VerificationToken` table and consumed once; no separate account system or schema migration is used. Website sign-in continues using the ordinary Auth.js Google flow.
 
 The Play Store review is not guaranteed for a WebView-led app: Google's current policy requires adequate app functionality and disallows a WebView of a site without the owner's permission. This app is for the existing Nurava commerce and merchant platform and the owner controls the site, but Play review will assess the final experience.
 
-The website download prompt appears on the platform homepage once per browser session. Its X closes it for the session; checking “Don't Show this again” stores a persistent preference. It does not appear in the Android app or on storefront pages. The platform/storefront footer links serve `/downloads/nurava-hubstores-staging.apk` from `frontend/public/downloads/nurava-hubstores-staging.apk`, a debug-signed staging build that loads the Vercel staging app. No emulator or Android device is currently available. The new Google sign-in handoff compiles but still needs end-to-end verification on an Android device with the deployed staging site and Google OAuth configuration. Google Play acceptance remains unverified.
+The website download prompt appears on the platform homepage once per browser session. Its X closes it for the session; checking “Don't Show this again” stores a persistent preference. It does not appear in the Android app or on storefront pages. The platform/storefront footer links serve `/downloads/nurava-hubstores-staging.apk` from `frontend/public/downloads/nurava-hubstores-staging.apk`, a debug-signed staging build that loads the Vercel staging app. Version 1.3.0 (code 4) includes the App and Browser plugins and the local offline fallback path. Google sign-in and offline recovery still need end-to-end verification on the Galaxy A31 using the deployed staging site. Google Play acceptance remains unverified.

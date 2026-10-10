@@ -11,9 +11,9 @@
 		"build": "npm --workspace frontend run build",
 		"android:sync": "npx cap sync android",
 		"android:open": "npx cap open android",
-		"android:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
-		"android:release:apk": "npm run android:sync && cd android && gradlew.bat copyReleaseApk",
-		"android:release:aab": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+		"android:debug": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
+		"android:release:apk": "npm run android:sync && cd android && .\\gradlew.bat copyReleaseApk",
+		"android:release:aab": "npm run android:sync && cd android && .\\gradlew.bat bundleRelease",
 		"lint": "npm --workspace frontend run lint && npm --workspace backend run build",
 		"type-check": "npm --workspace frontend exec tsc -- --noEmit && npm --workspace backend run build",
 		"start": "npm --workspace frontend run start",
@@ -29,6 +29,9 @@
 		"db:seed": "npm --workspace backend run db:seed"
 	},
 	"dependencies": {
+		"@capacitor/app": "^8.1.2",
+		"@capacitor/browser": "^8.0.5",
+		"@capacitor/core": "^8.5.3",
 		"lucide-react": "^1.31.0",
 		"react-icons": "^5.7.0",
 		"twilio": "^6.0.2"
