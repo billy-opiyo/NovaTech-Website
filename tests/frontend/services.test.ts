@@ -116,9 +116,9 @@ test("store navigation keeps merchant routes inside the active storefront", () =
 })
 
 test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {
-	assert.equal(resolveDirectoryStoreLogo("nuravatech", null, "/images/nurava-logo.png"), "/images/nurava-logo.png")
-	assert.equal(resolveDirectoryStoreLogo("nuravatech", "https://cdn.example.com/store-logo.webp", "/images/nurava-logo.png"), "https://cdn.example.com/store-logo.webp")
-	assert.equal(resolveDirectoryStoreLogo("another-store", null, "/images/nurava-logo.png"), null)
+	assert.equal(resolveDirectoryStoreLogo(null), null)
+	assert.equal(resolveDirectoryStoreLogo("https://cdn.example.com/store-logo.webp"), "https://cdn.example.com/store-logo.webp")
+	assert.equal(resolveDirectoryStoreLogo("  "), null)
 })
 
 test("platform store card destinations open the selected storefront directly", () => {

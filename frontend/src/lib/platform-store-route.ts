@@ -9,10 +9,9 @@ export function isVercelProjectHostname(hostname: string) {
 	return hostname === "vercel.app" || hostname.endsWith(".vercel.app")
 }
 
-export function resolveDirectoryStoreLogo(slug: string, logoUrl: string | null, platformStoreLogo: string): string | null {
+export function resolveDirectoryStoreLogo(logoUrl: string | null): string | null {
 	const configuredLogo = logoUrl?.trim()
-	if (configuredLogo) return configuredLogo
-	return slug.trim().toLowerCase() === "nuravatech" ? platformStoreLogo : null
+	return configuredLogo || null
 }
 
 export function getStorePublicHref(slug: string, host: string, platformDomain: string): string {

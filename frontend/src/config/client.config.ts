@@ -8,7 +8,7 @@ export const clientConfig = {
 	brand: {
 		name: "Nurava HubStores",
 		shortName: "Nurava",
-		logo: "/images/NovaTech icon.png",
+		logo: "/images/Nurava_HubStores_app_icon_logo.png",
 		logoAlt: "Nurava HubStores logo",
 		favicon: "/images/NovaTech%20icon.png",
 		tagline: "Kenya's multi-industry commerce platform",
