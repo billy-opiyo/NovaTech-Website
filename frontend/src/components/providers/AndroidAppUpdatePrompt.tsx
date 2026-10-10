@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { App } from "@capacitor/app"
 import { Browser } from "@capacitor/browser"
+import { usePathname } from "next/navigation"
 import { Download, LoaderCircle, X } from "lucide-react"
 
 type UpdateManifest = {
@@ -29,7 +30,9 @@ function isUpdateManifest(value: unknown): value is UpdateManifest {
 		&& typeof manifest.releaseNotes === "string"
 }
 
-export default function AndroidAppUpdatePrompt() {
+export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { showOnPlatformHomepage: boolean }) {
+	const pathname = usePathname()
+	const isPlatformHomepage = showOnPlatformHomepage && pathname === "/"
 	const [update, setUpdate] = useState<UpdateManifest | null>(null)
 	const [dismissedVersionCode, setDismissedVersionCode] = useState<number | null>(null)
 	const [downloading, setDownloading] = useState(false)
@@ -59,7 +62,7 @@ export default function AndroidAppUpdatePrompt() {
 	}, [])
 
 	useEffect(() => {
-		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
+		if (!isPlatformHomepage || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
 		void checkForUpdate()
 		let active = true
 		let appStateListener: { remove: () => Promise<void> } | undefined
@@ -80,7 +83,7 @@ export default function AndroidAppUpdatePrompt() {
 			document.removeEventListener("visibilitychange", handleVisibilityChange)
 			if (appStateListener) void appStateListener.remove()
 		}
-	}, [checkForUpdate])
+	}, [checkForUpdate, isPlatformHomepage])
 
 	useEffect(() => {
 		setDownloadStarted(false)
@@ -111,7 +114,7 @@ export default function AndroidAppUpdatePrompt() {
 		}
 	}
 
-	if (!update || dismissedVersionCode === update.versionCode) return null
+	if (!isPlatformHomepage || !update || dismissedVersionCode === update.versionCode) return null
 
 	return (
 		<div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" role="presentation">

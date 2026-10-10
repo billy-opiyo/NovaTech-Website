@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react"
 import { Capacitor } from "@capacitor/core"
 import { X } from "lucide-react"
+import { APP_DOWNLOAD_FILENAME, APP_DOWNLOAD_PATH, handleAppDownloadClick } from "@/lib/android-app-download"
 
 const DISMISS_KEY = "nurava.android-app-download.dismissed"
 const SESSION_SHOWN_KEY = "nurava.android-app-download.shown-this-session"
-const APP_DOWNLOAD_URL = "/downloads/nurava-hubstores-staging.apk?v=3"
 
 export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPlatformHomepage: boolean }) {
 	const [visible, setVisible] = useState(false)
@@ -59,8 +59,9 @@ export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPl
 		>
 			<div className="flex items-center gap-2">
 				<a
-					href={APP_DOWNLOAD_URL}
-					download="Nurava-HubStores-Android-Staging.apk"
+					href={APP_DOWNLOAD_PATH}
+					download={APP_DOWNLOAD_FILENAME}
+					onClick={handleAppDownloadClick}
 					className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
 				>
 					Download Mobile App
