@@ -14,6 +14,8 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const store = useStoreContext()
 	const splashSettings = platformHome ? store.platformSettings?.splash : undefined
 	const splashName = store.platformSettings?.brand?.name || clientConfig.brand.name
+	const fallbackSplashLogo = clientConfig.brand.logo || "/images/NovaTech icon.png"
+	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
 	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
 	const splashImages = splashSettings?.images || {}
@@ -170,6 +172,19 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 							</span>
 						))}
 					</h1>
+					<img
+						className="splash-logo-icon"
+						src={splashLogo}
+						alt=""
+						aria-hidden="true"
+						onError={(event) => {
+							const image = event.currentTarget
+							if (image.dataset.fallbackApplied !== "true") {
+								image.dataset.fallbackApplied = "true"
+								image.src = fallbackSplashLogo
+							}
+						}}
+					/>
 					{showProgress && <div className="splash-loading mt-10 w-full">
 						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
 							<span>{splashSettings?.loadingText || "Preparing your store"}</span>

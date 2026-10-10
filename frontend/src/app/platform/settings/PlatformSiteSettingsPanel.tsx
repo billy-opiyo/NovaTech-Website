@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
+import { clientConfig } from "@/config/client.config"
 import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
@@ -168,7 +169,12 @@ export default function PlatformSiteSettingsPanel() {
 			const response = await fetch("/api/platform/settings/visual", { method: "POST", body })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to upload platform visual")
-			setDraft((current) => ({ ...current, [section]: { ...current[section], images: { ...current[section]?.images, [slot]: data.url } } }))
+			setDraft((current) => ({
+				...current,
+				[section]: slot === "logo"
+					? { ...current[section], logo: data.url }
+					: { ...current[section], images: { ...current[section]?.images, [slot]: data.url } },
+			}))
 			setMessage("Platform image uploaded. Save the draft, then publish it to make it live.")
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : "Unable to upload platform visual")
@@ -345,6 +351,20 @@ export default function PlatformSiteSettingsPanel() {
 						</label>
 						<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.centerContentOnColor !== false} onChange={(event) => updateVisualText("splash", "centerContentOnColor", event.target.checked)} /><span>Center welcome content on the solid-color splash</span></label>
 					</>}
+				</div>
+				<div className="rounded-lg border border-gray-200 p-4 dark:border-white/10">
+					<div>
+						<p className="text-sm font-medium">Splash logo</p>
+						<p className="mt-1 text-xs text-gray-500">Shown between the animated platform name and loading progress. It also appears in the Android app splash. If no custom logo is uploaded, the current app splash logo is used.</p>
+					</div>
+					<div className="mt-3 flex flex-wrap items-center gap-4">
+						<img src={draft.splash?.logo || clientConfig.brand.logo} alt="Splash logo preview" className="h-14 w-14 rounded-lg object-contain" />
+						<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploadingVisual === "splash.logo" ? "cursor-wait opacity-60" : ""}`}>
+							{uploadingVisual === "splash.logo" ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+							{uploadingVisual === "splash.logo" ? "Uploading…" : "Upload logo"}
+							<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", "logo", event.target.files?.[0]); event.target.value = "" }} className="sr-only" />
+						</label>
+					</div>
 				</div>
 				{draft.splash?.backgroundMode === "images" && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visualSlots.map(([slot, label]) => { const id = `splash.${slot}`; return <div key={id} className="rounded-lg border border-gray-200 p-3 dark:border-white/10"><p className="text-sm font-medium">{label}</p>{assetValue(slot) && <img src={assetValue(slot)} alt={`${label} splash preview`} className="mt-2 h-24 w-full rounded object-cover" />}<label className={`mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${uploadingVisual === id ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}{uploadingVisual === id ? "Uploading…" : "Upload image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", slot, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div> })}</div>}
 			</section>
