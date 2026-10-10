@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
-import { clientConfig } from "@/config/client.config"
 import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
@@ -358,7 +357,7 @@ export default function PlatformSiteSettingsPanel() {
 						<p className="mt-1 text-xs text-gray-500">Shown between the animated platform name and loading progress. It also appears in the Android app splash. If no custom logo is uploaded, the current app splash logo is used.</p>
 					</div>
 					<div className="mt-3 flex flex-wrap items-center gap-4">
-						<img src={draft.splash?.logo || clientConfig.brand.logo} alt="Splash logo preview" className="h-14 w-14 rounded-lg object-contain" />
+						<img src={draft.splash?.logo || "/images/Nurava_HubStores_app_icon_logo.png"} alt="Splash logo preview" className="h-14 w-14 rounded-lg object-contain" />
 						<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploadingVisual === "splash.logo" ? "cursor-wait opacity-60" : ""}`}>
 							{uploadingVisual === "splash.logo" ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
 							{uploadingVisual === "splash.logo" ? "Uploading…" : "Upload logo"}

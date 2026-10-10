@@ -14,7 +14,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const store = useStoreContext()
 	const splashSettings = platformHome ? store.platformSettings?.splash : undefined
 	const splashName = store.platformSettings?.brand?.name || clientConfig.brand.name
-	const fallbackSplashLogo = clientConfig.brand.logo || "/images/NovaTech icon.png"
+	const fallbackSplashLogo = "/images/Nurava_HubStores_app_icon_logo.png"
 	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
 	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
