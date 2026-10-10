@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { Capacitor } from "@capacitor/core"
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 import { clientConfig } from "@/config/client.config"
 import { isVercelProjectHostname } from "@/lib/platform-store-route"
 import { getWhatsAppChatHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
-import { APP_DOWNLOAD_FILENAME, APP_DOWNLOAD_PATH, handleAppDownloadClick } from "@/lib/android-app-download"
+import { APP_DOWNLOAD_FILENAME, APP_DOWNLOAD_PATH, handleOpenAppClick, handleOpenWebsiteClick } from "@/lib/android-app-download"
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
@@ -93,6 +94,7 @@ const legalLinks = [
 export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
+	const isAndroidApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
 	const customerServiceLinks = [...shopperServiceLinks, {
 		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
 		href: "/warranty",
@@ -153,14 +155,18 @@ export default function Footer() {
 							</li>
 						))}
 						<li>
+							{isAndroidApp ? (
+								<a href="#" onClick={handleOpenWebsiteClick} className="font-semibold text-primary hover:underline">Open Website</a>
+							) : (
 							<a
 								href={APP_DOWNLOAD_PATH}
 								download={APP_DOWNLOAD_FILENAME}
-								onClick={handleAppDownloadClick}
+								onClick={handleOpenAppClick}
 								className="font-semibold text-primary hover:underline"
 							>
-								Download App
+								Open App
 							</a>
+							)}
 						</li>
 					</ul>
 				</div>
