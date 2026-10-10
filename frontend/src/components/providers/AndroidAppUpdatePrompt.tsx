@@ -63,6 +63,11 @@ export default function AndroidAppUpdatePrompt() {
 		void checkForUpdate()
 		let active = true
 		let appStateListener: { remove: () => Promise<void> } | undefined
+		const checkInterval = window.setInterval(() => void checkForUpdate(), 3 * 60 * 1000)
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "visible") void checkForUpdate()
+		}
+		document.addEventListener("visibilitychange", handleVisibilityChange)
 		void App.addListener("appStateChange", ({ isActive }) => {
 			if (active && isActive) void checkForUpdate()
 		}).then((listener) => {
@@ -71,9 +76,16 @@ export default function AndroidAppUpdatePrompt() {
 		})
 		return () => {
 			active = false
+			window.clearInterval(checkInterval)
+			document.removeEventListener("visibilitychange", handleVisibilityChange)
 			if (appStateListener) void appStateListener.remove()
 		}
 	}, [checkForUpdate])
+
+	useEffect(() => {
+		setDownloadStarted(false)
+		setError("")
+	}, [update?.versionCode])
 
 	const downloadUpdate = async () => {
 		if (!update || downloading) return
