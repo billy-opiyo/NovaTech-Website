@@ -8,9 +8,9 @@ The Android app uses the same deployed site and signed-in account as the browser
 
 ## In-app Android updates
 
-The Android shell checks `/downloads/nurava-hubstores-update.json` when it opens and whenever it returns to the foreground. If its installed Android `versionCode` is lower than the manifest, a theme-aware update dialog offers **Download update**. The native updater accepts only HTTPS APK downloads from the currently configured app host and the staging APK path. Android Download Manager shows download progress and a completion notification; the user taps that notification and confirms installation in Android. An already-installed build without the native updater plugin falls back to opening the same APK in Android's browser for its first update. Android does not permit this app to silently replace itself.
+The Android shell checks `/downloads/nurava-hubstores-update.json` at launch, when it returns to the foreground, when the app/browser becomes visible, and every three minutes while open. If its installed Android `versionCode` is lower than the deployed manifest, a theme-aware update dialog offers **Download update**. The native updater accepts only HTTPS APK downloads from the currently configured app host and the staging APK path. Android Download Manager shows download progress and a completion notification; the user taps that notification and confirms installation in Android. An already-installed build without the native updater plugin falls back to opening the same APK in Android's browser for its first update. Android does not permit this app to silently replace itself.
 
-For each native Android release, increment `versionCode` and `versionName` in `android/app/build.gradle`, update the matching `versionCode`/`versionName` in `frontend/public/downloads/nurava-hubstores-update.json`, build the APK, and copy it over `frontend/public/downloads/nurava-hubstores-staging.apk`. Deploy those website files together with the frontend update-check code. Users can then download and install the update from inside their existing app. Website-only changes still do not need a new APK. Installing an APK built with a different signing key will be rejected by Android as an update; keep using the same signing identity for all APKs on a device.
+Changing Capacitor or native Android source does not itself change an APK already installed on a phone. After making native changes, run `npm run android:staging:update`. This command increments `versionCode` and the patch part of `versionName`, builds a debug-signed staging APK, replaces the public APK, and writes a matching versioned update manifest. Commit and deploy the changed Gradle file, APK, manifest, and any web update-check changes together. The installed app will see the higher version code on its next check and show the in-app download prompt. Website-only changes still do not need a new APK. Installing an APK built with a different signing key will be rejected by Android as an update; use the same local debug signing identity for all staging APKs on a device.
 
 This project is not statically exported: page rendering and API routes use server-only Next.js and Prisma features. The Android shell therefore needs an internet connection and currently defaults to the live Vercel staging app at `https://nuravatech-saas-staging.vercel.app`. `CAPACITOR_SERVER_URL` can select a different HTTPS deployment when generating/syncing the Android project. Capacitor documents `server.url` primarily for live reload, so review Google Play's current WebView app requirements before preparing a production app.
 
@@ -57,14 +57,13 @@ npm run android:debug
 
 `npm run android:debug` syncs Capacitor and builds the APK. Sync must report both `@capacitor/app` and `@capacitor/browser` as Android plugins. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Alternatively, run `npm run android:sync`, then open the project in Android Studio and use **Build > Build APK(s)**.
 
-To replace the staging APK served by the website after a native change, copy the new build to the public download path and deploy that file with the website:
+After changing Capacitor/native files, create a new versioned staging APK and matching update manifest with:
 
 ```powershell
-Copy-Item android\app\build\outputs\apk\debug\app-debug.apk `
-  frontend\public\downloads\nurava-hubstores-staging.apk -Force
+npm run android:staging:update
 ```
 
-Users who already installed the app must install the rebuilt APK to receive native changes. This debug APK is for staging and sideload testing; use a signed release APK/AAB for distribution.
+The command requires the configured JDK 21 and Android SDK. Commit and deploy the files it updates; building locally alone does not notify installed apps. Users who already installed the app must confirm Android's install prompt to receive native changes. This debug APK is for staging and sideload testing; use a signed release APK/AAB for distribution.
 
 Build a release APK or Play Store AAB:
 
