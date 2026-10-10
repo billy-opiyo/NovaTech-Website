@@ -6,7 +6,7 @@ import { X } from "lucide-react"
 
 const DISMISS_KEY = "nurava.android-app-download.dismissed"
 const SESSION_SHOWN_KEY = "nurava.android-app-download.shown-this-session"
-const APP_DOWNLOAD_URL = "/downloads/nurava-hubstores-staging.apk"
+const APP_DOWNLOAD_URL = "/downloads/nurava-hubstores-staging.apk?v=3"
 
 export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPlatformHomepage: boolean }) {
 	const [visible, setVisible] = useState(false)

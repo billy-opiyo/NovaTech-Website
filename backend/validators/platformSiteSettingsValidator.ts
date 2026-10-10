@@ -112,6 +112,7 @@ export const platformSiteSettingsPatchSchema = z.object({
 		showProgress: z.boolean().optional(),
 		welcomeText: optionalText(120),
 		loadingText: optionalText(120),
+		logo: optionalHttpsOrPath.optional(),
 		backgroundMode: z.enum(["images", "color", "glass"]).optional(),
 		backgroundColor: hexColor,
 		centerContentOnColor: z.boolean().optional(),

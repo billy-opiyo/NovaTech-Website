@@ -538,6 +538,14 @@ html:not(.dark) .splash-screen {
     width: auto;
   }
 
+  .splash-logo-icon {
+	position: absolute;
+	left: 50%;
+	top: 54%;
+	margin: 0;
+	transform: translate(-50%, -50%);
+  }
+
   .splash-welcome {
     top: 22%;
     margin: 0;
@@ -581,6 +589,10 @@ html:not(.dark) .splash-screen {
   .splash-loading {
     top: 90%;
   }
+
+  .splash-logo-icon {
+	top: 59%;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
@@ -594,6 +606,10 @@ html:not(.dark) .splash-screen {
 
   .splash-loading {
     top: 84%;
+  }
+
+  .splash-logo-icon {
+	top: 49%;
   }
 }
 
@@ -616,6 +632,14 @@ html:not(.dark) .splash-screen {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: splash-write 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.splash-logo-icon {
+	width: clamp(2.5rem, 5vw, 3rem);
+	height: clamp(2.5rem, 5vw, 3rem);
+	margin-top: 0.25rem;
+	object-fit: contain;
+	filter: drop-shadow(0 4px 14px rgb(0 0 0 / 0.22));
 }
 
 .splash-progress {
@@ -676,12 +700,18 @@ html:not(.dark) .splash-screen {
 }
 
 .splash-screen.splash-screen--centered-content .splash-loading {
-	margin-top: 2.5rem;
+	margin-top: 0.25rem;
 	display: flex;
 	width: min(100%, clamp(18rem, 75vw, 36rem));
 	flex-direction: column;
 	align-items: center;
 	text-align: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-logo-icon {
+	position: static;
+	margin-top: 0.25rem;
+	transform: none;
 }
 
 .splash-screen.splash-screen--centered-content .splash-loading > div:first-child {

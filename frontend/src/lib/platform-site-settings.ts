@@ -101,6 +101,7 @@ export type PlatformSiteSettings = {
 		showProgress?: boolean
 		welcomeText?: string
 		loadingText?: string
+		logo?: string
 		backgroundMode?: "images" | "color" | "glass"
 		backgroundColor?: string
 		centerContentOnColor?: boolean

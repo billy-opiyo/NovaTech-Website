@@ -11,7 +11,7 @@ const imageKinds: Record<string, "JPEG" | "PNG" | "WEBP" | "GIF"> = {
 	"image/gif": "GIF",
 }
 const allowedSections = new Set(["splash"])
-const allowedSlots = new Set(["darkDesktop", "darkTablet", "darkMobile", "lightDesktop", "lightTablet", "lightMobile"])
+const allowedSlots = new Set(["logo", "darkDesktop", "darkTablet", "darkMobile", "lightDesktop", "lightTablet", "lightMobile"])
 
 export async function POST(request: NextRequest) {
 	const session = await auth()
