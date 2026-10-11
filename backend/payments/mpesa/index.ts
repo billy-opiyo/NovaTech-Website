@@ -56,6 +56,19 @@ export function mapMpesaQueryStatus(response: { ResponseCode: string; ResultCode
 	return { status: completed ? "COMPLETED" as const : pending ? "PENDING" as const : "FAILED" as const, completed, pending }
 }
 
+/** Keep shopper payment references tied to the complete server-created order ID. */
+export function getShopperOrderPaymentReference(orderId: string) {
+	return `ORD-${orderId}`
+}
+
+export function shopperPaymentMatchesOrder(payment: { orderId: string | null; amount: number }, orderId: string, amount: number) {
+	return payment.orderId === orderId && Math.abs(payment.amount - amount) <= 0.01
+}
+
+export function mergeMpesaPaymentMetadata(metadata: Record<string, unknown> | undefined, reference: string, merchantRequestId: string) {
+	return { ...(metadata || {}), reference, merchantRequestId }
+}
+
 export async function initiateMpesaPayment({
 	amount,
 	phone,
@@ -106,6 +119,19 @@ export async function initiateMpesaPayment({
 				where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
 			})
 	if (existing) {
+		if (orderId && !shopperPaymentMatchesOrder(existing, orderId, amount)) {
+			return {
+				ok: false,
+				provider: "mpesa",
+				reference,
+				checkoutRequestId: "",
+				phone,
+				amount,
+				currency: "KES",
+				status: "FAILED",
+				message: "This M-Pesa reference is already linked to a different order or amount.",
+			}
+		}
 		if (paymentId && !existing.providerReference) {
 			const claimed = await prisma.payment.updateMany({ where: { id: existing.id, status: "PENDING", providerReference: null }, data: { status: "PROCESSING" } })
 			if (!claimed.count) {
@@ -185,9 +211,7 @@ export async function initiateMpesaPayment({
 			providerReference: response.CheckoutRequestID,
 			phoneNumber: normalizedPhone,
 			metadata: {
-				reference,
-				merchantRequestId: response.MerchantRequestID,
-				...(metadata || {}),
+				...mergeMpesaPaymentMetadata(metadata, reference, response.MerchantRequestID),
 			},
 		},
 		})
@@ -213,6 +237,7 @@ export async function verifyMpesaPayment(
 	reference: string,
 	tenantId?: string,
 	merchantConfig?: MerchantMpesaConfig,
+	paymentId?: string,
 ): Promise<MpesaVerifyResult> {
 	if (!isMpesaConfigured(merchantConfig)) {
 		const message = merchantConfig
@@ -229,15 +254,23 @@ export async function verifyMpesaPayment(
 	}
 
 	const payment = await prisma.payment.findFirst({
-		where: {
-			provider: "mpesa",
-			...(tenantId ? { tenantId } : {}),
-			OR: [
-				{ providerReference: reference },
-				{ metadata: { path: ["reference"], equals: reference } },
-			],
-		},
+		where: paymentId
+			? { id: paymentId, provider: "mpesa", ...(tenantId ? { tenantId } : {}) }
+			: {
+				provider: "mpesa",
+				...(tenantId ? { tenantId } : {}),
+				OR: [
+					{ providerReference: reference },
+					{ metadata: { path: ["reference"], equals: reference } },
+				],
+			},
 	})
+	if (paymentId) {
+		const storedReference = (payment?.metadata as { reference?: unknown } | null)?.reference
+		if (!payment || (storedReference !== reference && payment.providerReference !== reference)) {
+			return { ok: false, provider: "mpesa", reference, checkoutRequestId: payment?.providerReference || reference, status: "FAILED", message: "Payment request does not match the requested order." }
+		}
+	}
 
 	const checkoutRequestId = payment?.providerReference || reference
 

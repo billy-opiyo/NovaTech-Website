@@ -181,19 +181,11 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 			const url = new URL(update.apkUrl, window.location.origin).toString()
 			if (new URL(url).origin !== window.location.origin) throw new Error("The update must download from the current app site.")
 			if (Capacitor.isPluginAvailable("AppUpdater")) {
-				try {
-					const result = await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
-					setDownloadId(result.downloadId)
-					setDownloadStarted(true)
-					setDownloadStatus("running")
-					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
-				} catch {
-					// Existing installs may have a native updater that rejects valid JSON numbers.
-					await Browser.open({ url })
-					setDownloadStarted(true)
-					setDownloadStatus(null)
-					setError("The Android browser opened the update download. When it finishes, open the downloaded APK and confirm installation.")
-				}
+				const result = await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
+				setDownloadId(result.downloadId)
+				setDownloadStarted(true)
+				setDownloadStatus("running")
+				setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 			} else {
 				// Existing installs cannot have the updater plugin until they update once.
 				await Browser.open({ url })

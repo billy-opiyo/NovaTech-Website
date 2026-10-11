@@ -196,6 +196,8 @@ function StoreAccountMenu({
 			await signOut({ redirect: false })
 			setOpen(false)
 		} catch {
+			// Keep the menu available so the user can retry a failed sign-out.
+		} finally {
 			setSigningOut(false)
 		}
 	}

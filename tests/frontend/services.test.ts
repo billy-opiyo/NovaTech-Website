@@ -9,6 +9,7 @@ import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket,
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
 import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
+import { getExternalHttpLinkUrl } from "../../frontend/src/lib/android-app-download"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -148,6 +149,54 @@ test("storefront footer copy is store-specific while platform footer copy remain
 	const footer = readFileSync("frontend/src/components/layout/Footer.tsx", "utf8")
 	assert.match(footer, /store\.isPlatformHome[\s\S]*?store\.site\.footerDescription[\s\S]*?: store\.homepage\.heroDescription/)
 	assert.match(footer, /Explore the products and offers available from \$\{store\.brand\.name\}/)
+})
+
+test("footer detects the Android host after hydration to keep SSR and app links aligned", () => {
+	const footer = readFileSync("frontend/src/components/layout/Footer.tsx", "utf8")
+	assert.match(footer, /const \[isAndroidApp, setIsAndroidApp\] = useState\(false\)/)
+	assert.match(footer, /useEffect\(\(\) => \{\s*setIsAndroidApp\(Capacitor\.isNativePlatform\(\) && Capacitor\.getPlatform\(\) === "android"\)/)
+	assert.doesNotMatch(footer, /const isAndroidApp = Capacitor\.isNativePlatform\(\)/)
+})
+
+test("Android external-link routing only hands cross-origin HTTP(S) links to the browser", () => {
+	const origin = "https://nuravatech-saas-staging.vercel.app"
+	assert.equal(getExternalHttpLinkUrl("/products/phone", origin), null)
+	assert.equal(getExternalHttpLinkUrl(origin + "/stores", origin), null)
+	assert.equal(getExternalHttpLinkUrl("https://wa.me/254700123456", origin), "https://wa.me/254700123456")
+	assert.equal(getExternalHttpLinkUrl("mailto:support@example.com", origin), null)
+	assert.equal(getExternalHttpLinkUrl("javascript:alert(1)", origin), null)
+})
+
+test("Android intercepts external target-blank links without changing website behavior", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidBackButtonHandler.tsx", "utf8")
+	assert.match(provider, /const openExternalTargetBlankLink = \(event: MouseEvent\)/)
+	assert.match(provider, /a\[target="_blank"\]/)
+	assert.match(provider, /Browser\.open\(\{ url: destination \}\)/)
+	assert.match(provider, /document\.addEventListener\("click", openExternalTargetBlankLink, true\)/)
+	assert.match(provider, /document\.removeEventListener\("click", openExternalTargetBlankLink, true\)/)
+})
+
+test("storefront sign-out always clears its busy state after the request settles", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const storefrontMenu = header.slice(header.indexOf("function StoreAccountMenu"), header.indexOf("function PlatformAccountMenu"))
+	assert.match(storefrontMenu, /async function handleSignOut\(\)[\s\S]*?try \{[\s\S]*?await signOut\(\{ redirect: false \}\)[\s\S]*?finally \{\s*setSigningOut\(false\)\s*\}/)
+})
+
+test("public card intent requests cannot supply payment metadata", () => {
+	const route = readFileSync("frontend/src/app/api/payments/card/create-intent/route.ts", "utf8")
+	const schema = route.slice(route.indexOf("const cardIntentSchema"), route.indexOf("export async function POST"))
+	assert.doesNotMatch(schema, /metadata\s*:/)
+	assert.doesNotMatch(route, /metadata:\s*validated\.metadata/)
+})
+
+test("native update errors remain visible instead of falling back to a manual browser APK download", () => {
+	const prompt = readFileSync("frontend/src/components/providers/AndroidAppUpdatePrompt.tsx", "utf8")
+	const downloadStart = prompt.indexOf("const downloadUpdate = async")
+	const downloadHandler = prompt.slice(downloadStart, prompt.indexOf("if (!isPlatformHomepage", downloadStart))
+	assert.match(downloadHandler, /if \(Capacitor\.isPluginAvailable\("AppUpdater"\)\) \{\s*const result = await AppUpdater\.downloadUpdate/)
+	assert.match(downloadHandler, /else \{[\s\S]*?await Browser\.open\(\{ url \}\)/)
+	assert.doesNotMatch(downloadHandler, /catch\s*\{[\s\S]*?Browser\.open\(\{ url \}\)/)
+	assert.match(downloadHandler, /catch \(reason\)[\s\S]*?setError\(reason instanceof Error \? reason\.message : "Unable to start the app update download\."\)/)
 })
 
 test("interactive links and enabled buttons show pointer cursors site-wide", () => {

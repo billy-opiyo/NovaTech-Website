@@ -7,9 +7,10 @@ import { Browser } from "@capacitor/browser"
 import { X } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { getSafeLocalCallbackUrl, PENDING_MOBILE_GOOGLE_AUTH_KEY } from "@/lib/mobile-google-auth"
+import { getExternalHttpLinkUrl } from "@/lib/android-app-download"
 import { useStoreContext } from "@/lib/store-context"
 
-type PendingMobileAuth = { state: string; callbackUrl: string }
+type PendingMobileAuth = { state: string; verifier: string; callbackUrl: string }
 
 const handledTickets = new Set<string>()
 
@@ -26,11 +27,11 @@ async function completeMobileGoogleSignIn(url: string) {
 		if (!rawPending) return
 		const pending = JSON.parse(rawPending) as Partial<PendingMobileAuth>
 		const callbackUrl = typeof pending.callbackUrl === "string" ? getSafeLocalCallbackUrl(pending.callbackUrl) : null
-		if (!callbackUrl || pending.state !== state) return
+		if (!callbackUrl || pending.state !== state || typeof pending.verifier !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(pending.verifier)) return
 
 		handledTickets.add(ticket)
 		await Browser.close().catch(() => undefined)
-		const result = await signIn("mobile-ticket", { ticket, redirect: false, callbackUrl })
+		const result = await signIn("mobile-ticket", { ticket, verifier: pending.verifier, redirect: false, callbackUrl })
 		if (result?.error) throw new Error("Mobile ticket exchange failed")
 
 		window.localStorage.removeItem(PENDING_MOBILE_GOOGLE_AUTH_KEY)
@@ -86,8 +87,20 @@ export default function AndroidBackButtonHandler() {
 		void App.getLaunchUrl().then((launch) => {
 			if (launch?.url) handleAppUrl(launch.url)
 		})
+		const openExternalTargetBlankLink = (event: MouseEvent) => {
+			if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+			if (!(event.target instanceof Element)) return
+			const anchor = event.target.closest<HTMLAnchorElement>('a[target="_blank"]')
+			if (!anchor || anchor.hasAttribute("download")) return
+			const destination = getExternalHttpLinkUrl(anchor.href, window.location.origin)
+			if (!destination) return
+			event.preventDefault()
+			void Browser.open({ url: destination }).catch(() => window.location.assign(destination))
+		}
+		document.addEventListener("click", openExternalTargetBlankLink, true)
 
 		return () => {
+			document.removeEventListener("click", openExternalTargetBlankLink, true)
 			void backButtonListener.then((handle) => handle.remove())
 			void urlOpenListener.then((handle) => handle.remove())
 		}

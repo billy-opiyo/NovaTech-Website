@@ -7,22 +7,24 @@ import { signIn } from "next-auth/react"
 function MobileGoogleStart() {
 	const searchParams = useSearchParams()
 	const state = searchParams.get("state") || ""
+	const challenge = searchParams.get("challenge") || ""
 	const started = useRef(false)
 
 	useEffect(() => {
 		if (started.current) return
 		started.current = true
-		if (!/^[0-9a-f-]{36}$/i.test(state)) {
+		if (!/^[0-9a-f-]{36}$/i.test(state) || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) {
 			window.location.replace("/auth/error?error=MobileAuthState")
 			return
 		}
 
 		const callbackUrl = new URL("/api/auth/mobile-google/complete", window.location.origin)
 		callbackUrl.searchParams.set("state", state)
+		callbackUrl.searchParams.set("challenge", challenge)
 		void signIn("google", { callbackUrl: callbackUrl.toString() }).catch(() => {
 			window.location.replace("/auth/error?error=MobileOAuthStartFailed")
 		})
-	}, [state])
+	}, [challenge, state])
 
 	return (
 		<main className="flex min-h-[70vh] items-center justify-center px-4">

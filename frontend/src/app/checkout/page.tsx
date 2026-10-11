@@ -83,14 +83,13 @@ export default function CheckoutPage() {
 			const orderResponse = await createOrder("MPESA")
 			const order = await orderResponse.json().catch(() => ({}))
 			if (!orderResponse.ok) throw new Error(order.message || "Unable to create the order")
-			const reference = `ORD-${String(order.id).slice(-8).toUpperCase()}`
-			const paymentResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/initiate"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, phone: customerPhone.trim(), reference }) })
+			const paymentResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/initiate"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, phone: customerPhone.trim() }) })
 			const payment = await paymentResponse.json().catch(() => ({}))
 			if (!paymentResponse.ok || !payment.ok) throw new Error(payment.message || "Unable to start the M-Pesa payment")
 			addToast("M-Pesa prompt sent. Enter your PIN on your phone.", "info")
 			for (let attempt = 0; attempt < 8; attempt += 1) {
 				await new Promise((resolve) => window.setTimeout(resolve, 3500))
-				const verifyResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/verify"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference }) })
+				const verifyResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/verify"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, phone: customerPhone.trim() }) })
 				const verification = await verifyResponse.json().catch(() => ({}))
 				if (verification.status === "COMPLETED") { clearCheckoutAttempt(); clearCart(); setSuccess(`Payment received. Order #${String(order.id).slice(-8).toUpperCase()} is confirmed by ${store.brand.name}.`); addToast("M-Pesa payment completed successfully.", "success"); return }
 				if (verification.status === "FAILED" || verification.status === "CANCELLED") throw new Error(verification.message || "M-Pesa payment was not completed")
