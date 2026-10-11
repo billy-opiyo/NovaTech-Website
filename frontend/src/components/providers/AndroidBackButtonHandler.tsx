@@ -101,7 +101,7 @@ export default function AndroidBackButtonHandler() {
 	}
 
 	return (
-		<div className="fixed inset-0 z-[180] grid place-items-center bg-black/55 p-4 backdrop-blur-sm" role="presentation">
+		<div className="fixed inset-0 z-[180] grid place-items-center bg-theme-bg/70 p-4 backdrop-blur-sm" role="presentation">
 			<section
 				aria-labelledby="android-exit-dialog-title"
 				aria-modal="true"

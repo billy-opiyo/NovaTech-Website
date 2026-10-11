@@ -26,7 +26,7 @@ export default function MobileNav() {
 
 	return (
 		<>
-			<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 glass backdrop-blur-lg safe-area-inset-bottom lg:hidden">
+			<nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-theme-border glass backdrop-blur-lg safe-area-inset-bottom lg:hidden">
 				<div className="flex items-center justify-around py-2">
 					{navItems.map((item) => {
 						const isActive = pathname === item.href
@@ -35,7 +35,7 @@ export default function MobileNav() {
 								key={item.label}
 								onClick={() => setSearchOpen(true)}
 								aria-label="Open search"
-								className="flex flex-col items-center gap-1 py-1 px-3 text-gray-500 hover:text-primary transition"
+								className="flex flex-col items-center gap-1 py-1 px-3 text-theme-muted hover:text-primary transition"
 							>
 								<item.icon size={22} />
 								<span className="max-w-20 truncate text-xs">{item.label}</span>
@@ -48,7 +48,7 @@ export default function MobileNav() {
 										"flex flex-col items-center gap-1 py-1 px-3 relative transition",
 										isActive
 											? "text-primary"
-											: "text-gray-500 hover:text-primary",
+										: "text-theme-muted hover:text-primary",
 									)}
 							>
 								<item.icon size={22} />

@@ -639,6 +639,8 @@ html:not(.dark) .splash-screen {
 	height: clamp(2.5rem, 5vw, 3rem);
 	margin-top: 0.25rem;
 	object-fit: contain;
+	border-radius: 27%;
+	clip-path: inset(0 round 27%);
 	filter: drop-shadow(0 4px 14px rgb(0 0 0 / 0.22));
 }
 

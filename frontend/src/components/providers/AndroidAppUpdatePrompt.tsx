@@ -101,7 +101,7 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 				try {
 					await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
 					setDownloadStarted(true)
-					setError("The download has started. Android will notify you when it is ready; tap that notification to install the update.")
+					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 				} catch {
 					// Existing installs may have a native updater that rejects valid JSON numbers.
 					await Browser.open({ url })
@@ -129,14 +129,14 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 				<button type="button" onClick={() => setDismissedVersionCode(update.versionCode)} className="absolute right-3 top-3 rounded-full p-2 text-gray-500 transition hover:bg-black/10 hover:text-theme-text dark:hover:bg-white/10" aria-label="Remind me later"><X size={18} /></button>
 				<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary"><Download size={25} aria-hidden="true" /></div>
 				<h2 id="app-update-title" className="mt-4 text-xl font-bold sm:text-2xl">App update available</h2>
-				<p id="app-update-description" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">Nurava HubStores {update.versionName} is ready. Download it here, then tap the Android download notification to install it.</p>
+				<p id="app-update-description" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">Nurava HubStores {update.versionName} is ready. The Android install screen will open after the download finishes.</p>
 				{update.releaseNotes && <p className="mt-2 text-sm leading-6 text-gray-500">{update.releaseNotes}</p>}
 				{error && <p className={`mt-4 text-sm leading-5 ${downloading ? "text-gray-500" : "text-primary"}`} role="status">{error}</p>}
 				<div className="mt-6 flex flex-col-reverse justify-center gap-3 sm:flex-row">
 					<button type="button" onClick={() => setDismissedVersionCode(update.versionCode)} className="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold transition hover:bg-black/5 dark:hover:bg-white/5">Remind me later</button>
 					<button type="button" onClick={() => void downloadUpdate()} disabled={downloading || downloadStarted} className="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70">{downloading ? <><LoaderCircle size={17} className="animate-spin" /> Starting download…</> : downloadStarted ? <><Download size={17} /> Download started</> : <><Download size={17} /> Download update</>}</button>
 				</div>
-				<p className="mt-4 text-xs text-gray-500">Android will ask you to confirm before installing.</p>
+				<p className="mt-4 text-xs text-gray-500">Android requires your confirmation before it installs an app update.</p>
 			</section>
 		</div>
 	)
