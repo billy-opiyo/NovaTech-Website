@@ -43,13 +43,7 @@ public class UpdateDownloadReceiver extends BroadcastReceiver {
 
             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
             if (apkUri == null) return;
-            if (installListener != null) {
-                installListener.onUpdateDownloaded(apkUri);
-                context.getSharedPreferences("app_update", Context.MODE_PRIVATE)
-                    .edit()
-                    .remove("pending_download_id")
-                    .apply();
-            }
+            if (installListener != null) installListener.onUpdateDownloaded(apkUri);
         } catch (RuntimeException ignored) {
             // A failed DownloadManager lookup must not crash the app process.
         }

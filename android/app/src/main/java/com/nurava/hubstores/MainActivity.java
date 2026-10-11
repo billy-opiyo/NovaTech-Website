@@ -4,7 +4,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.app.DownloadManager;
 import android.content.IntentFilter;
@@ -56,15 +55,6 @@ public class MainActivity extends BridgeActivity {
                 view.postDelayed(MainActivity.this::hideNativeLaunchOverlay, 180);
             }
 
-            @Override
-            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
-                if (request.isForMainFrame() && response.getStatusCode() >= 500) {
-                    showOfflinePage(view, request.getUrl().toString());
-                    return;
-                }
-                super.onReceivedHttpError(view, request, response);
-            }
-
             private void showOfflinePage(WebView view, String failedUrl) {
                 if (failedUrl == null || failedUrl.isEmpty()) return;
                 // The app loads the website from Vercel, but this fallback is
@@ -88,16 +78,18 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
-        if (updateDownloadReceiver != null) return;
-        updateDownloadReceiver = new UpdateDownloadReceiver(this::installDownloadedUpdate);
-        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            // DownloadManager is a separate privileged app, so NOT_EXPORTED can
-            // prevent its completion broadcast from reaching this receiver.
-            registerReceiver(updateDownloadReceiver, filter, android.content.Context.RECEIVER_EXPORTED);
-        } else {
-            registerReceiver(updateDownloadReceiver, filter);
+        if (updateDownloadReceiver == null) {
+            updateDownloadReceiver = new UpdateDownloadReceiver(this::installDownloadedUpdate);
+            IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                // DownloadManager is a separate privileged app, so NOT_EXPORTED can
+                // prevent its completion broadcast from reaching this receiver.
+                registerReceiver(updateDownloadReceiver, filter, android.content.Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(updateDownloadReceiver, filter);
+            }
         }
+        recoverCompletedUpdateDownload();
     }
 
     @Override
@@ -107,6 +99,26 @@ public class MainActivity extends BridgeActivity {
             updateDownloadReceiver = null;
         }
         super.onPause();
+    }
+
+    private void recoverCompletedUpdateDownload() {
+        if (pendingUpdateApk != null || updateDownloadReceiver == null) return;
+        long downloadId = getSharedPreferences("app_update", MODE_PRIVATE)
+            .getLong("pending_download_id", -1L);
+        if (downloadId < 0L) return;
+
+        // The app may have been paused or killed when DownloadManager sent its
+        // completion broadcast. Re-check the saved download whenever it resumes.
+        Intent completedDownload = new Intent(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            .putExtra(DownloadManager.EXTRA_DOWNLOAD_ID, downloadId);
+        updateDownloadReceiver.onReceive(this, completedDownload);
+    }
+
+    private void clearPendingUpdateDownload() {
+        getSharedPreferences("app_update", MODE_PRIVATE)
+            .edit()
+            .remove("pending_download_id")
+            .apply();
     }
 
     private void installDownloadedUpdate(Uri apkUri) {
@@ -127,6 +139,7 @@ public class MainActivity extends BridgeActivity {
             .setDataAndType(apkUri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(installIntent);
+        clearPendingUpdateDownload();
     }
 
     @Override
@@ -139,6 +152,7 @@ public class MainActivity extends BridgeActivity {
             || getPackageManager().canRequestPackageInstalls()) {
             launchUpdateInstaller(apkUri);
         } else {
+            clearPendingUpdateDownload();
             android.widget.Toast.makeText(this, "Allow Nurava HubStores to install this update, then open the downloaded APK.", android.widget.Toast.LENGTH_LONG).show();
         }
     }
