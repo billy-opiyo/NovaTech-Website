@@ -1,6 +1,10 @@
 package com.nurava.hubstores;
 
 import android.net.Uri;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -228,7 +232,7 @@ public class MainActivity extends BridgeActivity {
         if (content == null || getBridge() == null || getBridge().getWebView() == null) return;
 
         FrameLayout overlay = new FrameLayout(this);
-        overlay.setBackgroundResource(R.drawable.native_launch_background);
+        overlay.setBackground(createNativeLaunchBackground());
         overlay.setClickable(true);
         overlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
 
@@ -254,6 +258,46 @@ public class MainActivity extends BridgeActivity {
         );
         content.addView(overlay, overlayLayout);
         nativeLaunchOverlay = overlay;
+    }
+
+    private Drawable createNativeLaunchBackground() {
+        android.content.SharedPreferences theme = getSharedPreferences("active_theme", MODE_PRIVATE);
+        int backgroundColor = readThemeColor(theme, "background", "#061626");
+        int surfaceColor = readThemeColor(theme, "surface", "#0B233A");
+        int primaryColor = readThemeColor(theme, "primary", "#F97316");
+
+        GradientDrawable background = new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            new int[] { surfaceColor, backgroundColor }
+        );
+        background.setShape(GradientDrawable.RECTANGLE);
+
+        GradientDrawable frame = new GradientDrawable();
+        frame.setShape(GradientDrawable.RECTANGLE);
+        frame.setCornerRadius(dp(26));
+        frame.setColor(Color.argb(
+            0x99,
+            Color.red(surfaceColor),
+            Color.green(surfaceColor),
+            Color.blue(surfaceColor)
+        ));
+        frame.setStroke(dp(1), Color.argb(
+            0x33,
+            Color.red(primaryColor),
+            Color.green(primaryColor),
+            Color.blue(primaryColor)
+        ));
+
+        LayerDrawable launchBackground = new LayerDrawable(new Drawable[] { background, frame });
+        int frameInset = dp(12);
+        launchBackground.setLayerInset(1, frameInset, frameInset, frameInset, frameInset);
+        return launchBackground;
+    }
+
+    private int readThemeColor(android.content.SharedPreferences theme, String key, String fallback) {
+        String value = theme.getString(key, fallback);
+        if (value == null || !value.matches("#[0-9a-fA-F]{6}")) value = fallback;
+        return Color.parseColor(value);
     }
 
     private void hideNativeLaunchOverlay() {

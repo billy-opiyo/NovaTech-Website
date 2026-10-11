@@ -7,6 +7,18 @@ import type { MouseEvent as ReactMouseEvent } from "react"
 export const APP_DOWNLOAD_PATH = "/downloads/nurava-hubstores-staging.apk"
 export const APP_DOWNLOAD_FILENAME = "Nurava-HubStores-Android-Staging.apk"
 
+/** Return cross-origin HTTP(S) destinations that should leave the native WebView. */
+export function getExternalHttpLinkUrl(href: string, currentOrigin: string) {
+	try {
+		const current = new URL(currentOrigin)
+		const destination = new URL(href, current)
+		if ((destination.protocol !== "http:" && destination.protocol !== "https:") || destination.origin === current.origin) return null
+		return destination.toString()
+	} catch {
+		return null
+	}
+}
+
 function getAppDownloadUrl() {
 	const downloadUrl = new URL(APP_DOWNLOAD_PATH, window.location.origin)
 	// Avoid a stale APK from the browser or Vercel cache when the file at this

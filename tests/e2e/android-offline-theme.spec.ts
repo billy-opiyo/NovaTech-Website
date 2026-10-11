@@ -39,3 +39,24 @@ test("bundled Android offline page applies only valid saved theme colors", async
 	}))
 	expect(fallbackPalette).toEqual({ background: "#0b1220", primary: "#f97316" })
 })
+
+test("bundled Android offline page retries and returns to the requested page when it is reachable", async ({ page }) => {
+	const targetUrl = "http://127.0.0.1:3000/__offline_recovery_test"
+	let targetRequests = 0
+	await page.route(targetUrl, async (route) => {
+		targetRequests += 1
+		if (targetRequests === 1) {
+			await route.abort("failed")
+			return
+		}
+		await route.fulfill({
+			status: 200,
+			contentType: "text/html",
+			body: "<!doctype html><title>Recovered</title><h1>Connection restored</h1>",
+		})
+	})
+
+	await page.goto(`${offlinePage}?url=${encodeURIComponent(targetUrl)}`)
+	await expect(page.getByRole("heading", { name: "Connection restored" })).toBeVisible({ timeout: 10000 })
+	expect(targetRequests).toBeGreaterThanOrEqual(3)
+})

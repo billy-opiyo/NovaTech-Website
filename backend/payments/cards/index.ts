@@ -19,6 +19,18 @@ export function shouldCancelOrderAfterCardVerification(status: string) {
 	return status === "FAILED" || status === "CANCELLED"
 }
 
+export function mergeCardPaymentMetadata(
+	metadata: Record<string, unknown> | undefined,
+	trusted: { reference: string; orderId?: string; clientSecret?: string },
+) {
+	return {
+		...(metadata || {}),
+		reference: trusted.reference,
+		...(trusted.orderId ? { orderId: trusted.orderId } : {}),
+		...(trusted.clientSecret ? { clientSecret: trusted.clientSecret } : {}),
+	}
+}
+
 export async function createCardPaymentIntent({
 	amount,
 	currency = "KES",
@@ -91,9 +103,7 @@ export async function createCardPaymentIntent({
 		currency: currency.toLowerCase(),
 		receipt_email: customerEmail,
 		metadata: {
-			reference,
-			...(orderId ? { orderId } : {}),
-			...(metadata || {}),
+			...mergeCardPaymentMetadata(metadata, { reference, orderId }),
 		},
 	})
 
@@ -107,11 +117,7 @@ export async function createCardPaymentIntent({
 			status: "PENDING",
 			providerReference: paymentIntent.id,
 			customerEmail,
-		metadata: {
-				reference,
-				clientSecret: paymentIntent.client_secret,
-				...(metadata || {}),
-			},
+			metadata: mergeCardPaymentMetadata(metadata, { reference, clientSecret: paymentIntent.client_secret || undefined, orderId }),
 		},
 	})
 

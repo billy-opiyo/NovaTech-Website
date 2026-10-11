@@ -85,9 +85,10 @@ export const authOptions = {
 			name: "Mobile sign-in ticket",
 			credentials: {
 				ticket: { label: "One-time sign-in ticket", type: "text" },
+				verifier: { label: "One-time sign-in verifier", type: "text" },
 			},
 			async authorize(credentials) {
-				return authorizeMobileGoogleTicket(String(credentials?.ticket || ""))
+				return authorizeMobileGoogleTicket(String(credentials?.ticket || ""), String(credentials?.verifier || ""))
 			},
 		}),
 	],

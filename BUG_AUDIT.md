@@ -1,6 +1,6 @@
 # Project Bug Audit
 
-Status: cycle 29 repairs in progress on saas-staging; see the authoritative status register below
+Status: ongoing project-wide audit on saas-staging; latest repair recorded in Cycle 43; see the authoritative status register below
 Audit started: 2026-10-08; boutique-inclusive transfer audit: 2026-10-09
 Repository: NovaTech Website
 Branch: saas-staging
@@ -609,6 +609,15 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-087 | Fixed | Stripe invoice webhook processing now propagates Payment upsert errors so the event receipt is marked failed and can be retried; regression test forces the Payment write to fail and checks the receipt state. |
 | BUG-088 | Verified | Android update recovery now distinguishes returning from install-permission settings from an already-open installer, and can resume the saved DownloadManager APK after activity recreation. Java compilation and debug APK assembly pass; physical-device verification remains pending. |
 | BUG-089 | Verified | Android WebView vertical scrollbar is disabled natively; app-only CSS hides remaining WebView scrollbars behind a platform-gated document class, leaving browser scrollbar styling intact. Production build and versioned staging APK build pass; physical-device rendering remains unverified. |
+| BUG-090 | Fixed | Mobile Google OAuth tickets now require an app-held PKCE verifier; mismatched verification does not consume the ticket. Real Google OAuth and device callback behavior remain unverified. |
+| BUG-091 | Fixed | Footer platform detection now runs after hydration, aligning Android's Open Website action with server-rendered markup while the website retains Open App. |
+| BUG-092 | Verified | Shopper M-Pesa references and status checks are bound to the full server-verified order, payment row, and registered/guest owner; focused regression tests pass. Live Daraja settlement remains unverified. |
+| BUG-093 | Verified | Shopper callers can no longer submit payment metadata, and trusted reference/merchant IDs take precedence over metadata from internal callers; focused regression and production build pass. |
+| BUG-094 | Verified | Storefront sign-out clears its busy state after either success or failure; regression test, repository type-check, and production build pass. Live authenticated logout remains unverified. |
+| BUG-095 | Verified | Shopper card initiation no longer accepts caller metadata; trusted Stripe reference, order ID, and client secret are merged last. Full tests/type-check/build pass; live Stripe checkout remains unverified. |
+| BUG-096 | Verified | Native update-download errors now surface in the prompt; the browser APK fallback is used only when the native updater plugin is unavailable. Native installation behavior still needs device verification. |
+| BUG-097 | Verified | The Android launch overlay now uses the last saved background/surface/primary palette with brand fallbacks. JDK 21 Android build passes and a version 1.3.13 APK verifies; physical-device rendering remains untested. |
+| BUG-098 | In Progress | Cross-origin links using `target="_blank"` navigate inside the only Android WebView instead of opening the external destination separately. |
 
 #### BUG-066 — Product cards expose electronics-only specification text in every industry
 
@@ -1353,3 +1362,178 @@ The current `saas-staging` sources were traced across the Android shell, Next.js
 - BUG-081 and BUG-082 are source-fixed but not device-verified. These changes have not been built into or installed from a new APK. No database migration, seed, payment transaction, push, or deployment was run.
 - This cycle found and fixed two findings and is not a clean audit. The two consecutive clean full-audit gate remains outstanding; the project audit is still active.
 - Follow-up environment check: JDK 21 was downloaded to a temporary directory and used for the successful Java compile; no system-wide Java settings were changed. ADB starts successfully but reports no connected device. The read-only staging `/api/health` request was inaccessible through both direct sandbox fetch (EACCES) and the browser tool, so live staging health remains unverified.
+
+### Cycle 32 — Post-push Android/web audit continuation — 2026-10-11
+
+- Current Git state was rechecked: `saas-staging` and `origin/saas-staging` both point to `ed87eee` (`feat(android): enhance offline page with theme color support and update handling`); the worktree was clean before this report update. The pushed tree contains APK version 1.3.11 / versionCode 15 and the corresponding update manifest.
+- Re-traced the shared Capacitor origin/config, native startup/offline fallback, theme/system-bar bridge, Google ticket/deep-link bridge, checkout WhatsApp path, app-update download/install recovery, app-vs-website footer links, and standard file inputs. No new confirmed source defect was established in this targeted continuation.
+- Targeted Chromium flow `auth portals, protected workspace redirects, and platform mobile navigation work`: the test reported `ok 1` and passed in 32.8 seconds. Signup consent feedback was exercised without submitting a registration. The local application logged Neon connection failures and used configured defaults; this is not evidence of successful login, database-backed behavior, tenant CRUD, or payment processing.
+- A fresh request to the staging update manifest was attempted after the push but outbound socket access to Vercel was denied. Deployment completion and the live manifest version therefore remain unverified; the committed local manifest is not proof of deployed state.
+- This continuation is not a full audit cycle and does not count toward the two-consecutive-clean-full-audit requirement. Live Google OAuth/logout, Neon migration/data behavior, authenticated tenant CRUD, M-Pesa/Stripe callbacks, real R2 uploads, and Android-device offline/update/theme/navigation/file-picker behavior remain unverified. No device is connected.
+
+### BUG-090 — Mobile Google OAuth ticket can be redeemed when a custom-scheme link is intercepted
+
+- **Files:** `frontend/src/lib/mobile-google-auth.ts`, `frontend/src/app/auth/mobile-google-start/page.tsx`, `frontend/src/app/api/auth/mobile-google/complete/route.ts`, `frontend/src/components/providers/AndroidBackButtonHandler.tsx`, `frontend/src/lib/auth.ts`, `backend/lib/mobile-google-ticket.ts`
+- **Description:** The Android app checked a random `state` before exchanging the one-time Google OAuth ticket, but the callback deep link carried both the ticket and that same state. An Android app that intercepted the custom-scheme callback could therefore submit the bearer ticket to the `mobile-ticket` credentials provider without possessing any secret held only by the HubStores WebView.
+- **Root cause:** Callback correlation state was treated as proof of possession even though it was included in the interceptable callback URL; the server ticket grant was not bound to an app-held secret.
+- **Severity:** High
+- **Status:** Fixed at source/test/build level — the WebView now creates a random PKCE verifier and stores it with the pending state. Only its SHA-256 challenge is sent through the OAuth start/callback and stored with the short-lived ticket grant. Ticket redemption requires the verifier, and an incorrect verifier does not consume the ticket. No schema migration is needed. Focused ticket tests pass 3/3, the full unit suite passes 156/156, focused ESLint and repository type-check pass, and production build passes with 169 routes. Real Google OAuth and device callback interception/return remain unverified.
+
+### Cycle 33 — Mobile OAuth ticket binding repair — 2026-10-11
+
+- Reproduced the missing possession check by tracing the custom-scheme callback, which contained the same state value stored in localStorage, and the server credential provider, which previously accepted only the ticket. Added PKCE-style verifier binding end to end without changing the shared Google account/session model or database schema.
+- `node --test --require ./tests/register.cjs tests/auth/mobile-google-ticket.test.ts`: PASS, 3/3, including mismatched-verifier rejection without ticket consumption.
+- `npm test`: PASS, 156/156. The webhook tests logged expected local PostgreSQL-unavailable diagnostics; their mocked assertions passed.
+- `npm run type-check`: PASS. Focused ESLint on the modified frontend auth files: PASS. `npm run build`: PASS, all 169 routes generated. The existing Neon-unreachable fallback was used during store-directory generation; webpack cache and Node URL deprecation warnings remain.
+- This cycle found and fixed BUG-090, so it does not count as a clean full audit. The repair is local and has not been committed, pushed, or deployed. Live Google OAuth, Android callback interception behavior, authenticated logout, database/provider flows, real uploads, and remaining physical-device behavior are still unverified.
+
+### BUG-091 — Footer app/website quick link differs between server render and Android hydration
+
+- **Files:** `frontend/src/components/layout/Footer.tsx`
+- **Description:** The footer selected **Open Website** by calling Capacitor's native-platform APIs during render. The server render sees the web platform and emits **Open App**, while an Android WebView sees the native platform during hydration and emits **Open Website**. This creates a hydration mismatch and can expose the wrong action briefly on the app's footer.
+- **Root cause:** Native platform detection ran during a render that is also server-rendered.
+- **Severity:** Low
+- **Status:** Fixed at source/test level — the component now renders a stable web default on both server and first client render, then detects Android in an effect and switches to **Open Website**. A regression assertion verifies that native detection is deferred. Focused frontend tests pass 19/19, focused ESLint and repository type-check pass. Browser/native runtime rendering remains unverified.
+
+### Cycle 34 — Footer SSR/native link alignment — 2026-10-11
+
+- Fixed BUG-091 by moving Capacitor detection out of render; Android-only **Open Website** and website **Open App** behavior remain intact after hydration.
+- Focused frontend/service plus mobile Google ticket tests pass 19/19. Focused ESLint and `npm run type-check` pass. Full `npm test` passes 157/157. `npm run build` passes and generates 169 routes; store-directory generation used its existing fallback because Neon was unreachable. Existing webpack cache and Node URL deprecation warnings remain.
+- This cycle found and fixed BUG-091, so it is not a clean audit cycle. The source changes and documentation remain local and unpushed; Vercel access and physical Android device verification remain unavailable.
+
+### Cycle 35 — Staging APK rebuild and native capability evidence — 2026-10-11
+
+- Rechecked BUG-089: Android WebView vertical scrollbars are disabled in `MainActivity`; shared CSS hides scrollbars only when the native Android provider applies `html.android-app`. Website browser scrollbar styling remains unchanged.
+- Inspected the merged manifest from the rebuilt APK. It requests `INTERNET` and `REQUEST_INSTALL_PACKAGES` plus AndroidX's internal receiver permission. Standard file upload uses the WebView file chooser and grants selected URI access; no camera capture, geolocation, push-messaging registration, or app-posted notification flow exists, so no unrelated runtime permissions were added.
+- `npm run android:staging:update`: PASS using Temurin JDK 21 and the installed Android SDK. Generated local APK version 1.3.12 / versionCode 16 and updated the local update manifest URL to `/downloads/nurava-hubstores-staging.apk?v=16`.
+- `aapt dump badging`: package `com.nurava.hubstores`, versionCode 16, versionName 1.3.12, min SDK 24, target SDK 36. `apksigner verify`: PASS; the Android debug signer matches version 15's signer, so signing identity is consistent for a local in-place test update. Built APK and downloadable-copy SHA-256 are identical (`6320b5125d4ad1b42353ed0432430461a6da4fb9c0d9d38d5c76d730d3ec54f1`); each is 5,040,167 bytes.
+- The APK and manifest are local changes and have not been pushed or deployed, so the live app update endpoint still cannot deliver version 16. No Android device is connected; installing/updating on the Samsung device, scrollbar appearance, file picker, offline recovery, and theme behavior remain unverified. Live Google OAuth/logout, database-backed account flows, real payments, and remote uploads also remain open gates.
+- This targeted verification does not count as a clean full audit. The audit remains active, and no changes were made to `multi-industry-commerce`.
+
+### BUG-092 — Shopper M-Pesa payment references are client-controlled and can resolve to another order
+
+- **Files:** `frontend/src/app/api/payments/mpesa/initiate/route.ts`, `frontend/src/app/api/payments/mpesa/verify/route.ts`, `frontend/src/app/checkout/page.tsx`, `backend/payments/mpesa/index.ts`
+- **Description:** The shopper initiation route accepts the reference from the browser. The payment service uses tenant plus that reference to find an existing M-Pesa payment and returns it without confirming that its `orderId` matches the order in the current request. The verification route likewise looks up a payment by tenant plus caller-provided reference, without binding the verification request to an order or customer. A forged/colliding reference can therefore report or reuse a different shopper's payment; the checkout also constructs references from only the final eight order-ID characters.
+- **Root cause:** Payment identity and status lookup trust a browser-provided reference instead of binding it to the server-verified order and its owner.
+- **Recommended fix:** Derive references server-side from the full order ID; reject any existing payment whose order/amount differs; and require verification to include the order identity plus owner proof, then look up and verify only that order's payment record. Reuse an already-pending legacy payment so a rollout does not duplicate an in-flight request.
+- **Severity:** High
+- **Status:** Verified at source/test/build level — server derives the new reference from the full order ID, prevents reference reuse across order/amount mismatches, checks the registered account or guest phone on verification, and verifies the exact payment row for the requested order. Existing pending payments are reused by order to preserve in-flight requests from the previous short-reference format. Focused regressions, all 159 unit tests, type-check, focused ESLint, and the 169-route production build pass. Live M-Pesa callbacks/settlement remain unverified.
+
+### BUG-093 — Shopper payment metadata can overwrite the trusted M-Pesa reference
+
+- **Files:** `frontend/src/app/api/payments/mpesa/initiate/route.ts`, `backend/payments/mpesa/index.ts`
+- **Description:** The shopper initiation validator accepted arbitrary metadata, and the shared service merged that object after its server-owned payment reference and merchant request ID. A direct API caller could replace those protected metadata fields, breaking reliable lookup/callback correlation and undermining order-bound payment identity.
+- **Root cause:** Untrusted request metadata is allowed into a shopper payment record and takes precedence over the service's trusted correlation identifiers.
+- **Recommended fix:** Remove shopper-supplied metadata from the initiation contract and merge trusted reference/request IDs after any metadata from trusted internal callers.
+- **Severity:** High
+- **Status:** Verified at source/test/build level — the shopper initiation API no longer accepts metadata, and the shared service merges trusted reference/merchant request IDs after allowed internal metadata. The focused M-Pesa suite passes 4/4 and the production build passes with 169 routes. Live provider callback correlation remains unverified.
+
+### Cycle 37 — Trusted M-Pesa payment metadata — 2026-10-11
+
+- Recorded BUG-093 before repair after tracing the allowed shopper metadata through the shared payment writer.
+- Removed caller-provided metadata from the shopper initiation contract. The shared payment service now places its trusted reference and merchant request ID after any internal metadata, preventing those fields from being overwritten.
+- Focused M-Pesa suite: PASS, 4/4. Focused ESLint: PASS. Production build: PASS, all 169 routes generated; store-directory generation used the existing fallback because Neon was unreachable. `git diff --check`: PASS.
+- Daraja callback behavior against a live provider and database remains unverified. This cycle found and fixed a new issue, so it does not count as a clean full audit.
+
+### BUG-094 — Storefront account menu stays stuck in signing-out state after logout
+
+- **File:** `frontend/src/components/layout/Header.tsx`
+- **Description:** Storefront `StoreAccountMenu` calls `signOut({ redirect: false })` and marks itself as signing out, but clears that state only when the call throws. The menu remains mounted after a successful sign-out; if the user signs in again without a full page reload, its Sign out action remains disabled and reads “Signing out…” indefinitely. The same shared component is used by the Android WebView and website storefronts.
+- **Root cause:** The successful sign-out path closes the menu but never resets the component's `signingOut` state.
+- **Recommended fix:** Always clear the local in-progress flag after the sign-out request settles, including the success path.
+- **Severity:** Medium
+- **Status:** Verified at source/test/type-check level — `StoreAccountMenu` now clears `signingOut` in `finally`, so both successful and failed sign-out attempts release the busy state. The storefront regression assertion passes. The shared menu serves web storefronts and the Android WebView; authenticated live logout remains unverified.
+
+### Cycle 38 — Storefront sign-out recovery — 2026-10-11
+
+- Fixed BUG-094 by clearing the storefront menu's signing-out flag in `finally`, including after successful sign-out. Failed sign-out keeps the menu available to retry.
+- Regression check: `node --test --require ./tests/register.cjs tests/frontend/services.test.ts` PASS, 17/17. Full `npm test` PASS, 160/160. `npm run type-check` PASS. Focused ESLint on `Header.tsx` reports zero errors and one existing `<img>` warning. `git diff --check` PASS with line-ending notices only.
+- `npm run build` PASS; all 169 routes generated. Store-directory generation used the existing fallback because the configured Neon endpoint was unreachable. Existing webpack cache, Node URL deprecation, and repository lint warnings remain.
+- This is source/test/type-check/build evidence; authenticated web logout and native Android logout have not been exercised against the live staging session. Deployment was not checked. This cycle found and fixed an issue and does not count toward the two consecutive clean full audits.
+
+### Cycle 39 — Offline recovery parity check — 2026-10-11
+
+- Compared the website `OfflineNotice`, the Capacitor `MainActivity` main-frame error fallback, and the bundled `capacitor-shell/offline.html`. The website and native fallback use the same connection-unavailable copy and Wi-Fi-off icon; the bundled page retries the failed URL and returns to it when the request succeeds. No new source defect was confirmed in this trace.
+- Added a Playwright regression case that aborts the first request, then allows the retry and resulting navigation. Both tests in `tests/e2e/android-offline-theme.spec.ts` printed `ok`, including theme-parameter validation and offline recovery. The Playwright command did not exit after the tests because the spawned dev-server process remained alive; it was interrupted during cleanup, so no clean suite exit is claimed. Dev-server logs showed the configured Neon endpoint was unavailable and defaults were used.
+- This validates the bundled page in desktop Chromium only; it does not verify Android WebView connectivity-change events, active-page recovery, or native theme bars on a device. No new production build was needed for this test-only change. The audit remains open.
+
+### BUG-095 — Shopper card metadata can overwrite trusted Stripe payment correlation fields
+
+- **Files:** `frontend/src/app/api/payments/card/create-intent/route.ts`, `backend/payments/cards/index.ts`
+- **Description:** The public card-intent schema accepts arbitrary `metadata`; the route passes it to the shared payment service, which currently merges it after the trusted payment `reference` and `orderId` in both Stripe intent metadata and the local payment metadata. A caller can replace those correlation values, so checkout verification can fail to find its own payment and Stripe-side metadata can point at a different order than the local payment row.
+- **Root cause:** Shopper-controlled metadata is admitted into the card initiation flow and spread after service-owned correlation identifiers.
+- **Recommended fix:** Remove shopper-supplied metadata from the public card-intent contract and merge trusted reference/order/client-secret fields after any metadata supplied only by internal callers. Cover both the metadata merge and the public request contract.
+- **Severity:** High
+- **Status:** Verified at source/test/type-check/build level — the public shopper route no longer accepts metadata, and trusted reference/order/client-secret values override collisions from internal callers. Public-contract and merge-collision regressions pass; the full 162-test suite, repository type-check, and production build of all 169 routes pass. Live Stripe checkout/webhook reconciliation remains unverified.
+
+### Cycle 40 — Trusted Stripe shopper metadata — 2026-10-11
+
+- Fixed BUG-095 by removing shopper-supplied metadata from the card-intent API and ensuring the shared service writes trusted reference, order ID, and client secret after internal metadata.
+- Regression checks: focused card/frontend tests pass 22/22. Full `npm test` passes 162/162. `npm run type-check` passes. `npm run build` passes and generates all 169 routes; store-directory generation used the existing fallback because Neon was unreachable. Existing webpack cache, Node URL deprecation, and repository lint warnings remain. `git diff --check` passes with line-ending notices only.
+- Live Stripe intent creation, payment confirmation/webhook reconciliation, authenticated checkout, and Android WebView payment behavior remain unverified. This cycle found and fixed an issue and does not count toward the two consecutive clean full audits.
+
+### Cycle 41 — App/web links and native file selection audit — 2026-10-11
+
+- Traced the `Open Website` and `Open App` footer actions, including the Android intent's same-origin URL validation and browser APK fallback. The in-app action preserves the current page URL when opening the browser; no source mismatch was confirmed.
+- Inspected Capacitor's installed `BridgeWebChromeClient.onShowFileChooser`: ordinary and multiple-selection inputs use Android's system file picker and return selected content URIs to the WebView. Camera permission is requested only when a web input explicitly enables capture; current shared image/document inputs do not request capture. The app does not need blanket storage permission for these pickers.
+- Traced product image and merchant evidence uploads from file input through multipart API validation, tenant permission checks, MIME/signature/size checks, and existing storage APIs. No source-level web/native divergence was confirmed. Actual Android file selection, authenticated session cookies, and R2 storage writes still require a connected device and reachable services.
+- Source review only; no code change or new test in this cycle. The overall audit remains open pending live auth/payment/database/storage and physical Android verification.
+
+### BUG-096 — Native update failures silently fall back to manual browser APK download
+
+- **File:** `frontend/src/components/providers/AndroidAppUpdatePrompt.tsx`
+- **Description:** When the native `AppUpdater` plugin is available, any rejection from its `downloadUpdate` method is caught and replaced with `Browser.open`. This includes native validation, DownloadManager, or installer-preparation failures. The prompt then tells the user to manually open the APK, bypassing the native auto-installer and hiding the original failure.
+- **Root cause:** The fallback is triggered by any rejected native download, rather than only when the plugin is unavailable on an older installed app.
+- **Fix:** Kept the browser download path only for installs without the native plugin. Rejections from the native updater now reach the prompt's existing error handling, preserving the real failure and allowing retry instead of silently starting a manual download.
+- **Severity:** Medium
+- **Status:** Verified at source/test/build level. Focused service tests pass 19/19, the full unit suite passes 163/163, type-check and focused ESLint pass, and the production build generates all 169 routes. Actual native download/install still needs a physical Android device.
+
+### Cycle 42 — Native APK updater failure handling — 2026-10-11
+
+- Reproduced BUG-096 in `AndroidAppUpdatePrompt`: a catch around `AppUpdater.downloadUpdate` treated every native updater failure as a reason to open the APK in the browser. This masked native errors and bypassed automatic installation.
+- Removed that catch-all browser fallback. The browser fallback now applies only when the native updater plugin is unavailable; native failures appear through the prompt's error state and remain retryable.
+- Added a regression assertion proving native updater rejection does not invoke browser fallback. Focused service tests pass 19/19; full `npm test` passes 163/163; repository type-check and focused ESLint pass; `npm run build` passes and generates all 169 routes.
+- The build used the configured Neon-unreachable store-directory fallback and emitted existing webpack cache, lint, and Node URL deprecation warnings. No build errors occurred.
+- No physical Android device is connected, so native DownloadManager and package-installer behavior remain unverified. This cycle found and fixed an issue and does not count toward the two consecutive clean full audits.
+
+### BUG-097 — Native launch overlay ignores the last active site theme
+
+- **File:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`
+- **Description:** `SystemBarsPlugin` persists the last rendered page palette in `active_theme`, and the offline page reads that palette, but `showNativeLaunchOverlay()` always applies the static dark `native_launch_background`. Returning to the app after using a light or differently colored storefront therefore flashes a mismatched launch panel before the shared website UI renders.
+- **Root cause:** The native overlay is created without consulting the already persisted theme preferences.
+- **Fix:** Build the overlay background from the persisted background, surface, and primary colors, validating each value and using the existing brand palette as the first-launch fallback. The centered launch icon and its position remain unchanged.
+- **Severity:** Medium
+- **Status:** Verified at source/build/artifact level — Android `assembleDebug` passes with JDK 21 and SDK 36; version 1.3.13 / versionCode 17 passes package metadata and APK signature verification. The staged-copy APK hash matches the build output. The earliest Android system splash remains a fixed brand fallback; the saved web palette applies to the native overlay after the activity starts. Physical-device rendering remains unverified.
+
+### Cycle 43 — Native launch theme synchronization — 2026-10-11
+
+- Inspected the launch sequence and confirmed the system splash has a fixed brand fallback while the app's native overlay remains visible until the remote web page finishes rendering. The last active site palette is already persisted by `SystemBarsPlugin`, but was not used by that overlay.
+- Fixed BUG-097 by using validated persisted theme colors for the overlay and keeping the existing navy/orange palette as the safe default when no saved theme exists. The icon layout is unchanged.
+- `:app:assembleDebug` passes using the installed Gradle 8.14.3 distribution, Temurin JDK 21, and Android SDK 36. The rebuilt APK is version 1.3.13 / versionCode 17; `aapt dump badging` confirms package/version metadata and `apksigner verify` passes with the same debug certificate as version 1.3.12. The build APK and `frontend/public/downloads/nurava-hubstores-staging.apk` SHA-256 values match (`4d55fb758dae0fb93d538bb511642421a8af5d5c2188f5fd57d9bae074f26507`). The update manifest points to versionCode 17.
+- The standard staging wrapper could not run in this shell because it tried to fetch Gradle again; direct use of the installed Gradle distribution completed the build. The Android system splash itself remains a static brand-color resource until native activity code can read the saved web theme. ADB reports no connected device and no emulator AVD is configured, so the visual behavior cannot be verified on Android in this environment.
+- This cycle found and fixed a source issue and does not count toward the two consecutive clean full audits.
+
+### BUG-098 — Android WebView does not preserve external `target="_blank"` link behavior
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `frontend/src/components/providers/AndroidBackButtonHandler.tsx`, and shared link components.
+- **Description:** The shared website renders external links with `target="_blank"` for WhatsApp, social profiles, maps, and some storefront/product links. Capacitor's Android WebView does not enable multiple-window support or implement `onCreateWindow`; Android WebView defaults to treating `_blank` requests as a top-level navigation in the current WebView. In the Android app these links can replace the current storefront/page instead of opening a separate browser surface, unlike the website's new-tab behavior.
+- **Root cause:** Shared `target="_blank"` links have no app-only external-browser handoff; the native WebView does not provide browser-tab semantics.
+- **Fix:** On native Android only, intercept unmodified clicks on cross-origin HTTP(S) anchors with `target="_blank"` and open them with Capacitor Browser. Same-origin navigation, modified clicks, downloads, and website behavior remain unchanged.
+- **Severity:** Medium
+- **Status:** Verified at source/test/type-check/build level — regression coverage, targeted ESLint, and the production build pass. Actual external-app handoff on a physical Android device remains unverified.
+
+### Cycle 44 — External link handoff audit — 2026-10-11
+
+- Scanned shared React components for `target="_blank"` and browser/external handoffs. Found external WhatsApp, social-profile, map, and store-discovery links that depend on new-window behavior.
+- Confirmed the installed Capacitor Android client does not set `WebSettings.setSupportMultipleWindows` and `BridgeWebChromeClient` does not override `onCreateWindow`. Android documents that with multiple-window support disabled, `_blank` requests navigate the current WebView instead of opening a new one.
+- Fixed the issue with an Android-only click handler and a shared URL classifier. Same-origin, non-HTTP(S), modified, and download links are not intercepted; website behavior is unchanged.
+- `node --test --require ./tests/register.cjs tests/frontend/services.test.ts`: PASS, 21/21. Targeted ESLint for `AndroidBackButtonHandler.tsx` and `android-app-download.ts`: PASS. `npm run build`: PASS; all 169 routes generated and type checking completed. The build emitted existing lint, webpack-cache, and Node URL deprecation warnings; store-directory generation used the fallback because Neon was unreachable. `git diff --check`: PASS with line-ending notices only.
+- Physical Android external-browser handoff and live staging navigation remain unverified. This cycle found and fixed a source issue, so it does not count toward a clean full audit.
+
+### Cycle 36 — Shopper payment ownership and reference audit — 2026-10-11
+
+- Source trace confirmed the shopper M-Pesa API accepted a browser-supplied reference; the shared payment service could return a payment without checking that it belonged to the requested order, and verification did not require order ownership. Recorded BUG-092 before repair.
+- Fixed initiation to create references from the complete server-validated order ID and reject any existing payment whose order or amount differs. Fixed verification to require order ID and phone, apply the same registered-user/guest ownership check used at initiation, locate the M-Pesa payment under that exact order, and pass its database ID to provider verification.
+- Preserved older pending payments during rollout: initiation reuses an active M-Pesa payment for the same order, and verification uses the reference stored on that exact row. This avoids starting a duplicate STK prompt for orders created with the previous short reference.
+- `npm test`: PASS, 159/159. New tests cover full-order reference uniqueness, order/amount matching, and registered/guest ownership. `npm run build`: PASS, all 169 routes; Next static generation used the existing fallback because the configured Neon endpoint was unreachable. Focused ESLint and `git diff --check` pass.
+- Live Daraja initiation/callback/verification, guest-order recovery on a real browser, and database-backed multi-order settlement remain unverified. BUG-092 is verified at source/test/build level, not with live provider transactions. This cycle found and fixed an issue, so it does not count toward the two consecutive clean full audits.

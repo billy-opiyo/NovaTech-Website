@@ -14,7 +14,6 @@ const cardIntentSchema = z.object({
 	customerEmail: z.string().email(),
 	reference: z.string().min(3),
 	orderId: z.string().optional(),
-	metadata: z.record(z.unknown()).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -43,7 +42,6 @@ export async function POST(req: NextRequest) {
 			reference: validated.reference,
 			orderId: validated.orderId,
 			tenantId: context.tenantId,
-			metadata: validated.metadata,
 		})
 
 		if (!result.ok) {

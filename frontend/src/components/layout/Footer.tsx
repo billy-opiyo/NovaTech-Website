@@ -94,7 +94,7 @@ const legalLinks = [
 export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
-	const isAndroidApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
+	const [isAndroidApp, setIsAndroidApp] = useState(false)
 	const customerServiceLinks = [...shopperServiceLinks, {
 		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
 		href: "/warranty",
@@ -105,6 +105,10 @@ export default function Footer() {
 		: store.homepage.heroDescription?.trim() || `Explore the products and offers available from ${store.brand.name}. Contact the store directly for assistance.`
 	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
+
+	useEffect(() => {
+		setIsAndroidApp(Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android")
+	}, [])
 
 	useEffect(() => {
 		const hostname = window.location.hostname
