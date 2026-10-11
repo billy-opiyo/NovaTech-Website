@@ -75,6 +75,16 @@ public class AppUpdaterPlugin extends Plugin {
                     "nurava-hubstores-update-v" + targetVersionCode + ".apk"
                 );
             long downloadId = manager.enqueue(request);
+            boolean savedDownload = getContext()
+                .getSharedPreferences("app_update", Context.MODE_PRIVATE)
+                .edit()
+                .putLong("pending_download_id", downloadId)
+                .commit();
+            if (!savedDownload) {
+                manager.remove(downloadId);
+                call.reject("Android could not prepare the automatic installer.");
+                return;
+            }
 
             JSObject result = new JSObject();
             result.put("downloadId", downloadId);
