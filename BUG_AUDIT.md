@@ -1153,7 +1153,7 @@ The independent post-cycle-25 review rechecked effect dependencies and asynchron
 - **Root cause:** Not yet confirmed; isolate form validity/submission and the component's consent-handler state update before changing the test expectation.
 - **Recommended fix:** Preserve the requirement that unchecked credential registration is blocked; repair the component or browser interaction based on the observed submission path, then rerun the complete browser suite.
 - **Severity:** Medium
-- **Status:** Pending — recorded before further browser-test or UI changes.
+- **Status:** Verified — the targeted Chromium auth/signup flow submits valid credentials without consent and confirms the app's consent message appears. See Cycle 27 verification addendum.
 
 ### BUG-077 — Signup navigation E2E uses a timeout shorter than the database-unavailable render path
 
@@ -1178,3 +1178,45 @@ The independent post-cycle-25 review rechecked effect dependencies and asynchron
 - Playwright is not currently green: the first full run passed the catalog flow but failed the auth/signup flow; a targeted rerun exceeded its 60-second test timeout during signup navigation. The current Neon host was unreachable and fallback reads delayed page rendering. BUG-080 remains pending; do not claim the unchecked-consent browser feedback passed on this run.
 - No database migration, seed, write, commit, push, or deployment was run. `frontend/src/lib/demo-store-config.ts`, `.env.local`, and `frontend/.env.local` remain unchanged.
 - Cycle 26 found BUG-080 and does not count as a clean audit. Two consecutive complete post-repair audits remain outstanding; live database/provider and authenticated staging gates are still open.
+
+## Cycle 27 — Capacitor mobile and website flow audit — 2026-10-11
+
+The current `saas-staging` sources were traced across the Android shell, Next.js application, mobile-specific authentication and navigation, update/download flows, offline fallback, checkout/payment handlers, and image uploads. No live merchant account or provider payment was used. Findings are recorded before source changes.
+
+### BUG-081 — Completed app updates are not recovered after the activity pauses
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `android/app/src/main/java/com/nurava/hubstores/UpdateDownloadReceiver.java`
+- **Description:** The download-complete receiver is dynamically registered only while `MainActivity` is resumed and is unregistered in `onPause()`. If Android's DownloadManager finishes while the app is paused or its activity/process is stopped, the completion event is missed. On the next resume, the app registers a receiver but never checks the persisted pending download ID or its DownloadManager status, leaving the APK downloaded without opening Android's installer.
+- **Root cause:** Completion handling depends solely on a transient activity receiver; the pending ID is persisted but no resume-time recovery reads it.
+- **Recommended fix:** When the activity resumes, check the persisted pending download with DownloadManager and pass a successful matching completion through the same receiver/installer path. Keep Android's required installation confirmation.
+- **Severity:** Medium
+- **Status:** Fixed — `MainActivity` now rechecks the persisted DownloadManager ID on resume and sends a completed matching download through the same receiver and installer path. The pending ID is retained until the installer opens or install permission is explicitly denied. Android Java compilation passes with a temporary JDK 21. Full APK assembly cannot complete because Gradle cannot fetch Android build plugins under the current network sandbox; physical-device verification also remains pending because no phone is connected.
+
+### Cycle 27 scope and evidence boundary
+
+- Static traces confirm the app uses the same deployed Next.js origin and existing server/API routes. They do not prove the live Google OAuth callback, authenticated session persistence, merchant checkout, external payment callbacks, storage uploads, theme rendering, or network recovery on a physical phone.
+- Existing BUG-050, BUG-052, and BUG-060 live database/provider verification remains open as documented above. BUG-080 was reverified by the targeted browser flow below. The full two-consecutive-clean-audits gate is not met.
+- Automated repository checks and a deterministic auth/signup/protected-route/mobile-navigation browser flow have been run for this cycle. The production build completed. Android debug APK assembly was blocked because sandbox networking denied Gradle access to Google Maven and Maven Central (`Permission denied: getsockopt`). No database write, migration, seed, payment transaction, push, or deployment has been run.
+
+### BUG-082 — Offline recovery treats HTTP 5xx as restored connectivity and can loop
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `capacitor-shell/offline.html`
+- **Description:** `MainActivity` routes main-frame HTTP 5xx responses to the bundled offline page. The offline page probes that URL using `fetch(..., mode: "no-cors")` and treats any resolved promise as success. A cross-origin no-CORS response is opaque even when its HTTP status is 5xx, so the page immediately navigates back to the failing URL and repeats the fallback cycle.
+- **Root cause:** The recovery probe cannot inspect a no-CORS response status, while the native layer classifies every main-frame 5xx as offline.
+- **Recommended fix:** Keep the offline fallback limited to transport-level WebView connection failures. Do not route HTTP 5xx responses into a page whose no-CORS probe cannot inspect the status.
+- **Severity:** Medium
+- **Status:** Fixed — the Android WebView client no longer treats main-frame HTTP 5xx responses as internet-offline errors. The offline page is now used for transport-level failures, so its opaque no-CORS response cannot create a 5xx redirect loop. Physical network-loss/recovery behavior still needs device verification.
+
+## Cycle 27 verification addendum — mobile/website integration checks — 2026-10-11
+
+- `npm test`: PASS, 152/152. Webhook tests logged expected localhost PostgreSQL-unavailable fallback errors; no database writes were performed.
+- `npm run lint`: PASS, 0 errors and 54 warnings. The command also ran the backend TypeScript build successfully.
+- `npm run type-check`: PASS for frontend TypeScript and backend TypeScript.
+- Targeted Playwright auth/signup/protected-route/mobile-navigation test: PASS. This also verifies BUG-080's unchecked consent feedback. The full Playwright run was interrupted after the app's Neon-backed page rendering remained slow; the database endpoint was unreachable. The provider sandbox test was skipped because `E2E_PAYMENT_PROVIDER` is unset.
+- Android Java compile: PASS — `:app:compileDebugJavaWithJavac` completed successfully using temporary Temurin JDK 21. The earlier JDK 26 `jlink` transform failure was resolved by using JDK 21. Full `:app:assembleDebug` was attempted but blocked during Gradle configuration because the sandbox denied network access to Google Maven and Maven Central (`Permission denied: getsockopt`); no APK was produced by that attempt.
+- Full production build: PASS. Optimized Next.js production build completed and generated 169 pages; the remote Neon database was unreachable during store-directory generation, so the existing fallback was used. Existing webpack cache and Node URL deprecation warnings remain.
+- Live staging health check: BLOCKED by sandbox network (`fetch` to the staging Vercel host failed with EACCES). No public deployment status is claimed.
+- Live Google OAuth, authenticated logout, provider payments/callbacks, storage uploads, device offline recovery, update installation, and physical theme/system-bar behavior remain unverified.
+- BUG-081 and BUG-082 are source-fixed but not device-verified. These changes have not been built into or installed from a new APK. No database migration, seed, payment transaction, push, or deployment was run.
+- This cycle found and fixed two findings and is not a clean audit. The two consecutive clean full-audit gate remains outstanding; the project audit is still active.
+- Follow-up environment check: JDK 21 was downloaded to a temporary directory and used for the successful Java compile; no system-wide Java settings were changed. ADB starts successfully but reports no connected device. The read-only staging `/api/health` request was inaccessible through both direct sandbox fetch (EACCES) and the browser tool, so live staging health remains unverified.
