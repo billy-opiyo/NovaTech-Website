@@ -133,6 +133,23 @@
     background: var(--scrollbar-thumb-hover);
     background-clip: padding-box;
   }
+
+  /* Hide scrollbars only inside the native Android WebView. The website keeps
+     its existing browser scrollbar styling. */
+  html.android-app,
+  html.android-app body,
+  html.android-app * {
+    scrollbar-width: none !important;
+    scrollbar-color: transparent transparent !important;
+  }
+
+  html.android-app::-webkit-scrollbar,
+  html.android-app body::-webkit-scrollbar,
+  html.android-app *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
 }
 
 @layer components {

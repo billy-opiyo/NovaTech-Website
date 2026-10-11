@@ -15,8 +15,10 @@ type UpdateManifest = {
 }
 
 type AppUpdaterPlugin = {
+	getPendingUpdate(options: { versionCode: number }): Promise<{ downloadId: number | null }>
 	downloadUpdate(options: { url: string; versionCode: number; versionName: string }): Promise<{ downloadId: number }>
 	getDownloadStatus(options: { downloadId: number }): Promise<{ status: "running" | "paused" | "downloaded" | "failed" }>
+	openDownloadedUpdate(options: { downloadId: number }): Promise<void>
 }
 
 const AppUpdater = registerPlugin<AppUpdaterPlugin>("AppUpdater")
@@ -39,7 +41,9 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 	const [downloading, setDownloading] = useState(false)
 	const [downloadStarted, setDownloadStarted] = useState(false)
 	const [downloadId, setDownloadId] = useState<number | null>(null)
+	const [downloadStatus, setDownloadStatus] = useState<"running" | "paused" | "downloaded" | null>(null)
 	const [error, setError] = useState("")
+	const updateVersionCode = update?.versionCode
 
 	const checkForUpdate = useCallback(async () => {
 		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
@@ -90,11 +94,38 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 	useEffect(() => {
 		setDownloadStarted(false)
 		setDownloadId(null)
+		setDownloadStatus(null)
 		setError("")
-	}, [update?.versionCode])
+		if (updateVersionCode === undefined || !Capacitor.isPluginAvailable("AppUpdater")) return
+		let active = true
+		const restorePendingDownload = async () => {
+			try {
+				const pending = await AppUpdater.getPendingUpdate({ versionCode: updateVersionCode })
+				if (!active || pending.downloadId === null) return
+				const result = await AppUpdater.getDownloadStatus({ downloadId: pending.downloadId })
+				if (!active) return
+				if (result.status === "failed") {
+					setError("The previous APK download failed or was cancelled. You can try again.")
+					return
+				}
+				setDownloadId(pending.downloadId)
+				setDownloadStarted(true)
+				setDownloadStatus(result.status)
+				if (result.status === "paused") setError("The APK download is paused. Resume it from the Android download notification.")
+				else if (result.status === "downloaded") setError("Download complete. If Android's install screen was dismissed, tap Open installer to try again.")
+				else setError("Your app update download is continuing in the background.")
+			} catch {
+				// A failed state recovery must not prevent the user from checking the update.
+			}
+		}
+		void restorePendingDownload()
+		return () => {
+			active = false
+		}
+	}, [updateVersionCode])
 
 	useEffect(() => {
-		if (!downloadStarted || downloadId === null || !Capacitor.isPluginAvailable("AppUpdater")) return
+		if (!downloadStarted || downloadId === null || downloadStatus === "downloaded" || !Capacitor.isPluginAvailable("AppUpdater")) return
 		let active = true
 		const checkDownload = async () => {
 			try {
@@ -103,13 +134,16 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 				if (result.status === "failed") {
 					setDownloadStarted(false)
 					setDownloadId(null)
+					setDownloadStatus(null)
 					setError("The APK download failed or was cancelled. Check your connection, then try again.")
 				} else if (result.status === "paused") {
+					setDownloadStatus("paused")
 					setError("The APK download is paused. Resume it from the Android download notification.")
 				} else if (result.status === "downloaded") {
-					setDownloadId(null)
-					setError("Download complete. Android will ask you to confirm the installation.")
+					setDownloadStatus("downloaded")
+					setError("Download complete. If Android's install screen was dismissed, tap Open installer to try again.")
 				} else {
+					setDownloadStatus("running")
 					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 				}
 			} catch {
@@ -122,11 +156,26 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 			active = false
 			window.clearInterval(interval)
 		}
-	}, [downloadId, downloadStarted])
+	}, [downloadId, downloadStarted, downloadStatus])
+
+	const reopenDownloadedInstaller = async () => {
+		if (downloadId === null || !Capacitor.isPluginAvailable("AppUpdater")) return
+		setDownloading(true)
+		setError("")
+		try {
+			await AppUpdater.openDownloadedUpdate({ downloadId })
+			setError("Opening Android's installer. Confirm the update there to finish installing it.")
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : "Unable to reopen the downloaded app installer.")
+		} finally {
+			setDownloading(false)
+		}
+	}
 
 	const downloadUpdate = async () => {
 		if (!update || downloading) return
 		setDownloading(true)
+		setDownloadStatus(null)
 		setError("")
 		try {
 			const url = new URL(update.apkUrl, window.location.origin).toString()
@@ -136,17 +185,20 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 					const result = await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
 					setDownloadId(result.downloadId)
 					setDownloadStarted(true)
+					setDownloadStatus("running")
 					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 				} catch {
 					// Existing installs may have a native updater that rejects valid JSON numbers.
 					await Browser.open({ url })
 					setDownloadStarted(true)
+					setDownloadStatus(null)
 					setError("The Android browser opened the update download. When it finishes, open the downloaded APK and confirm installation.")
 				}
 			} else {
 				// Existing installs cannot have the updater plugin until they update once.
 				await Browser.open({ url })
 				setDownloadStarted(true)
+				setDownloadStatus(null)
 				setError("The Android browser opened the update download. When it finishes, open the downloaded APK and confirm installation.")
 			}
 		} catch (reason) {
@@ -169,7 +221,7 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 				{error && <p className={`mt-4 text-sm leading-5 ${downloading ? "text-gray-500" : "text-primary"}`} role="status">{error}</p>}
 				<div className="mt-6 flex flex-col-reverse justify-center gap-3 sm:flex-row">
 					<button type="button" onClick={() => setDismissedVersionCode(update.versionCode)} className="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold transition hover:bg-black/5 dark:hover:bg-white/5">Remind me later</button>
-					<button type="button" onClick={() => void downloadUpdate()} disabled={downloading || downloadStarted} className="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70">{downloading ? <><LoaderCircle size={17} className="animate-spin" /> Starting download…</> : downloadStarted ? <><Download size={17} /> Download started</> : <><Download size={17} /> Download update</>}</button>
+					<button type="button" onClick={() => downloadStatus === "downloaded" ? void reopenDownloadedInstaller() : void downloadUpdate()} disabled={downloading || (downloadStarted && downloadStatus !== "downloaded")} className="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70">{downloading ? <><LoaderCircle size={17} className="animate-spin" /> {downloadStatus === "downloaded" ? "Opening installer…" : "Starting download…"}</> : downloadStatus === "downloaded" ? <><Download size={17} /> Open installer</> : downloadStarted ? <><Download size={17} /> Download started</> : <><Download size={17} /> Download update</>}</button>
 				</div>
 				<p className="mt-4 text-xs text-gray-500">Android requires your confirmation before it installs an app update.</p>
 			</section>
