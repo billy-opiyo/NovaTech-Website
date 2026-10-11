@@ -1,5 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import prisma from "../../backend/lib/db"
+import { mockPrismaMethod } from "../tenant/mock-prisma-method"
 import {
 	handleMpesaStkCallback,
 	handleStripeEvent,
@@ -107,4 +109,32 @@ test("handleStripeEvent handles unknown events gracefully", async () => {
 	assert.equal(result.ok, true)
 	assert.equal(result.provider, "stripe")
 	assert.match(result.message || "", /no payment status mapping/)
+})
+
+test("handleStripeEvent leaves invoice receipt retryable when payment persistence fails", async () => {
+	const receiptUpdates: Array<{ data: { status: string } }> = []
+	const paymentWriteError = new Error("Payment write unavailable")
+	const restoreReceiptFind = mockPrismaMethod(prisma.webhookReceipt, "findUnique", async () => null)
+	const restoreReceiptCreate = mockPrismaMethod(prisma.webhookReceipt, "create", async () => ({ id: "receipt-invoice-failure" }))
+	const restoreReceiptUpdate = mockPrismaMethod(prisma.webhookReceipt, "update", async ({ data }: { data: { status: string } }) => { receiptUpdates.push({ data }); return { id: "receipt-invoice-failure" } })
+	const restoreSubscriptionFind = mockPrismaMethod(prisma.subscription, "findFirst", async () => ({ id: "subscription-a", tenantId: "tenant-a" }))
+	const restoreSubscriptionUpdate = mockPrismaMethod(prisma.subscription, "update", async () => ({ id: "subscription-a", tenantId: "tenant-a", planId: "plan-a" }))
+	const restoreInvoiceUpsert = mockPrismaMethod(prisma.invoice, "upsert", async () => ({ id: "invoice-a", tenantId: "tenant-a", currency: "KES" }))
+	const restorePaymentUpsert = mockPrismaMethod(prisma.payment, "upsert", async () => { throw paymentWriteError })
+
+	try {
+		await assert.rejects(
+			() => handleStripeEvent({ id: "evt_invoice_payment_failure", type: "invoice.paid", data: { object: { id: "in_123", subscription: "sub_123", payment_intent: "pi_123", amount_paid: 100000, currency: "kes" } } }),
+			paymentWriteError,
+		)
+		assert.equal(receiptUpdates.at(-1)?.data.status, "FAILED")
+	} finally {
+		restorePaymentUpsert()
+		restoreInvoiceUpsert()
+		restoreSubscriptionUpdate()
+		restoreSubscriptionFind()
+		restoreReceiptUpdate()
+		restoreReceiptCreate()
+		restoreReceiptFind()
+	}
 })

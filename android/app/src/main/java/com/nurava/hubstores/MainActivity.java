@@ -37,6 +37,9 @@ public class MainActivity extends BridgeActivity {
 
         if (getBridge() == null) return;
 
+        WebView webView = getBridge().getWebView();
+        webView.setVerticalScrollBarEnabled(false);
+
         getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -59,8 +62,26 @@ public class MainActivity extends BridgeActivity {
                 if (failedUrl == null || failedUrl.isEmpty()) return;
                 // The app loads the website from Vercel, but this fallback is
                 // bundled in the APK. A remote /offline.html URL does not exist.
-                String offlineUrl = "file:///android_asset/public/offline.html?url=" + Uri.encode(failedUrl);
-                view.loadUrl(offlineUrl);
+                android.content.SharedPreferences theme = MainActivity.this.getSharedPreferences("active_theme", MODE_PRIVATE);
+                Uri.Builder offlineUri = Uri.parse("file:///android_asset/public/offline.html")
+                    .buildUpon()
+                    .appendQueryParameter("url", failedUrl);
+                appendThemeColor(offlineUri, theme, "background");
+                appendThemeColor(offlineUri, theme, "surface");
+                appendThemeColor(offlineUri, theme, "text");
+                appendThemeColor(offlineUri, theme, "muted");
+                appendThemeColor(offlineUri, theme, "primary");
+                if (theme.contains("light_icons")) {
+                    offlineUri.appendQueryParameter("lightIcons", Boolean.toString(theme.getBoolean("light_icons", false)));
+                }
+                view.loadUrl(offlineUri.build().toString());
+            }
+
+            private void appendThemeColor(Uri.Builder uri, android.content.SharedPreferences theme, String key) {
+                String value = theme.getString(key, null);
+                if (value != null && value.matches("#[0-9a-fA-F]{6}")) {
+                    uri.appendQueryParameter(key, value);
+                }
             }
 
             private boolean isConnectionError(int errorCode, String description) {
@@ -89,6 +110,7 @@ public class MainActivity extends BridgeActivity {
                 registerReceiver(updateDownloadReceiver, filter);
             }
         }
+        clearPendingUpdateIfInstalled();
         recoverCompletedUpdateDownload();
     }
 
@@ -103,8 +125,25 @@ public class MainActivity extends BridgeActivity {
 
     private void recoverCompletedUpdateDownload() {
         if (pendingUpdateApk != null || updateDownloadReceiver == null) return;
-        long downloadId = getSharedPreferences("app_update", MODE_PRIVATE)
-            .getLong("pending_download_id", -1L);
+        android.content.SharedPreferences preferences = getSharedPreferences("app_update", MODE_PRIVATE);
+        boolean awaitingPermission = preferences.getBoolean("awaiting_install_permission", false);
+        if (awaitingPermission) {
+            // Android may recreate this Activity while the user is in Settings.
+            // Resume automatic installation only after permission is granted;
+            // if it is still denied, leave the completed download available for
+            // an explicit retry from the in-app update prompt.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                && !getPackageManager().canRequestPackageInstalls()) return;
+            preferences.edit()
+                .putBoolean("awaiting_install_permission", false)
+                .putBoolean("installer_prompt_open", false)
+                .commit();
+        } else if (preferences.getBoolean("installer_prompt_open", false)) {
+            // The package installer is already open. Do not reopen it if the
+            // user cancels and returns to the app.
+            return;
+        }
+        long downloadId = preferences.getLong("pending_download_id", -1L);
         if (downloadId < 0L) return;
 
         // The app may have been paused or killed when DownloadManager sent its
@@ -115,17 +154,41 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void clearPendingUpdateDownload() {
-        getSharedPreferences("app_update", MODE_PRIVATE)
-            .edit()
+        android.content.SharedPreferences preferences = getSharedPreferences("app_update", MODE_PRIVATE);
+        long downloadId = preferences.getLong("pending_download_id", -1L);
+        DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        if (manager != null && downloadId >= 0L) manager.remove(downloadId);
+        preferences.edit()
             .remove("pending_download_id")
+            .remove("pending_version_code")
+            .remove("awaiting_install_permission")
+            .remove("installer_prompt_open")
             .apply();
     }
 
-    private void installDownloadedUpdate(Uri apkUri) {
+    private void clearPendingUpdateIfInstalled() {
+        android.content.SharedPreferences preferences = getSharedPreferences("app_update", MODE_PRIVATE);
+        long targetVersionCode = preferences.getLong("pending_version_code", -1L);
+        if (targetVersionCode < 1L) return;
+        try {
+            android.content.pm.PackageInfo installed = getPackageManager().getPackageInfo(getPackageName(), 0);
+            long installedVersionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(installed);
+            if (installedVersionCode >= targetVersionCode) clearPendingUpdateDownload();
+        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+            // Keep the saved download so the user can retry if package lookup is unavailable.
+        }
+    }
+
+    public void installDownloadedUpdate(Uri apkUri) {
         if (apkUri == null) return;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
             && !getPackageManager().canRequestPackageInstalls()) {
             pendingUpdateApk = apkUri;
+            getSharedPreferences("app_update", MODE_PRIVATE)
+                .edit()
+                .putBoolean("installer_prompt_open", true)
+                .putBoolean("awaiting_install_permission", true)
+                .apply();
             Intent settingsIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
                 .setData(Uri.parse("package:" + getPackageName()));
             startActivityForResult(settingsIntent, REQUEST_INSTALL_PERMISSION);
@@ -135,11 +198,15 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void launchUpdateInstaller(Uri apkUri) {
+        getSharedPreferences("app_update", MODE_PRIVATE)
+            .edit()
+            .putBoolean("installer_prompt_open", true)
+            .putBoolean("awaiting_install_permission", false)
+            .apply();
         Intent installIntent = new Intent(Intent.ACTION_VIEW)
             .setDataAndType(apkUri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(installIntent);
-        clearPendingUpdateDownload();
     }
 
     @Override
@@ -152,8 +219,7 @@ public class MainActivity extends BridgeActivity {
             || getPackageManager().canRequestPackageInstalls()) {
             launchUpdateInstaller(apkUri);
         } else {
-            clearPendingUpdateDownload();
-            android.widget.Toast.makeText(this, "Allow Nurava HubStores to install this update, then open the downloaded APK.", android.widget.Toast.LENGTH_LONG).show();
+            android.widget.Toast.makeText(this, "Allow Nurava HubStores to install updates, then tap Open installer in the app.", android.widget.Toast.LENGTH_LONG).show();
         }
     }
 

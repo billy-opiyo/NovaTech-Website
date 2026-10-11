@@ -5,6 +5,8 @@ import Image from "next/image"
 import { ArrowLeft, Loader2, Mail, MapPin, Store } from "lucide-react"
 import { FaWhatsapp } from "react-icons/fa"
 import { useRef, useState } from "react"
+import { Browser } from "@capacitor/browser"
+import { Capacitor } from "@capacitor/core"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantEmailHref, getMerchantWhatsAppHref } from "@/lib/merchant-contact"
@@ -116,7 +118,8 @@ export default function CheckoutPage() {
 		const validationError = validateContactDetails(false)
 		if (validationError) { setError(validationError); return }
 		let whatsappWindow: Window | null = null
-		if (contactMethod === "WHATSAPP") {
+		const useNativeBrowser = Capacitor.isNativePlatform()
+		if (contactMethod === "WHATSAPP" && !useNativeBrowser) {
 			whatsappWindow = window.open("about:blank", "_blank")
 			if (!whatsappWindow) { setError("Allow pop-ups for this site to continue to WhatsApp."); return }
 			whatsappWindow.opener = null
@@ -127,8 +130,17 @@ export default function CheckoutPage() {
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Unable to save enquiry")
 			addToast("Your enquiry was sent successfully. The merchant will follow up shortly.", "success")
-			if (contactMethod === "WHATSAPP") { if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappHref }
-			else window.location.href = emailHref
+			if (contactMethod === "WHATSAPP") {
+				if (useNativeBrowser) {
+					try {
+						await Browser.open({ url: whatsappHref })
+					} catch {
+						const openError = "Your enquiry was saved, but WhatsApp could not be opened. You can contact the store directly from its page."
+						setError(openError)
+						addToast(openError, "error")
+					}
+				} else if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = whatsappHref
+			} else window.location.href = emailHref
 		} catch (reason) { whatsappWindow?.close(); const text = reason instanceof Error ? reason.message : "Unable to save enquiry"; setError(text); addToast(text, "error") } finally { setBusy(null) }
 	}
 

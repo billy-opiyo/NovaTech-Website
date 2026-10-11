@@ -3,6 +3,7 @@ package com.nurava.hubstores;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Build.VERSION_CODES;
+import android.content.Context;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -29,13 +30,35 @@ public class SystemBarsPlugin extends Plugin {
             return;
         }
 
+        String surfaceValue = call.getString("surface", colorValue);
+        String textValue = call.getString("text", "#f8fafc");
+        String mutedValue = call.getString("muted", "#cbd5e1");
+        String primaryValue = call.getString("primary", "#f97316");
         final int color;
+        final int surface;
+        final int text;
+        final int muted;
+        final int primary;
         try {
             color = Color.parseColor(colorValue);
+            surface = Color.parseColor(surfaceValue);
+            text = Color.parseColor(textValue);
+            muted = Color.parseColor(mutedValue);
+            primary = Color.parseColor(primaryValue);
         } catch (IllegalArgumentException error) {
-            call.reject("The theme color is invalid.", error);
+            call.reject("The theme palette is invalid.", error);
             return;
         }
+
+        getContext().getSharedPreferences("active_theme", Context.MODE_PRIVATE)
+            .edit()
+            .putString("background", colorValue)
+            .putString("surface", surfaceValue)
+            .putString("text", textValue)
+            .putString("muted", mutedValue)
+            .putString("primary", primaryValue)
+            .putBoolean("light_icons", lightIconsValue)
+            .apply();
 
         getActivity().runOnUiThread(() -> {
             Window window = getActivity().getWindow();

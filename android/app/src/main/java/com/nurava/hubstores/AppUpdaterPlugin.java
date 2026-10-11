@@ -16,6 +16,27 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "AppUpdater")
 public class AppUpdaterPlugin extends Plugin {
     @PluginMethod
+    public void getPendingUpdate(PluginCall call) {
+        Long requestedVersionCode = call.getLong("versionCode");
+        if (requestedVersionCode == null || requestedVersionCode < 1L) {
+            call.reject("The app update version code is invalid.");
+            return;
+        }
+
+        android.content.SharedPreferences preferences = getContext()
+            .getSharedPreferences("app_update", Context.MODE_PRIVATE);
+        long downloadId = preferences.getLong("pending_download_id", -1L);
+        long pendingVersionCode = preferences.getLong("pending_version_code", -1L);
+        JSObject result = new JSObject();
+        if (downloadId >= 0L && pendingVersionCode == requestedVersionCode) {
+            result.put("downloadId", downloadId);
+        } else {
+            result.put("downloadId", JSObject.NULL);
+        }
+        call.resolve(result);
+    }
+
+    @PluginMethod
     public void getDownloadStatus(PluginCall call) {
         Long requestedDownloadId = call.getLong("downloadId");
         if (requestedDownloadId == null || requestedDownloadId < 0L) {
@@ -67,13 +88,66 @@ public class AppUpdaterPlugin extends Plugin {
             android.content.SharedPreferences preferences = getContext()
                 .getSharedPreferences("app_update", Context.MODE_PRIVATE);
             if (preferences.getLong("pending_download_id", -1L) == requestedDownloadId) {
-                preferences.edit().remove("pending_download_id").apply();
+                preferences.edit()
+                    .remove("pending_download_id")
+                    .remove("pending_version_code")
+                    .remove("awaiting_install_permission")
+                    .remove("installer_prompt_open")
+                    .apply();
             }
         }
 
         JSObject result = new JSObject();
         result.put("status", status);
         call.resolve(result);
+    }
+
+    @PluginMethod
+    public void openDownloadedUpdate(PluginCall call) {
+        Long requestedDownloadId = call.getLong("downloadId");
+        if (requestedDownloadId == null || requestedDownloadId < 0L) {
+            call.reject("The app update download ID is invalid.");
+            return;
+        }
+
+        android.content.SharedPreferences preferences = getContext()
+            .getSharedPreferences("app_update", Context.MODE_PRIVATE);
+        if (preferences.getLong("pending_download_id", -1L) != requestedDownloadId) {
+            call.reject("This app update download is no longer available.");
+            return;
+        }
+
+        DownloadManager manager = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+        if (manager == null) {
+            call.reject("Android could not open the downloaded update.");
+            return;
+        }
+
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(requestedDownloadId);
+        try (Cursor cursor = manager.query(query)) {
+            if (cursor == null || !cursor.moveToFirst()) {
+                call.reject("The downloaded app update could not be found.");
+                return;
+            }
+            int statusColumn = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+            int titleColumn = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE);
+            if (statusColumn < 0 || titleColumn < 0
+                || cursor.getInt(statusColumn) != DownloadManager.STATUS_SUCCESSFUL
+                || !"Nurava HubStores update".equals(cursor.getString(titleColumn))) {
+                call.reject("The downloaded file is not a completed Nurava HubStores update.");
+                return;
+            }
+
+            Uri apkUri = manager.getUriForDownloadedFile(requestedDownloadId);
+            if (apkUri == null || !(getActivity() instanceof MainActivity)) {
+                call.reject("Android could not open the downloaded update.");
+                return;
+            }
+            getActivity().runOnUiThread(() -> ((MainActivity) getActivity()).installDownloadedUpdate(apkUri));
+            call.resolve();
+        } catch (RuntimeException error) {
+            call.reject("Android could not open the downloaded update.", error);
+        }
     }
 
     @PluginMethod
@@ -141,6 +215,9 @@ public class AppUpdaterPlugin extends Plugin {
                 .getSharedPreferences("app_update", Context.MODE_PRIVATE)
                 .edit()
                 .putLong("pending_download_id", downloadId)
+                .putLong("pending_version_code", targetVersionCode)
+                .putBoolean("awaiting_install_permission", false)
+                .putBoolean("installer_prompt_open", false)
                 .commit();
             if (!savedDownload) {
                 manager.remove(downloadId);

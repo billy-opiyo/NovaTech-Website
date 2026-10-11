@@ -1,6 +1,6 @@
 # Project Bug Audit
 
-Status: cycle 26 repairs in progress; 49 prior findings verified; 30 current-cycle entries recorded, including two verified false positives
+Status: cycle 29 repairs in progress on saas-staging; see the authoritative status register below
 Audit started: 2026-10-08; boutique-inclusive transfer audit: 2026-10-09
 Repository: NovaTech Website
 Branch: saas-staging
@@ -599,7 +599,16 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-077 | Verified | Signup E2E waits up to 15 seconds for the expected URL before asserting the rendered heading; the complete deterministic browser suite passes. |
 | BUG-078 | Verified | Admin data loaders sequence requests and ignore stale success/error/loading updates after a newer filter or search request begins. |
 | BUG-079 | Verified | Merchant verification loads are sequenced; stale tenant responses are ignored and previously loaded tenant data is not rendered under a different tenant URL. |
-| BUG-080 | Pending | Signup browser regression does not observe the consent validation feedback after submitting valid fields with the consent box unchecked. |
+| BUG-080 | Verified | Targeted Chromium signup flow confirms the accessible consent feedback appears after an unchecked submission. |
+| BUG-081 | Fixed | Android checks the persisted DownloadManager request on resume and routes a completed APK to the installer; Java compile and local APK packaging passed, but device verification remains open. |
+| BUG-082 | Fixed | Main-frame HTTP 5xx responses no longer enter the opaque no-CORS offline retry loop; device network-recovery verification remains open. |
+| BUG-083 | Fixed | Native system-bars bridge persists the current five-color site palette; the bundled fallback validates and applies it, with browser and packaged APK asset checks passing. Physical Android rendering remains unverified. |
+| BUG-084 | Fixed | Native DownloadManager status lets the update prompt restore retry after a failed or cancelled request; type-check and repository tests pass, but device verification remains open. |
+| BUG-085 | Fixed | The app restores a completed pending update and can reopen its verified APK installer; device installation/cancel/reopen verification remains open. |
+| BUG-086 | Fixed | Android checkout saves the enquiry before opening WhatsApp via Capacitor Browser; website popup behavior remains intact. Type-check, focused lint, and all 152 repository tests pass; physical-device verification remains open. |
+| BUG-087 | Fixed | Stripe invoice webhook processing now propagates Payment upsert errors so the event receipt is marked failed and can be retried; regression test forces the Payment write to fail and checks the receipt state. |
+| BUG-088 | Verified | Android update recovery now distinguishes returning from install-permission settings from an already-open installer, and can resume the saved DownloadManager APK after activity recreation. Java compilation and debug APK assembly pass; physical-device verification remains pending. |
+| BUG-089 | Verified | Android WebView vertical scrollbar is disabled natively; app-only CSS hides remaining WebView scrollbars behind a platform-gated document class, leaving browser scrollbar styling intact. Production build and versioned staging APK build pass; physical-device rendering remains unverified. |
 
 #### BUG-066 — Product cards expose electronics-only specification text in every industry
 
@@ -1206,6 +1215,130 @@ The current `saas-staging` sources were traced across the Android shell, Next.js
 - **Recommended fix:** Keep the offline fallback limited to transport-level WebView connection failures. Do not route HTTP 5xx responses into a page whose no-CORS probe cannot inspect the status.
 - **Severity:** Medium
 - **Status:** Fixed — the Android WebView client no longer treats main-frame HTTP 5xx responses as internet-offline errors. The offline page is now used for transport-level failures, so its opaque no-CORS response cannot create a 5xx redirect loop. Physical network-loss/recovery behavior still needs device verification.
+
+### BUG-083 — Android offline fallback does not use the active site theme
+
+- **Files:** `capacitor-shell/offline.html`, `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `android/app/src/main/java/com/nurava/hubstores/SystemBarsPlugin.java`, `frontend/src/components/providers/AndroidSystemBars.tsx`
+- **Description:** The website `OfflineNotice` reads the active theme palette, but the bundled Android offline page hardcodes a navy background and orange icon. When a platform or storefront uses another palette or light mode, the offline fallback visibly switches themes.
+- **Root cause:** The offline document is loaded from the APK's `file://` origin and cannot read the remote page's CSS theme. The native bridge currently receives only the bar background color and does not persist a palette for the fallback.
+- **Recommended fix:** Persist validated active background, surface, text, muted, and primary colors from the web theme through the native bridge, then pass them as encoded query parameters to the bundled offline document with safe defaults.
+- **Severity:** Medium
+- **Status:** Fixed — `AndroidSystemBars` sends the active background, surface, text, muted, and primary colors to `SystemBarsPlugin`; the native plugin validates and persists the palette; `MainActivity` passes saved values to the bundled fallback, which only applies six-digit hex colors. Browser runtime checks pass for both valid colors and invalid-value fallback. Android Java compilation and APK packaging pass, and the APK's offline asset SHA-256 matches `capacitor-shell/offline.html`. Physical network-loss behavior remains unverified.
+
+### BUG-084 — Failed app update downloads cannot be retried from the prompt
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/AppUpdaterPlugin.java`, `frontend/src/components/providers/AndroidAppUpdatePrompt.tsx`
+- **Description:** The prompt sets `downloadStarted` after DownloadManager accepts a request and disables its download button. `UpdateDownloadReceiver` ignores failed/cancelled requests, and the web layer never queries DownloadManager status, so it remains stuck on “Download started” and cannot retry until the app or route reloads.
+- **Root cause:** The plugin returns only the request ID and has no status method or callback; failure broadcasts are discarded before React can clear its started state.
+- **Recommended fix:** Expose a scoped native status query for the active DownloadManager request, poll it while a native download is pending, and restore the retry action with an actionable message when the request fails or is cancelled.
+- **Severity:** Medium
+- **Status:** Fixed — `AppUpdaterPlugin.getDownloadStatus` now reports the matching DownloadManager request state, and the prompt polls it to restore the retry action after a failed or cancelled request. Frontend/backend type-check and all 152 repository unit tests pass. Runtime validation on a physical Android device remains pending.
+
+## Cycle 28 — Offline fallback theme synchronization — 2026-10-11
+
+### Cycle 28 verification
+
+- `npm test`: PASS, 152/152. Webhook tests emitted expected database-unavailable diagnostics because the local PostgreSQL service is not running.
+- `npm run type-check`: PASS for frontend and backend.
+- `npm run lint`: PASS, 0 errors and 54 existing warnings; backend TypeScript build also passed.
+- Production `npm run build`: PASS; optimized Next.js build generated all 169 static pages. The configured Neon endpoint was unreachable during store-directory generation, so the existing fallback was used. Existing webpack cache and Node URL deprecation warnings remain.
+- Android `:app:compileDebugJavaWithJavac`: PASS using temporary Temurin JDK 21.
+- `npm run android:sync`: PASS; both Capacitor app and browser plugins were detected. The synced Android offline asset SHA-256 matches the source file.
+- Android `:app:assembleDebug`: PASS. The APK includes `assets/public/offline.html` with the same SHA-256 as the source. The APK is local only; the public staging APK and manifest were not replaced or deployed.
+- Chromium runtime check of `capacitor-shell/offline.html`: PASS for applying a valid light palette and retaining defaults for malformed colors. The matching Playwright spec was added; its configured test run did not return a result after the local web server repeatedly queried unreachable Neon, so the spec itself is not claimed as a Playwright-suite pass.
+- Live Neon, Google login/logout with a real account, M-Pesa/Stripe provider settlement, object-storage uploads, device offline recovery, Android update installation, and physical system-bar rendering remain unverified. ADB has no connected phone.
+- Cycle 28 fixed BUG-083 and therefore does not count as a clean full audit. The two consecutive clean full-audit gate remains outstanding.
+
+## Cycle 29 — Update installation recovery and mobile integration audit — 2026-10-11
+
+### BUG-085 — Dismissing Android's installer leaves the update prompt stuck
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/AppUpdaterPlugin.java`, `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `frontend/src/components/providers/AndroidAppUpdatePrompt.tsx`
+- **Description:** After DownloadManager reports a successful APK download, the prompt sets `downloadStarted` permanently and disables its action. If Android's package installer is dismissed or its launch is interrupted, the app has no action to reopen the already-downloaded APK; periodic update checks do not reset the state because the target version is unchanged.
+- **Root cause:** The UI treats a completed download as a terminal state, while the native bridge exposes status but no way to reopen the verified APK URI.
+- **Recommended fix:** Keep the completed request ID and expose a native action that revalidates the saved DownloadManager request before reopening the installer. Restore that matching request after app restart and present an explicit install/retry action after download completion.
+- **Severity:** Medium
+- **Status:** Fixed — the native bridge revalidates the saved request ID, target version, successful DownloadManager status, and update title before reopening the installer. The prompt restores the matching request after app restart and presents **Open installer** after a completed download; native state is cleared only after the installed version reaches the saved target. Type-check and unit tests pass; device installation/cancel/reopen verification remains pending.
+
+### BUG-086 — WhatsApp checkout popup can replace the Android app page
+
+- **Files:** `frontend/src/app/checkout/page.tsx`, Capacitor's Android `BridgeWebChromeClient`
+- **Description:** The WhatsApp checkout flow pre-opens `about:blank` with `window.open` before saving the enquiry, then navigates that window to WhatsApp. Android WebView's default multiple-window support is disabled; the platform documents that `window.open()` requests then navigate in the same WebView, replacing the current page. In the app this can unload checkout before its enquiry request finishes or leave the user on a blank page.
+- **Root cause:** The website's popup-blocker workaround is shared with Android WebView even though its window semantics differ from a desktop browser.
+- **Recommended fix:** Keep the popup flow on the website, but on Android save the enquiry first and open the resulting WhatsApp URL through Capacitor Browser.
+- **Severity:** Medium
+- **Status:** Fixed — Android now skips the `about:blank` popup, saves the enquiry, then opens the WhatsApp URL through Capacitor Browser; desktop website popup behavior is preserved. Repository type-check, focused ESLint, all 152 tests, and the production build passed in the Cycle 29 addendum below. Physical Android checkout verification remains pending.
+
+### BUG-087 — Stripe invoice webhook acknowledges failed payment persistence
+
+- **Files:** `backend/billing/service.ts`, `backend/payments/webhooks/index.ts`
+- **Description:** `applyStripeInvoiceEvent` catches and discards errors from `prisma.payment.upsert` for an invoice payment intent. The function can then update the subscription and return normally; `handleStripeEvent` marks the corresponding webhook receipt `PROCESSED`. If the Payment write failed, Stripe's retry is treated as a duplicate and the missing/stale payment record is never reconciled by that event.
+- **Root cause:** A persistence error on the payment reconciliation path is treated as an optional side effect even though it is part of the authoritative invoice settlement state.
+- **Recommended fix:** Let the Payment upsert error reach `handleStripeEvent` so the receipt is marked `FAILED` and Stripe receives a retryable error response. Add a mocked regression that forces the Payment upsert to fail and proves the handler does not report successful processing.
+- **Severity:** High
+- **Status:** Fixed — `applyStripeInvoiceEvent` no longer suppresses Payment upsert errors. The error reaches `handleStripeEvent`, which marks the receipt `FAILED` and rethrows for provider retry. Regression test simulates Payment persistence failure and confirms a failed receipt; targeted webhook suite, repository type-check, and lint pass. A live Stripe retry remains unverified.
+
+### BUG-088 — Update install recovery conflates permission settings with installer state
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `android/app/src/main/java/com/nurava/hubstores/AppUpdaterPlugin.java`
+- **Description:** Before opening Android's unknown-app install permission settings, the app persists `installer_prompt_open=true` and keeps the APK URI only in an Activity field. If Android kills/recreates the app during the settings trip, the in-memory URI is lost and resume recovery sees the same flag used for an already-open installer, so it skips automatic installer launch even when permission was granted.
+- **Root cause:** One persisted state flag represents both the permission-settings trip and the package-installer trip, while the APK URI/recovery decision is not reconstructed after process recreation.
+- **Recommended fix:** Persist a distinct awaiting-install-permission state. On resume, if that state is set and permission is now granted, revalidate the saved DownloadManager item and launch its installer URI; if permission is still denied, leave the completed download available for the prompt's manual retry. Keep the separate installer-open state to avoid reopening after the user cancels the package installer.
+- **Severity:** Medium
+- **Status:** Verified at source/build level — `MainActivity` now persists `awaiting_install_permission` separately from `installer_prompt_open`. When Android recreates the Activity and returns with install permission granted, resume recovery rechecks the saved DownloadManager request and routes its verified APK URI to the installer. If permission remains denied, recovery does not repeatedly reopen Settings; the in-app retry remains available. Download completion still retains Android's installer confirmation. `:app:compileDebugJavaWithJavac` and `:app:assembleDebug` both pass. Physical-device permission grant/deny, process recreation, installer cancel, and installation checks remain pending.
+
+### BUG-089 — Android app displays page scrollbars
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`, `frontend/src/components/providers/AndroidSystemBars.tsx`, `frontend/src/app/globals.css`
+- **Description:** The global website scrollbar styling is active in the shared WebView, and the native WebView has no vertical-scrollbar suppression. Scrolling app pages can show a vertical bar at the right edge.
+- **Root cause:** Website scrollbar styling is shared with the Android WebView, which has not enabled app-only scrollbar suppression.
+- **Recommended fix:** Disable the native WebView vertical scrollbar and apply scrollbar-hiding CSS only after detecting the native Android platform. Preserve the website's existing scrollbar styling.
+- **Severity:** Low
+- **Status:** Verified at source/build level — `MainActivity` disables the WebView vertical scrollbar, and `AndroidSystemBars` adds `android-app` only on native Android. `globals.css` hides scrollbars only under that class; browser instances never receive it and retain existing scrollbar styling. Type-check, lint, production build, and Android staging APK build pass. Physical rendering on an Android device remains unverified.
+
+### Cycle 29 verification
+
+- `npm test`: PASS, 152/152. The webhook tests logged the expected local PostgreSQL-unavailable diagnostics; their mocked assertions passed.
+- `npm run type-check`: PASS for frontend and backend.
+- `npm run lint`: PASS, 0 errors and 55 warnings; the modified update-prompt file passes standalone ESLint with no warnings.
+- `git diff --check`: PASS.
+- Android `:app:compileDebugJavaWithJavac` and `:app:assembleDebug`: PASS with JDK 21 and the installed Android SDK. The generated local APK contains the synced offline fallback; source, synced asset, and APK asset SHA-256 values match (`c6830b21086028f3c58f0dc91dcc4297f8042ad5db93e638a2102767b6d651e9`). The APK was not published or installed. No physical Android device is connected, so installer cancel/reopen and real download status remain unverified.
+- Read-only staging `/api/health`: PASS; application and database both reported up. Mobile-sized Chromium smoke: sign-in form rendered after hydration; `/admin/dashboard`, `/manage/settings`, and `/platform` redirected to the sign-in gate; the website homepage rendered its **Open App** footer link; no non-GET requests were observed.
+- Read-only staging update contract: manifest returned HTTP 200 with `versionCode: 14`, `versionName: 1.3.10`, and APK path `/downloads/nurava-hubstores-staging.apk`; APK HEAD returned 200 and `application/vnd.android.package-archive`. The local Android Gradle version is also code 14, so the newly built local native changes are not yet advertised as an update to an installed version 14. A version bump and staging deployment are required before the in-app update can deliver this local native fix; no release artifact was published.
+- Source tracing covered Android Google OAuth ticket exchange, protected portal return URLs, footer app/website links, native update download recovery, M-Pesa checkout route ownership, and shared image-upload API paths. Live OAuth, payments/provider callbacks, R2 uploads, and device behavior remain operational verification gates.
+- Cycle 29 found BUG-085 and BUG-086 and fixed both in source. It does not count as a clean full audit. Two consecutive complete post-repair audits remain outstanding.
+
+### Cycle 29 continuation — 2026-10-11
+
+- The active branch remains `saas-staging`; no changes were made to `multi-industry-commerce`, and no commit, push, or deployment was performed.
+- `npm run type-check`: PASS for frontend and backend after BUG-086.
+- `npx eslint src/app/checkout/page.tsx`: PASS with no warnings. `git diff --check`: PASS.
+- `npm test`: PASS, 152/152. The webhook tests printed their expected local PostgreSQL-unavailable diagnostics; assertions passed.
+- Production `npm run build`: PASS. The optimized Next.js build generated all 169 pages. The configured Neon endpoint was unreachable during store-directory generation, so the existing fallback was used; webpack cache and Node URL deprecation warnings remain.
+- BUG-086 preserves the website's popup behavior and changes only the native Android path. The provider/browser handoff and actual WhatsApp launch still require a physical-device check.
+- Full OAuth/logout, live provider settlement, real object-storage uploads, and Android update installer/network/theme behavior still require authenticated provider credentials or a connected device. The staging update manifest remains version 14; native changes in this local tree have not been published as an update. The complete audit and two-clean-cycle gate remain open.
+- Follow-up verification after BUG-087: the focused webhook suite passed 8/8, repository type-check and lint passed, the full suite passed 153/153, and `npm run build` passed with all 169 pages generated. Webhook tests still log expected localhost PostgreSQL-unavailable diagnostics; the new payment-write failure path is mocked. The build used the existing fallback when Neon was unreachable and emitted the recorded webpack/Node warnings.
+- Android upload source trace: Capacitor's `BridgeWebChromeClient.onShowFileChooser` opens the native picker for standard file inputs. Shared platform/storefront handlers optimize selected images and POST to the existing APIs. This confirms the code path exists, but file selection and a real R2 upload remain unverified on-device.
+- Mobile Google auth verification: extracted the existing one-time ticket authorizer into `backend/lib/mobile-google-ticket.ts` and added regression tests for hashing, first-use/replay behavior, malformed input, expiry, and shared-user resolution. The focused tests pass 2/2, frontend/backend type-check passes, the full suite passes 155/155, and the production build passes with all 169 routes. OAuth provider callback and Android deep-link handoff still require real-account/device verification.
+
+### Cycle 30 continuation — 2026-10-11
+
+- The user explicitly directed that work remain on `saas-staging`; no changes were made to `multi-industry-commerce`. No commit, push, or deployment was performed.
+- Fixed BUG-088 by persisting install-permission-settings state separately from package-installer state. Resume recovery revalidates the saved DownloadManager item and resumes the installer only after permission has been granted; a denied permission or cancelled installer does not cause an automatic reopen loop.
+- Android `:app:compileDebugJavaWithJavac`: PASS using JDK 21 and the installed Android SDK. Android `:app:assembleDebug`: PASS. The local debug APK is `android/app/build/outputs/apk/debug/app-debug.apk`; it was not installed or published.
+- `npm run type-check`: PASS for frontend and backend. `npm test`: PASS, 155/155. `npm run lint`: PASS with 0 errors and 54 warnings. `git diff --check`: PASS.
+- `git diff --check`: PASS. Physical-device permission return/process recreation, update installation, and cancel/retry behavior remain unverified because no device is connected in this session.
+- This was a targeted source repair and build check, not a clean full audit. The two-consecutive-clean-audit gate, live database/provider flows, real OAuth, R2 upload, and device checks remain outstanding.
+
+### Cycle 31 — Mobile scrollbars, permissions, and staging APK — 2026-10-11
+
+- Fixed BUG-089: native Android WebView scrollbars are disabled, and shared CSS hides scrollbars only while the root carries the `android-app` class. That class is applied only when Capacitor confirms the Android native platform; the website keeps its current scrollbar styling.
+- Capability/permission audit: the merged APK requests `INTERNET` and `REQUEST_INSTALL_PACKAGES` (plus AndroidX's generated internal receiver permission). File uploads use WebView file inputs and the native file chooser, which grants access to selected URIs without broad storage/media permissions. No camera capture, geolocation, Firebase Messaging, or app-posted notification implementation is present; `google-services.json` and a push delivery integration are absent. No unused camera/location/push permissions were added. Account notifications are fetched from the shared API while the app is open; Download Manager owns the APK download notification.
+- `npm run android:staging:update`: PASS. Capacitor sync found `@capacitor/app` and `@capacitor/browser`; debug APK assembled as version 1.3.11 / code 15 and copied to `frontend/public/downloads/nurava-hubstores-staging.apk`; the update manifest now points to code 15. The v15 APK signer certificate matches the prior local staging APK's signer. The artifact is local and not published.
+- `npm run type-check`: PASS. `npm run lint`: PASS, 0 errors and 54 warnings. `npm run build`: PASS, 169 routes generated. Static store-directory generation could not reach Neon and used the existing fallback; webpack cache and Node URL deprecation warnings remain.
+- Read-only GET to the staging health endpoint returned `ok: true` and `database: up`. The deployed update manifest still returns version 1.3.10 / code 14 and points to the v14 APK; the locally prepared v15 APK is not live because no push/deployment was authorized.
+- `adb devices` shows no connected device/emulator, so scrollbar rendering, Android file-picker launch, and an actual v14-to-v15 install were not exercised on-device.
+- The website was not given a new behavior change: the scrollbar rule is gated to native Android. Branch remains `saas-staging`; no changes to `multi-industry-commerce`, commit, push, or deployment occurred. The two-consecutive-clean-audit gate and the live database/provider/auth/upload/device checks remain open.
 
 ## Cycle 27 verification addendum — mobile/website integration checks — 2026-10-11
 

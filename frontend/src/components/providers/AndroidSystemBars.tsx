@@ -5,23 +5,44 @@ import { Capacitor, registerPlugin } from "@capacitor/core"
 import { App } from "@capacitor/app"
 
 type SystemBarsPlugin = {
-	setColors(options: { color: string; lightIcons: boolean }): Promise<void>
+	setColors(options: {
+		color: string
+		surface: string
+		text: string
+		muted: string
+		primary: string
+		lightIcons: boolean
+	}): Promise<void>
 }
 
 const SystemBars = registerPlugin<SystemBarsPlugin>("SystemBars")
 
 function readThemeColor() {
-	const raw = getComputedStyle(document.documentElement).getPropertyValue("--color-theme-bg").trim()
-	const channels = raw.split(/[ ,]+/).map(Number)
-	if (channels.length < 3 || channels.some((channel) => !Number.isFinite(channel))) return null
-	const [red, green, blue] = channels.map((channel) => Math.max(0, Math.min(255, Math.round(channel))))
+	const styles = getComputedStyle(document.documentElement)
+	const toHex = (property: string) => {
+		const channels = styles.getPropertyValue(property).trim().split(/[ ,]+/).map(Number)
+		if (channels.length < 3 || channels.some((channel) => !Number.isFinite(channel))) return null
+		const [red, green, blue] = channels.map((channel) => Math.max(0, Math.min(255, Math.round(channel))))
+		return `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`
+	}
+	const color = toHex("--color-theme-bg")
+	const surface = toHex("--color-theme-surface")
+	const text = toHex("--color-theme-text")
+	const muted = toHex("--color-theme-muted")
+	const primary = toHex("--color-primary")
+	if (!color || !surface || !text || !muted || !primary) return null
+	const [red, green, blue] = color.slice(1).match(/.{2}/g)!.map((channel) => Number.parseInt(channel, 16))
 	const linear = [red, green, blue].map((channel) => {
 		const normalized = channel / 255
 		return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4
 	})
 	const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
 	return {
-		color: `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`,
+		color,
+		surface,
+		text,
+		muted,
+		primary,
 		lightIcons: luminance > 0.45,
 	}
 }
@@ -29,14 +50,19 @@ function readThemeColor() {
 /** Keep Android's status and navigation bars matched to the active site palette. */
 export default function AndroidSystemBars() {
 	useEffect(() => {
-		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android" || !Capacitor.isPluginAvailable("SystemBars")) return
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
+		const root = document.documentElement
+		root.classList.add("android-app")
+		if (!Capacitor.isPluginAvailable("SystemBars")) {
+			return () => root.classList.remove("android-app")
+		}
 		let lastApplied = ""
 		let pending = false
 		const applyTheme = () => {
 			pending = false
 			const theme = readThemeColor()
 			if (!theme) return
-			const key = `${theme.color}:${theme.lightIcons}`
+			const key = `${theme.color}:${theme.surface}:${theme.text}:${theme.muted}:${theme.primary}:${theme.lightIcons}`
 			if (key === lastApplied) return
 			lastApplied = key
 			void SystemBars.setColors(theme).catch(() => undefined)
@@ -61,6 +87,7 @@ export default function AndroidSystemBars() {
 			active = false
 			observer.disconnect()
 			if (appStateListener) void appStateListener.remove()
+			root.classList.remove("android-app")
 		}
 	}, [])
 

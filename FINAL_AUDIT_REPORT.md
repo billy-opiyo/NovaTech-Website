@@ -1,27 +1,30 @@
 # Final Audit Report
 
-Date: 2026-10-09
+Date: 2026-10-11
 Repository: NovaTech Website
 Branch: `saas-staging`
 Audit source of truth: [BUG_AUDIT.md](BUG_AUDIT.md)
 
-Status: **Interim — audit remains open; this is not a final clearance.**
+Status: **Interim — cycle 31 audit remains open; this is not production clearance.**
+
+> The current cycle 31 continuation below supersedes older counts and verification notes in the historical cycle summaries. Use `BUG_AUDIT.md` as the source of truth for individual findings.
 
 ## Result
 
 The project-wide audit now includes the four merchant-creatable industries: electronics, cakes, furniture, and boutiques. The current transfer adds boutique-specific copy and comparison behavior, onboarding and currency checks, checkout/payment hardening, and order settlement protections. One initial boutique WhatsApp concern was a false positive: the user confirmed the boutique demo should use the same shared number as the other industry demos.
 
-There are 49 previously verified findings plus current-cycle entries BUG-050–BUG-080 recorded in [BUG_AUDIT.md](BUG_AUDIT.md), including two verified false positives. BUG-050, BUG-052, and BUG-060 remain in progress pending live database/provider verification; BUG-070–BUG-079 are verified and BUG-080 remains pending. The required two consecutive post-repair full audits are not established. This report must not be read as final sign-off.
+The ledger records findings through BUG-089. BUG-050, BUG-052, and BUG-060 remain in progress pending live database/provider verification. Android update recovery and scrollbar changes compile and package locally, but device behavior remains unverified; BUG-080 and BUG-087 are verified at source/test level. The required two consecutive post-repair full audits are not established. This report must not be read as final sign-off.
 
-This is not a production-readiness certification. The configured Neon database could not be reached during this audit, so live schema/migration state, current demo-store data, and database-backed tenant behavior remain unverified. No database migration, seed, write, push, or deployment was run. All transferred changes are unstaged and uncommitted on `saas-staging`; the source-branch stash remains as a recovery copy.
+This is not a production-readiness certification. The configured Neon database could not be reached during the current production build, so live schema/migration state, current demo-store data, and database-backed tenant behavior remain unverified. No database migration, seed, write, push, or deployment was run. The current changes are uncommitted on `saas-staging`; no work was applied to `multi-industry-commerce`.
 
 ## Issue totals
 
 | Measure | Count |
 |---|---:|
 | Previously verified findings | 49 |
-| Current-cycle entries | BUG-050–BUG-080 (two verified false positives) |
-| Current open/in-progress findings | 4 (BUG-050, BUG-052, BUG-060, BUG-080) |
+| Current-cycle entries | Through BUG-087 (see authoritative ledger) |
+| Source findings awaiting live database/provider evidence | 3 (BUG-050, BUG-052, BUG-060) |
+| Android fixes awaiting physical-device verification | 8 (BUG-081–BUG-086 and BUG-088–BUG-089) |
 | Critical or High findings still in progress | 3 |
 | Consecutive post-repair clean audits for this transfer | 0 |
 
@@ -50,17 +53,52 @@ Earlier verified repairs remain recorded individually in [BUG_AUDIT.md](BUG_AUDI
 | Check | Result |
 |---|---|
 | Focused order-idempotency tests | PASS — 3 passed |
-| `npm test` on `saas-staging` | PASS — 152 passed, 0 failed, 0 skipped |
-| `npm run lint` | PASS — 0 errors, 53 warnings |
+| `npm test` on `saas-staging` | PASS — 155 passed, 0 failed, 0 skipped (latest rerun) |
+| `npm run lint` | PASS — 0 errors, 54 warnings (current rerun) |
 | Strict frontend no-explicit-`any` lint | PASS — no violations |
 | Tenant test type-check (`npx tsc --project tests/tenant/tsconfig.json --noEmit`) | PASS |
 | TypeScript source/test explicit-`any` scan | PASS — no explicit annotations found |
 | `npm run type-check` | PASS — frontend TypeScript and backend `tsc` |
-| `npm run build` | PASS — exit 0; Prisma client generated and all 166 routes built |
+| `npm run build` | PASS — exit 0; Prisma client generated and all 169 routes built (cycle 29) |
 | `npm run test:e2e` | FAIL / INCOMPLETE — catalog flow passed; auth/signup flow failed and targeted rerun timed out during navigation while Neon was unreachable; provider test skipped because `E2E_PAYMENT_PROVIDER` is unset |
 | `git diff --check` | PASS — no whitespace errors (line-ending notices only) |
 
-The build, tests, and browser run logged fallback/diagnostic errors because the configured Neon endpoint/local PostgreSQL were unreachable. The Playwright catalog smoke uses a deterministic product fixture, so it validates rendering and search behavior but not live product data. The latest signup browser run did not verify unchecked-consent feedback; this remains BUG-080. Login/logout, authenticated dashboards/settings, tenant CRUD, and provider payment flows remain unverified. Build emitted webpack cache and Node `url.parse()` deprecation warnings. Lint warnings are primarily legacy hook dependencies, unused symbols, image optimization suggestions, and presentation warnings; they are non-blocking cleanup debt.
+## Cycle 29 continuation — 2026-10-11
+
+- `npm test`: PASS, 153/153. Webhook tests emitted expected PostgreSQL-unavailable diagnostics against localhost; mocked assertions passed.
+- `npm run type-check`: PASS for frontend and backend. `npx eslint src/app/checkout/page.tsx`: PASS. `git diff --check`: PASS.
+- `npm run build` after BUG-087: PASS; all 169 static pages generated. Neon was unreachable during store-directory generation and the existing fallback was used. Webpack cache snapshot and Node URL deprecation warnings remain.
+- The local debug APK had compiled and packaged earlier in cycle 29, but it was not published or installed. `adb devices` currently reports no connected Android device.
+- Read-only staging health and route smoke had passed earlier in cycle 29. A fresh staging request from this shell was blocked by network access; no new live result is claimed here.
+- No authenticated Google login/logout, live M-Pesa/Stripe settlement, real R2 upload, device update installation, offline recovery, system-bar rendering, or WhatsApp handoff has been verified in this continuation. `E2E_PAYMENT_PROVIDER` is not configured for provider sandbox tests.
+- BUG-086 fixes native checkout to save the enquiry before opening WhatsApp through Capacitor Browser while preserving website popup behavior. It passes type-check, lint, full unit tests, and build; real-device handoff remains unverified.
+- BUG-087 fixes Stripe invoice event handling so Payment persistence failures leave the webhook receipt retryable. Its focused webhook regression test, repository type-check, and repository lint pass. A live Stripe retry was not exercised.
+- Android upload source trace: Capacitor's `BridgeWebChromeClient.onShowFileChooser` opens the native picker for standard file inputs; shared platform/storefront handlers optimize images and use the existing upload APIs. Device file selection and a real R2 upload remain unverified.
+- Mobile Google auth now has focused regression coverage for hashed one-time ticket consumption, replay rejection, invalid/expired tickets, and resolving the shared user. Focused tests pass 2/2 and full repository tests pass 155/155; real Google OAuth callback and device deep-link handoff remain unverified.
+- `npm run build` after extracting the mobile ticket authorizer: PASS; all 169 pages generated. Neon remained unreachable during store-directory generation and the existing fallback was used; webpack cache and Node URL warnings remain.
+- The staging update manifest remains version 14, while these native changes are uncommitted and unpublished. No commit, push, or deployment was performed.
+- The audit is still open. It has not completed two consecutive clean full audits after repairs.
+
+## Cycle 30 continuation — 2026-10-11
+
+- Fixed BUG-088: native update recovery distinguishes the install-permission settings trip from an already-open package installer. After Activity recreation, a granted permission resumes from the saved DownloadManager request; denied permission and installer cancellation do not trigger a reopen loop.
+- Android `:app:compileDebugJavaWithJavac`: PASS. Android `:app:assembleDebug`: PASS. Local artifact: `android/app/build/outputs/apk/debug/app-debug.apk`. It was not installed, published, or deployed.
+- `npm run type-check`: PASS for frontend/backend. `npm test`: PASS, 155/155. `npm run lint`: PASS with 0 errors and 54 warnings. `git diff --check`: PASS.
+- `git diff --check`: PASS. No Android device is connected, so permission/recreation/cancel/install behavior was not tested on a phone.
+- The branch remains `saas-staging`. No changes were made to `multi-industry-commerce`; no commit, push, or deployment occurred.
+- This targeted repair does not count as a clean full audit. The two-consecutive-clean-audit gate, live database/provider checks, real Google OAuth, R2 upload, and Android runtime checks remain open.
+
+## Cycle 31 — Mobile scrollbars, permissions, and staging APK — 2026-10-11
+
+- BUG-089 is fixed at source/build level. The native WebView vertical scrollbar is disabled; CSS suppression is gated by a class applied only on Android. Website browser scrollbar styling remains unchanged.
+- Permission audit found only app-relevant existing permissions in the APK: Internet and user-confirmed package installation (plus an AndroidX internal receiver permission). File inputs open Android's native file chooser and need no broad storage permission. There is no app camera capture, location feature, Firebase Cloud Messaging setup, or background push sender; adding permissions alone would not implement those features, so none were added. Existing account notifications remain in-app/API-driven while open.
+- `npm run android:staging:update`: PASS. The local staging APK and manifest are version 1.3.11 / versionCode 15; the APK signer matches the prior staging APK, enabling an in-place update for that signing identity. APK: `frontend/public/downloads/nurava-hubstores-staging.apk`. No deployment occurred.
+- A fresh read-only staging check returned healthy application/database status. The deployed update manifest remains version 1.3.10 / code 14; local v15 artifacts are not published because no push or deployment was authorized.
+- `npm run type-check`: PASS; `npm run lint`: PASS with 0 errors and 54 warnings; `npm run build`: PASS with 169 routes. The build could not reach Neon during static store-directory generation and used the existing fallback. Android compilation and APK assembly passed through the staging-update script.
+- No Android device/emulator is connected. Physical scrollbar appearance, native picker launch, notification/runtime capability behavior, and APK installation remain unverified. No changes were made to `multi-industry-commerce`; no commit, push, or deployment was performed.
+- This does not count as a clean full audit. Live database/provider/authentication/upload checks and the two-consecutive-clean-audit gate remain outstanding.
+
+The build, tests, and browser run logged fallback/diagnostic errors because the configured Neon endpoint/local PostgreSQL were unreachable. The Playwright catalog smoke uses a deterministic product fixture, so it validates rendering and search behavior but not live product data. BUG-080's unchecked-consent feedback is verified by the targeted Chromium signup flow recorded in cycle 27. Successful login/logout, authenticated dashboards/settings, tenant CRUD, and provider payment flows remain unverified. Build emitted webpack cache and Node `url.parse()` deprecation warnings. Lint warnings are primarily legacy hook dependencies, unused symbols, image optimization suggestions, and presentation warnings; they are non-blocking cleanup debt.
 
 ## Cycle 18 repair addendum — tenant-scoped browser state
 
