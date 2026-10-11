@@ -16,6 +16,7 @@ type UpdateManifest = {
 
 type AppUpdaterPlugin = {
 	downloadUpdate(options: { url: string; versionCode: number; versionName: string }): Promise<{ downloadId: number }>
+	getDownloadStatus(options: { downloadId: number }): Promise<{ status: "running" | "paused" | "downloaded" | "failed" }>
 }
 
 const AppUpdater = registerPlugin<AppUpdaterPlugin>("AppUpdater")
@@ -37,6 +38,7 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 	const [dismissedVersionCode, setDismissedVersionCode] = useState<number | null>(null)
 	const [downloading, setDownloading] = useState(false)
 	const [downloadStarted, setDownloadStarted] = useState(false)
+	const [downloadId, setDownloadId] = useState<number | null>(null)
 	const [error, setError] = useState("")
 
 	const checkForUpdate = useCallback(async () => {
@@ -87,8 +89,40 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 
 	useEffect(() => {
 		setDownloadStarted(false)
+		setDownloadId(null)
 		setError("")
 	}, [update?.versionCode])
+
+	useEffect(() => {
+		if (!downloadStarted || downloadId === null || !Capacitor.isPluginAvailable("AppUpdater")) return
+		let active = true
+		const checkDownload = async () => {
+			try {
+				const result = await AppUpdater.getDownloadStatus({ downloadId })
+				if (!active) return
+				if (result.status === "failed") {
+					setDownloadStarted(false)
+					setDownloadId(null)
+					setError("The APK download failed or was cancelled. Check your connection, then try again.")
+				} else if (result.status === "paused") {
+					setError("The APK download is paused. Resume it from the Android download notification.")
+				} else if (result.status === "downloaded") {
+					setDownloadId(null)
+					setError("Download complete. Android will ask you to confirm the installation.")
+				} else {
+					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
+				}
+			} catch {
+				// A temporary status-query failure must not interrupt an active download.
+			}
+		}
+		void checkDownload()
+		const interval = window.setInterval(() => void checkDownload(), 2000)
+		return () => {
+			active = false
+			window.clearInterval(interval)
+		}
+	}, [downloadId, downloadStarted])
 
 	const downloadUpdate = async () => {
 		if (!update || downloading) return
@@ -99,7 +133,8 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 			if (new URL(url).origin !== window.location.origin) throw new Error("The update must download from the current app site.")
 			if (Capacitor.isPluginAvailable("AppUpdater")) {
 				try {
-					await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
+					const result = await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
+					setDownloadId(result.downloadId)
 					setDownloadStarted(true)
 					setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 				} catch {

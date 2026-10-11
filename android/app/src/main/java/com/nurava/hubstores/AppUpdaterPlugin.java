@@ -2,6 +2,7 @@ package com.nurava.hubstores;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.database.Cursor;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Environment;
@@ -14,6 +15,67 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "AppUpdater")
 public class AppUpdaterPlugin extends Plugin {
+    @PluginMethod
+    public void getDownloadStatus(PluginCall call) {
+        Long requestedDownloadId = call.getLong("downloadId");
+        if (requestedDownloadId == null || requestedDownloadId < 0L) {
+            call.reject("The app update download ID is invalid.");
+            return;
+        }
+
+        DownloadManager manager = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+        if (manager == null) {
+            call.reject("Android could not check the update download.");
+            return;
+        }
+
+        String status = "failed";
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(requestedDownloadId);
+        try (Cursor cursor = manager.query(query)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int statusColumn = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int titleColumn = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE);
+                if (statusColumn < 0 || titleColumn < 0
+                    || !"Nurava HubStores update".equals(cursor.getString(titleColumn))) {
+                    call.reject("The app update download could not be verified.");
+                    return;
+                }
+
+                switch (cursor.getInt(statusColumn)) {
+                    case DownloadManager.STATUS_PENDING:
+                    case DownloadManager.STATUS_RUNNING:
+                        status = "running";
+                        break;
+                    case DownloadManager.STATUS_PAUSED:
+                        status = "paused";
+                        break;
+                    case DownloadManager.STATUS_SUCCESSFUL:
+                        status = "downloaded";
+                        break;
+                    case DownloadManager.STATUS_FAILED:
+                    default:
+                        status = "failed";
+                        break;
+                }
+            }
+        } catch (RuntimeException error) {
+            call.reject("Android could not check the update download.", error);
+            return;
+        }
+
+        if ("failed".equals(status)) {
+            android.content.SharedPreferences preferences = getContext()
+                .getSharedPreferences("app_update", Context.MODE_PRIVATE);
+            if (preferences.getLong("pending_download_id", -1L) == requestedDownloadId) {
+                preferences.edit().remove("pending_download_id").apply();
+            }
+        }
+
+        JSObject result = new JSObject();
+        result.put("status", status);
+        call.resolve(result);
+    }
+
     @PluginMethod
     public void downloadUpdate(PluginCall call) {
         String url = call.getString("url");
