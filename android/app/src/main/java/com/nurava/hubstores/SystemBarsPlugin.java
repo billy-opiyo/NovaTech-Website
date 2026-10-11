@@ -8,6 +8,7 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.widget.FrameLayout;
+import androidx.core.view.WindowCompat;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -38,8 +39,18 @@ public class SystemBarsPlugin extends Plugin {
 
         getActivity().runOnUiThread(() -> {
             Window window = getActivity().getWindow();
-            window.setStatusBarColor(color);
-            window.setNavigationBarColor(color);
+            FrameLayout decor = (FrameLayout) window.getDecorView();
+            decor.setBackgroundColor(color);
+            if (Build.VERSION.SDK_INT >= 35) {
+                // Android 15+ enforces edge-to-edge for apps targeting API 35+;
+                // status/navigation bar color setters no longer paint those areas.
+                WindowCompat.setDecorFitsSystemWindows(window, false);
+                window.setStatusBarColor(Color.TRANSPARENT);
+                window.setNavigationBarColor(Color.TRANSPARENT);
+            } else {
+                window.setStatusBarColor(color);
+                window.setNavigationBarColor(color);
+            }
             if (Build.VERSION.SDK_INT >= VERSION_CODES.Q) {
                 window.setStatusBarContrastEnforced(false);
                 window.setNavigationBarContrastEnforced(false);
@@ -55,13 +66,12 @@ public class SystemBarsPlugin extends Plugin {
                     controller.setSystemBarsAppearance(appearance, mask);
                 }
             } else {
-                View decor = window.getDecorView();
                 int flags = decor.getSystemUiVisibility();
                 int lightBarFlags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
                 decor.setSystemUiVisibility(lightIcons ? flags | lightBarFlags : flags & ~lightBarFlags);
             }
             if (Build.VERSION.SDK_INT >= 35) {
-                ensureEdgeToEdgeColorBands();
+                ensureEdgeToEdgeColorBands(decor);
                 statusBarColorBand.setBackgroundColor(color);
                 navigationBarColorBand.setBackgroundColor(color);
             }
@@ -69,13 +79,13 @@ public class SystemBarsPlugin extends Plugin {
         call.resolve();
     }
 
-    private void ensureEdgeToEdgeColorBands() {
+    private void ensureEdgeToEdgeColorBands(FrameLayout decor) {
         if (edgeToEdgeColorBands != null) return;
-        FrameLayout content = getActivity().findViewById(android.R.id.content);
-        if (content == null) return;
 
         FrameLayout bands = new FrameLayout(getActivity());
         bands.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        bands.setClickable(false);
+        bands.setFocusable(false);
         statusBarColorBand = new View(getActivity());
         navigationBarColorBand = new View(getActivity());
         bands.addView(statusBarColorBand, new FrameLayout.LayoutParams(
@@ -109,12 +119,12 @@ public class SystemBarsPlugin extends Plugin {
             navigationBarColorBand.setLayoutParams(bottomLayout);
             return insets;
         });
-        content.addView(bands, new FrameLayout.LayoutParams(
+        decor.addView(bands, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         ));
         bands.bringToFront();
-        bands.requestApplyInsets();
+        decor.requestApplyInsets();
         edgeToEdgeColorBands = bands;
     }
 }

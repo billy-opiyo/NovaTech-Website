@@ -6,6 +6,9 @@ import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
+import android.app.DownloadManager;
+import android.content.IntentFilter;
+import android.content.Intent;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewOutlineProvider;
@@ -16,7 +19,10 @@ import com.getcapacitor.BridgeWebViewClient;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private static final int REQUEST_INSTALL_PERMISSION = 8012;
     private View nativeLaunchOverlay;
+    private UpdateDownloadReceiver updateDownloadReceiver;
+    private Uri pendingUpdateApk;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -77,6 +83,62 @@ public class MainActivity extends BridgeActivity {
                     || normalizedDescription.contains("err_internet_disconnected");
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (updateDownloadReceiver != null) return;
+        updateDownloadReceiver = new UpdateDownloadReceiver(this::installDownloadedUpdate);
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(updateDownloadReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(updateDownloadReceiver, filter);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        if (updateDownloadReceiver != null) {
+            unregisterReceiver(updateDownloadReceiver);
+            updateDownloadReceiver = null;
+        }
+        super.onPause();
+    }
+
+    private void installDownloadedUpdate(Uri apkUri) {
+        if (apkUri == null) return;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+            && !getPackageManager().canRequestPackageInstalls()) {
+            pendingUpdateApk = apkUri;
+            Intent settingsIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                .setData(Uri.parse("package:" + getPackageName()));
+            startActivityForResult(settingsIntent, REQUEST_INSTALL_PERMISSION);
+            return;
+        }
+        launchUpdateInstaller(apkUri);
+    }
+
+    private void launchUpdateInstaller(Uri apkUri) {
+        Intent installIntent = new Intent(Intent.ACTION_VIEW)
+            .setDataAndType(apkUri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(installIntent);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_INSTALL_PERMISSION || pendingUpdateApk == null) return;
+        Uri apkUri = pendingUpdateApk;
+        pendingUpdateApk = null;
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O
+            || getPackageManager().canRequestPackageInstalls()) {
+            launchUpdateInstaller(apkUri);
+        } else {
+            android.widget.Toast.makeText(this, "Allow Nurava HubStores to install this update, then open the downloaded APK.", android.widget.Toast.LENGTH_LONG).show();
+        }
     }
 
     private void showNativeLaunchOverlay() {

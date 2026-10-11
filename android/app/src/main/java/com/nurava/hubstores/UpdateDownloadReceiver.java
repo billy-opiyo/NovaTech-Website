@@ -6,10 +6,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.provider.Settings;
 
-/** Opens Android's install confirmation as soon as this app's APK finishes downloading. */
+/** Hands a completed update APK to the foreground activity to open Android's installer. */
 public class UpdateDownloadReceiver extends BroadcastReceiver {
+    public interface InstallListener {
+        void onUpdateDownloaded(Uri apkUri);
+    }
+
+    private final InstallListener installListener;
+
+    public UpdateDownloadReceiver(InstallListener installListener) {
+        this.installListener = installListener;
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
@@ -30,25 +39,7 @@ public class UpdateDownloadReceiver extends BroadcastReceiver {
 
             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
             if (apkUri == null) return;
-            Intent installIntent = new Intent(Intent.ACTION_VIEW)
-                .setDataAndType(apkUri, "application/vnd.android.package-archive")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-
-            try {
-                context.startActivity(installIntent);
-            } catch (SecurityException | android.content.ActivityNotFoundException blocked) {
-                // The DownloadManager completion notification remains available as a fallback.
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    Intent settingsIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                        .setData(Uri.parse("package:" + context.getPackageName()))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    try {
-                        context.startActivity(settingsIntent);
-                    } catch (RuntimeException ignored) {
-                        // Android may block background activity starts; the system download notification is retained.
-                    }
-                }
-            }
+            if (installListener != null) installListener.onUpdateDownloaded(apkUri);
         } catch (RuntimeException ignored) {
             // A failed DownloadManager lookup must not crash the app process.
         }
