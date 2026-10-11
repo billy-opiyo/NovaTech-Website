@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Capacitor, registerPlugin } from "@capacitor/core"
+import { App } from "@capacitor/app"
 
 type SystemBarsPlugin = {
 	setColors(options: { color: string; lightIcons: boolean }): Promise<void>
@@ -48,7 +49,19 @@ export default function AndroidSystemBars() {
 		applyTheme()
 		const observer = new MutationObserver(scheduleApply)
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] })
-		return () => observer.disconnect()
+		let active = true
+		let appStateListener: { remove: () => Promise<void> } | undefined
+		void App.addListener("appStateChange", ({ isActive }) => {
+			if (active && isActive) scheduleApply()
+		}).then((listener) => {
+			if (active) appStateListener = listener
+			else void listener.remove()
+		})
+		return () => {
+			active = false
+			observer.disconnect()
+			if (appStateListener) void appStateListener.remove()
+		}
 	}, [])
 
 	return null

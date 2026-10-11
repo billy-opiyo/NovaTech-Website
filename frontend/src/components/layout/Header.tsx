@@ -47,7 +47,7 @@ export default function Header() {
 	const accountName = session?.user?.name || session?.user?.email || "Account"
 
 	return (
-		<header className="site-header sticky top-0 z-[60] glass navy-glass backdrop-blur-lg border-b border-white/10">
+		<header className="site-header sticky top-0 z-[60] glass navy-glass border-0 backdrop-blur-lg">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}

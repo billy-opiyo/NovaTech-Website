@@ -18,7 +18,7 @@ export default function PlatformMobileNav() {
 		<>
 			<nav
 				aria-label="Platform navigation"
-				className="glass lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-theme-border shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur-lg"
+				className="glass lg:hidden fixed bottom-0 left-0 right-0 z-50 border-0 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur-lg"
 			>
 				<div className="mx-auto flex max-w-2xl items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
 					{baseNavItems.map(({ icon: Icon, label, href, match }) => {
