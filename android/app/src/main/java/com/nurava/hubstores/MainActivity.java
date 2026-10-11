@@ -6,15 +6,22 @@ import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import java.util.Locale;
 import com.getcapacitor.BridgeWebViewClient;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private View nativeLaunchOverlay;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppUpdaterPlugin.class);
         super.onCreate(savedInstanceState);
+        showNativeLaunchOverlay();
     }
 
     @Override
@@ -31,6 +38,14 @@ public class MainActivity extends BridgeActivity {
                     return;
                 }
                 super.onReceivedError(view, request, error);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                // Keep the native glass splash visible until the website has
+                // rendered its own splash or the bundled offline page.
+                view.postDelayed(MainActivity.this::hideNativeLaunchOverlay, 180);
             }
 
             @Override
@@ -60,5 +75,48 @@ public class MainActivity extends BridgeActivity {
                     || normalizedDescription.contains("err_internet_disconnected");
             }
         });
+    }
+
+    private void showNativeLaunchOverlay() {
+        FrameLayout content = findViewById(android.R.id.content);
+        if (content == null || getBridge() == null || getBridge().getWebView() == null) return;
+
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackgroundResource(R.drawable.native_launch_background);
+        overlay.setClickable(true);
+        overlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.launch_icon);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int logoWidth = dp(112);
+        int logoHeight = dp(90);
+        FrameLayout.LayoutParams logoLayout = new FrameLayout.LayoutParams(logoWidth, logoHeight, Gravity.CENTER);
+        overlay.addView(logo, logoLayout);
+
+        FrameLayout.LayoutParams overlayLayout = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        content.addView(overlay, overlayLayout);
+        nativeLaunchOverlay = overlay;
+    }
+
+    private void hideNativeLaunchOverlay() {
+        if (nativeLaunchOverlay == null) return;
+        FrameLayout content = findViewById(android.R.id.content);
+        if (content == null) return;
+
+        View overlay = nativeLaunchOverlay;
+        nativeLaunchOverlay = null;
+        overlay.animate()
+            .alpha(0f)
+            .setDuration(180)
+            .withEndAction(() -> content.removeView(overlay))
+            .start();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }
