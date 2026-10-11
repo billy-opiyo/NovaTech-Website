@@ -92,7 +92,9 @@ public class MainActivity extends BridgeActivity {
         updateDownloadReceiver = new UpdateDownloadReceiver(this::installDownloadedUpdate);
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (android.os.Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(updateDownloadReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED);
+            // DownloadManager is a separate privileged app, so NOT_EXPORTED can
+            // prevent its completion broadcast from reaching this receiver.
+            registerReceiver(updateDownloadReceiver, filter, android.content.Context.RECEIVER_EXPORTED);
         } else {
             registerReceiver(updateDownloadReceiver, filter);
         }

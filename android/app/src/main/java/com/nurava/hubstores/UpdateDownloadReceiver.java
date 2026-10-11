@@ -25,6 +25,10 @@ public class UpdateDownloadReceiver extends BroadcastReceiver {
         long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
         if (downloadId < 0L) return;
 
+        long expectedDownloadId = context.getSharedPreferences("app_update", Context.MODE_PRIVATE)
+            .getLong("pending_download_id", -1L);
+        if (downloadId != expectedDownloadId) return;
+
         DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) return;
 
@@ -39,7 +43,13 @@ public class UpdateDownloadReceiver extends BroadcastReceiver {
 
             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
             if (apkUri == null) return;
-            if (installListener != null) installListener.onUpdateDownloaded(apkUri);
+            if (installListener != null) {
+                installListener.onUpdateDownloaded(apkUri);
+                context.getSharedPreferences("app_update", Context.MODE_PRIVATE)
+                    .edit()
+                    .remove("pending_download_id")
+                    .apply();
+            }
         } catch (RuntimeException ignored) {
             // A failed DownloadManager lookup must not crash the app process.
         }
