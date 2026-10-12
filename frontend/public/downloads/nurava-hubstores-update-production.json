@@ -1,0 +1,10 @@
+{
+	"enabled": false,
+	"channel": "production",
+	"applicationId": "com.nurava.hubstores",
+	"versionCode": 0,
+	"versionName": "0.0.0",
+	"apkUrl": "/downloads/nurava-hubstores-production.apk",
+	"signingCertificateSha256": "",
+	"releaseNotes": "Production app updates are not enabled."
+}

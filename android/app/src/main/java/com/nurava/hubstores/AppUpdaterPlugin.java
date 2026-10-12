@@ -4,6 +4,7 @@ import android.app.DownloadManager;
 import android.content.Context;
 import android.database.Cursor;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Environment;
 import androidx.core.content.pm.PackageInfoCompat;
@@ -18,6 +19,8 @@ public class AppUpdaterPlugin extends Plugin {
     @PluginMethod
     public void getPendingUpdate(PluginCall call) {
         Long requestedVersionCode = call.getLong("versionCode");
+        String requestedChannel = call.getString("channel");
+        String requestedCertificate = UpdateApkVerifier.normalizeSha256(call.getString("signingCertificateSha256"));
         if (requestedVersionCode == null || requestedVersionCode < 1L) {
             call.reject("The app update version code is invalid.");
             return;
@@ -27,12 +30,36 @@ public class AppUpdaterPlugin extends Plugin {
             .getSharedPreferences("app_update", Context.MODE_PRIVATE);
         long downloadId = preferences.getLong("pending_download_id", -1L);
         long pendingVersionCode = preferences.getLong("pending_version_code", -1L);
+        String pendingChannel = preferences.getString("pending_channel", "");
+        String pendingCertificate = preferences.getString("pending_certificate_sha256", "");
         JSObject result = new JSObject();
-        if (downloadId >= 0L && pendingVersionCode == requestedVersionCode) {
+        if (downloadId >= 0L && pendingVersionCode == requestedVersionCode
+            && requestedChannel != null && requestedChannel.equals(pendingChannel)
+            && requestedCertificate != null && requestedCertificate.equals(pendingCertificate)) {
             result.put("downloadId", downloadId);
         } else {
             result.put("downloadId", JSObject.NULL);
         }
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void checkUpdateCompatibility(PluginCall call) {
+        String channel = call.getString("channel");
+        String packageId = call.getString("applicationId");
+        String certificate = UpdateApkVerifier.normalizeSha256(call.getString("signingCertificateSha256"));
+        Long versionCode = call.getLong("versionCode");
+        boolean compatible = versionCode != null
+            && versionCode > 0L
+            && versionCode > getInstalledVersionCode()
+            && UpdateApkVerifier.PACKAGE_ID.equals(packageId)
+            && packageId.equals(getContext().getPackageName())
+            && channel != null
+            && channel.equals(UpdateApkVerifier.channelForServerUrl(getBridge().getServerUrl()))
+            && certificate != null
+            && UpdateApkVerifier.installedSignerMatches(getContext(), certificate);
+        JSObject result = new JSObject();
+        result.put("compatible", compatible);
         call.resolve(result);
     }
 
@@ -71,7 +98,9 @@ public class AppUpdaterPlugin extends Plugin {
                         status = "paused";
                         break;
                     case DownloadManager.STATUS_SUCCESSFUL:
-                        status = "downloaded";
+                        status = isDownloadedUpdateCompatible(requestedDownloadId, cursor)
+                            ? "downloaded"
+                            : "failed";
                         break;
                     case DownloadManager.STATUS_FAILED:
                     default:
@@ -88,9 +117,15 @@ public class AppUpdaterPlugin extends Plugin {
             android.content.SharedPreferences preferences = getContext()
                 .getSharedPreferences("app_update", Context.MODE_PRIVATE);
             if (preferences.getLong("pending_download_id", -1L) == requestedDownloadId) {
+                manager.remove(requestedDownloadId);
                 preferences.edit()
                     .remove("pending_download_id")
                     .remove("pending_version_code")
+                    .remove("pending_channel")
+                    .remove("pending_server_url")
+                    .remove("pending_apk_url")
+                    .remove("pending_application_id")
+                    .remove("pending_certificate_sha256")
                     .remove("awaiting_install_permission")
                     .remove("installer_prompt_open")
                     .apply();
@@ -139,7 +174,8 @@ public class AppUpdaterPlugin extends Plugin {
             }
 
             Uri apkUri = manager.getUriForDownloadedFile(requestedDownloadId);
-            if (apkUri == null || !(getActivity() instanceof MainActivity)) {
+            if (apkUri == null || !isDownloadedUpdateCompatible(requestedDownloadId, cursor)
+                || !(getActivity() instanceof MainActivity)) {
                 call.reject("Android could not open the downloaded update.");
                 return;
             }
@@ -154,6 +190,9 @@ public class AppUpdaterPlugin extends Plugin {
     public void downloadUpdate(PluginCall call) {
         String url = call.getString("url");
         String versionName = call.getString("versionName", "latest");
+        String channel = call.getString("channel");
+        String packageId = call.getString("applicationId");
+        String certificate = UpdateApkVerifier.normalizeSha256(call.getString("signingCertificateSha256"));
         Object versionCodeValue = call.getData().opt("versionCode");
         Long targetVersionCode = null;
         if (versionCodeValue instanceof Number) {
@@ -170,25 +209,26 @@ public class AppUpdaterPlugin extends Plugin {
             }
         }
 
-        if (url == null || targetVersionCode == null || targetVersionCode <= 0) {
+        if (url == null || channel == null || packageId == null || certificate == null
+            || versionName == null || versionName.trim().isEmpty()
+            || targetVersionCode == null || targetVersionCode <= 0) {
             call.reject("The app update details are incomplete.");
             return;
         }
 
+        String appServerUrl = getBridge().getServerUrl();
         Uri apkUri = Uri.parse(url);
-        Uri appUri = Uri.parse(getBridge().getServerUrl());
-        String expectedApkPath = "/downloads/nurava-hubstores-staging.apk";
-        if (!"https".equalsIgnoreCase(apkUri.getScheme())
-            || appUri.getHost() == null
-            || !appUri.getHost().equalsIgnoreCase(apkUri.getHost())
-            || !expectedApkPath.equals(apkUri.getPath())) {
+        if (!UpdateApkVerifier.isAllowedApkUrl(channel, appServerUrl, url)
+            || !UpdateApkVerifier.PACKAGE_ID.equals(packageId)
+            || !packageId.equals(getContext().getPackageName())
+            || !channel.equals(UpdateApkVerifier.channelForServerUrl(appServerUrl))
+            || !UpdateApkVerifier.installedSignerMatches(getContext(), certificate)) {
             call.reject("The update download URL is not allowed.");
             return;
         }
 
         try {
-            PackageInfo installed = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
-            long installedVersionCode = PackageInfoCompat.getLongVersionCode(installed);
+            long installedVersionCode = getInstalledVersionCode();
             if (targetVersionCode <= installedVersionCode) {
                 call.reject("This app is already up to date.");
                 return;
@@ -216,6 +256,11 @@ public class AppUpdaterPlugin extends Plugin {
                 .edit()
                 .putLong("pending_download_id", downloadId)
                 .putLong("pending_version_code", targetVersionCode)
+                .putString("pending_channel", channel)
+                .putString("pending_server_url", appServerUrl)
+                .putString("pending_apk_url", url)
+                .putString("pending_application_id", packageId)
+                .putString("pending_certificate_sha256", certificate)
                 .putBoolean("awaiting_install_permission", false)
                 .putBoolean("installer_prompt_open", false)
                 .commit();
@@ -231,5 +276,42 @@ public class AppUpdaterPlugin extends Plugin {
         } catch (Exception error) {
             call.reject("Android could not start the update download.", error);
         }
+    }
+
+    private long getInstalledVersionCode() {
+        try {
+            PackageInfo installed = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+            return PackageInfoCompat.getLongVersionCode(installed);
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return -1L;
+        }
+    }
+
+    private boolean isDownloadedUpdateCompatible(long downloadId, Cursor cursor) {
+        android.content.SharedPreferences preferences = getContext()
+            .getSharedPreferences("app_update", Context.MODE_PRIVATE);
+        int uriColumn = cursor.getColumnIndex(DownloadManager.COLUMN_URI);
+        String apkUrl = uriColumn >= 0 ? cursor.getString(uriColumn) : null;
+        String channel = preferences.getString("pending_channel", "");
+        String appServerUrl = preferences.getString("pending_server_url", "");
+        String applicationId = preferences.getString("pending_application_id", "");
+        String certificate = preferences.getString("pending_certificate_sha256", "");
+        long versionCode = preferences.getLong("pending_version_code", -1L);
+        long savedDownloadId = preferences.getLong("pending_download_id", -1L);
+        DownloadManager manager = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+        Uri downloadedUri = savedDownloadId == downloadId && manager != null
+            ? manager.getUriForDownloadedFile(downloadId)
+            : null;
+        return downloadedUri != null
+            && UpdateApkVerifier.verifyDownloadedApk(
+                getContext(),
+                downloadedUri,
+                channel,
+                appServerUrl,
+                apkUrl,
+                applicationId,
+                versionCode,
+                certificate
+            );
     }
 }

@@ -3,40 +3,32 @@
 import { useCallback, useEffect, useState } from "react"
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { App } from "@capacitor/app"
-import { Browser } from "@capacitor/browser"
 import { usePathname } from "next/navigation"
 import { Download, LoaderCircle, X } from "lucide-react"
-
-type UpdateManifest = {
-	versionCode: number
-	versionName: string
-	apkUrl: string
-	releaseNotes: string
-}
+import {
+	ANDROID_UPDATE_CHANNELS,
+	getAndroidUpdateManifestUrl,
+	isNativeUpdateCompatible,
+	resolveAndroidUpdateChannel,
+	validateAndroidUpdateManifest,
+	type AndroidUpdateChannel,
+	type AndroidUpdateManifest,
+} from "@/lib/android-update-channel"
 
 type AppUpdaterPlugin = {
-	getPendingUpdate(options: { versionCode: number }): Promise<{ downloadId: number | null }>
-	downloadUpdate(options: { url: string; versionCode: number; versionName: string }): Promise<{ downloadId: number }>
+	getPendingUpdate(options: { versionCode: number; channel: AndroidUpdateChannel; signingCertificateSha256: string }): Promise<{ downloadId: number | null }>
+	checkUpdateCompatibility(options: { channel: AndroidUpdateChannel; applicationId: string; versionCode: number; signingCertificateSha256: string }): Promise<{ compatible: boolean }>
+	downloadUpdate(options: { url: string; channel: AndroidUpdateChannel; applicationId: string; versionCode: number; versionName: string; signingCertificateSha256: string }): Promise<{ downloadId: number }>
 	getDownloadStatus(options: { downloadId: number }): Promise<{ status: "running" | "paused" | "downloaded" | "failed" }>
 	openDownloadedUpdate(options: { downloadId: number }): Promise<void>
 }
 
 const AppUpdater = registerPlugin<AppUpdaterPlugin>("AppUpdater")
-const UPDATE_MANIFEST_URL = "/downloads/nurava-hubstores-update.json"
-
-function isUpdateManifest(value: unknown): value is UpdateManifest {
-	if (!value || typeof value !== "object") return false
-	const manifest = value as Record<string, unknown>
-	return Number.isSafeInteger(manifest.versionCode)
-		&& typeof manifest.versionName === "string"
-		&& typeof manifest.apkUrl === "string"
-		&& typeof manifest.releaseNotes === "string"
-}
 
 export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { showOnPlatformHomepage: boolean }) {
 	const pathname = usePathname()
 	const isPlatformHomepage = showOnPlatformHomepage && pathname === "/"
-	const [update, setUpdate] = useState<UpdateManifest | null>(null)
+	const [update, setUpdate] = useState<AndroidUpdateManifest | null>(null)
 	const [dismissedVersionCode, setDismissedVersionCode] = useState<number | null>(null)
 	const [downloading, setDownloading] = useState(false)
 	const [downloadStarted, setDownloadStarted] = useState(false)
@@ -47,23 +39,48 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 
 	const checkForUpdate = useCallback(async () => {
 		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
+		const hasNativeCompatibilityCheck = Capacitor.isPluginAvailable("AppUpdater")
+		if (!hasNativeCompatibilityCheck) {
+			setUpdate(null)
+			return
+		}
+		const channel = resolveAndroidUpdateChannel(window.location.origin)
+		if (!channel) {
+			setUpdate(null)
+			return
+		}
 		try {
 			const [appInfo, response] = await Promise.all([
 				App.getInfo(),
-				fetch(`${UPDATE_MANIFEST_URL}?check=${Date.now()}`, { cache: "no-store" }),
+				fetch(`${getAndroidUpdateManifestUrl(channel)}?check=${Date.now()}`, { cache: "no-store" }),
 			])
-			if (!response.ok) return
-			const manifest: unknown = await response.json()
-			if (!isUpdateManifest(manifest) || !/^\d+$/.test(appInfo.build)) return
-			const installedVersionCode = Number(appInfo.build)
-			if (manifest.versionCode > installedVersionCode) {
-				setUpdate(manifest)
-				setError("")
-			} else {
+			if (!response.ok || appInfo.id !== "com.nurava.hubstores" || !/^\d+$/.test(appInfo.build)) {
 				setUpdate(null)
+				return
 			}
+			const manifest: unknown = await response.json()
+			const installedVersionCode = Number(appInfo.build)
+			const validManifest = validateAndroidUpdateManifest(manifest, channel, installedVersionCode)
+			if (!validManifest) {
+				setUpdate(null)
+				return
+			}
+
+			const compatibility = await AppUpdater.checkUpdateCompatibility({
+				channel: validManifest.channel,
+				applicationId: validManifest.applicationId,
+				versionCode: validManifest.versionCode,
+				signingCertificateSha256: validManifest.signingCertificateSha256,
+			})
+			if (!isNativeUpdateCompatible(hasNativeCompatibilityCheck, compatibility)) {
+				setUpdate(null)
+				return
+			}
+			setUpdate(validManifest)
+			setError("")
 		} catch {
-			// A failed update check must not interrupt opening or using the app.
+			// An unavailable or malformed update feed must not interrupt app use.
+			setUpdate(null)
 		}
 	}, [])
 
@@ -100,7 +117,12 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 		let active = true
 		const restorePendingDownload = async () => {
 			try {
-				const pending = await AppUpdater.getPendingUpdate({ versionCode: updateVersionCode })
+				if (!update) return
+				const pending = await AppUpdater.getPendingUpdate({
+					versionCode: update.versionCode,
+					channel: update.channel,
+					signingCertificateSha256: update.signingCertificateSha256,
+				})
 				if (!active || pending.downloadId === null) return
 				const result = await AppUpdater.getDownloadStatus({ downloadId: pending.downloadId })
 				if (!active) return
@@ -122,7 +144,7 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 		return () => {
 			active = false
 		}
-	}, [updateVersionCode])
+	}, [update, updateVersionCode])
 
 	useEffect(() => {
 		if (!downloadStarted || downloadId === null || downloadStatus === "downloaded" || !Capacitor.isPluginAvailable("AppUpdater")) return
@@ -178,21 +200,27 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 		setDownloadStatus(null)
 		setError("")
 		try {
-			const url = new URL(update.apkUrl, window.location.origin).toString()
-			if (new URL(url).origin !== window.location.origin) throw new Error("The update must download from the current app site.")
-			if (Capacitor.isPluginAvailable("AppUpdater")) {
-				const result = await AppUpdater.downloadUpdate({ url, versionCode: update.versionCode, versionName: update.versionName })
-				setDownloadId(result.downloadId)
-				setDownloadStarted(true)
-				setDownloadStatus("running")
-				setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
-			} else {
-				// Existing installs cannot have the updater plugin until they update once.
-				await Browser.open({ url })
-				setDownloadStarted(true)
-				setDownloadStatus(null)
-				setError("The Android browser opened the update download. When it finishes, open the downloaded APK and confirm installation.")
+			const channelSettings = ANDROID_UPDATE_CHANNELS[update.channel]
+			const parsedUrl = new URL(update.apkUrl, window.location.origin)
+			if (parsedUrl.origin !== channelSettings.origin || parsedUrl.pathname !== channelSettings.apkPath) {
+				throw new Error("The update download URL does not match this app channel.")
 			}
+			const url = parsedUrl.toString()
+			if (!Capacitor.isPluginAvailable("AppUpdater")) {
+				throw new Error("This installed app cannot verify update compatibility. Use a trusted manual installation path.")
+			}
+			const result = await AppUpdater.downloadUpdate({
+				url,
+				channel: update.channel,
+				applicationId: update.applicationId,
+				versionCode: update.versionCode,
+				versionName: update.versionName,
+				signingCertificateSha256: update.signingCertificateSha256,
+			})
+			setDownloadId(result.downloadId)
+			setDownloadStarted(true)
+			setDownloadStatus("running")
+			setError("The install screen will open automatically when the download finishes. Android will ask you to confirm the update.")
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : "Unable to start the app update download.")
 		} finally {

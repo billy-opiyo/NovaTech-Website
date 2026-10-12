@@ -34,6 +34,11 @@ public class SystemBarsPlugin extends Plugin {
         String textValue = call.getString("text", "#f8fafc");
         String mutedValue = call.getString("muted", "#cbd5e1");
         String primaryValue = call.getString("primary", "#f97316");
+        String glassBackgroundValue = call.getString("glassBackground");
+        if (glassBackgroundValue != null && !glassBackgroundValue.matches("rgba?\\(\\s*[0-9.]+\\s*,\\s*[0-9.]+\\s*,\\s*[0-9.]+(\\s*,\\s*[0-9.]+)?\\s*\\)")) {
+            call.reject("The theme glass background is invalid.");
+            return;
+        }
         final int color;
         final int surface;
         final int text;
@@ -59,6 +64,12 @@ public class SystemBarsPlugin extends Plugin {
             .putString("primary", primaryValue)
             .putBoolean("light_icons", lightIconsValue)
             .apply();
+        if (glassBackgroundValue != null) {
+            getContext().getSharedPreferences("active_theme", Context.MODE_PRIVATE)
+                .edit()
+                .putString("glass_background", glassBackgroundValue)
+                .apply();
+        }
 
         getActivity().runOnUiThread(() -> {
             Window window = getActivity().getWindow();

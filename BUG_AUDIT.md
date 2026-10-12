@@ -1537,3 +1537,35 @@ The current `saas-staging` sources were traced across the Android shell, Next.js
 - Preserved older pending payments during rollout: initiation reuses an active M-Pesa payment for the same order, and verification uses the reference stored on that exact row. This avoids starting a duplicate STK prompt for orders created with the previous short reference.
 - `npm test`: PASS, 159/159. New tests cover full-order reference uniqueness, order/amount matching, and registered/guest ownership. `npm run build`: PASS, all 169 routes; Next static generation used the existing fallback because the configured Neon endpoint was unreachable. Focused ESLint and `git diff --check` pass.
 - Live Daraja initiation/callback/verification, guest-order recovery on a real browser, and database-backed multi-order settlement remain unverified. BUG-092 is verified at source/test/build level, not with live provider transactions. This cycle found and fixed an issue, so it does not count toward the two consecutive clean full audits.
+
+### BUG-099 — Pending update verification depended on the receiver Activity context
+
+- **Files:** `android/app/src/main/java/com/nurava/hubstores/AppUpdaterPlugin.java`, `android/app/src/main/java/com/nurava/hubstores/UpdateDownloadReceiver.java`, `android/app/src/main/java/com/nurava/hubstores/MainActivity.java`
+- **Description:** Download completion verification derived the configured app origin by casting the broadcast context to `MainActivity`. If the receiver is invoked with a non-Activity context, validation receives an empty origin and treats a valid completed update as incompatible.
+- **Root cause:** The download record persisted its channel and APK identity but not the exact app origin against which the update URL had been validated.
+- **Fix:** Save the validated app origin alongside the pending channel and APK identity, then use that saved value for DownloadManager completion, status polling, resume recovery, and installer validation. Clear it with the other pending-download fields.
+- **Severity:** Medium
+- **Status:** Verified at source, regression-test, type-check, and staging build/artifact level. Native DownloadManager broadcasts and package-installer handoff still require a physical Android device.
+
+### Cycle 45 — Staging updater recovery and build verification — 2026-10-12
+
+- Persisted the selected staging/production app origin with the pending update, removing receiver-context dependence while retaining the per-channel URL, package, version, and signer checks.
+- The updater test asserts the saved-origin read/write and cleanup paths. `npm test` passes 182/182, `npm run type-check` passes, focused ESLint passes, and `git diff --check` passes with existing generated-file line-ending notices.
+- `npm run android:debug` passes with the verified JDK 21, Android SDK 36, and Gradle 8.14.3. The fresh debug APK verifies as `com.nurava.hubstores`, version 1.3.13/code 17, contains the staging HTTPS URL and offline page, and uses the signer pinned by the staging manifest. The publisher was not run; no public APK or update manifest was replaced.
+- No Android device is connected, and the staging host and live update feed are inaccessible from the current verification tools. DownloadManager completion, resume, and installer confirmation remain device-only checks; deployed feed behavior remains unverified.
+
+### BUG-100 — Legacy staging update prompts could not attest the installed signer
+
+- **Files:** `frontend/src/components/providers/AndroidAppUpdatePrompt.tsx`, `frontend/src/lib/android-update-channel.ts`
+- **Description:** Staging APKs without the new native compatibility method could still receive an update prompt based on a web-side staging certificate pin. That pin validates the offered APK identity, but cannot prove that the installed APK uses the same signing identity.
+- **Root cause:** A legacy browser/native fallback preserved update prompting when the installed signer could not be read by the app.
+- **Fix:** Require an affirmative result from the native compatibility check before showing an update prompt. Missing plugin support, rejected checks, and negative results now fail closed. The browser APK fallback was removed.
+- **Severity:** High
+- **Status:** Verified at source, regression-test, type-check, and lint level. The current published staging APK was inspected and does not include `checkUpdateCompatibility`, so it will not show in-app update prompts after this web fix is deployed; a trusted manual upgrade is required to reach a compatible native version.
+
+### Cycle 46 — Fail-closed update compatibility — 2026-10-12
+
+- Confirmed the local published staging APK lacks the native installed-signer check; the fresh local debug APK contains it. The former web-only pin fallback could not attest the installed signer, so update prompts now require a positive native compatibility result.
+- Added direct regression cases for missing native capability and negative compatibility results, and updated the frontend source guard. The production feed remains disabled; staging/production manifests and APK artifacts were not changed.
+- `npm test`: PASS, 183/183. `npm run type-check`: PASS. Focused ESLint: PASS. `git diff --check`: PASS with existing generated-file line-ending notices. The previously completed staging debug build compiled the native verifier; this cycle changed only frontend/test/documentation code, so no APK rebuild was needed.
+- No device is connected and the deployed staging site/feed could not be reached. Legacy version 17 in-app update behavior after deployment, native DownloadManager/install flows, and the trusted manual transition remain unverified. No deployment or artifact publishing was performed.
