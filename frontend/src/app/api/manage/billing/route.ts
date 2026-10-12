@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
+import { getPlatformMpesaDestinationSummary } from "backend/lib/platform-mpesa-destination"
 import {
 	BillingError,
 	cancelSubscription,
@@ -14,10 +15,10 @@ import {
 	getBillingSnapshot,
 	listActiveAddons,
 	listActivePlans,
+	submitManualBillingReceipt,
 	subscribeToAddon,
 	unsubscribeFromAddon,
 } from "backend/billing/service"
-import { isMpesaConfigured } from "backend/lib/daraja"
 
 const actionSchema = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("checkout"), planKey: z.string().min(1), addonKeys: z.array(z.string()).max(20).default([]) }),
@@ -25,6 +26,7 @@ const actionSchema = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("cancel"), immediate: z.boolean().default(false) }),
 	z.object({ action: z.literal("renew_mpesa"), phone: z.string().min(9).max(15) }),
 	z.object({ action: z.literal("setup_mpesa"), phone: z.string().min(9).max(15) }),
+	z.object({ action: z.literal("submit_manual_receipt"), paymentId: z.string().min(1), receiptCode: z.string().min(8).max(12) }),
 	z.object({ action: z.literal("portal") }),
 	z.object({ action: z.literal("addon_subscribe"), addonKey: z.string().min(1) }),
 	z.object({ action: z.literal("addon_unsubscribe"), addonKey: z.string().min(1) }),
@@ -44,9 +46,7 @@ export async function GET() {
 		const [snapshot, plans, addons] = await Promise.all([getBillingSnapshot(context.tenantId), listActivePlans(), listActiveAddons()])
 		const paymentMethod = {
 			provider: "mpesa" as const,
-			configured: isMpesaConfigured(),
-			shortcode: process.env.MPESA_SHORTCODE || "",
-			env: process.env.MPESA_ENV === "production" ? "production" : "sandbox",
+			...(await getPlatformMpesaDestinationSummary()),
 		}
 		return NextResponse.json({ ...snapshot, paymentMethod, plans, addons })
 	} catch (error: unknown) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 		const { session, context } = await getAccess()
 		const parsed = actionSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid billing action", issues: parsed.error.flatten() }, { status: 400 })
-		if (["checkout", "change_plan", "cancel", "renew_mpesa", "setup_mpesa", "portal", "addon_subscribe", "addon_unsubscribe"].includes(parsed.data.action)) {
+		if (["checkout", "change_plan", "cancel", "renew_mpesa", "setup_mpesa", "submit_manual_receipt", "portal", "addon_subscribe", "addon_unsubscribe"].includes(parsed.data.action)) {
 			await requireStorePermission(session.user.id, context.tenantId, "MANAGE_BILLING")
 		}
 		const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
 				return NextResponse.json(await createMpesaInvoicePayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone }))
 			case "setup_mpesa":
 				return NextResponse.json(await createSetupFeeMpesaPayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone }))
+			case "submit_manual_receipt":
+				return NextResponse.json(await submitManualBillingReceipt({ tenantId: context.tenantId, paymentId: parsed.data.paymentId, receiptCode: parsed.data.receiptCode }))
 			case "portal":
 				return NextResponse.json(await createCustomerPortalSession(context.tenantId, `${baseUrl}/manage/billing`))
 			case "addon_subscribe":

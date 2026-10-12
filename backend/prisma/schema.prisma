@@ -635,6 +635,21 @@ model PlatformSiteSettings {
   updatedAt         DateTime  @updatedAt
 }
 
+// Versioned, server-only collection destination for Nurava SaaS billing.
+// Keeping prior rows allows in-flight STK callbacks to use their original
+// shortcode/passkey pair after an administrator changes the active destination.
+model PlatformMpesaDestination {
+  id                String   @id @default(cuid())
+  version           Int      @unique
+  accountType       String
+  accountNumber     String
+  passkeyCiphertext String?
+  createdById       String
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model MerchantEnquiry {
   id                 String                       @id @default(cuid())
   tenantId           String
