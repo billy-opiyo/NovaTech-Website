@@ -75,6 +75,7 @@ public class MainActivity extends BridgeActivity {
                 appendThemeColor(offlineUri, theme, "text");
                 appendThemeColor(offlineUri, theme, "muted");
                 appendThemeColor(offlineUri, theme, "primary");
+                appendThemeGlassBackground(offlineUri, theme);
                 if (theme.contains("light_icons")) {
                     offlineUri.appendQueryParameter("lightIcons", Boolean.toString(theme.getBoolean("light_icons", false)));
                 }
@@ -85,6 +86,13 @@ public class MainActivity extends BridgeActivity {
                 String value = theme.getString(key, null);
                 if (value != null && value.matches("#[0-9a-fA-F]{6}")) {
                     uri.appendQueryParameter(key, value);
+                }
+            }
+
+            private void appendThemeGlassBackground(Uri.Builder uri, android.content.SharedPreferences theme) {
+                String value = theme.getString("glass_background", null);
+                if (value != null && value.matches("rgba?\\(\\s*[0-9.]+\\s*,\\s*[0-9.]+\\s*,\\s*[0-9.]+(\\s*,\\s*[0-9.]+)?\\s*\\)")) {
+                    uri.appendQueryParameter("glassBackground", value);
                 }
             }
 
@@ -165,6 +173,11 @@ public class MainActivity extends BridgeActivity {
         preferences.edit()
             .remove("pending_download_id")
             .remove("pending_version_code")
+            .remove("pending_channel")
+            .remove("pending_server_url")
+            .remove("pending_apk_url")
+            .remove("pending_application_id")
+            .remove("pending_certificate_sha256")
             .remove("awaiting_install_permission")
             .remove("installer_prompt_open")
             .apply();
@@ -185,6 +198,21 @@ public class MainActivity extends BridgeActivity {
 
     public void installDownloadedUpdate(Uri apkUri) {
         if (apkUri == null) return;
+        android.content.SharedPreferences update = getSharedPreferences("app_update", MODE_PRIVATE);
+        if (!UpdateApkVerifier.verifyDownloadedApk(
+            this,
+            apkUri,
+            update.getString("pending_channel", ""),
+            update.getString("pending_server_url", ""),
+            update.getString("pending_apk_url", ""),
+            update.getString("pending_application_id", ""),
+            update.getLong("pending_version_code", -1L),
+            update.getString("pending_certificate_sha256", "")
+        )) {
+            clearPendingUpdateDownload();
+            android.widget.Toast.makeText(this, "The downloaded update does not match this app and was discarded.", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
             && !getPackageManager().canRequestPackageInstalls()) {
             pendingUpdateApk = apkUri;

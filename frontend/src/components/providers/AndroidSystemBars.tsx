@@ -11,6 +11,7 @@ type SystemBarsPlugin = {
 		text: string
 		muted: string
 		primary: string
+		glassBackground: string
 		lightIcons: boolean
 	}): Promise<void>
 }
@@ -30,7 +31,8 @@ function readThemeColor() {
 	const text = toHex("--color-theme-text")
 	const muted = toHex("--color-theme-muted")
 	const primary = toHex("--color-primary")
-	if (!color || !surface || !text || !muted || !primary) return null
+	const glassBackground = styles.getPropertyValue("--glass-bg").trim()
+	if (!color || !surface || !text || !muted || !primary || !/^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+)?\s*\)$/.test(glassBackground)) return null
 	const [red, green, blue] = color.slice(1).match(/.{2}/g)!.map((channel) => Number.parseInt(channel, 16))
 	const linear = [red, green, blue].map((channel) => {
 		const normalized = channel / 255
@@ -43,6 +45,7 @@ function readThemeColor() {
 		text,
 		muted,
 		primary,
+		glassBackground,
 		lightIcons: luminance > 0.45,
 	}
 }
@@ -62,7 +65,7 @@ export default function AndroidSystemBars() {
 			pending = false
 			const theme = readThemeColor()
 			if (!theme) return
-			const key = `${theme.color}:${theme.surface}:${theme.text}:${theme.muted}:${theme.primary}:${theme.lightIcons}`
+			const key = `${theme.color}:${theme.surface}:${theme.text}:${theme.muted}:${theme.primary}:${theme.glassBackground}:${theme.lightIcons}`
 			if (key === lastApplied) return
 			lastApplied = key
 			void SystemBars.setColors(theme).catch(() => undefined)

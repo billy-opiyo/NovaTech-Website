@@ -11,6 +11,7 @@ test("bundled Android offline page applies only valid saved theme colors", async
 		text: "#0f172a",
 		muted: "#475569",
 		primary: "#0ea5e9",
+		glassBackground: "rgba(4, 15, 28, 0.72)",
 		lightIcons: "true",
 	})
 	await page.goto(`${offlinePage}?${validPalette.toString()}`)
@@ -21,6 +22,7 @@ test("bundled Android offline page applies only valid saved theme colors", async
 		text: getComputedStyle(document.documentElement).getPropertyValue("--offline-text").trim(),
 		muted: getComputedStyle(document.documentElement).getPropertyValue("--offline-muted").trim(),
 		primary: getComputedStyle(document.documentElement).getPropertyValue("--offline-primary").trim(),
+		glassBackground: getComputedStyle(document.documentElement).getPropertyValue("--offline-glass-bg").trim(),
 		colorScheme: getComputedStyle(document.documentElement).colorScheme,
 	}))
 	expect(appliedPalette).toEqual({
@@ -29,8 +31,21 @@ test("bundled Android offline page applies only valid saved theme colors", async
 		text: "#0f172a",
 		muted: "#475569",
 		primary: "#0ea5e9",
+		glassBackground: "rgba(4, 15, 28, 0.72)",
 		colorScheme: "light",
 	})
+	const dialogStyles = await page.locator(".dialog").evaluate((element) => {
+		const styles = getComputedStyle(element)
+		return { borderWidth: styles.borderTopWidth, background: styles.backgroundImage }
+	})
+	const iconStyles = await page.locator(".icon").evaluate((element) => {
+		const styles = getComputedStyle(element)
+		return { borderWidth: styles.borderTopWidth, background: styles.backgroundColor }
+	})
+	expect(dialogStyles.borderWidth).toBe("0px")
+	expect(dialogStyles.background).toContain("linear-gradient")
+	expect(iconStyles.borderWidth).toBe("0px")
+	expect(iconStyles.background).not.toBe("rgba(0, 0, 0, 0)")
 
 	await page.goto(`${offlinePage}?background=red&primary=%23fff`)
 	const fallbackPalette = await page.evaluate(() => ({

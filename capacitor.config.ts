@@ -1,10 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli"
+import { resolveAndroidBuildTarget } from "./scripts/android-build.mjs"
 
-const appUrl = process.env.CAPACITOR_SERVER_URL?.trim() || "https://nuravatech-saas-staging.vercel.app"
+const { url: appUrl } = resolveAndroidBuildTarget(process.env)
 const parsedAppUrl = new URL(appUrl)
-if (parsedAppUrl.protocol !== "https:") {
-	throw new Error("CAPACITOR_SERVER_URL must use HTTPS")
-}
 
 const config: CapacitorConfig = {
 	appId: "com.nurava.hubstores",

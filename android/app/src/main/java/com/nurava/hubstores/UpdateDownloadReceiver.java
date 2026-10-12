@@ -43,6 +43,38 @@ public class UpdateDownloadReceiver extends BroadcastReceiver {
 
             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
             if (apkUri == null) return;
+            android.content.SharedPreferences preferences = context.getSharedPreferences("app_update", Context.MODE_PRIVATE);
+            String appServerUrl = preferences.getString("pending_server_url", "");
+            int uriColumn = cursor.getColumnIndex(DownloadManager.COLUMN_URI);
+            String apkUrl = uriColumn >= 0 ? cursor.getString(uriColumn) : null;
+            boolean compatible = UpdateApkVerifier.verifyDownloadedApk(
+                context,
+                apkUri,
+                preferences.getString("pending_channel", ""),
+                appServerUrl,
+                apkUrl,
+                preferences.getString("pending_application_id", ""),
+                preferences.getLong("pending_version_code", -1L),
+                preferences.getString("pending_certificate_sha256", "")
+            );
+            if (!compatible) {
+                manager.remove(downloadId);
+                preferences.edit()
+                    .remove("pending_download_id")
+                    .remove("pending_version_code")
+                    .remove("pending_channel")
+                    .remove("pending_server_url")
+                    .remove("pending_apk_url")
+                    .remove("pending_application_id")
+                    .remove("pending_certificate_sha256")
+                    .remove("awaiting_install_permission")
+                    .remove("installer_prompt_open")
+                    .apply();
+                if (context instanceof MainActivity) {
+                    android.widget.Toast.makeText(context, "The downloaded update does not match this app and was discarded.", android.widget.Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
             if (installListener != null) installListener.onUpdateDownloaded(apkUri);
         } catch (RuntimeException ignored) {
             // A failed DownloadManager lookup must not crash the app process.

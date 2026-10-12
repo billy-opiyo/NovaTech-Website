@@ -189,16 +189,13 @@ test("public card intent requests cannot supply payment metadata", () => {
 	assert.doesNotMatch(route, /metadata:\s*validated\.metadata/)
 })
 
-test("native update errors remain visible instead of falling back to a manual browser APK download", () => {
+test("update offers fail closed unless the installed app passes native compatibility checks", () => {
 	const prompt = readFileSync("frontend/src/components/providers/AndroidAppUpdatePrompt.tsx", "utf8")
-	const downloadStart = prompt.indexOf("const downloadUpdate = async")
-	const downloadHandler = prompt.slice(downloadStart, prompt.indexOf("if (!isPlatformHomepage", downloadStart))
-	assert.match(downloadHandler, /if \(Capacitor\.isPluginAvailable\("AppUpdater"\)\) \{\s*const result = await AppUpdater\.downloadUpdate/)
-	assert.match(downloadHandler, /else \{[\s\S]*?await Browser\.open\(\{ url \}\)/)
-	assert.doesNotMatch(downloadHandler, /catch\s*\{[\s\S]*?Browser\.open\(\{ url \}\)/)
-	assert.match(downloadHandler, /catch \(reason\)[\s\S]*?setError\(reason instanceof Error \? reason\.message : "Unable to start the app update download\."\)/)
+	assert.match(prompt, /const hasNativeCompatibilityCheck = Capacitor\.isPluginAvailable\("AppUpdater"\)/)
+	assert.match(prompt, /const compatibility = await AppUpdater\.checkUpdateCompatibility/)
+	assert.match(prompt, /isNativeUpdateCompatible\(hasNativeCompatibilityCheck, compatibility\)/)
+	assert.doesNotMatch(prompt, /Browser\.open/)
 })
-
 test("interactive links and enabled buttons show pointer cursors site-wide", () => {
 	const styles = readFileSync("frontend/src/app/globals.css", "utf8")
 	assert.match(styles, /a\[href\]:not\(\[aria-disabled="true"\]\):hover,[\s\S]*?button:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover,[\s\S]*?cursor: pointer/)
@@ -214,7 +211,14 @@ test("platform header reuses search overlay with available-store suggestions", (
 	assert.match(search, /!compactTrigger && <>[\s\S]*?Search pages &amp; products[\s\S]*?<kbd/)
 	assert.match(search, /Search size=\{compactTrigger \? 20 : 16\}/)
 	assert.match(search, /Search pages and stores\.\.\./)
-	assert.match(search, /\[\.\.\.pageSuggestions, \.\.\.storeSuggestions\]/)
+	assert.match(search, /\[\.\.\.controlPlaneSuggestions, \.\.\.pageSuggestions, \.\.\.storeSuggestions\]/)
+	assert.match(search, /Platform control plane[\s\S]*?\/platform\/operations/)
+	assert.match(search, /canOpenPlatformPage\(page\.access, role, platformRole\)/)
+	assert.match(search, /\/api\/manage\/readiness/)
+	assert.match(search, /getStoreRouteHref\(store, "\/manage\/dashboard"\)/)
+	assert.match(search, /type: "workspace"/)
+	assert.match(search, /platformSuggestion\.href/)
+	assert.match(search, /workspaceSuggestion\.href/)
 	assert.match(search, /suggestions\[selectedIndex\]\.type === "store"\) window\.location\.assign/)
 	assert.match(search, /suggestion\.type === "store"[\s\S]*?<a key=\{i\} href=\{suggestion\.href\}/)
 	assert.match(endpoint, /getPublishedStores\(\)/)

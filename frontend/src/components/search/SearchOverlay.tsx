@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Search, X, TrendingUp, Clock, ArrowRight, Zap, FileText, Store } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -14,7 +15,7 @@ import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 
 interface SearchSuggestion {
-	type: "product" | "page" | "category" | "brand" | "recent" | "store"
+	type: "product" | "page" | "category" | "brand" | "recent" | "store" | "workspace"
 	text: string
 	href: string
 	description?: string
@@ -37,6 +38,24 @@ const popularSearches = [
 	"Special offers",
 ]
 
+type PlatformSearchPage = { text: string; href: string; description: string; keywords: string; access?: "superadmin" | "content" }
+
+const platformPages: PlatformSearchPage[] = [
+	{ text: "Platform control plane", href: "/platform", description: "Open the platform administration overview", keywords: "platform admin manage control plane dashboard overview" },
+	{ text: "Platform operations", href: "/platform/operations", description: "Review platform and tenant operations", keywords: "platform operations admin tenants stores metrics" },
+	{ text: "Platform billing", href: "/platform/billing", description: "Review platform plans and billing", keywords: "platform billing plans subscriptions admin" },
+	{ text: "Platform access", href: "/platform/access", description: "Manage platform operator access", keywords: "platform access operators admin" , access: "superadmin" },
+	{ text: "Platform site settings", href: "/platform/settings", description: "Manage platform branding and site settings", keywords: "platform settings branding admin", access: "superadmin" },
+	{ text: "Industries and themes", href: "/platform/industries", description: "Configure industries, categories, attributes, and themes", keywords: "platform industries themes categories admin", access: "content" },
+	{ text: "Platform blog", href: "/platform/blog", description: "Manage platform articles and guides", keywords: "platform blog content articles admin", access: "content" },
+]
+
+function canOpenPlatformPage(access: PlatformSearchPage["access"], role: string, platformRole: string) {
+	if (access === "superadmin") return role === "SUPERADMIN"
+	if (access === "content") return role === "SUPERADMIN" || platformRole === "PLATFORM_OWNER" || platformRole === "PLATFORM_ADMIN"
+	return role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"].includes(platformRole)
+}
+
 interface SearchOverlayProps {
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
@@ -47,6 +66,7 @@ interface SearchOverlayProps {
 export default function SearchOverlay({ open, onOpenChange, showTrigger = true, compactTrigger = false }: SearchOverlayProps = {}) {
 	const router = useRouter()
 	const store = useStoreContext()
+	const { data: session, status: sessionStatus } = useSession()
 	const [internalOpen, setInternalOpen] = useState(false)
 	const [query, setQuery] = useState("")
 	const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
@@ -90,6 +110,17 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)
 			.map((page) => ({ type: "page", text: page.text, href: getStoreRouteHref(store, page.href), description: page.description }))
+		const platformRole = session?.user?.platformRole || ""
+		const role = session?.user?.role || ""
+		const controlPlaneSuggestions: SearchSuggestion[] = store.isPlatformHome
+			? platformPages
+				.filter((page) => canOpenPlatformPage(page.access, role, platformRole))
+				.filter((page) => `${page.text} ${page.href} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
+				.map((page) => ({ type: "page", text: page.text, href: page.href, description: page.description }))
+			: []
+		const wantsStoreWorkspace = !store.isPlatformHome
+			&& sessionStatus === "authenticated"
+			&& /\b(admin|manage|dashboard)\b/.test(normalizedQuery)
 		const categorySuggestions: SearchSuggestion[] = store.isPlatformHome ? [] : store.homepage.categories
 			.filter((category) => `${category.name} ${category.slug}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)
@@ -103,37 +134,39 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 					if (!response.ok) throw new Error("Store search failed")
 					const data: { stores?: Array<{ name: string; href: string; tagline: string }> } = await response.json()
 					const storeSuggestions: SearchSuggestion[] = (data.stores || []).map((entry) => ({ type: "store", text: entry.name, href: entry.href, description: entry.tagline }))
-					setSuggestions([...pageSuggestions, ...storeSuggestions].slice(0, 8))
+					setSuggestions([...controlPlaneSuggestions, ...pageSuggestions, ...storeSuggestions].slice(0, 8))
 				} catch (error) {
-					if ((error as Error).name !== "AbortError") setSuggestions(pageSuggestions)
+					if ((error as Error).name !== "AbortError") setSuggestions([...controlPlaneSuggestions, ...pageSuggestions].slice(0, 8))
 				}
 				return
 			}
-			try {
-				const response = await fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(query)}&limit=6`), {
-					signal: controller.signal,
-					cache: "no-store",
-				})
-				if (!response.ok) throw new Error("Search failed")
-				const data: { products?: ProductSearchResult[] } = await response.json()
-				const products: SearchSuggestion[] = (data.products || []).map((product) => ({
+			const [data, accessResponse] = await Promise.all([
+				fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(query)}&limit=6`), { signal: controller.signal, cache: "no-store" })
+					.then(async (response) => response.ok ? await response.json() as { products?: ProductSearchResult[] } : null)
+					.catch(() => null),
+				wantsStoreWorkspace
+					? fetch(getStoreRouteHref(store, "/api/manage/readiness"), { signal: controller.signal, cache: "no-store" }).catch(() => null)
+					: Promise.resolve(null),
+			])
+			if (controller.signal.aborted) return
+			const products: SearchSuggestion[] = (data?.products || []).map((product) => ({
 					type: "product",
 					text: product.name,
 					href: getStoreRouteHref(store, `/products/${product.slug}`),
 					image: product.images?.[0],
 					price: product.discountedPrice ?? product.price,
 				}))
-				setSuggestions([...pageSuggestions, ...categorySuggestions, ...products].slice(0, 8))
-			} catch (error) {
-				if ((error as Error).name !== "AbortError") setSuggestions([...pageSuggestions, ...categorySuggestions].slice(0, 8))
-			}
+				const workspaceSuggestion: SearchSuggestion[] = accessResponse?.ok
+					? [{ type: "workspace", text: "Store admin dashboard", href: getStoreRouteHref(store, "/manage/dashboard"), description: "Manage this store" }]
+					: []
+				setSuggestions([...workspaceSuggestion, ...pageSuggestions, ...categorySuggestions, ...products].slice(0, 8))
 		}
 		const debounce = window.setTimeout(loadSuggestions, 150)
 		return () => {
 			window.clearTimeout(debounce)
 			controller.abort()
 		}
-	}, [query, store])
+	}, [query, session?.user?.platformRole, session?.user?.role, sessionStatus, store])
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "ArrowDown") {
@@ -147,6 +180,18 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 				if (suggestions[selectedIndex].type === "store") window.location.assign(suggestions[selectedIndex].href)
 				else router.push(suggestions[selectedIndex].href)
 				setOpen(false)
+			} else if (!store.isPlatformHome && /^(admin|manage|dashboard)$/i.test(query.trim())) {
+				const workspaceSuggestion = suggestions.find((suggestion) => suggestion.type === "workspace")
+				if (workspaceSuggestion) {
+					router.push(workspaceSuggestion.href)
+					setOpen(false)
+				}
+			} else if (store.isPlatformHome && /^(platform|admin|manage|control plane|platform admin|platform manage)$/i.test(query.trim())) {
+				const platformSuggestion = suggestions.find((suggestion) => suggestion.type === "page" && suggestion.href === "/platform")
+				if (platformSuggestion) {
+					router.push(platformSuggestion.href)
+					setOpen(false)
+				}
 			} else if (query && !store.isPlatformHome) {
 				router.push(getStoreRouteHref(store, `/products?q=${encodeURIComponent(query)}`))
 				setOpen(false)
@@ -233,6 +278,11 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 														<FileText size={18} className="text-primary" />
 													</div>
 												)}
+											{suggestion.type === "workspace" && (
+												<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+													<Store size={18} className="text-primary" />
+												</div>
+											)}
 													{(suggestion.type === "category" || suggestion.type === "store") && (
 														<div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
 															{suggestion.type === "store" ? <Store size={18} className="text-blue-500" /> : <Search size={18} className="text-blue-500" />}
@@ -250,7 +300,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 												)}
 												<div className="flex-1">
 													<p className="font-medium">{suggestion.text}</p>
-													{(suggestion.type === "page" || suggestion.type === "store") && (
+												{(suggestion.type === "page" || suggestion.type === "store" || suggestion.type === "workspace") && (
 														<p className="text-sm text-gray-500">{suggestion.description}</p>
 													)}
 													{suggestion.price && (

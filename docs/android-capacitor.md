@@ -8,11 +8,15 @@ The Android app uses the same deployed site and signed-in account as the browser
 
 ## In-app Android updates
 
-The Android shell checks `/downloads/nurava-hubstores-update.json` at launch, when it returns to the foreground, when the app/browser becomes visible, and every three minutes while open. If its installed Android `versionCode` is lower than the deployed manifest, a theme-aware update dialog offers **Download update**. The native updater accepts only HTTPS APK downloads from the currently configured app host and the staging APK path. Android Download Manager shows download progress and a completion notification; when the app is in the foreground, the installer opens automatically after download. If the download finishes while the app is paused, the app checks the saved DownloadManager request on its next resume and opens the installer then. While the prompt is open, it checks the native request status: a failed or cancelled download shows a retry action, a paused download directs the user to resume it from Android's notification, and a completed download keeps an **Open installer** action available. If the app restarts before installation is completed, it restores the matching pending request from native storage. Android still requires the user to confirm installation; it does not permit this app to silently replace itself. An already-installed build without the native updater plugin falls back to opening the same APK in Android's browser for its first update.
+The Android shell selects a channel-specific update feed from the exact HTTPS site origin: staging uses `/downloads/nurava-hubstores-update-staging.json` and `/downloads/nurava-hubstores-staging.apk`; production uses `/downloads/nurava-hubstores-update-production.json` and `/downloads/nurava-hubstores-production.apk`. It checks while the platform homepage is open, on foreground/visibility changes, and every three minutes. A feed must be enabled and match the channel, package ID, newer version, expected same-origin APK path, and SHA-256 signing-certificate fingerprint before the update prompt is shown. The production feed is disabled until a production signing identity is established. To enable it later, verify the production APK certificate against the established release identity, then set the dedicated production feed's enabled flag, version and production APK path together. Never place a staging APK or staging certificate in that feed. The older shared `/downloads/nurava-hubstores-update.json` remains as a legacy file but is no longer used by the channel-aware updater.
 
-Changing Capacitor or native Android source does not itself change an APK already installed on a phone. After making native changes, run `npm run android:staging:update`. This command increments `versionCode` and the patch part of `versionName`, builds a debug-signed staging APK, replaces the public APK, and writes a matching versioned update manifest. Commit and deploy the changed Gradle file, APK, manifest, and any web update-check changes together. The installed app will see the higher version code on its next check and show the in-app download prompt. Website-only changes still do not need a new APK. Installing an APK built with a different signing key will be rejected by Android as an update; use the same local debug signing identity for all staging APKs on a device.
+The native updater independently restricts each channel to its own APK path. Before showing an update prompt, the native plugin verifies that the installed package and signing certificate match the feed. Before opening Android's installer, it inspects the downloaded APK and verifies its package ID, exact target version, and signing certificate against the installed app. Android also enforces signing compatibility during installation. Android Download Manager shows download progress and a completion notification; when the app is in the foreground, the installer opens after a compatible APK finishes downloading. If the download finishes while the app is paused, the app checks the saved request on resume. Failed, cancelled, malformed, wrong-channel, wrong-version, or incompatible APKs are discarded and can be retried. A paused download can be resumed from Android's notification, and a completed download keeps an **Open installer** action available. Android still requires the user to confirm installation. Staging APKs that lack the native compatibility method are not offered in-app updates because their installed signer cannot be verified before prompting; upgrading those installations requires a separately trusted manual path. Production updates remain disabled until a production signing identity is established.
 
-This project is not statically exported: page rendering and API routes use server-only Next.js and Prisma features. The Android shell therefore needs an internet connection and currently defaults to the live Vercel staging app at `https://nuravatech-saas-staging.vercel.app`. `CAPACITOR_SERVER_URL` can select a different HTTPS deployment when generating/syncing the Android project. Capacitor documents `server.url` primarily for live reload, so review Google Play's current WebView app requirements before preparing a production app.
+When a download starts, the selected HTTPS app origin is saved with its channel and APK identity. Completion broadcasts, resume recovery, and the final installer check reuse that saved origin, so validation does not depend on the Android broadcast context being the foreground Activity.
+
+Changing Capacitor or native Android source does not itself change an APK already installed on a phone. After making native changes, run `npm run android:staging:update`. This command increments `versionCode` and the patch part of `versionName`, builds a debug-signed staging APK, verifies that its package, staging URL, version and certificate match the current staging channel, then prepares the APK and `/downloads/nurava-hubstores-update-staging.json`. It refuses to replace the staging APK if the debug signing identity changed. The legacy shared update manifest is left untouched. Deploy the web code, staging APK and staging manifest together when approved; this audit does not publish them. Website-only changes still do not need a new APK. Android continues to reject an APK update signed by an incompatible key.
+
+This project is not statically exported: page rendering and API routes use server-only Next.js and Prisma features. The Android shell therefore needs an internet connection. Android build commands select one of two fixed HTTPS origins: staging uses `https://nuravatech-saas-staging.vercel.app`; production uses `https://nuravahubstores.com`. The production domain is a configured target and must be purchased, deployed, and verified before a production APK can load it. `CAPACITOR_BUILD_TARGET` is required when invoking Capacitor directly, and any `CAPACITOR_SERVER_URL` override must exactly match that target. Capacitor documents `server.url` primarily for live reload, so review Google Play's current WebView app requirements before preparing a production app.
 
 ## Existing architecture audit
 
@@ -29,12 +33,27 @@ Prerequisites: Node.js 22 or newer, Android Studio 2025.2.1 or newer with Androi
 
 ```powershell
 npm install
-npx cap add android
-npx cap sync android
-npx cap open android
+npm run android:add # First-time setup only, when android/ has not been added yet
+npm run android:sync
+npm run android:open
 ```
 
-The default Android build points to `https://nuravatech-saas-staging.vercel.app`. Set `CAPACITOR_SERVER_URL` to another HTTPS deployment before `cap sync` when you intentionally need a different target. Do not use HTTP or commit environment secrets.
+Existing projects with an `android/` directory should skip `android:add` and use the explicit npm scripts below.
+
+Use the explicit staging commands for staging APK work and the release commands for the production target:
+
+```powershell
+npm run android:sync
+npm run android:debug
+npm run android:staging:update
+npm run android:open
+npm run android:sync:production
+npm run android:open:production
+npm run android:release:apk
+npm run android:release:aab
+```
+
+The staging commands bind the Capacitor URL to `https://nuravatech-saas-staging.vercel.app`; the release commands bind it to `https://nuravahubstores.com`. If `CAPACITOR_BUILD_TARGET` or `CAPACITOR_SERVER_URL` is already set to a conflicting value, the command stops with an error. Direct `npx cap sync android` calls require `CAPACITOR_BUILD_TARGET` (`staging` or `production`); if `CAPACITOR_SERVER_URL` is set, it must match the selected target. Do not use HTTP or commit environment secrets.
 
 ### When a new APK is needed
 
@@ -55,7 +74,7 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 npm run android:debug
 ```
 
-`npm run android:debug` syncs Capacitor and builds the APK. Sync must report both `@capacitor/app` and `@capacitor/browser` as Android plugins. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Alternatively, run `npm run android:sync`, then open the project in Android Studio and use **Build > Build APK(s)**.
+`npm run android:debug` syncs the staging Capacitor configuration and builds the APK. Sync must report both `@capacitor/app` and `@capacitor/browser` as Android plugins. The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. To open Android Studio with an explicitly selected target, use `npm run android:open` for staging or `npm run android:open:production` for production; each command syncs that target first. Direct Gradle release tasks do not carry the required launcher marker and fail; use the release npm scripts below so the completed artifact is verified.
 
 After changing Capacitor/native files, create a new versioned staging APK and matching update manifest with:
 
@@ -65,15 +84,29 @@ npm run android:staging:update
 
 The command requires the configured JDK 21 and Android SDK. Commit and deploy the files it updates; building locally alone does not notify installed apps. Users who already installed the app must confirm Android's install prompt to receive native changes. This debug APK is for staging and sideload testing; use a signed release APK/AAB for distribution.
 
-Build a release APK or Play Store AAB:
+Build a release APK or Play Store AAB with the production target selected:
 
 ```powershell
-Set-Location android
-./gradlew.bat copyReleaseApk
-./gradlew.bat bundleRelease
+npm run android:release:apk
+npm run android:release:aab
 ```
 
-For signing, set `NURAVA_ANDROID_KEYSTORE`, `NURAVA_ANDROID_STORE_PASSWORD`, `NURAVA_ANDROID_KEY_ALIAS`, and `NURAVA_ANDROID_KEY_PASSWORD` in your local build environment. The Gradle release build applies that signing configuration only when all four values are present. Keep the keystore outside the repository and never commit signing values. The AAB is written to `android/app/build/outputs/bundle/release/app-release.aab`; when signing is configured, the signed release APK is copied to `android/app/build/outputs/apk/release/nurava-hubstores.apk` for direct download. Without signing credentials, `copyReleaseApk` stops instead of labeling an unsigned APK as installable. The debug-signed staging APK remains the sideload/update artifact for existing staging installs.
+Production release builds fail before Capacitor sync unless all four local signing variables are present: `NURAVA_ANDROID_KEYSTORE`, `NURAVA_ANDROID_STORE_PASSWORD`, `NURAVA_ANDROID_KEY_ALIAS`, and `NURAVA_ANDROID_KEY_PASSWORD`. The keystore path must be absolute and point to an existing file outside the repository. Also set `NURAVA_ANDROID_EXPECTED_CERT_SHA256` to the approved production signing certificate's SHA-256 fingerprint (64 hexadecimal characters; colons are accepted). This fingerprint is public certificate identity data, not a password. The release commands do not print signing variable values.
+
+Production APK/AAB generation is additionally disabled unless the current build process has `NURAVA_ANDROID_PRODUCTION_RELEASE_ENABLED=1`. Leave this unset while `https://nuravahubstores.com` is not deployed. Set it only for an explicitly approved production release after confirming the production site is live and the signing identity is established. This is a local build gate; it does not modify Vercel or production environment variables.
+
+Before preparing production signing, establish whether a valid existing production key must be preserved. Check the approved secret manager/build machine and, if the app was ever distributed, its release archive and Google Play Console **App integrity** page. Compare the certificate fingerprint of any prior APK with the Play Console app-signing and upload certificates. Never create a replacement key while an existing distribution identity remains unresolved. If no production key exists and no previous release requires it, create a dedicated production key in a protected, encrypted location outside the repository. For example, after creating a protected directory and setting `NURAVA_ANDROID_KEYSTORE` to its absolute keystore path, run this command from PowerShell; keytool prompts for passwords rather than putting them in command history:
+
+```powershell
+keytool -genkeypair -v -keystore "$env:NURAVA_ANDROID_KEYSTORE" -alias nurava-production -keyalg RSA -keysize 4096 -validity 10000
+keytool -list -v -keystore "$env:NURAVA_ANDROID_KEYSTORE" -alias nurava-production
+```
+
+Record the displayed SHA-256 certificate fingerprint as `NURAVA_ANDROID_EXPECTED_CERT_SHA256`. Store at least one encrypted offline backup separately from the build machine, restrict access to both copies, and verify a backup can be restored before relying on it. Never copy the password into a command argument, commit the keystore or credentials, or reuse the staging/debug signing key for production.
+
+Production release commands require Android SDK verification tools (`apksigner` and `aapt` for APKs; `bundletool` for AABs) plus Java `jarsigner` and `keytool` for AABs. The APK/AAB is checked against the pinned certificate fingerprint, package ID `com.nurava.hubstores`, version in `android/app/build.gradle`, and the embedded Capacitor config for `https://nuravahubstores.com` with cleartext disabled. The APK copy is also verified against the same checks. Verification failure makes the npm release command fail; inspect and explicitly approve any artifact before distributing it.
+
+The AAB is written to `android/app/build/outputs/bundle/release/app-release.aab`; the signed APK is copied to `android/app/build/outputs/apk/release/nurava-hubstores.apk` for direct distribution. These paths are build outputs and are not produced by the verification tests. The debug-signed staging APK remains the sideload/update artifact for existing staging installs.
 
 ## Android-specific behavior and remaining release work
 
