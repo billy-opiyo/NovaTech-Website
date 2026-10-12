@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 import { useStoreContext } from "@/lib/store-context"
 
+const LETTER_STAGGER_DELAY = 240
+const LETTER_ANIMATION_DURATION = 450
 const SPLASH_DURATION = 1200
 const POST_LOAD_DELAY = 250
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
@@ -17,7 +19,8 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const fallbackSplashLogo = "/images/Nurava_HubStores_app_icon_logo.png"
 	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
-	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
+	const wordmarkAnimationDuration = Math.max(LETTER_ANIMATION_DURATION, (Array.from(splashName).length - 1) * LETTER_STAGGER_DELAY + LETTER_ANIMATION_DURATION)
+	const splashDuration = showProgress ? Math.max(SPLASH_DURATION, wordmarkAnimationDuration) : wordmarkAnimationDuration
 	const splashImages = splashSettings?.images || {}
 	const backgroundMode = splashSettings?.backgroundMode || "glass"
 	const centerSplashContent = backgroundMode === "glass"
@@ -166,7 +169,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 						{Array.from(splashName).map((character, index) => (
 							<span
 								key={`${character}-${index}`}
-								style={{ animationDelay: `${(index / Math.max(1, Array.from(splashName).length - 1)) * 450}ms` }}
+								style={{ animationDelay: `${index * LETTER_STAGGER_DELAY}ms` }}
 							>
 								{character === " " ? "\u00a0" : character}
 							</span>
