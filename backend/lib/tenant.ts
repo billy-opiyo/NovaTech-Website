@@ -1,4 +1,5 @@
 import prisma from "./db"
+import type { Prisma } from "@prisma/client"
 import { getPlatformDomain } from "./platform-domain"
 import { canMerchantSell } from "./merchant-verification"
 
@@ -8,6 +9,7 @@ export type TenantContext = {
 	storeSlug: string
 	hostname: string
 	publicationStatus: "DRAFT" | "PUBLISHED" | "SUSPENDED"
+	commerceSettings?: Prisma.JsonValue | null
 }
 
 export function isPublicTenantStatus(status: string) {
@@ -64,9 +66,10 @@ function unavailableStore(context: { status: string; publicationStatus?: string 
  * Resolve the store from the request host. Callers must use the returned IDs
  * for every tenant-owned query; request bodies and query strings are not used.
  */
-export async function resolveTenantFromRequest(request: { headers: Headers }, options: { allowUnpublished?: boolean; allowSuspended?: boolean } = {}): Promise<TenantContext> {
+export async function resolveTenantFromRequest(request: { headers: Headers }, options: { allowUnpublished?: boolean; allowSuspended?: boolean; includeCommerceSettings?: boolean } = {}): Promise<TenantContext> {
 	const allowUnpublished = options.allowUnpublished === true
 	const allowSuspended = options.allowSuspended === true
+	const includeCommerceSettings = options.includeCommerceSettings === true
 	const hostname = normalizeHostname(request.headers.get("host"))
 	if (!hostname) throw new TenantResolutionError("UNKNOWN_HOST", "A valid request host is required.")
 
@@ -79,13 +82,13 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	if (requestedStoreSlug && isCanonicalPlatformHost) {
 		const store = await prisma.store.findUnique({
 			where: { slug: requestedStoreSlug },
-			select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } },
+			select: { id: true, tenantId: true, slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } },
 		})
 		if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 		if (!allowUnpublished && !(allowSuspended && store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
 		if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
 		if (!allowUnpublished && !(allowSuspended && store.publicationStatus === "SUSPENDED") && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
-		return { tenantId: store.tenantId, storeId: store.id, storeSlug: store.slug, hostname, publicationStatus: store.publicationStatus }
+		return { tenantId: store.tenantId, storeId: store.id, storeSlug: store.slug, hostname, publicationStatus: store.publicationStatus, ...(includeCommerceSettings ? { commerceSettings: store.commerceSettings } : {}) }
 	}
 
 	// The canonical platform hosts must win over any stale or misconfigured
@@ -100,7 +103,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 					verificationStatus: true,
 					tenantId: true,
 					storeId: true,
-					store: { select: { slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } } },
+					store: { select: { slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } } },
 				},
 			})
 
@@ -119,6 +122,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 			storeSlug: domain.store.slug,
 			hostname,
 			publicationStatus: domain.store.publicationStatus,
+			...(includeCommerceSettings ? { commerceSettings: domain.store.commerceSettings } : {}),
 		}
 	}
 
@@ -134,7 +138,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 
 	const store = await prisma.store.findUnique({
 		where: { slug },
-		select: { id: true, tenantId: true, slug: true, publicationStatus: true, tenant: { select: { status: true, verificationStatus: true } } },
+		select: { id: true, tenantId: true, slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } },
 	})
 	if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 	if (!allowUnpublished && !(allowSuspended && store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
@@ -147,6 +151,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		storeSlug: store.slug,
 		hostname,
 		publicationStatus: store.publicationStatus,
+		...(includeCommerceSettings ? { commerceSettings: store.commerceSettings } : {}),
 	}
 }
 

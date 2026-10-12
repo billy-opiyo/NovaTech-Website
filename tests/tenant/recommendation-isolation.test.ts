@@ -61,3 +61,28 @@ test("hidden category and store settings reads run concurrently and stay tenant-
 		restoreCategoryFindMany()
 	}
 })
+
+test("product category visibility reuses resolved store settings and scopes categories to that store", async () => {
+	let storeLookups = 0
+	let categoryWhere: unknown
+	const restoreStoreFindUnique = mockPrismaMethod(prisma.store, "findUnique", async () => {
+		storeLookups += 1
+		throw new Error("resolved store context should avoid a second store lookup")
+	})
+	const restoreCategoryFindMany = mockPrismaMethod(prisma.category, "findMany", async ({ where }: { where: unknown }) => {
+		categoryWhere = where
+		return [{ slug: "phones", storeId: "store-a" }]
+	})
+	try {
+		const hidden = await getHiddenStoreCategorySlugs("tenant-a", {
+			storeId: "store-a",
+			commerceSettings: { categoryAvailability: { phones: false } },
+		})
+		assert.deepEqual(hidden, ["phones"])
+		assert.equal(storeLookups, 0)
+		assert.deepEqual(categoryWhere, { tenantId: "tenant-a", storeId: "store-a" })
+	} finally {
+		restoreStoreFindUnique()
+		restoreCategoryFindMany()
+	}
+})
