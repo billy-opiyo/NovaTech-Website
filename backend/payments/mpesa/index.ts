@@ -13,6 +13,7 @@ import type {
 	MpesaInitiateResult,
 	MpesaVerifyResult,
 } from "../../types/payments"
+import type { DarajaCredentials } from "../../lib/daraja"
 import { cancelPendingOrder, finalizePendingOrderPayment } from "../../services/order.service"
 import type { MerchantMpesaConfig } from "../merchant-mpesa"
 
@@ -33,6 +34,7 @@ export interface MpesaInitiateInput extends MpesaPayload {
 	callbackUrl?: string
 	paymentId?: string
 	merchantConfig?: MerchantMpesaConfig
+	platformCredentials?: DarajaCredentials
 }
 
 const mpesaInitiateResponseSchema = z.object({
@@ -83,8 +85,10 @@ export async function initiateMpesaPayment({
 	callbackUrl,
 	paymentId,
 	merchantConfig,
+	platformCredentials,
 }: MpesaInitiateInput): Promise<MpesaInitiateResult> {
-	if (!isMpesaConfigured(merchantConfig)) {
+	const credentials = merchantConfig || platformCredentials
+	if (!isMpesaConfigured(credentials)) {
 		const message = merchantConfig
 			? "This merchant has not configured an active M-Pesa shopper payment route."
 			: "M-Pesa is not configured. Set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_PASSKEY and MPESA_SHORTCODE."
@@ -177,7 +181,7 @@ export async function initiateMpesaPayment({
 			phone: normalizedPhone,
 			accountReference: reference.slice(0, 12),
 			callbackUrl: callback,
-			credentials: merchantConfig,
+		credentials,
 		}))
 	} catch (error) {
 		if (existing && paymentId) await prisma.payment.update({ where: { id: existing.id }, data: { status: "FAILED", failureReason: "M-Pesa initiation failed" } }).catch(() => undefined)
@@ -193,7 +197,7 @@ export async function initiateMpesaPayment({
 					providerReference: response.CheckoutRequestID,
 					phoneNumber: normalizedPhone,
 					failureReason: response.ResponseCode === "0" ? null : response.ResponseDescription || response.CustomerMessage || "M-Pesa request rejected",
-					metadata: { ...((existing.metadata || {}) as Record<string, unknown>), merchantRequestId: response.MerchantRequestID },
+					metadata: { ...((existing.metadata || {}) as Record<string, unknown>), ...(metadata || {}), merchantRequestId: response.MerchantRequestID },
 				},
 			})
 		: await prisma.payment.create({

@@ -446,8 +446,10 @@ payment history, plan checkout/change, renewal, cancellation, Stripe portal
 where enabled, and add-on actions.
 
 The merchant selects a monthly plan during onboarding. A one-time setup fee is
-paid first through an M-Pesa STK request; the six-month pilot starts after the
-successful provider callback, using the selected plan's entitlements. The
+paid first through the platform's configured PayBill/Till STK route, or by a
+manual phone transfer when that collection mode is selected. The six-month pilot
+starts only after a verified provider callback or platform-admin receipt review,
+using the selected plan's entitlements. The
 selected monthly subscription is payable from month seven. Nothing is charged
 automatically. Pilot-expiry reminders are sent at 14, 7, and 1 day before the
 pilot ends and during the following 14-day grace period. If payment remains
@@ -455,8 +457,11 @@ unpaid after grace, the public storefront is paused while merchant data and
 workspace access are preserved.
 
 Later monthly renewals create local invoices and require a merchant-initiated
-Daraja STK request. A successful callback updates invoice, payment, subscription,
-and tenant state. No automatic recurring M-Pesa debit is used.
+Daraja STK request for PayBill/Till destinations. Phone-number transfers require
+the merchant to submit the M-Pesa receipt and a platform administrator to verify
+it against the account statement before billing is updated. No automatic
+recurring M-Pesa debit is used. The platform destination is managed in
+`/platform/billing`; shopper payment destinations remain store-specific.
 
 Nurava SaaS prices are configured as VAT-inclusive. When `NURAVA_VAT_ENABLED=true`,
 the invoice records the agreed 16% VAT rate and shows the net amount, VAT, any

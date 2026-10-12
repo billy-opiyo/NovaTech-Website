@@ -3,6 +3,7 @@ import Stripe from "stripe"
 import { sendOrderConfirmationEmail, shippingAddressEmail } from "../../lib/email"
 import { getStripeClient, getStripeWebhookSecret } from "../../lib/stripeClient"
 import { isMpesaConfigured, stkQuery } from "../../lib/daraja"
+import type { DarajaCredentials } from "../../lib/daraja"
 import type { Prisma } from "@prisma/client"
 import type {
 	MpesaStkCallbackPayload,
@@ -14,6 +15,7 @@ import { applyStripeCheckoutCompleted, applyStripeInvoiceEvent, applyStripeSubsc
 import { z } from "zod"
 import { getMerchantMpesaConfig } from "../merchant-mpesa"
 import type { MerchantMpesaConfig } from "../merchant-mpesa"
+import { getPlatformMpesaCredentials } from "../../lib/platform-mpesa-destination"
 
 const mpesaStkCallbackSchema = z.object({
 	Body: z.object({
@@ -200,21 +202,28 @@ export async function handleMpesaStkCallback(
 	const checkoutRequestId = stkCallback.CheckoutRequestID
 	const resultCode = stkCallback.ResultCode
 	const completed = resultCode === 0
-	let paymentForQuery: { kind: string; tenantId: string | null } | null = null
+	let paymentForQuery: { kind: string; tenantId: string | null; metadata: unknown } | null = null
 	let merchantConfig: MerchantMpesaConfig | null | undefined
+	let platformCredentials: DarajaCredentials | undefined
+	let platformConfigVersion: number | undefined
 	try {
-		paymentForQuery = await prisma.payment.findFirst({ where: { provider: "mpesa", providerReference: checkoutRequestId }, select: { kind: true, tenantId: true } })
+		paymentForQuery = await prisma.payment.findFirst({ where: { provider: "mpesa", providerReference: checkoutRequestId }, select: { kind: true, tenantId: true, metadata: true } })
 		merchantConfig = paymentForQuery?.kind === "ORDER" && paymentForQuery.tenantId
 			? await getMerchantMpesaConfig(paymentForQuery.tenantId)
 			: undefined
+		const metadata = paymentForQuery?.metadata as { platformMpesaDestinationVersion?: unknown } | null
+		platformConfigVersion = typeof metadata?.platformMpesaDestinationVersion === "number" ? metadata.platformMpesaDestinationVersion : undefined
+		if (paymentForQuery?.kind !== "ORDER" && platformConfigVersion !== undefined) platformCredentials = (await getPlatformMpesaCredentials(platformConfigVersion)).credentials || undefined
 	} catch {
 		// The normal payment update below retains its retryable/no-database behavior.
 		paymentForQuery = null
 		merchantConfig = undefined
+		platformCredentials = undefined
 	}
-	const callbackConfigured = paymentForQuery?.kind === "ORDER" ? Boolean(merchantConfig) : isMpesaConfigured()
+	const callbackCredentials = paymentForQuery?.kind === "ORDER" ? merchantConfig || undefined : platformCredentials
+	const callbackConfigured = paymentForQuery?.kind === "ORDER" ? Boolean(merchantConfig) : platformConfigVersion !== undefined ? Boolean(platformCredentials && isMpesaConfigured(platformCredentials)) : isMpesaConfigured()
 	if (completed && callbackConfigured) {
-		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials: merchantConfig || undefined }))
+		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials: callbackCredentials }))
 		if (!providerCheck.success || providerCheck.data.ResponseCode !== "0" || providerCheck.data.ResultCode !== 0) return { ok: false, received: false, provider: "mpesa", event: "stk-callback", receivedAt, message: "M-Pesa callback could not be confirmed with the provider." }
 	}
 
