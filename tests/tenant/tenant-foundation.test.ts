@@ -106,21 +106,24 @@ test("Vercel platform store paths remain scoped when the middleware slug header 
 
 test("local store subdomains resolve by store slug", async () => {
 	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const commerceSettings = { categoryAvailability: { phones: false } }
 	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "demo" ? {
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
 		publicationStatus: "PUBLISHED",
+		commerceSettings,
 			tenant: { status: "TRIALING", verificationStatus: "APPROVED" },
 	} : null)
 	try {
-		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) })
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) }, { includeCommerceSettings: true })
 		assert.deepEqual(context, {
 			tenantId: "tenant-demo",
 			storeId: "store-demo",
 			storeSlug: "demo",
 			hostname: "demo.localhost",
 			publicationStatus: "PUBLISHED",
+			commerceSettings,
 		})
 	} finally {
 		restoreDomain()

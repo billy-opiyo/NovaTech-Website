@@ -6,8 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 import { useStoreContext } from "@/lib/store-context"
 
-const SPLASH_DURATION = 5000
-const POST_LOAD_DELAY = 2000
+const SPLASH_DURATION = 1200
+const POST_LOAD_DELAY = 250
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
 	const searchParams = useSearchParams()
@@ -166,7 +166,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 						{Array.from(splashName).map((character, index) => (
 							<span
 								key={`${character}-${index}`}
-								style={{ animationDelay: `${index * 240}ms` }}
+								style={{ animationDelay: `${(index / Math.max(1, Array.from(splashName).length - 1)) * 450}ms` }}
 							>
 								{character === " " ? "\u00a0" : character}
 							</span>
