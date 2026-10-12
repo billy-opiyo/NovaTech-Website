@@ -271,6 +271,13 @@ export async function verifyMpesaPayment(
 			return { ok: false, provider: "mpesa", reference, checkoutRequestId: payment?.providerReference || reference, status: "FAILED", message: "Payment request does not match the requested order." }
 		}
 	}
+	const paymentWasCompleted = payment?.status === "COMPLETED"
+	const settlementRecorded = (payment?.metadata as { orderSettlement?: unknown } | null)?.orderSettlement === "ORDER_CONFIRMED"
+	// Skip another Daraja query once provider confirmation and order settlement
+	// are both recorded. Older completed records still follow reconciliation below.
+	if (payment && payment.status === "COMPLETED" && (!payment.orderId || settlementRecorded)) {
+		return { ok: true, provider: "mpesa", reference, checkoutRequestId: payment.providerReference || reference, status: "COMPLETED", message: "M-Pesa payment completed successfully." }
+	}
 
 	const checkoutRequestId = payment?.providerReference || reference
 
@@ -283,7 +290,7 @@ export async function verifyMpesaPayment(
 	const resultCode = response.ResultCode
 	const { status: queriedStatus, pending } = mapMpesaQueryStatus(response)
 
-	const status = payment?.status === "COMPLETED" && queriedStatus !== "COMPLETED" ? "COMPLETED" : queriedStatus
+	const status = paymentWasCompleted && queriedStatus !== "COMPLETED" ? "COMPLETED" : queriedStatus
 
 	if (payment && status === "COMPLETED" && payment.orderId) {
 		const orderTenantId = tenantId || payment.tenantId
@@ -301,7 +308,7 @@ export async function verifyMpesaPayment(
 	} else if (payment) {
 		await prisma.payment.update({ where: { id: payment.id }, data: { status, metadata: { ...(payment.metadata as Record<string, unknown> | undefined), verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } } })
 	}
-	if (status === "FAILED" && payment?.orderId && payment.status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
+	if (status === "FAILED" && payment?.orderId && !paymentWasCompleted) await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 	return {
 		ok: status === "COMPLETED" || status === "PENDING",

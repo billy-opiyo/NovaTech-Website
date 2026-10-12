@@ -8,9 +8,11 @@ import { getStoreContext } from "@/lib/store-context.server"
 export default async function HomePage() {
 	const store = await getStoreContext()
 	if (store.isPlatformHome) {
-		const stores = await getPlatformDiscoveryStores()
+		const [stores, publicPlans] = await Promise.all([
+			getPlatformDiscoveryStores(),
+			getPublicPlans(),
+		])
 		const entries = await Promise.all(stores.map(async (entry) => ({ ...entry, href: await getStorePublicUrl(entry.slug) })))
-		const publicPlans = await getPublicPlans()
 		return <PlatformDiscoveryHome stores={entries} plans={publicPlans.plans} plansUnavailable={publicPlans.unavailable} plansSource={publicPlans.source} />
 	}
 

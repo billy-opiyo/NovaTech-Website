@@ -98,6 +98,9 @@ export default function ProductsClient() {
 	const brands = store.industry?.slug === "electronics" ? electronicsBrands : catalogBrands
 
 	useEffect(() => {
+		// On a deep-linked filtered page, keep the complete brand facet available.
+		// The unfiltered page derives brands from its main product response below.
+		if (!searchParams.get("q") && !searchParams.get("category") && searchParams.get("trending") !== "true") return
 		let current = true
 		getProducts({ limit: 100 }, productsEndpoint)
 			.then(({ products }) => {
@@ -108,7 +111,7 @@ export default function ProductsClient() {
 				if (current) setCatalogBrands([])
 			})
 		return () => { current = false }
-	}, [productsEndpoint])
+	}, [productsEndpoint, searchParamsKey])
 
 	useEffect(() => {
 		if (filters.category && !store.homepage.categories.some((category) => category.slug === filters.category)) {
@@ -128,13 +131,17 @@ export default function ProductsClient() {
 		const nextSearch = searchParams.get("q") || ""
 		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
-		setSearchQuery(nextSearch)
-		setFilters((current) => ({ ...current, category: searchParams.get("category") || "", sortBy: nextSortBy, trending: searchParams.get("trending") === "true" }))
+		const nextCategory = searchParams.get("category") || ""
+		const nextTrending = searchParams.get("trending") === "true"
+		setSearchQuery((current) => current === nextSearch ? current : nextSearch)
+		setFilters((current) => current.category === nextCategory && current.sortBy === nextSortBy && current.trending === nextTrending
+			? current
+			: { ...current, category: nextCategory, sortBy: nextSortBy, trending: nextTrending })
 	}, [searchParamsKey])
 
 	const applyFilters = useCallback(() => {
 		setIsLoading(true)
-		getProducts({
+		const query = {
 			q: searchQuery || undefined,
 			category: filters.category || undefined,
 			brands: filters.brands.length ? filters.brands.join(",") : undefined,
@@ -145,8 +152,11 @@ export default function ProductsClient() {
 			trending: filters.trending ? true : undefined,
 			sortBy: filters.sortBy,
 			limit: 100,
-		}, productsEndpoint)
+		}
+		const requestsEntireCatalog = !query.q && !query.category && !query.brands && query.minPrice === undefined && query.maxPrice === undefined && !query.inStock && !query.onSale && !query.trending
+		getProducts(query, productsEndpoint)
 			.then((response) => {
+				if (requestsEntireCatalog) setCatalogBrands(Array.from(new Set(response.products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
 				const products = response.products.map((product) => {
 					const productWithMetrics = product as typeof product & { averageRating?: number }
 					return {
