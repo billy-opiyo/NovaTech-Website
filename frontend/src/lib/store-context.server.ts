@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { getRequestedStoreSlug, resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
@@ -72,7 +73,7 @@ function isPlatformHost(value: string | null): boolean {
 	return isLocalPreviewHost(value) || isVercelProjectHostname(hostname) || hostname === platformDomain || hostname === `www.${platformDomain}`
 }
 
-export async function getStoreContext(): Promise<StoreContext> {
+export const getStoreContext = cache(async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
 	const requestedStoreSlug = getRequestedStoreSlug(requestHeaders)
 	const platformHome = isPlatformHost(requestHeaders.get("host")) && !requestedStoreSlug
@@ -251,7 +252,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		console.error("Store context unavailable", error)
 		return fallbackStoreContext(platformHome)
 	}
-}
+})
 
 export function fallbackStoreContext(isPlatformHome = false, platformSettings: PlatformSiteSettings = {}): StoreContext {
 	const mergedPlatformSettings = mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), platformSettings)

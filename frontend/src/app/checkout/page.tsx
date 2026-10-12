@@ -32,6 +32,7 @@ export default function CheckoutPage() {
 	const [error, setError] = useState("")
 	const [success, setSuccess] = useState("")
 	const [busy, setBusy] = useState<BusyMethod>(null)
+	const [mpesaPromptSent, setMpesaPromptSent] = useState(false)
 	const orderAttempt = useRef<{ fingerprint: string; key: string; storageKey: string } | null>(null)
 
 	if (items.length === 0 && !success) return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-3xl font-bold">No products selected</h1><p className="mt-3 text-gray-500">Choose a product first, then return here to pay or contact the store.</p><Link href={getStoreRouteHref(store, "/products")} className="btn-primary mt-8 inline-flex">Browse products</Link></div>
@@ -76,6 +77,7 @@ export default function CheckoutPage() {
 
 	async function payWithMpesa() {
 		setError(""); setSuccess("")
+		setMpesaPromptSent(false)
 		const validationError = validateContactDetails(true)
 		if (validationError) { setError(validationError); return }
 		setBusy("MPESA")
@@ -87,15 +89,38 @@ export default function CheckoutPage() {
 			const payment = await paymentResponse.json().catch(() => ({}))
 			if (!paymentResponse.ok || !payment.ok) throw new Error(payment.message || "Unable to start the M-Pesa payment")
 			addToast("M-Pesa prompt sent. Enter your PIN on your phone.", "info")
+			setMpesaPromptSent(true)
+			const pendingMessage = `Your M-Pesa request is still pending. Order #${String(order.id).slice(-8).toUpperCase()} will be confirmed automatically after provider confirmation.`
+			// The STK prompt has been accepted. Show the pending state immediately
+			// instead of keeping checkout in a loading state while Daraja is queried.
+			setSuccess(pendingMessage)
+			setBusy(null)
 			for (let attempt = 0; attempt < 8; attempt += 1) {
 				await new Promise((resolve) => window.setTimeout(resolve, 3500))
-				const verifyResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/verify"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, phone: customerPhone.trim() }) })
+				const controller = new AbortController()
+				const verifyTimeout = window.setTimeout(() => controller.abort(), 12000)
+				let verifyResponse: Response
+				try {
+					verifyResponse = await fetch(getStoreRouteHref(store, "/api/payments/mpesa/verify"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id, phone: customerPhone.trim() }), signal: controller.signal })
+				} catch {
+					// The STK request was accepted. A lost or slow status response is pending, not proof of failure.
+					setSuccess(pendingMessage)
+					return
+				} finally {
+					window.clearTimeout(verifyTimeout)
+				}
 				const verification = await verifyResponse.json().catch(() => ({}))
+				if (!verifyResponse.ok) {
+					// Initiation already succeeded; verification transport/auth failures
+					// cannot safely be treated as proof that payment failed.
+					setSuccess(pendingMessage)
+					return
+				}
 				if (verification.status === "COMPLETED") { clearCheckoutAttempt(); clearCart(); setSuccess(`Payment received. Order #${String(order.id).slice(-8).toUpperCase()} is confirmed by ${store.brand.name}.`); addToast("M-Pesa payment completed successfully.", "success"); return }
-				if (verification.status === "FAILED" || verification.status === "CANCELLED") throw new Error(verification.message || "M-Pesa payment was not completed")
+				if (verification.status === "FAILED" || verification.status === "CANCELLED") { setSuccess(""); throw new Error(verification.message || "M-Pesa payment was not completed") }
 			}
-			setSuccess(`Your M-Pesa request is still pending. Order #${String(order.id).slice(-8).toUpperCase()} will be confirmed automatically after provider confirmation.`)
-		} catch (reason) { const text = reason instanceof Error ? reason.message : "Unable to complete M-Pesa payment"; setError(text); addToast(text, "error") } finally { setBusy(null) }
+			setSuccess(pendingMessage)
+		} catch (reason) { const text = reason instanceof Error ? reason.message : "Unable to complete M-Pesa payment"; setError(text); addToast(text, "error") } finally { setBusy(null); setMpesaPromptSent(false) }
 	}
 
 	async function payOnDelivery() {
@@ -153,7 +178,7 @@ export default function CheckoutPage() {
 					<div className="mt-8 space-y-3 text-left"><h2 className="font-semibold">Customer and delivery details</h2><div className="grid gap-3 sm:grid-cols-2"><input required value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" className="rounded-lg border bg-transparent px-3 py-3" /><input required type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} placeholder="Email address" className="rounded-lg border bg-transparent px-3 py-3" /></div><input required value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone number (07XXXXXXXX or +2547XXXXXXXX)" className="w-full rounded-lg border bg-transparent px-3 py-3" /><div className="grid gap-3 sm:grid-cols-2"><input required value={county} onChange={(event) => setCounty(event.target.value)} placeholder="County" className="rounded-lg border bg-transparent px-3 py-3" /><input required value={town} onChange={(event) => setTown(event.target.value)} placeholder="Town" className="rounded-lg border bg-transparent px-3 py-3" /></div><div className="relative"><MapPin size={17} className="absolute left-3 top-3 text-gray-400" /><input required value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Delivery address" className="w-full rounded-lg border bg-transparent py-3 pl-10 pr-3" /></div><input value={landmark} onChange={(event) => setLandmark(event.target.value)} placeholder="Landmark (optional)" className="w-full rounded-lg border bg-transparent px-3 py-3" /><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Note to the merchant (optional)" rows={3} className="w-full rounded-lg border bg-transparent px-3 py-3" /><label className="flex items-start gap-2 text-sm text-gray-500"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 accent-primary" /><span>I agree that this store may use my details to process and respond to this order.</span></label>{error && <p className="text-sm text-red-600">{error}</p>}</div>
 					<div className="mt-5 space-y-3">
 						<div className="grid gap-3 sm:grid-cols-2">
-							<button type="button" disabled={busy !== null} onClick={() => void payWithMpesa()} className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50 sm:text-base"><Image src="/images/Mpesa_logo_image.png" alt="M-Pesa" width={72} height={24} className="h-6 w-[4.5rem] shrink-0 object-contain" />{busy === "MPESA" && <Loader2 size={18} className="animate-spin" />}{busy === "MPESA" ? "Starting…" : "Pay with M-Pesa"}</button>
+							<button type="button" disabled={busy !== null} onClick={() => void payWithMpesa()} className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50 sm:text-base"><Image src="/images/Mpesa_logo_image.png" alt="M-Pesa" width={72} height={24} className="h-6 w-[4.5rem] shrink-0 object-contain" />{busy === "MPESA" && !mpesaPromptSent && <Loader2 size={18} className="animate-spin" />}{busy === "MPESA" ? mpesaPromptSent ? "Waiting for confirmation…" : "Starting…" : "Pay with M-Pesa"}</button>
 							<button type="button" disabled={busy !== null} onClick={() => void payOnDelivery()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50 sm:text-base">{busy === "COD" && <Loader2 size={18} className="animate-spin" />}{busy === "COD" ? "Placing order…" : "Pay on Delivery"}</button>
 						</div>
 						<p className="text-center text-xs text-gray-500">Payment requests go to the merchant’s configured provider. The merchant confirms {getProductEnquiryTopics(store.industry?.slug)}.</p>

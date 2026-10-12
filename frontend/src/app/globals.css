@@ -290,6 +290,7 @@
 
   .search-overlay-panel>.glass-card {
     width: 100%;
+    background: linear-gradient(135deg, rgb(var(--color-theme-surface) / 0.96), rgb(var(--color-theme-surface) / 0.92));
   }
 
   @media (min-width: 1024px) {
