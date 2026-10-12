@@ -13,7 +13,10 @@ type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sk
 }
 
 export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<string[]> {
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, commerceSettings: true } })
+	const [store, categories] = await Promise.all([
+		prisma.store.findUnique({ where: { tenantId }, select: { id: true, commerceSettings: true } }),
+		prisma.category.findMany({ where: { tenantId, store: { is: { tenantId } } }, select: { slug: true, storeId: true } }),
+	])
 	const commerce = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
 		? store.commerceSettings as Record<string, unknown>
 		: {}
@@ -21,8 +24,7 @@ export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<str
 		? commerce.categoryAvailability as Record<string, unknown>
 		: {}
 	if (!store) return []
-	const categories = await prisma.category.findMany({ where: { tenantId, storeId: store.id }, select: { slug: true } })
-	return categories.filter(({ slug }) => availability[slug] === false).map(({ slug }) => slug)
+	return categories.filter(({ slug, storeId }) => storeId === store.id && availability[slug] === false).map(({ slug }) => slug)
 }
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
