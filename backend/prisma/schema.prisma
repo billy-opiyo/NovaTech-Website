@@ -645,9 +645,11 @@ model PlatformMpesaDestination {
   accountType       String
   accountNumber     String
   passkeyCiphertext String?
+  isActive          Boolean  @default(true)
   createdById       String
   createdAt         DateTime @default(now())
 
+  @@index([accountType, isActive, version])
   @@index([createdAt])
 }
 
