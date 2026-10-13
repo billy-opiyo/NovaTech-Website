@@ -44,7 +44,7 @@ className="fixed bottom-16 left-3 z-50 flex h-12 w-12 items-center justify-cente
 				<button
 					onClick={scrollToTop}
 					aria-label="Back to top"
-					className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/30 sm:h-14 sm:w-14 md:bottom-6 md:right-6"
+					className="fixed bottom-16 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/30 sm:h-14 sm:w-14 md:bottom-5 md:right-6"
 				>
 					<FaArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
 				</button>
