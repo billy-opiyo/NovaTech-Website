@@ -1,6 +1,6 @@
 # Nurava HubStores SaaS architecture decisions
 
-**Status:** Tenant foundation and source-level SaaS billing implementation complete; live database/provider rollout remains gated
+**Status:** Tenant foundation and source-level SaaS billing implementation complete; migrations through 0039 are verified on staging; production database/provider rollout remains gated
 **Date:** 2026-10-03 (positioning updated)
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
@@ -89,6 +89,13 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Nurava HubStores receives no product-sale commission and does not hold shopper funds. Merchant responsibility for payment, delivery, refunds, warranties, and the sale contract remains unchanged.
 - The checkout creates a pending tenant-scoped order, reserves stock atomically, starts M-Pesa, and confirms the order only after provider verification. Failed payments cancel the pending order and restore the reserved stock. The existing WhatsApp/email enquiry flow remains available as a merchant-direct alternative.
 - Migration `0030_merchant_shopper_payment_profiles` must be deployed before the merchant payment settings or shopper M-Pesa checkout can operate against a target database. Sandbox credentials, callback reachability, production Daraja approval, refund/dispute procedures, and legal/tax/privacy review remain launch gates.
+
+### Implementation update (2026-10-13)
+
+- Merchant shopper-payment settings now support either a tenant-scoped PayBill/Till STK route using the merchant's own encrypted Daraja credentials or a registered-phone manual Send Money route. Phone-transfer receipts remain pending until authorized store staff verify them. The merchant's route is separate from the platform's SaaS collection destinations.
+- Platform SaaS collection can keep PayBill, Till, and registered-phone options active independently. Merchants choose an available platform option for setup fees and invoices; platform phone receipts require review by a Super Admin or Platform Owner. PayBill/Till use server-side Daraja consumer credentials and a protected destination passkey.
+- Migrations `0037_platform_mpesa_destination`, `0038_merchant_phone_shopper_payments`, and `0039_platform_mpesa_destination_options` are present in source. On 2026-10-13, migration 0039 was applied to the configured staging Neon database and Prisma reported the schema up to date. Production database migration state and live payment-provider flows remain unverified.
+- The merchant shopper-payment form clears the destination number when the account type changes. This keeps PayBill/Till and phone values from being carried across route types.
 
 ## Lifecycle and data policy defaults
 

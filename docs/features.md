@@ -24,7 +24,7 @@
 |---------|-------------|
 | **Cart Context** (`CartProvider`) | Client-side cart state persisted to `localStorage`:<br>- Add / remove / update quantity items<br>- Variant-aware item merging<br>- Max-stock clamping<br>- **Save for later** / **Move to cart**<br>- Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations |
 | **Cart Page** | Item list with quantity controls, selection summary, save-for-later section, and direct merchant handoff. |
-| **Shopper Checkout and Handoff** | In `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and requests M-Pesa payment through the merchant-declared PayBill/Till route with zero Nurava product commission. Daraja responses determine payment success; WhatsApp/email handoff remains available. |
+| **Shopper Checkout and Handoff** | In `MERCHANT_ROUTED` mode, collects delivery details and creates a tenant-scoped pending order. Each merchant may use PayBill/Till Daraja STK credentials or a registered phone for manual Send Money; phone-transfer receipts require merchant review before order confirmation. Nurava product commission is zero; WhatsApp/email handoff remains available. |
 
 ## 👤 Authentication
 
@@ -86,12 +86,12 @@
 | **Database-backed plans** | Starter, Business, and Enterprise records are stored in Prisma/PostgreSQL with configurable prices, billing intervals, entitlements, setup fees, and Stripe price IDs. Legacy commission-rate fields remain for historical compatibility. |
 | **Merchant billing dashboard** | `/manage/billing` shows the active plan, lifecycle state, setup-fee status, add-ons, VAT/credit-aware invoices, SaaS payment history, renewal, cancellation, upgrade, downgrade, and payment-method actions. |
 | **Setup-gated pilot** | During onboarding, a merchant selects a monthly plan and creates the store workspace. A one-time setup fee must be paid before the six-month pilot starts; the selected plan and its entitlements apply during the pilot. Its monthly subscription becomes payable from month seven. No automatic charges occur. |
-| **M-Pesa SaaS collection** | `/platform/billing` configures a versioned platform PayBill or Till destination and encrypted Daraja passkey, or a registered phone number for manual receipt review. PayBill/Till payments settle only after provider callback verification. Phone transfers remain pending until an authorized platform administrator checks the receipt against the account statement. Merchant shopper-payment destinations remain tenant-specific and separate. |
+| **M-Pesa SaaS collection** | `/platform/billing` can keep PayBill, Till, and registered-phone options enabled independently. Each option has a versioned destination; a changed destination replaces the active destination for that type while other types remain available. PayBill/Till use server-side Daraja consumer credentials and an encrypted destination passkey; the legacy environment fallback applies to PayBill. Phone transfers use manual receipt review. Merchants choose among the active platform options for setup fees and invoices. Shopper-payment destinations remain tenant-specific and separate. |
 | **Future provider support** | Stripe provider helpers and historical webhook synchronization remain available behind the billing-provider boundary but are not presented as an active launch payment method. |
 | **Add-ons** | Admin-managed add-ons can be subscribed/unsubscribed by merchant owners/admins. In M-Pesa-only launch mode, an add-on remains pending until the next successful invoice callback, then its entitlement activates. |
 | **Plan entitlement enforcement** | Product, staff, custom-domain, storage, analytics-level, and WhatsApp-notification capabilities are checked server-side. Product-image uploads create tenant-scoped storage records and are blocked when the plan limit is reached. |
 | **Transaction commissions** | Merchant-routed shopper sales create no Nurava product commission. The transaction row is retained as a zero-value audit record, while historical commission records remain visible for reconciliation. |
-| **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, collection-destination configuration, pending phone-transfer receipt review, legacy commission visibility, invoices, and failed SaaS payments. |
+| **Platform billing control plane** | `/platform/billing` provides platform-role-protected plan/add-on management, subscription/customer visibility, paid invoice revenue, separate PayBill/Till/phone option management and disable controls, pending phone-transfer receipt review, legacy commission visibility, invoices, and failed SaaS payments. Collection-setting and receipt-review actions require a Super Admin or Platform Owner. |
 | **Platform operations control plane** | `/platform/operations` provides Super Admin and platform-role-protected cross-store metrics, tenant/store search and filtering, product/order/support counts, subscription/setup-fee status, merchant verification review actions, recent activity and invoices, storefront preview links, and authorized suspension/reactivation controls. |
 | **Reversible merchant verification** | Light onboarding is the default: identity/business/location/KRA/M-Pesa-ownership documents, phone OTP, and platform approval are not required to publish. Set `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore the retained private evidence and review workflow. Existing records remain under normal retention. |
 | **Lifecycle and retention worker** | `backend/workers/lifecycle.ts` applies subscription expiry/grace transitions, processes 90-day merchant-workspace retention, 12-month closed-enquiry retention, and due private verification-file deletion while preserving 7-year SaaS billing/legal records. Deployment scheduling remains an operational gate. |
@@ -151,20 +151,21 @@
 ## 💳 Payment Boundaries
 
 SaaS billing and shopper payments are separate. In `MERCHANT_ROUTED` mode,
-shopper M-Pesa requests use the selected merchant's configured, self-declared
-PayBill or Till credentials. Daraja responses determine payment success. Nurava HubStores does not receive or hold product-sale funds,
+shopper M-Pesa uses the selected merchant's configured route: PayBill/Till
+Daraja credentials for STK, or a registered phone for manual Send Money and
+merchant receipt review. Daraja responses determine STK payment success. Nurava HubStores does not receive or hold product-sale funds,
 does not act as merchant of record, and records zero product-sale commission.
 `MERCHANT_DIRECT` is the contact-only fallback and fails closed at the order
 and payment route boundaries.
 
-### M-Pesa (`backend/payments/mpesa/`)
+### M-Pesa (`backend/payments/mpesa/` and `backend/payments/manual-shopper.ts`)
 
 | Feature | Description |
 |---------|-------------|
 | `initiateMpesaPayment` | Starts a platform SaaS or merchant-routed shopper STK request using the appropriate server-side credentials. |
 | `verifyMpesaPayment` | Queries the matching platform or merchant route and confirms a pending shopper order after provider verification. |
 | `simulateMpesaPayment` | Sandbox C2B simulate helper. |
-| Merchant route safety | Credentials are encrypted and tenant-scoped. Under light onboarding, account name and PayBill/Till are merchant-declared; the provider's response determines whether the route can accept payments. Credentials are never returned to clients. |
+| Merchant route safety | PayBill/Till credentials are encrypted and tenant-scoped. Under light onboarding, the account name and business destination are merchant-declared; Daraja determines whether the STK route accepts payment. Merchant phone transfers do not use Daraja credentials and remain pending until an authorized store staff member checks and approves the receipt. Secrets are never returned to clients. |
 | Graceful fallback | Clear not-configured behavior when platform or merchant M-Pesa credentials are absent. |
 
 ### Cards (`backend/payments/cards/`)
@@ -187,8 +188,10 @@ and payment route boundaries.
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/payments/mpesa/initiate` | Starts a merchant-routed shopper STK Push for a pending tenant order when enabled; fails closed in merchant-direct mode. |
+| `GET, POST /api/payments/mpesa/initiate` | Lists available payment modes and starts an STK request or prepares, submits, or checks a manual phone transfer for a pending tenant order; fails closed in merchant-direct mode. |
 | `POST /api/payments/mpesa/verify` | Verifies a merchant-routed shopper payment and confirms the pending order after provider confirmation. |
+| `GET, POST /api/manage/shopper-payments/manual-receipts` | Tenant-scoped listing and review of shopper phone-transfer receipts by authorized store staff. |
+| `GET, POST /api/platform/billing` | Also lists/configures/disables platform collection options and lists/reviews platform phone-transfer receipts; collection mutations require Super Admin or Platform Owner. |
 | `POST /api/payments/card/create-intent` | Returns a merchant-direct response; no shopper PaymentIntent is created. |
 | `POST /api/payments/card/verify` | Returns a merchant-direct response; no shopper payment is verified. |
 | `POST /api/payments/webhooks/stripe` | Stripe webhook (signature verified). |
@@ -273,7 +276,7 @@ Core models:
 | **Prisma Schema** | Complete relational data model with proper relationships. |
 | **Seed Data** | Admin user, categories, sample products, coupons. |
 | **Payments** | Merchant-direct shopper handoff plus SaaS Stripe Billing, invoice-driven M-Pesa collection, setup fees, add-ons, invoices, and signature-verified webhook lifecycle handling. |
-| **Merchant Handoff Flow** | Product selection can still use the store's direct WhatsApp/email contact. When merchant-routed checkout is enabled, the shopper may instead request M-Pesa payment to the merchant's verified account; the merchant remains responsible for availability, delivery, payment disputes, refunds, and warranty. |
+| **Merchant Handoff Flow** | Product selection can use the store's direct WhatsApp/email contact. When merchant-routed checkout is enabled, the shopper may pay by STK through the merchant-declared PayBill/Till route or use a registered-phone transfer with receipt review; the merchant remains responsible for availability, delivery, payment disputes, refunds, and warranty. |
 | **Route Protection Middleware** | Admin and protected route guards with role-based access control. |
 | **Inventory Service** | Complete inventory management backend with:<br>- Low stock and out-of-stock product detection<br>- Inventory overview with total value and stock counts<br>- Stock alerts (WARNING/CRITICAL severity)<br>- Reorder suggestions based on sales velocity<br>- Stock update endpoints for products and variants<br>- Stock movement history tracking |
 | **Recommendation Engine** | API-backed similar-product recommendations render on product-detail pages; the API also supports personalized, trending, featured, new-arrival, and deal queries. |
