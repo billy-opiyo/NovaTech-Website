@@ -14,7 +14,7 @@ const profileSchema = z.object({
 	businessType: z.enum(["INDIVIDUAL", "REGISTERED_BUSINESS"]),
 	taxStatus: z.enum(["REGISTERED", "NOT_REGISTERED", "NOT_APPLICABLE", "UNDER_REVIEW"]),
 	locationType: z.enum(["PHYSICAL_LOCATION", "ONLINE_ONLY"]),
-	settlementAccountType: z.enum(["PAYBILL", "TILL", "OTHER"]),
+	settlementAccountType: z.enum(["PAYBILL", "TILL", "PHONE", "OTHER"]),
 	legalName: z.string().trim().min(2).max(160),
 	phone: z.string().trim().min(9).max(15),
 	businessRegistrationNumber: z.string().trim().max(80).optional().default(""),

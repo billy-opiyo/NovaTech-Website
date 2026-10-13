@@ -10,6 +10,7 @@ import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "../
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
 import { getMerchantMpesaConfig } from "../payments/merchant-mpesa"
+import { getManualShopperPaymentDestination } from "../payments/manual-shopper"
 import { createOrderIdempotencyKey } from "../lib/order-idempotency"
 
 export async function getOrders(req: NextRequest) {
@@ -39,7 +40,7 @@ export async function createOrder(req: NextRequest) {
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
-		if (validated.paymentMethod === "MPESA" && !await getMerchantMpesaConfig(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		if (validated.paymentMethod === "MPESA" && !await getMerchantMpesaConfig(context.tenantId) && !await getManualShopperPaymentDestination(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
 
 		const rawIdempotencyKey = req.headers.get("idempotency-key")?.trim()
 		const ownerScope = session?.user?.id ? `user:${session.user.id}` : `guest:${validated.shippingAddress.email.trim().toLowerCase()}`

@@ -33,7 +33,7 @@ export async function getMerchantMpesaConfig(tenantId: string): Promise<Merchant
 
 	const profile = tenant.shopperPaymentProfile
 	if (!profile) return null
-	if (profile.accountType === "OTHER") return null
+	if (profile.accountType !== "PAYBILL" && profile.accountType !== "TILL") return null
 	if (isMerchantVerificationRequired()) {
 		if (profile.status !== "ACTIVE" || !profile.verifiedAt || tenant.verificationStatus !== "APPROVED") return null
 		if (tenant.verificationProfile?.settlementAccountType !== profile.accountType) return null

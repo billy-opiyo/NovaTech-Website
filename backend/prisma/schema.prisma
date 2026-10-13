@@ -158,6 +158,7 @@ enum MerchantLocationType {
 enum MerchantSettlementAccountType {
   PAYBILL
   TILL
+  PHONE
   OTHER
 }
 
