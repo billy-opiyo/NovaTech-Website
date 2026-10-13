@@ -75,9 +75,9 @@ export default function AndroidBackButtonHandler() {
 
 					const target = new URL(targetUrl)
 					if (target.protocol !== "https:" || target.origin !== window.location.origin) return
-					// Android can report the cold-start URL through both appUrlOpen and
-					// getLaunchUrl. Replacing the current URL with itself reloads the
-					// document, which restarts the platform splash and can repeat forever.
+					// Capacitor retains the original cold-start intent for getLaunchUrl
+					// across WebView document loads. Replacing an already-current target
+					// reloads the page and restarts the splash on every load.
 					if (target.href === window.location.href) return
 					window.location.replace(target.toString())
 					return
