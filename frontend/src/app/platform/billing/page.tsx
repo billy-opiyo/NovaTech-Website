@@ -17,9 +17,9 @@ type Plan = {
 }
 
 type Addon = { id: string; key: string; name: string; description?: string | null; price: number; currency: string; billingInterval: string; active: boolean }
-type PaymentDestination = { accountType: "PAYBILL" | "TILL" | "PHONE" | null; accountNumber: string; version: number | null; configured: boolean; env: "production" | "sandbox"; passkeyConfigured: boolean }
+type PaymentDestination = { accountType: "PAYBILL" | "TILL" | "PHONE" | null; accountNumber: string; version: number | null; configured: boolean; env: "production" | "sandbox"; passkeyConfigured: boolean; source: "DATABASE" | "ENVIRONMENT" }
 type ManualPayment = { id: string; tenantId: string | null; amount: number; currency: string; kind: string; providerReference: string | null; phoneNumber: string | null; metadata: unknown; createdAt: string; tenant?: { legalName: string | null } | null; invoice?: { kind: string; status: string } | null }
-type BillingData = { plans: Plan[]; addons: Addon[]; paymentDestination: PaymentDestination; manualPayments: ManualPayment[]; canManageCollection: boolean; stats: { subscriptionCount: number; activeSubscriptionCount: number; paidRevenue: number; generatedCommission: number }; failedPayments: { id: string; tenantId: string; provider: string; amount: number; currency: string; failureReason?: string | null }[] }
+type BillingData = { plans: Plan[]; addons: Addon[]; paymentDestination: PaymentDestination; paymentDestinations: PaymentDestination[]; manualPayments: ManualPayment[]; canManageCollection: boolean; stats: { subscriptionCount: number; activeSubscriptionCount: number; paidRevenue: number; generatedCommission: number }; failedPayments: { id: string; tenantId: string; provider: string; amount: number; currency: string; failureReason?: string | null }[] }
 
 function money(value: number, currency = "KES") { return `${currency} ${Number(value || 0).toLocaleString()}` }
 function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }
@@ -48,7 +48,7 @@ export default function PlatformBillingPage() {
 		setData(result)
 		if (result.paymentDestination) {
 			setDestinationType(result.paymentDestination.accountType || "PAYBILL")
-			setDestinationNumber(result.paymentDestination.accountNumber || "")
+			setDestinationNumber(result.paymentDestinations?.find((item: PaymentDestination) => item.accountType === result.paymentDestination.accountType)?.accountNumber || "")
 		}
 		setMessage("")
 	}
@@ -123,6 +123,26 @@ export default function PlatformBillingPage() {
 		await load()
 	}
 
+	function selectDestinationType(accountType: "PAYBILL" | "TILL" | "PHONE") {
+		setDestinationType(accountType)
+		setDestinationNumber(data?.paymentDestinations.find((item) => item.accountType === accountType)?.accountNumber || "")
+		setDestinationPasskey("")
+	}
+
+	async function disablePaymentDestination(accountType: "PAYBILL" | "TILL" | "PHONE") {
+		setDestinationBusy(true)
+		try {
+			const response = await fetch("/api/platform/billing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "disable_mpesa_destination", accountType }) })
+			const result = await response.json()
+			if (!response.ok) throw new Error(result.message || "Unable to disable payment option")
+			addToast(`${humanize(accountType)} payments disabled.`, "success")
+			await load()
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : "Unable to disable payment option"
+			addToast(errorMessage, "error")
+		} finally { setDestinationBusy(false) }
+	}
+
 	if (!data) return <div className="glass-card p-6"><p>{message}</p><p className="mt-2 text-sm text-amber-700">Billing configuration requires the platform database. No placeholder prices or revenue data are shown.</p></div>
 
 	return <div className="space-y-6">
@@ -130,15 +150,15 @@ export default function PlatformBillingPage() {
 		{message && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="glass-card p-5"><p className="text-sm text-gray-500">Subscriptions</p><p className="mt-2 text-2xl font-bold">{data.stats.subscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Active / trialing</p><p className="mt-2 text-2xl font-bold">{data.stats.activeSubscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Paid invoice revenue</p><p className="mt-2 text-2xl font-bold">{money(data.stats.paidRevenue)}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Legacy commission records</p><p className="mt-2 text-2xl font-bold">{money(data.stats.generatedCommission)}</p></div></div>
 		<section className="glass-card space-y-4 p-5" aria-labelledby="platform-mpesa-destination-title">
-			<div><h3 id="platform-mpesa-destination-title" className="text-xl font-semibold">Platform M-Pesa collection destination</h3><p className="mt-1 text-sm text-gray-500">This destination is used for merchant setup fees, subscriptions, and add-on invoices. It does not change shopper payments configured by each store.</p></div>
-			<div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">Current: {data.paymentDestination.accountType ? `${humanize(data.paymentDestination.accountType)} ${data.paymentDestination.accountNumber}` : "not configured"} {data.paymentDestination.env === "sandbox" ? "(sandbox)" : "(production)"}. {data.paymentDestination.accountType === "PHONE" ? "Phone-number payments require a receipt and manual platform verification." : data.paymentDestination.passkeyConfigured ? "Daraja credentials are available." : "Daraja passkey is not configured for automatic STK collection."}</div>
+			<div><h3 id="platform-mpesa-destination-title" className="text-xl font-semibold">Platform M-Pesa collection options</h3><p className="mt-1 text-sm text-gray-500">Enable PayBill, Till, and/or phone transfer for merchant setup fees, subscriptions, and add-on invoices. This does not change shopper payments configured by each store.</p></div>
+			<div className="space-y-2">{data.paymentDestinations.length ? data.paymentDestinations.map((destination) => <div key={`${destination.accountType}:${destination.version ?? "environment"}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span><b>{humanize(destination.accountType || "")}</b> {destination.accountNumber} · {destination.env} · {destination.source === "ENVIRONMENT" ? "server environment" : destination.configured ? "ready" : "credentials incomplete"}{destination.accountType === "PHONE" ? " · receipt review required" : ""}</span>{data.canManageCollection && <button type="button" disabled={destinationBusy} onClick={() => destination.accountType && void disablePaymentDestination(destination.accountType)} className="rounded border px-3 py-1 text-xs font-semibold">Disable</button>}</div>) : <p className="text-sm text-amber-700">No platform M-Pesa payment options are enabled.</p>}</div>
 			{data.canManageCollection ? <form onSubmit={savePaymentDestination} className="grid gap-3 sm:grid-cols-2">
-				<label className="grid gap-1 text-sm font-semibold">Receive payments with<select value={destinationType} onChange={(event) => setDestinationType(event.target.value as "PAYBILL" | "TILL" | "PHONE")} className="rounded border p-2 font-normal dark:bg-dark-surface"><option value="PAYBILL">PayBill (automatic M-Pesa prompt)</option><option value="TILL">Till / Buy Goods (automatic M-Pesa prompt)</option><option value="PHONE">Registered phone number (manual transfer)</option></select></label>
+				<label className="grid gap-1 text-sm font-semibold">Add or update payment option<select value={destinationType} onChange={(event) => selectDestinationType(event.target.value as "PAYBILL" | "TILL" | "PHONE")} className="rounded border p-2 font-normal dark:bg-dark-surface"><option value="PAYBILL">PayBill (automatic M-Pesa prompt)</option><option value="TILL">Till / Buy Goods (automatic M-Pesa prompt)</option><option value="PHONE">Registered phone number (manual transfer)</option></select></label>
 				<label className="grid gap-1 text-sm font-semibold">{destinationType === "PHONE" ? "Registered M-Pesa phone number" : `${destinationType === "TILL" ? "Till" : "PayBill"} number`}<input required value={destinationNumber} onChange={(event) => setDestinationNumber(event.target.value)} placeholder={destinationType === "PHONE" ? "07XXXXXXXX" : "Enter the business short code"} className="rounded border p-2 font-normal dark:bg-dark-surface" /></label>
-				{destinationType !== "PHONE" && <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Daraja passkey<input type="password" autoComplete="new-password" value={destinationPasskey} onChange={(event) => setDestinationPasskey(event.target.value)} placeholder={data.paymentDestination.passkeyConfigured ? "Saved securely; leave blank to keep the current passkey" : "Enter the passkey for this shortcode"} className="rounded border p-2 font-normal dark:bg-dark-surface" /><span className="font-normal text-gray-500">Encrypted on the server. Consumer key and consumer secret stay in the server environment; no credentials are sent to the browser.</span></label>}
+				{destinationType !== "PHONE" && <label className="grid gap-1 text-sm font-semibold sm:col-span-2">Daraja passkey<input type="password" autoComplete="new-password" value={destinationPasskey} onChange={(event) => setDestinationPasskey(event.target.value)} placeholder={data.paymentDestinations.find((item) => item.accountType === destinationType)?.passkeyConfigured ? "Saved securely; leave blank to keep this option's current passkey" : "Enter the passkey for this shortcode"} className="rounded border p-2 font-normal dark:bg-dark-surface" /><span className="font-normal text-gray-500">Encrypted on the server. Consumer key and consumer secret stay in the server environment; no credentials are sent to the browser.</span></label>}
 				{destinationType === "PHONE" && <p className="text-sm text-amber-800 dark:text-amber-200 sm:col-span-2">Daraja STK prompts pay a business short code, not a personal phone. Merchants will send money to this phone and submit the M-Pesa receipt; a platform administrator must verify it before billing changes.</p>}
-				<div className="sm:col-span-2"><button disabled={destinationBusy} className="btn-primary" type="submit">{destinationBusy ? "Saving…" : "Save collection destination"}</button></div>
-			</form> : <p className="text-sm text-gray-500">Platform-owner authorization is required to change the collection destination.</p>}
+				<div className="sm:col-span-2"><button disabled={destinationBusy} className="btn-primary" type="submit">{destinationBusy ? "Saving…" : `Save ${humanize(destinationType)} option`}</button></div>
+			</form> : <p className="text-sm text-gray-500">Platform-owner authorization is required to change collection options.</p>}
 		</section>
 		<section className="glass-card space-y-3 p-5" aria-labelledby="manual-mpesa-review-title"><div><h3 id="manual-mpesa-review-title" className="text-xl font-semibold">Phone-transfer receipts awaiting review</h3><p className="mt-1 text-sm text-amber-800 dark:text-amber-200">Verify each receipt against the M-Pesa account statement before approving. Approval activates the associated setup fee or invoice.</p></div>{data.manualPayments.length ? <div className="divide-y divide-gray-200 dark:divide-gray-700">{data.manualPayments.map((payment) => <div key={payment.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><div><b>{payment.tenant?.legalName || payment.tenantId || "Merchant"}</b><p>{humanize(payment.kind)} · {money(payment.amount, payment.currency)} · receipt {payment.providerReference || "missing"}</p><p className="text-xs text-gray-500">Submitted {new Date(payment.createdAt).toLocaleString()} · payer {payment.phoneNumber || "not recorded"}</p></div>{data.canManageCollection && <div className="flex gap-2"><button type="button" onClick={() => reviewManualPayment(payment.id, true).catch((error: unknown) => addToast(error instanceof Error ? error.message : "Review failed", "error"))} className="rounded border border-emerald-600 px-3 py-1 font-semibold text-emerald-700">Verify and apply</button><button type="button" onClick={() => reviewManualPayment(payment.id, false).catch((error: unknown) => addToast(error instanceof Error ? error.message : "Review failed", "error"))} className="rounded border border-red-600 px-3 py-1 font-semibold text-red-700">Reject</button></div>}</div>)}</div> : <p className="text-sm text-gray-500">No phone-transfer receipts are waiting for review.</p>}</section>
 		<div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">

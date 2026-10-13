@@ -1,5 +1,5 @@
 import type Stripe from "stripe"
-import { BillingPaymentKind, BillingRecordStatus, InvoiceKind, InvoiceStatus, SubscriptionStatus } from "@prisma/client"
+import { BillingPaymentKind, BillingRecordStatus, InvoiceKind, InvoiceStatus, Prisma, SubscriptionStatus } from "@prisma/client"
 import prisma from "../lib/db"
 import { retentionDueAt } from "../retention/tenant-retention"
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient"
@@ -9,7 +9,7 @@ import { calculateSaasInvoiceTotals, configuredSaasVatRate } from "./policy"
 import { pilotTrialEndsAt } from "./mvp-policy"
 import { finalizeInvoiceCredits, releaseInvoiceCredits, reserveBillingCredits } from "./credits"
 import { isMerchantVerificationRequired } from "../lib/merchant-verification"
-import { getPlatformMpesaCredentials, getPlatformMpesaDestinationSummary } from "../lib/platform-mpesa-destination"
+import { getActivePlatformMpesaPaymentDestination, getPlatformMpesaCredentialsForDestination, getPlatformMpesaDestinationSummary, type PlatformMpesaAccountType, type PlatformMpesaDestinationSummary } from "../lib/platform-mpesa-destination"
 import { normalizePhone } from "../lib/daraja"
 
 export class BillingError extends Error {
@@ -27,6 +27,26 @@ export class BillingError extends Error {
 const paidSubscriptionStatuses = ["TRIALING", "ACTIVE", "PAST_DUE", "GRACE_PERIOD"] as const
 const billableSubscriptionStatuses = [...paidSubscriptionStatuses, "SUSPENDED"] as const
 const saasBillingProvider = (process.env.NURAVA_SAAS_BILLING_PROVIDER || "mpesa").toLowerCase()
+
+function paymentUsesDestination(payment: { metadata: unknown }, destination: PlatformMpesaDestinationSummary) {
+	const metadata = payment.metadata && typeof payment.metadata === "object" ? payment.metadata as Record<string, unknown> : {}
+	const saved = metadata.platformPaymentDestination && typeof metadata.platformPaymentDestination === "object" ? metadata.platformPaymentDestination as Record<string, unknown> : {}
+	return saved.accountType === destination.accountType && saved.accountNumber === destination.accountNumber && (saved.version ?? null) === destination.version
+}
+
+function assertPendingPaymentDestination(payment: { status: string; metadata: unknown }, destination: PlatformMpesaDestinationSummary) {
+	if (["PENDING", "PROCESSING"].includes(payment.status) && !paymentUsesDestination(payment, destination)) {
+		throw new BillingError("A payment attempt is already pending with another platform payment option. Finish or wait for that attempt before choosing a different option.", 409, "BILLING_PAYMENT_DESTINATION_PENDING")
+	}
+}
+
+async function selectBillingDestination(input: { destinationType?: PlatformMpesaAccountType; destinationVersion?: number | null }) {
+	const destination = input.destinationType
+		? await getActivePlatformMpesaPaymentDestination(input.destinationType, input.destinationVersion)
+		: await getPlatformMpesaDestinationSummary()
+	if (!destination?.configured || !destination.accountType) throw new BillingError("The selected platform M-Pesa payment option is not available", 409, "MPESA_DESTINATION_NOT_AVAILABLE")
+	return destination
+}
 
 type StripeProviderPayload = {
 	id?: string
@@ -249,12 +269,11 @@ export async function changeSubscriptionPlan(input: { tenantId: string; ownerUse
 	return { subscriptionId: updated.id, provider: "stripe" as const, changed: true }
 }
 
-export async function createMpesaInvoicePayment(input: { tenantId: string; ownerUserId: string; phone: string; kind?: InvoiceKind }) {
-	const destination = await getPlatformMpesaDestinationSummary()
-	if (!destination.configured || !destination.accountType) throw new BillingError("The platform M-Pesa payment destination is not configured", 503, "MPESA_DESTINATION_NOT_CONFIGURED")
+export async function createMpesaInvoicePayment(input: { tenantId: string; ownerUserId: string; phone: string; kind?: InvoiceKind; destinationType?: PlatformMpesaAccountType; destinationVersion?: number | null }) {
+	const destination = await selectBillingDestination(input)
 	const manualPhonePayment = destination.accountType === "PHONE"
 	const payerPhone = manualPhonePayment ? normalizePhone(input.phone) : input.phone
-	const platformMpesa = manualPhonePayment ? null : await getPlatformMpesaCredentials(destination.version ?? undefined)
+	const platformMpesa = manualPhonePayment ? null : await getPlatformMpesaCredentialsForDestination(destination)
 	if (!manualPhonePayment && !platformMpesa?.credentials) throw new BillingError("Platform Daraja credentials are not configured for this payment destination", 503, "MPESA_DESTINATION_NOT_CONFIGURED")
 	const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, include: { plan: true, billingRecord: true, subscriptions: { where: { status: { in: [...billableSubscriptionStatuses] } }, orderBy: { createdAt: "desc" }, take: 1, include: { plan: true, pendingPlan: true, addonSubscriptions: { where: { status: { in: ["ACTIVE", "INCOMPLETE"] } }, include: { addon: true } } } } } })
 	if (tenant?.billingRecord && tenant.billingRecord.setupFeeAmount > 0 && tenant.billingRecord.setupFeeStatus !== BillingRecordStatus.PAID && tenant.billingRecord.setupFeeStatus !== BillingRecordStatus.WAIVED) {
@@ -276,10 +295,15 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.tenantId}:${subscription.id}:${kind}`}))`
 		const existing = await transaction.invoice.findFirst({ where: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: { in: ["mpesa", "mpesa-manual"] } }, orderBy: { createdAt: "desc" }, include: { payments: { where: { kind: { not: "ORDER" } }, orderBy: { createdAt: "desc" }, take: 1 } } })
 		const existingPayment = existing?.payments[0]
-		if (existing && existingPayment && ["PENDING", "PROCESSING", "COMPLETED"].includes(existingPayment.status)) return { invoice: existing, payment: existingPayment, created: false }
+		if (existing && existingPayment && ["PENDING", "PROCESSING", "COMPLETED"].includes(existingPayment.status)) {
+			assertPendingPaymentDestination(existingPayment, destination)
+			return { invoice: existing, payment: existingPayment, created: false }
+		}
 		const billingProvider = manualPhonePayment ? "mpesa-manual" : "mpesa"
 		const destinationMetadata = { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version }
-		const invoice = existing || await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: billingProvider, subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000), metadata: { platformPaymentDestination: destinationMetadata } } })
+		const invoice = existing
+			? await transaction.invoice.update({ where: { id: existing.id }, data: { provider: billingProvider, metadata: { ...(existing.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata) ? existing.metadata as Record<string, unknown> : {}), platformPaymentDestination: destinationMetadata } as Prisma.InputJsonValue } })
+			: await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: billingProvider, subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000), metadata: { platformPaymentDestination: destinationMetadata } } })
 		const creditAmount = existing ? existing.creditAmount : await reserveBillingCredits(transaction, input.tenantId, billingPlan.currency, totals.grossAmount, invoice.id)
 		const updatedInvoice = existing ? invoice : await transaction.invoice.update({ where: { id: invoice.id }, data: { creditAmount, total: totals.grossAmount - creditAmount } })
 		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: updatedInvoice.total === 0 ? "internal-credit" : billingProvider, amount: updatedInvoice.total, currency: updatedInvoice.currency, status: updatedInvoice.total === 0 ? "COMPLETED" : "PENDING", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `INV-${invoice.id}`, invoiceKind: invoice.kind, operation: "subscription-invoice", platformPaymentDestination: destinationMetadata } } })
@@ -300,7 +324,7 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 	if (manualPhonePayment) throw new BillingError("The manual M-Pesa payment record could not be prepared", 500, "MANUAL_PAYMENT_SETUP_FAILED")
 	let result
 	try {
-		result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, paymentId: paymentReservation.id, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, platformCredentials: platformMpesa?.credentials || undefined, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id, grossTotal: totals.grossAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, creditAmount: invoice.creditAmount, ...(platformMpesa?.version ? { platformMpesaDestinationVersion: platformMpesa.version } : {}) } })
+		result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `INV-${invoice.id}`, tenantId: input.tenantId, paymentId: paymentReservation.id, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, platformCredentials: platformMpesa?.credentials || undefined, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, planId: billingPlan.id, grossTotal: totals.grossAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, creditAmount: invoice.creditAmount, ...(platformMpesa?.version != null ? { platformMpesaDestinationVersion: platformMpesa.version } : { platformMpesaDestinationEnvironment: true }) } })
 	} catch (error) {
 		await prisma.payment.update({ where: { id: paymentReservation.id }, data: { status: "FAILED", failureReason: "M-Pesa initiation failed" } }).catch(() => undefined)
 		await releaseInvoiceCredits(invoice.id).catch(() => undefined)
@@ -314,12 +338,11 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 	return { ...result, invoiceId: invoice.id }
 }
 
-export async function createSetupFeeMpesaPayment(input: { tenantId: string; ownerUserId: string; phone: string }) {
-	const destination = await getPlatformMpesaDestinationSummary()
-	if (!destination.configured || !destination.accountType) throw new BillingError("The platform M-Pesa payment destination is not configured", 503, "MPESA_DESTINATION_NOT_CONFIGURED")
+export async function createSetupFeeMpesaPayment(input: { tenantId: string; ownerUserId: string; phone: string; destinationType?: PlatformMpesaAccountType; destinationVersion?: number | null }) {
+	const destination = await selectBillingDestination(input)
 	const manualPhonePayment = destination.accountType === "PHONE"
 	const payerPhone = manualPhonePayment ? normalizePhone(input.phone) : input.phone
-	const platformMpesa = manualPhonePayment ? null : await getPlatformMpesaCredentials(destination.version ?? undefined)
+	const platformMpesa = manualPhonePayment ? null : await getPlatformMpesaCredentialsForDestination(destination)
 	if (!manualPhonePayment && !platformMpesa?.credentials) throw new BillingError("Platform Daraja credentials are not configured for this payment destination", 503, "MPESA_DESTINATION_NOT_CONFIGURED")
 	const tenant = await prisma.tenant.findUnique({
 		where: { id: input.tenantId },
@@ -337,9 +360,12 @@ export async function createSetupFeeMpesaPayment(input: { tenantId: string; owne
 		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.tenantId}:setup-fee`}))`
 		const existingInvoice = await transaction.invoice.findFirst({ where: { tenantId: input.tenantId, kind: InvoiceKind.SETUP_FEE, status: InvoiceStatus.OPEN }, orderBy: { createdAt: "desc" }, include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } } })
 		const latestPayment = existingInvoice?.payments[0]
-		if (existingInvoice && latestPayment && ["COMPLETED", "PROCESSING", "PENDING"].includes(latestPayment.status)) return { invoice: existingInvoice, payment: latestPayment }
+		if (existingInvoice && latestPayment && ["COMPLETED", "PROCESSING", "PENDING"].includes(latestPayment.status)) {
+			assertPendingPaymentDestination(latestPayment, destination)
+			return { invoice: existingInvoice, payment: latestPayment }
+		}
 		const invoice = existingInvoice
-			? await transaction.invoice.update({ where: { id: existingInvoice.id }, data: { status: InvoiceStatus.OPEN, paidAt: null } })
+			? await transaction.invoice.update({ where: { id: existingInvoice.id }, data: { status: InvoiceStatus.OPEN, paidAt: null, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", metadata: { ...(existingInvoice.metadata && typeof existingInvoice.metadata === "object" && !Array.isArray(existingInvoice.metadata) ? existingInvoice.metadata as Record<string, unknown> : {}), platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } as Prisma.InputJsonValue } })
 			: await transaction.invoice.create({ data: { tenantId: input.tenantId, kind: InvoiceKind.SETUP_FEE, status: InvoiceStatus.OPEN, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", subtotal: billingRecord.setupFeeAmount, setupFeeAmount: billingRecord.setupFeeAmount, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingRecord.currency, dueDate: new Date(Date.now() + 3 * 86400000), metadata: { operation: "one-time-store-setup", platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } } })
 		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, billingRecordId: billingRecord.id, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", amount: invoice.total, currency: invoice.currency, status: "PENDING", kind: BillingPaymentKind.SETUP_FEE, phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `SET-${invoice.id}`, operation: "one-time-store-setup", platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } } })
 		return { invoice, payment }
@@ -354,7 +380,7 @@ export async function createSetupFeeMpesaPayment(input: { tenantId: string; owne
 	if (manualPhonePayment) throw new BillingError("The manual M-Pesa payment record could not be prepared", 500, "MANUAL_PAYMENT_SETUP_FAILED")
 	let result
 	try {
-		result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `SET-${invoice.id}`, tenantId: input.tenantId, paymentId: payment.id, invoiceId: invoice.id, billingRecordId: billingRecord.id, kind: BillingPaymentKind.SETUP_FEE, platformCredentials: platformMpesa?.credentials || undefined, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, operation: "one-time-store-setup", ...(platformMpesa?.version ? { platformMpesaDestinationVersion: platformMpesa.version } : {}) } })
+		result = await initiateMpesaPayment({ amount: invoice.total, phone: input.phone, reference: `SET-${invoice.id}`, tenantId: input.tenantId, paymentId: payment.id, invoiceId: invoice.id, billingRecordId: billingRecord.id, kind: BillingPaymentKind.SETUP_FEE, platformCredentials: platformMpesa?.credentials || undefined, metadata: { invoiceId: invoice.id, invoiceKind: invoice.kind, operation: "one-time-store-setup", ...(platformMpesa?.version != null ? { platformMpesaDestinationVersion: platformMpesa.version } : { platformMpesaDestinationEnvironment: true }) } })
 	} catch (error) {
 		await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failureReason: "M-Pesa setup-fee initiation failed" } }).catch(() => undefined)
 		await prisma.invoice.update({ where: { id: invoice.id }, data: { status: InvoiceStatus.FAILED } }).catch(() => undefined)

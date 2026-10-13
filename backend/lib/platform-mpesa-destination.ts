@@ -13,6 +13,7 @@ export type PlatformMpesaDestinationSummary = {
 	configured: boolean
 	env: "production" | "sandbox"
 	passkeyConfigured: boolean
+	source: "DATABASE" | "ENVIRONMENT"
 }
 
 function isAccountType(value: string): value is PlatformMpesaAccountType {
@@ -35,24 +36,26 @@ function decryptPasskey(destination: PlatformMpesaDestination) {
 
 export async function getPlatformMpesaDestination(version?: number): Promise<PlatformMpesaDestination | null> {
 	if (version !== undefined) return prisma.platformMpesaDestination.findUnique({ where: { version } })
-	return prisma.platformMpesaDestination.findFirst({ orderBy: { version: "desc" } })
+	return prisma.platformMpesaDestination.findFirst({ where: { isActive: true }, orderBy: { version: "desc" } })
 }
 
-export async function getPlatformMpesaDestinationSummary(): Promise<PlatformMpesaDestinationSummary> {
-	const destination = await getPlatformMpesaDestination()
+function environmentDestinationSummary(): PlatformMpesaDestinationSummary {
 	const env = process.env.MPESA_ENV === "production" ? "production" : "sandbox"
-	if (!destination) {
-		const accountNumber = process.env.MPESA_SHORTCODE?.replace(/\D/g, "") || ""
-		const brandIsConfigured = env !== "production" || process.env.MPESA_BUSINESS_NAME === PLATFORM_BRAND_NAME
-		return {
-			accountType: accountNumber && validAccountNumber("PAYBILL", accountNumber) ? "PAYBILL" : null,
-			accountNumber,
-			version: null,
-			configured: Boolean(accountNumber && validAccountNumber("PAYBILL", accountNumber) && process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET && process.env.MPESA_PASSKEY && brandIsConfigured),
-			env,
-			passkeyConfigured: Boolean(process.env.MPESA_PASSKEY && brandIsConfigured),
-		}
+	const accountNumber = process.env.MPESA_SHORTCODE?.replace(/\D/g, "") || ""
+	const brandIsConfigured = env !== "production" || process.env.MPESA_BUSINESS_NAME === PLATFORM_BRAND_NAME
+	return {
+		accountType: accountNumber && validAccountNumber("PAYBILL", accountNumber) ? "PAYBILL" : null,
+		accountNumber,
+		version: null,
+		configured: Boolean(accountNumber && validAccountNumber("PAYBILL", accountNumber) && process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET && process.env.MPESA_PASSKEY && brandIsConfigured),
+		env,
+		passkeyConfigured: Boolean(process.env.MPESA_PASSKEY && brandIsConfigured),
+		source: "ENVIRONMENT",
 	}
+}
+
+function destinationSummary(destination: PlatformMpesaDestination): PlatformMpesaDestinationSummary {
+	const env = process.env.MPESA_ENV === "production" ? "production" : "sandbox"
 	const accountType = isAccountType(destination.accountType) ? destination.accountType : null
 	const passkeyConfigured = destination.passkeyCiphertext
 		? Boolean(decryptPasskey(destination))
@@ -61,7 +64,50 @@ export async function getPlatformMpesaDestinationSummary(): Promise<PlatformMpes
 	const configured = accountType === "PHONE"
 		? validAccountNumber("PHONE", destination.accountNumber)
 		: Boolean(accountType && validAccountNumber(accountType, destination.accountNumber) && passkeyConfigured && process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET && brandIsConfigured)
-	return { accountType, accountNumber: destination.accountNumber, version: destination.version, configured, env, passkeyConfigured }
+	return { accountType, accountNumber: destination.accountNumber, version: destination.version, configured, env, passkeyConfigured, source: "DATABASE" }
+}
+
+export async function getPlatformMpesaDestinationSummary(version?: number): Promise<PlatformMpesaDestinationSummary> {
+	const destination = await getPlatformMpesaDestination(version)
+	if (destination) return destinationSummary(destination)
+	if (version !== undefined) {
+		return { accountType: null, accountNumber: "", version: null, configured: false, env: process.env.MPESA_ENV === "production" ? "production" : "sandbox", passkeyConfigured: false, source: "DATABASE" }
+	}
+	const activeDestination = await prisma.platformMpesaDestination.findFirst({ where: { isActive: true }, orderBy: { version: "desc" } })
+	if (activeDestination) return destinationSummary(activeDestination)
+	if (await prisma.platformMpesaDestination.findFirst({ where: { accountType: "PAYBILL" }, select: { id: true } })) return { accountType: null, accountNumber: "", version: null, configured: false, env: process.env.MPESA_ENV === "production" ? "production" : "sandbox", passkeyConfigured: false, source: "DATABASE" }
+	return environmentDestinationSummary()
+}
+
+export async function getPlatformMpesaDestinationSummaries(): Promise<PlatformMpesaDestinationSummary[]> {
+	const destinations = await prisma.platformMpesaDestination.findMany({ where: { isActive: true }, orderBy: [{ accountType: "asc" }, { version: "desc" }] })
+	const summaries = destinations.map(destinationSummary)
+	const hasDatabasePaybill = Boolean(await prisma.platformMpesaDestination.findFirst({ where: { accountType: "PAYBILL" }, select: { id: true } }))
+	if (hasDatabasePaybill) return summaries
+	const fallback = environmentDestinationSummary()
+	return fallback.accountType ? [fallback, ...summaries] : summaries
+}
+
+export async function getActivePlatformMpesaPaymentDestination(accountType: PlatformMpesaAccountType, version?: number | null): Promise<PlatformMpesaDestinationSummary | null> {
+	if (version === undefined) {
+		const destination = await prisma.platformMpesaDestination.findFirst({ where: { accountType, isActive: true }, orderBy: { version: "desc" } })
+		if (destination) {
+			const summary = destinationSummary(destination)
+			return summary.configured ? summary : null
+		}
+		if (await prisma.platformMpesaDestination.findFirst({ where: { accountType }, select: { id: true } })) return null
+		const fallback = environmentDestinationSummary()
+		return fallback.accountType === accountType && fallback.configured ? fallback : null
+	}
+	if (version === null) {
+		if (accountType !== "PAYBILL" || await prisma.platformMpesaDestination.findFirst({ where: { accountType }, select: { id: true } })) return null
+		const fallback = environmentDestinationSummary()
+		return fallback.accountType === accountType && fallback.configured ? fallback : null
+	}
+	const destination = await prisma.platformMpesaDestination.findUnique({ where: { version } })
+	if (!destination?.isActive || destination.accountType !== accountType) return null
+	const summary = destinationSummary(destination)
+	return summary.configured ? summary : null
 }
 
 export async function getPlatformMpesaCredentials(version?: number): Promise<{ credentials: DarajaCredentials | null; version: number | null }> {
@@ -82,6 +128,22 @@ export async function getPlatformMpesaCredentials(version?: number): Promise<{ c
 	if (!passkey) return { credentials: null, version: destination.version }
 	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_BRAND_NAME) return { credentials: null, version: destination.version }
 	return { credentials: { consumerKey, consumerSecret, passkey, shortcode: destination.accountNumber, accountType: destination.accountType }, version: destination.version }
+}
+
+export function getPlatformMpesaEnvironmentCredentials(): DarajaCredentials | null {
+	const consumerKey = process.env.MPESA_CONSUMER_KEY
+	const consumerSecret = process.env.MPESA_CONSUMER_SECRET
+	const passkey = process.env.MPESA_PASSKEY
+	const shortcode = process.env.MPESA_SHORTCODE
+	if (!consumerKey || !consumerSecret || !passkey || !shortcode) return null
+	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_BRAND_NAME) return null
+	return { consumerKey, consumerSecret, passkey, shortcode, accountType: "PAYBILL" }
+}
+
+export async function getPlatformMpesaCredentialsForDestination(destination: PlatformMpesaDestinationSummary): Promise<{ credentials: DarajaCredentials | null; version: number | null }> {
+	if (destination.source === "DATABASE" && destination.version !== null) return getPlatformMpesaCredentials(destination.version)
+	if (destination.source !== "ENVIRONMENT" || destination.accountType !== "PAYBILL") return { credentials: null, version: null }
+	return { credentials: getPlatformMpesaEnvironmentCredentials(), version: null }
 }
 
 export function validatePlatformMpesaDestination(accountType: PlatformMpesaAccountType, accountNumber: string) {

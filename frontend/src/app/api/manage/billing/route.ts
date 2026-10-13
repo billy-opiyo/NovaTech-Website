@@ -3,7 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
-import { getPlatformMpesaDestinationSummary } from "backend/lib/platform-mpesa-destination"
+import { getPlatformMpesaDestinationSummaries, getPlatformMpesaDestinationSummary } from "backend/lib/platform-mpesa-destination"
 import {
 	BillingError,
 	cancelSubscription,
@@ -24,8 +24,8 @@ const actionSchema = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("checkout"), planKey: z.string().min(1), addonKeys: z.array(z.string()).max(20).default([]) }),
 	z.object({ action: z.literal("change_plan"), planKey: z.string().min(1) }),
 	z.object({ action: z.literal("cancel"), immediate: z.boolean().default(false) }),
-	z.object({ action: z.literal("renew_mpesa"), phone: z.string().min(9).max(15) }),
-	z.object({ action: z.literal("setup_mpesa"), phone: z.string().min(9).max(15) }),
+	z.object({ action: z.literal("renew_mpesa"), phone: z.string().min(9).max(15), destinationType: z.enum(["PAYBILL", "TILL", "PHONE"]).optional(), destinationVersion: z.number().int().positive().nullable().optional() }),
+	z.object({ action: z.literal("setup_mpesa"), phone: z.string().min(9).max(15), destinationType: z.enum(["PAYBILL", "TILL", "PHONE"]).optional(), destinationVersion: z.number().int().positive().nullable().optional() }),
 	z.object({ action: z.literal("submit_manual_receipt"), paymentId: z.string().min(1), receiptCode: z.string().min(8).max(12) }),
 	z.object({ action: z.literal("portal") }),
 	z.object({ action: z.literal("addon_subscribe"), addonKey: z.string().min(1) }),
@@ -44,11 +44,12 @@ export async function GET() {
 	try {
 		const { context } = await getAccess()
 		const [snapshot, plans, addons] = await Promise.all([getBillingSnapshot(context.tenantId), listActivePlans(), listActiveAddons()])
-		const paymentMethod = {
+		const [paymentMethod, paymentMethods] = await Promise.all([getPlatformMpesaDestinationSummary(), getPlatformMpesaDestinationSummaries()])
+		const legacyPaymentMethod = {
 			provider: "mpesa" as const,
-			...(await getPlatformMpesaDestinationSummary()),
+			...paymentMethod,
 		}
-		return NextResponse.json({ ...snapshot, paymentMethod, plans, addons })
+		return NextResponse.json({ ...snapshot, paymentMethod: legacyPaymentMethod, paymentMethods, plans, addons })
 	} catch (error: unknown) {
 		console.error("Billing status unavailable", error)
 		const status = error instanceof BillingError ? error.status : 503
@@ -74,9 +75,9 @@ export async function POST(request: NextRequest) {
 			case "cancel":
 				return NextResponse.json({ subscription: await cancelSubscription(context.tenantId, parsed.data.immediate) })
 			case "renew_mpesa":
-				return NextResponse.json(await createMpesaInvoicePayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone }))
+				return NextResponse.json(await createMpesaInvoicePayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone, destinationType: parsed.data.destinationType, destinationVersion: parsed.data.destinationVersion }))
 			case "setup_mpesa":
-				return NextResponse.json(await createSetupFeeMpesaPayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone }))
+				return NextResponse.json(await createSetupFeeMpesaPayment({ tenantId: context.tenantId, ownerUserId: session.user.id, phone: parsed.data.phone, destinationType: parsed.data.destinationType, destinationVersion: parsed.data.destinationVersion }))
 			case "submit_manual_receipt":
 				return NextResponse.json(await submitManualBillingReceipt({ tenantId: context.tenantId, paymentId: parsed.data.paymentId, receiptCode: parsed.data.receiptCode }))
 			case "portal":
