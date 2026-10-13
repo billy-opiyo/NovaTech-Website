@@ -1,108 +1,135 @@
-# Billing implementation plan
+# SaaS Billing and M-Pesa Collection
 
-**Status:** Implemented at source level on 2026-08-19. Type, unit, schema, and
-repository checks pass. Deployment of the migration, regenerated Prisma
-Client, provider credentials, webhooks, and live payment flows remains a
-separate rollout step.
+**Current implementation status (2026-10-13):** The platform destination and
+merchant phone-transfer flows are implemented in the current source. Migrations
+`0037_platform_mpesa_destination`, `0038_merchant_phone_shopper_payments`, and
+`0039_platform_mpesa_destination_options` are present. Migration 0039 was
+deployed to the configured staging Neon database on 2026-10-13; Prisma then
+reported the staging schema up to date. This does not establish production
+migration status or verify live Daraja payments.
 
-## Current architecture audit
+This document records the current behavior and rollout boundaries. The user
+manual and feature reference contain the operational instructions and endpoint
+inventory.
 
-Nurava HubStores is a Next.js App Router monorepo with shared server-side code under
-`backend/`. Prisma/PostgreSQL is the system of record. Merchant workspaces use
-`/manage`, platform operators use `/platform`, and storefront requests resolve
-their tenant through `resolveTenantFromRequest()` before tenant-owned queries.
-Memberships authorize merchant access; platform roles authorize the control
-plane.
+## Architecture and payment boundaries
 
-The repository already contains:
+Prisma/PostgreSQL remains the system of record. Merchant billing and shopper
+orders use separate payment contexts and authorization checks:
 
-- database-backed `Plan` and `Subscription` models, tenant status/lifecycle
-  enums, usage entitlements, and webhook receipt idempotency;
-- legacy Stripe PaymentIntent support for historical shopper checkout records
-  and signature-verified Stripe webhooks;
-- Daraja STK Push/query and M-Pesa callback support;
-- merchant `/manage/billing` and platform `/platform/billing` surfaces, now
-  implemented by the billing API and dashboard changes described below.
+- SaaS billing collects setup fees, invoices, renewals, and add-ons for Nurava
+  HubStores. The platform controls its own payment destinations in
+  `/platform/billing`.
+- Shopper payments belong to a specific merchant tenant and its orders. The
+  merchant controls that store's payment route in `/manage/payments`.
+- Tenant IDs and destination choices are resolved and checked server-side.
+  Prisma and payment-provider credentials remain on the server; credentials are
+  not returned to browser clients.
+- Merchant-routed product sales carry zero Nurava product commission. Manual
+  phone receipts do not confirm an order until an authorized merchant staff
+  member verifies the receipt.
 
-The existing shopper `Payment` model is order-oriented but nullable `orderId`,
-so it can safely be extended for SaaS billing payments without creating a
-second payment architecture.
+## Platform SaaS collection
 
-## Billing model
+The platform may independently enable a PayBill, Till, and registered phone
+option. At most one current destination of each type is active; saving a new
+destination replaces the active version for that type while leaving other types
+available. A platform owner or Super Admin can configure or disable each type
+and review manual phone receipts. A merchant chooses from the platform options
+currently available when initiating a setup-fee or invoice payment.
 
-1. Keep plans in PostgreSQL. Add Stripe price IDs and setup-fee amount to
-   `Plan`. Retain the plan transaction commission rate for historical
-   compatibility, but do not create new shopper commissions in merchant-direct
-   mode. Seed Starter, Business, and Enterprise as editable defaults; prices
-   remain database data.
-2. Add a tenant billing customer record with Stripe customer/payment-method
-   references and the preferred M-Pesa phone. Add a separate billing record
-   for setup-fee status so onboarding payment is never confused with recurring
-   subscription state.
-3. Extend subscriptions with provider checkout/session metadata and add-on
-   subscriptions. A Stripe subscription is native recurring billing. M-Pesa is
-   represented as invoice-driven collection: each renewal creates an invoice
-   and an STK request, with the callback changing the invoice/payment status.
-4. Add invoices and extend payments with invoice/subscription/setup-fee
-   references, failure information, and a payment kind. Existing order
-   payments remain supported.
-5. Add database-backed add-ons and tenant add-on subscriptions. Stripe
-   recurring prices are optional; when configured they are included as Checkout
-   line items or subscription items. M-Pesa add-ons are included in the next
-   invoice.
-6. Add transaction commission records with a unique source payment/order
-   boundary. Commission rate is snapshotted from the active plan so later plan
-   edits do not rewrite historical revenue.
+- **PayBill/Till:** Uses the server-side Daraja consumer key and consumer
+  secret. The destination passkey is encrypted when stored. The existing
+  environment-configured PayBill can serve as a fallback where no database
+  PayBill destination overrides it. STK payments settle through provider
+  verification/callback handling.
+- **Registered phone:** Uses manual Send Money and does not use Daraja STK
+  credentials. A merchant submits the receipt code; a platform owner or Super
+  Admin verifies it against the account statement before the payment is settled
+  and the associated billing state changes.
+- **Selection/versioning:** The payment request records its destination type
+  and version. An active pending payment is protected from being silently
+  switched to another option; a conflicting choice is rejected until the
+  existing attempt is resolved.
 
-## API and authorization changes
+Environment credentials and database destinations must stay isolated between
+staging and production. Do not place private provider credentials in the
+frontend or Android bundle.
 
-- Public/authenticated plan listing is read-only and returns active plans only.
-- Merchant billing reads and mutations require an authenticated session plus
-  the resolved tenant membership. Plan changes, cancellation, add-on changes,
-  and payment-method actions require store owner/admin membership.
-- Platform plan/add-on/customer/revenue endpoints require the existing
-  platform-role guard; no tenant ID from a request body is trusted.
-- Stripe Checkout sessions, customer portal sessions, and M-Pesa collection
-  requests are created only on the server from database prices and current
-  tenant ownership.
-- Stripe webhooks verify the raw signature before parsing, acknowledge
-  duplicate event IDs, and process subscription/invoice/payment-failure events
-  idempotently. M-Pesa callbacks update only an existing provider reference
-  after amount and tenant ownership checks.
+## Merchant shopper payments
 
-## UI changes
+Each merchant configures one shopper-payment route for its store:
 
-- Implement the merchant billing surface with current plan/status, setup-fee
-  status, add-ons, invoices, payment history, plan actions, and provider-aware
-  checkout buttons. Provider credentials remain an explicit unavailable state
-  when absent.
-- Implement the platform billing surface with plan/add-on management,
-  recurring-price and one-time setup-fee editing, subscription/customer/revenue
-  summaries, and failed-payment visibility.
-- Implement the platform operations surface with aggregate tenant/store
-  metrics, cross-store activity and invoice feeds, preview links, billing
-  status, and audited suspension/reactivation controls.
-- Keep the existing admin shell, tenant resolver, and visual language. The
-  shopper surface uses product selection and direct merchant WhatsApp/email
-  handoff; Nurava HubStores does not collect shopper payments.
+- **PayBill/Till:** The merchant supplies the business number, account name,
+  and its own Daraja consumer key, consumer secret, and STK passkey. Credentials
+  are encrypted and tenant-scoped. A successful STK flow is confirmed by
+  provider verification/callback handling.
+- **Registered M-Pesa phone:** The merchant supplies the registered phone and
+  account name. The route is stored as manual phone transfer and does not ask
+  for Daraja credentials. The shopper sends the exact amount, submits the M-Pesa
+  receipt code, and waits while an authorized store staff member verifies it.
+  Receipt review is tenant-scoped; an approved receipt confirms the pending
+  order. A rejected receipt leaves the shopper able to retry.
 
-## Configuration and rollout
+Changing the account type clears the number field in the merchant settings UI,
+preventing a PayBill/Till value from being reused as a phone number or the
+reverse. Under strict merchant verification mode, the existing verification
+gate also applies to the phone route. Under the default light onboarding mode,
+the route is merchant-declared; the system does not claim independent ownership
+verification.
 
-Required provider configuration is documented in `.env.example`: Stripe secret,
-publishable key, webhook secret, and application URL; M-Pesa Daraja credentials
-and callback URL are already present. Stripe price IDs can be set per plan and
-add-on after catalog creation. Live rollout still requires provider dashboard
-configuration, webhook registration, tax/legal decisions, and a real database
-backup/restore check.
+`MERCHANT_DIRECT` remains the contact-only checkout mode. It does not initiate
+shopper payment requests. SaaS billing is independent of this shopper-commerce
+setting.
 
-Implementation order:
+## Database and migration state
 
-1. Schema and migration, including safe indexes and seed defaults.
-2. Billing domain service and provider adapters.
-3. Merchant and platform APIs with authorization and idempotency.
-4. Stripe/M-Pesa webhook lifecycle handling.
-5. Merchant/platform dashboard surfaces.
-6. Unit, type, route, and database-backed verification.
+- `0037_platform_mpesa_destination` added versioned platform destination
+  records and the allowed destination types.
+- `0038_merchant_phone_shopper_payments` added `PHONE` as a merchant settlement
+  account type for manual shopper transfers.
+- `0039_platform_mpesa_destination_options` added per-destination active state
+  and an index used to retrieve the active destination by type and version.
+- Staging status was checked after applying 0039 and reported all migrations
+  applied. Production migration state has not been established by this record.
+- Apply additive migrations before deploying source that depends on them.
+  Avoid schema reset or `db push`; retain migration history and back up the
+  intended database before a production rollout.
 
-The implementation will not claim live provider success without configured
-credentials and a real webhook/payment test.
+No database credential, payment secret, signing key, or environment value is
+stored in this document.
+
+## Authorization and operational checks
+
+- Merchant shopper-payment settings require owner/admin store permissions.
+- Shopper order lookup, payment initiation, receipt submission, and receipt
+  review are scoped to the resolved tenant and relevant order/payment.
+- Platform collection changes and manual billing-receipt review require a
+  Super Admin or Platform Owner. Other platform administrators can access
+  permitted billing views but cannot mutate collection settings.
+- M-Pesa PINs are never requested or stored.
+- A receipt submission is not payment confirmation. Billing or order state
+  changes only after the corresponding authorized review succeeds.
+- Staging and production databases, Daraja modes, and deployment credentials
+  must be verified separately before release.
+
+## Remaining rollout verification
+
+Source and database state alone do not verify the external payment path. Before
+claiming production readiness, verify with approved staging accounts and
+provider configuration:
+
+1. PayBill and Till STK initiation, callback/query settlement, and the expected
+   invoice/order update.
+2. Platform phone-transfer receipt submit, approve, and reject behavior.
+3. Merchant phone-transfer receipt submit, approve, reject, retry, and
+   tenant-isolation behavior.
+4. Destination switching and disabling when multiple platform types are
+   active, including the legacy environment PayBill fallback.
+5. Authentication, authorization, audit records, duplicate receipt handling,
+   and merchant billing/setup-fee lifecycle results.
+6. Production database migration status and provider configuration, only as a
+   separately approved production rollout.
+
+Do not interpret a successful STK prompt as settlement; require the verified
+provider result. Do not treat staging verification as production verification.

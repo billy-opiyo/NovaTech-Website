@@ -29,9 +29,10 @@ distinct experiences:
 
 The current staging commerce model is <code>MERCHANT_ROUTED</code>. Nurava
 provides discovery, hosting, catalog presentation, and SaaS tools. In this
-mode, a shopper can create a pending order and pay through an M-Pesa STK Push
-using the selected merchant's configured, self-declared PayBill or Till. Daraja
-determines whether it accepts and completes the payment. Nurava
+mode, a shopper can create a pending order and pay through a merchant-configured
+PayBill/Till STK Push or by sending money to the merchant's registered M-Pesa
+phone. Daraja determines whether an STK payment completes; a phone-transfer
+order remains pending until the merchant verifies the receipt. Nurava
 does not receive or hold the product-sale money and charges no product-sale
 commission. The independent merchant remains seller of record and is
 responsible for the final price, delivery, taxes, refunds, warranty, and sale
@@ -236,15 +237,18 @@ support, and billing copy is merchant/SaaS-facing.
 4. Select the monthly plan that matches the store and review its one-time setup
    fee and monthly price.
 5. Accept the current merchant terms and privacy notice, then create the store.
-6. Open the billing workspace and pay the setup fee through the M-Pesa prompt.
-   The six-month pilot starts only after the provider confirms payment. The
+6. Open the billing workspace and pay the setup fee using an option currently
+   enabled by the platform. PayBill/Till uses an M-Pesa prompt; a phone option
+   uses manual transfer and platform receipt review. The six-month pilot starts
+   only after successful provider confirmation or platform-admin approval. The
    selected plan applies during the pilot; monthly billing starts in month seven.
 
 Onboarding creates the tenant, draft store, owner membership, selected-plan
 subscription, billing customer and billing record. For a plan with a setup fee,
-the subscription remains incomplete and the pilot dates are unset until a
-successful M-Pesa callback pays the fee. A store still needs verification and
-publication after the pilot is activated.
+the subscription remains incomplete and the pilot dates are unset until an
+M-Pesa callback or platform-admin approval confirms the fee. Publication is a
+separate launch-readiness step. Documentary verification is required only when
+`MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` is enabled.
 
 The onboarding page lists the user's memberships. Current tenant selection is
 host-based; a first-class multi-store switcher is a future update.
@@ -341,13 +345,32 @@ business-registration, location, KRA, or M-Pesa-ownership documents, complete
 merchant phone OTP, or wait for platform review before publishing. Existing
 verification records remain protected by the current retention process.
 
-To accept shopper M-Pesa payments, an owner/admin self-declares the account
-type, PayBill/Till number, and account/business name in Shopper payments, then
-enters Daraja credentials. Credentials are encrypted and scoped to that store.
-The system does not verify account ownership at setup; Daraja's response when a
-shopper initiates payment determines whether the configured route can process
-it. Never enter an M-Pesa PIN. Merchant terms, account access, billing, custom
-domain checks, and platform suspension controls remain separate requirements.
+To accept shopper M-Pesa payments, an owner/admin opens **Shopper payments**
+and selects one route for that store:
+
+- **PayBill or Till:** enter the business number, account/business name, and
+  that business's Daraja consumer key, consumer secret, and STK passkey. These
+  merchant credentials are encrypted and scoped to the store; they are not the
+  platform's credentials. A shopper receives an STK prompt, and Daraja's
+  response determines whether the payment succeeds.
+- **Registered M-Pesa phone:** enter the merchant's registered phone number and
+  account/business name. This uses manual Send Money, so no Daraja keys or
+  passkey are required. The shopper submits the receipt code, and authorized
+  store staff verify it against the merchant's account statement before the
+  order is confirmed.
+
+The form clears the destination-number field when its account type changes so
+that a PayBill/Till value is not carried into the phone-number field or vice
+versa. Under light onboarding, ownership is not checked during setup. If
+`MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` is enabled, the phone route must
+also satisfy the existing merchant verification requirements. Never enter an
+M-Pesa PIN. Merchant terms, account access, billing, custom domain checks, and
+platform suspension controls remain separate requirements.
+
+For phone-transfer orders, authorized store staff open **Shopper M-Pesa
+payments** in `/manage/payments`, compare each receipt code and amount with the
+merchant's M-Pesa statement, then verify or reject the receipt. Verification
+confirms the order; a rejected receipt leaves it unconfirmed.
 
 Set `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore the retained
 phone OTP, private evidence upload, and platform review process.
@@ -446,8 +469,11 @@ payment history, plan checkout/change, renewal, cancellation, Stripe portal
 where enabled, and add-on actions.
 
 The merchant selects a monthly plan during onboarding. A one-time setup fee is
-paid first through the platform's configured PayBill/Till STK route, or by a
-manual phone transfer when that collection mode is selected. The six-month pilot
+paid first using one of the collection options currently enabled by the
+platform: PayBill, Till, and/or registered phone. The merchant selects the
+available option for each payment. PayBill/Till use an STK prompt; a phone
+option uses manual transfer and a receipt that a platform administrator must
+review. The six-month pilot
 starts only after a verified provider callback or platform-admin receipt review,
 using the selected plan's entitlements. The
 selected monthly subscription is payable from month seven. Nothing is charged
@@ -456,12 +482,20 @@ pilot ends and during the following 14-day grace period. If payment remains
 unpaid after grace, the public storefront is paused while merchant data and
 workspace access are preserved.
 
-Later monthly renewals create local invoices and require a merchant-initiated
-Daraja STK request for PayBill/Till destinations. Phone-number transfers require
-the merchant to submit the M-Pesa receipt and a platform administrator to verify
-it against the account statement before billing is updated. No automatic
-recurring M-Pesa debit is used. The platform destination is managed in
-`/platform/billing`; shopper payment destinations remain store-specific.
+Later monthly renewals create local invoices. Merchants select from the
+currently enabled options in `/manage/billing`: PayBill/Till destinations use a
+merchant-initiated Daraja STK request; phone destinations use manual transfer,
+receipt submission, and platform-admin review against the account statement.
+The platform owner manages each destination type independently in
+`/platform/billing`; disabling one type does not disable the other active types.
+No automatic recurring M-Pesa debit is used. These SaaS collection options are
+separate from store-specific shopper payment destinations.
+
+Platform owners and Super Admins manage the options in **Platform billing**
+(`/platform/billing`). They can keep PayBill, Till, and phone transfer enabled
+at the same time, update each type separately, or disable only the selected
+type. A phone transfer appears in the platform's pending receipt review list;
+verify the receipt against the receiving account statement before approving it.
 
 Nurava SaaS prices are configured as VAT-inclusive. When `NURAVA_VAT_ENABLED=true`,
 the invoice records the agreed 16% VAT rate and shows the net amount, VAT, any
@@ -581,14 +615,17 @@ Product image upload is a protected merchant/admin operation at
 /api/platform/access/invitations, /api/platform/access/accept,
 /api/platform/verification/{tenantId}, /api/billing/plans, and /api/health.
 
-**Payments:** /api/manage/shopper-payments, /api/payments/webhooks/stripe,
+**Payments:** /api/manage/shopper-payments,
+/api/manage/shopper-payments/manual-receipts, /api/payments/webhooks/stripe,
 /api/payments/webhooks/mpesa/stk-callback,
 /api/payments/webhooks/mpesa/c2b, plus legacy
 /api/payments/mpesa/initiate, /api/payments/mpesa/verify,
 /api/payments/card/create-intent, and /api/payments/card/verify. The two card
 routes remain disabled for shopper checkout. M-Pesa shopper routes work only
 when <code>SHOPPER_COMMERCE_MODEL=MERCHANT_ROUTED</code> and the merchant has
-an active approved payment profile.
+an active configured payment profile. PayBill/Till uses the merchant's own
+Daraja credentials; registered-phone transfers require the merchant to review
+the submitted receipt.
 
 ## 10. Integrations
 
@@ -600,7 +637,7 @@ an active approved payment profile.
 | Africa's Talking | Default SMS delivery for order, support, and verification messages; configure with server-side credentials |
 | Twilio | Optional SMS provider, enabled only by setting `SMS_PROVIDER=twilio` |
 | WhatsApp Cloud API | Customer/merchant notifications and enquiry support |
-| M-Pesa Daraja | SaaS invoice STK plus tenant-scoped merchant shopper STK and callbacks |
+| M-Pesa | SaaS PayBill/Till STK and merchant PayBill/Till shopper STK use Daraja; platform billing and merchant shopper phone transfers use separate manual receipt-review flows |
 | Stripe | Provider-ready SaaS Checkout/portal/webhooks |
 | Google OAuth | Optional sign-in provider |
 
@@ -681,7 +718,7 @@ backup restore, or deployed browser behavior.
 | Payment not configured | Required provider variables and webhook setup |
 | Images have no public URL | R2 public bucket configuration/upload |
 | No email/SMS/WhatsApp | Provider credentials, sender approval, number formatting |
-| Shopper cannot pay | Check the commerce model, merchant payment profile status, self-declared PayBill/Till/account name, encrypted credentials, and Daraja callback/provider response; documentary approval is required only in strict onboarding mode |
+| Shopper cannot pay | Check the commerce model and active merchant route. PayBill/Till requires the merchant's own Daraja credentials and provider callback; a phone route requires a submitted receipt and merchant review. Strict onboarding adds the existing verification gate. |
 | Data appears from wrong store | Correct verified host; tenant context is host-derived |
 | Invitation link fails | Known missing acceptance page; see Future Updates |
 | Platform metrics blank | Intentional unavailable-state behavior without live data |

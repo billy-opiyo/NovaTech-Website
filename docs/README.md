@@ -9,7 +9,7 @@ Nurava HubStores is a **monorepo** managed with **npm workspaces**, containing:
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
 
-The platform enables customers to discover published stores at `/stores`, browse and compare products, and connect directly with the selected merchant. Each merchant manages its own catalog and confirms its sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context, with categories and product attributes configured for each store.
+The platform enables customers to discover published stores at `/stores`, browse and compare products, and complete a merchant-routed M-Pesa order or contact the selected merchant directly. Each merchant manages its own catalog and confirms its sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context, with categories and product attributes configured for each store.
 
 ## Recent Changes
 
@@ -38,7 +38,8 @@ The current implementation also includes the following production hardening work
 - Added database-backed SaaS billing with Starter/Business/Enterprise plans, setup-fee records, subscriptions, invoices, add-ons, provider payments, and commission transactions.
 - Added commercial-alignment enforcement for M-Pesa add-on activation, grace-period public access, server-side storage and analytics entitlements, paid WhatsApp order-update gating, explicit newsletter consent/unsubscribe, and tenant-scoped storage/newsletter records through migration `0015_commercial_alignment`.
 - Added merchant `/manage/billing` actions for Stripe Checkout/portal, M-Pesa invoice collection, plan changes, cancellation, renewal, setup-fee payment, add-ons, and billing history.
-- Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments.
+- Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments. Migration `0037_platform_mpesa_destination` added database-backed platform M-Pesa destinations; migration `0039_platform_mpesa_destination_options` allows PayBill, Till, and registered-phone options to be enabled independently and selected by merchants for setup fees and invoices.
+- Added merchant registered-phone shopper payments in migration `0038_merchant_phone_shopper_payments`. This route uses manual Send Money and merchant receipt verification; PayBill/Till shopper payments continue to use the merchant's own encrypted Daraja credentials and STK flow.
 - Added the platform operations control plane at `/platform/operations` with cross-store metrics, tenant/store search, activity and invoice feeds, storefront preview links, billing/setup-fee visibility, and authorized suspension/reactivation controls.
 - Added the protected `/api/cron/lifecycle` Vercel Cron route with an hourly schedule, database-backed execution lease, subscription lifecycle sweep, pilot/grace reminders, and retention sweep. Configure `CRON_SECRET` and deploy the required migrations before enabling it in production.
 - Added admin audit logging for order status, product, coupon, and review changes.
@@ -123,7 +124,7 @@ Start the local server with `npm run dev`. The development server uses `http://l
 
 The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. The canonical merchant admin workspace is `/manage` on the merchant's verified host, while the Nurava HubStores platform control plane is `/platform` on the platform host. Both are server-protected and marked no-index. `/admin` is retained only as a legacy ADMIN/SUPERADMIN console and is not the merchant link to share.
 
-Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and direct merchant contact options. The merchant completes the shopper transaction outside Nurava HubStores' payment flow.
+Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and configured checkout/contact options. In `MERCHANT_ROUTED` mode, the platform records the tenant-scoped pending order and payment attempt; STK payment is confirmed by Daraja, while phone-transfer payment is confirmed by the merchant after receipt review. The merchant remains responsible for sale fulfillment, delivery, refunds, and warranty.
 
 ### Storefront
 
@@ -241,7 +242,7 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 | **Auth** | NextAuth v5 (beta) — Google OAuth + Credentials |
 | **Email** | Resend |
 | **Storage** | Cloudflare R2 (AWS SDK v3) |
-| **Payments** | Merchant-direct shopper handoff plus Stripe Billing and invoice-driven M-Pesa SaaS billing |
+| **Payments** | Merchant-direct shopper handoff or tenant-scoped merchant-routed M-Pesa checkout; invoice-driven M-Pesa SaaS billing, setup fees, add-ons, and receipt-reviewed phone transfers |
 | **Notifications** | Africa's Talking SMS (default), optional Twilio SMS, WhatsApp Cloud API |
 | **Monorepo** | npm workspaces (`frontend` + `backend`) |
 
