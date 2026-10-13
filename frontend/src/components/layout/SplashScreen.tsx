@@ -16,7 +16,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const store = useStoreContext()
 	const splashSettings = platformHome ? store.platformSettings?.splash : undefined
 	const splashName = store.platformSettings?.brand?.name || clientConfig.brand.name
-	const fallbackSplashLogo = "/images/Nurava_HubStores_app_icon_logo.png"
+	const fallbackSplashLogo = "/images/Nurava_HubStores_splash_logo.webp"
 	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
 	const wordmarkAnimationDuration = Math.max(LETTER_ANIMATION_DURATION, (Array.from(splashName).length - 1) * LETTER_STAGGER_DELAY + LETTER_ANIMATION_DURATION)
