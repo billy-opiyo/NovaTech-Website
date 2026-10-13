@@ -55,7 +55,7 @@ export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPl
 	return (
 		<aside
 			aria-label="Download the Nurava HubStores Android app"
-			className="glass-card navy-glass fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
+			className="glass-card navy-glass fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md md:hidden sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
 		>
 			<div className="flex items-center gap-2">
 				<a
