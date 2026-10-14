@@ -15,7 +15,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-@CapacitorPlugin(name = "SystemBars")
+@CapacitorPlugin(name = "NuravaSystemBars")
 public class SystemBarsPlugin extends Plugin {
     private FrameLayout edgeToEdgeColorBands;
     private View statusBarColorBand;

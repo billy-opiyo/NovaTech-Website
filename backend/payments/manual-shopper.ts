@@ -44,32 +44,35 @@ export async function getManualShopperPaymentDestination(tenantId: string) {
 export async function createManualShopperPayment(input: { tenantId: string; orderId: string; phone: string }) {
 	const destination = await getManualShopperPaymentDestination(input.tenantId)
 	if (!destination) throw paymentError("This store has not configured an active registered M-Pesa phone for shopper payments.", 409, "MERCHANT_MANUAL_MPESA_NOT_READY")
-	const order = await prisma.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, select: { id: true, total: true, status: true, paymentMethod: true } })
-	if (!order || order.paymentMethod !== "MPESA" || order.status !== "PENDING") throw paymentError("This order is not awaiting M-Pesa payment.", 409, "ORDER_NOT_PAYABLE")
-	if (!Number.isFinite(order.total) || order.total <= 0) throw paymentError("The order has an invalid payable total.", 409, "INVALID_ORDER_TOTAL")
-	const existing = await prisma.payment.findFirst({
-		where: { tenantId: input.tenantId, orderId: order.id, provider: "mpesa-manual", kind: "ORDER", status: { in: ["PENDING", "PROCESSING"] } },
-		orderBy: { createdAt: "desc" },
+	return prisma.$transaction(async (transaction) => {
+		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`manual-shopper-payment:${input.tenantId}:${input.orderId}`}))`
+		const order = await transaction.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, select: { id: true, total: true, status: true, paymentMethod: true } })
+		if (!order || order.paymentMethod !== "MPESA" || order.status !== "PENDING") throw paymentError("This order is not awaiting M-Pesa payment.", 409, "ORDER_NOT_PAYABLE")
+		if (!Number.isFinite(order.total) || order.total <= 0) throw paymentError("The order has an invalid payable total.", 409, "INVALID_ORDER_TOTAL")
+		const existing = await transaction.payment.findFirst({
+			where: { tenantId: input.tenantId, orderId: order.id, provider: "mpesa-manual", kind: "ORDER", status: { in: ["PENDING", "PROCESSING"] } },
+			orderBy: { createdAt: "desc" },
+		})
+		if (existing) {
+			const metadata = metadataObject(existing.metadata)
+			if (metadata.manualMode !== "PHONE_TRANSFER" || Math.abs(existing.amount - order.total) > 0.01) throw paymentError("A different payment is already pending for this order. Contact the store before retrying.", 409, "ORDER_PAYMENT_CONFLICT")
+			return { paymentId: existing.id, amount: existing.amount, currency: existing.currency, phone: String((metadata.manualDestination as { phone?: unknown } | undefined)?.phone || destination.phone), accountName: String((metadata.manualDestination as { accountName?: unknown } | undefined)?.accountName || destination.accountName), status: existing.status }
+		}
+		const payment = await transaction.payment.create({
+			data: {
+				tenantId: input.tenantId,
+				orderId: order.id,
+				provider: "mpesa-manual",
+				amount: order.total,
+				currency: "KES",
+				status: "PENDING",
+				kind: "ORDER",
+				phoneNumber: input.phone,
+				metadata: { reference: `ORD-${order.id}`, manualMode: "PHONE_TRANSFER", manualDestination: destination },
+			},
+		})
+		return { paymentId: payment.id, amount: payment.amount, currency: payment.currency, ...destination, status: payment.status }
 	})
-	if (existing) {
-		const metadata = metadataObject(existing.metadata)
-		if (metadata.manualMode !== "PHONE_TRANSFER" || Math.abs(existing.amount - order.total) > 0.01) throw paymentError("A different payment is already pending for this order. Contact the store before retrying.", 409, "ORDER_PAYMENT_CONFLICT")
-		return { paymentId: existing.id, amount: existing.amount, currency: existing.currency, phone: String((metadata.manualDestination as { phone?: unknown } | undefined)?.phone || destination.phone), accountName: String((metadata.manualDestination as { accountName?: unknown } | undefined)?.accountName || destination.accountName), status: existing.status }
-	}
-	const payment = await prisma.payment.create({
-		data: {
-			tenantId: input.tenantId,
-			orderId: order.id,
-			provider: "mpesa-manual",
-			amount: order.total,
-			currency: "KES",
-			status: "PENDING",
-			kind: "ORDER",
-			phoneNumber: input.phone,
-			metadata: { reference: `ORD-${order.id}`, manualMode: "PHONE_TRANSFER", manualDestination: destination },
-		},
-	})
-	return { paymentId: payment.id, amount: payment.amount, currency: payment.currency, ...destination, status: payment.status }
 }
 
 export async function submitManualShopperReceipt(input: { tenantId: string; orderId: string; paymentId: string; receiptCode: string }) {

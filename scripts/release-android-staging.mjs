@@ -46,10 +46,16 @@ function findBuildTool(name) {
 }
 
 function runCaptured(command, args) {
-	const result = spawnSync(command, args, {
+	const usesWindowsBatchShell = process.platform === "win32" && /\.(bat|cmd)$/i.test(command)
+	// Node concatenates arguments when shell:true. Quote each argument so paths
+	// containing spaces (such as a Windows workspace path) remain one argument.
+	const commandArgs = usesWindowsBatchShell
+		? args.map((argument) => `"${argument.replaceAll('"', '""')}"`)
+		: args
+	const result = spawnSync(command, commandArgs, {
 		cwd: projectRoot,
 		encoding: "utf8",
-		shell: process.platform === "win32" && /\.(bat|cmd)$/i.test(command),
+		shell: usesWindowsBatchShell,
 	})
 	if (result.error || result.status !== 0) throw new Error(`Staging APK verification failed: ${path.basename(command)}.`)
 	return `${result.stdout || ""}\n${result.stderr || ""}`
