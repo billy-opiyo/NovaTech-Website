@@ -3,6 +3,7 @@ import type { User, Session } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
+import { createHash } from "node:crypto"
 import bcrypt from "bcrypt"
 import prisma from "backend/lib/db"
 import { getPlatformDomain } from "backend/lib/platform-domain"
@@ -77,6 +78,39 @@ export const authOptions = {
 					role: user.role,
 					platformRole: user.platformRole || undefined,
 				}
+			},
+		}),
+		Credentials({
+			id: "mobile-ticket",
+			name: "Mobile sign-in ticket",
+			credentials: {
+				ticket: { label: "One-time sign-in ticket", type: "text" },
+			},
+			async authorize(credentials) {
+				const ticket = String(credentials?.ticket || "")
+				if (!/^[A-Za-z0-9_-]{40,64}$/.test(ticket)) return null
+
+				const token = createHash("sha256").update(ticket).digest("hex")
+				const now = new Date()
+				const user = await prisma.$transaction(async (transaction) => {
+					const grant = await transaction.verificationToken.findUnique({ where: { token } })
+					const prefix = "mobile-google:"
+					if (!grant || !grant.identifier.startsWith(prefix) || grant.expires <= now) return null
+
+					const consumed = await transaction.verificationToken.deleteMany({
+						where: { token, identifier: grant.identifier, expires: { gt: now } },
+					})
+					if (consumed.count !== 1) return null
+
+					const id = grant.identifier.slice(prefix.length)
+					if (!id) return null
+					return transaction.user.findUnique({
+						where: { id },
+						select: { id: true, email: true, name: true, image: true, role: true, platformRole: true },
+					})
+				})
+				if (!user) return null
+				return { ...user, platformRole: user.platformRole || undefined }
 			},
 		}),
 	],

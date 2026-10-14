@@ -1,5 +1,5 @@
 import type { CapacitorConfig } from "@capacitor/cli"
-
+const appEntryUrl = "https://nuravahubstores.com/"
 const config: CapacitorConfig = {
 	appId: "com.nurava.hubstores",
 	appName: "Nurava HubStores",
@@ -11,6 +11,7 @@ const config: CapacitorConfig = {
 	server: {
 		url: "https://nuravahubstores.com",
 		cleartext: false,
+		errorPath: `offline.html?url=${encodeURIComponent(appEntryUrl)}`,
 	},
 	plugins: {
 		App: {
