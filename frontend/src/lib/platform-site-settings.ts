@@ -93,9 +93,11 @@ export type PlatformSiteSettings = {
 		showContactCards?: boolean
 	}
 	splash?: {
+		enabled?: boolean
 		showProgress?: boolean
 		welcomeText?: string
 		loadingText?: string
+		logo?: string
 		images?: PlatformResponsiveAssets
 	}
 	hero?: {
@@ -143,6 +145,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showContactCards: clientConfig.features.showContactCards,
 		},
 		splash: {
+			enabled: true,
 			showProgress: true,
 			welcomeText: "Welcome to",
 			loadingText: "Preparing your store",

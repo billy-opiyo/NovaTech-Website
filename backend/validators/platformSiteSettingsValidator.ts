@@ -108,9 +108,11 @@ export const platformSiteSettingsPatchSchema = z.object({
 		showContactCards: z.boolean().optional(),
 	}).strict().optional(),
 	splash: z.object({
+		enabled: z.boolean().optional(),
 		showProgress: z.boolean().optional(),
 		welcomeText: optionalText(120),
 		loadingText: optionalText(120),
+		logo: optionalHttpsOrPath.optional(),
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),
 	hero: z.object({

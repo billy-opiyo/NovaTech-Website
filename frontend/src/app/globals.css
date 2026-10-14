@@ -417,6 +417,15 @@ body.splash-pending {
   isolation: isolate;
 }
 
+.splash-logo-icon {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  margin: 1.25rem auto 0;
+  border-radius: 30%;
+  object-fit: contain;
+}
+
 @media (min-width: 768px) {
   .splash-screen {
     background-image:
@@ -490,6 +499,16 @@ html:not(.dark) .splash-screen {
   .splash-wordmark {
     top: 25%;
     margin: 0;
+  }
+
+  .splash-logo-icon {
+    position: absolute;
+    top: 39%;
+    left: 50%;
+    width: 4rem;
+    height: 4rem;
+    margin: 0;
+    transform: translateX(-50%);
   }
 
   .splash-loading {

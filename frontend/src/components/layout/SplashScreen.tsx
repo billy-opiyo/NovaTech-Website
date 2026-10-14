@@ -14,6 +14,8 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const store = useStoreContext()
 	const splashSettings = platformHome ? store.platformSettings?.splash : undefined
 	const splashName = store.platformSettings?.brand?.name || clientConfig.brand.name
+	const fallbackSplashLogo = "/images/Nurava_HubStores_splash_logo.webp"
+	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
 	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
 	const splashImages = splashSettings?.images || {}
@@ -35,7 +37,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	// the platform homepage (especially OAuth). The user is already returning
 	// to the page they started from, so do not replay the platform splash.
 	const isLoginReturn = searchParams.get("login") === "success"
-	const shouldShowSplash = clientConfig.features.showSplashScreen && isInitialPlatformHomepage && !isLoginReturn
+	const shouldShowSplash = (splashSettings?.enabled ?? clientConfig.features.showSplashScreen) && isInitialPlatformHomepage && !isLoginReturn
 	const hasShownSplash = useRef(false)
 	const startTimeRef = useRef<number | null>(null)
 	const [progress, setProgress] = useState(0)
@@ -161,6 +163,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 							</span>
 						))}
 					</h1>
+					<img className="splash-logo-icon" src={splashLogo} alt="" aria-hidden="true" onError={(event) => { const image = event.currentTarget; if (image.dataset.fallbackApplied !== "true") { image.dataset.fallbackApplied = "true"; image.src = fallbackSplashLogo } }} />
 					{showProgress && <div className="splash-loading mt-10 w-full">
 						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-blue-700 dark:text-blue-200">
 							<span>{splashSettings?.loadingText || "Preparing your store"}</span>
