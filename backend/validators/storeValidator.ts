@@ -7,6 +7,7 @@ export const storeOnboardingSchema = z.object({
 	currency: z.string().trim().length(3).default("KES"),
 	timezone: z.string().trim().min(3).max(80).default("Africa/Nairobi"),
 	defaultLocale: z.string().trim().min(2).max(20).default("en-KE"),
+	industrySlug: z.string().trim().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).default("electronics"),
 	planKey: z.string().min(2).max(40).default("STARTER"),
 	acceptLegalTerms: z.literal(true),
 })

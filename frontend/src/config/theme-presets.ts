@@ -250,6 +250,7 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	const darkScrollbar = scrollbarColors("dark")
 	return {
 	"--color-primary": hexToRgb(primary),
+	"--color-primary-light": overrides?.colors?.primaryLight || primary,
 	"--color-primary-dark": hexToRgb(primaryDark),
 	"--color-accent": hexToRgb(accent),
 	"--color-bg-light": hexToRgb(color("light", "background")),

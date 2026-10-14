@@ -1,6 +1,7 @@
 import prisma from "../lib/db"
 import type { Prisma } from "@prisma/client"
 import { resolveVariantSelection } from "../lib/product-variant"
+import { normalizeIndustryCustomizations } from "../lib/cake-customizations"
 
 const FREE_SHIPPING_THRESHOLD = 50000
 const DEFAULT_SHIPPING_COST = 500
@@ -21,6 +22,7 @@ function toCartResponse(items: CartItemWithProduct[], commerceSettings?: unknown
 		price: (item.product.discountedPrice ?? item.product.price) + selectedVariant.priceModifier,
 		quantity: item.quantity,
 		variant: item.variant || undefined,
+		customizations: item.customizations && typeof item.customizations === "object" ? item.customizations : undefined,
 		maxStock: selectedVariant.stock ?? item.product.stock,
 		slug: item.product.slug,
 		}
@@ -67,9 +69,12 @@ export async function addCartItem(
 	quantity: number,
 	tenantId: string,
 	variant?: string,
+	customizationsInput?: unknown,
 ) {
 	const product = await prisma.product.findFirst({ where: { id: productId, tenantId }, include: { variants: { where: { tenantId } } } })
 	if (!product) throw new Error("Product not found")
+	const store = await prisma.store.findFirst({ where: { tenantId, ...(product.storeId ? { id: product.storeId } : {}) }, select: { industry: { select: { slug: true } } } })
+	const customizations = normalizeIndustryCustomizations(store?.industry?.slug, customizationsInput)
 	const selectedVariant = resolveVariantSelection(product.variants, variant)
 	if (!selectedVariant.valid) throw new Error("The selected product variant is unavailable")
 	const maxStock = selectedVariant.stock ?? product.stock
@@ -80,17 +85,18 @@ export async function addCartItem(
 		// Serialize the logical cart key until the database uniqueness migration is
 		// applied to existing installations. This prevents concurrent add calls
 		// from both observing an empty cart row.
-		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${tenantId}:${userId}:${productId}:${normalizedVariant || ""}`}))`
-		const existing = await transaction.cartItem.findFirst({
+		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${tenantId}:${userId}:${productId}:${normalizedVariant || ""}:${JSON.stringify(customizations || null)}`}))`
+		const existingItems = await transaction.cartItem.findMany({
 			where: { userId, tenantId, productId, variant: normalizedVariant },
 		})
+		const existing = customizations ? undefined : existingItems.find((item) => item.customizations === null)
 		const nextQuantity = (existing?.quantity || 0) + quantity
 		if (nextQuantity > maxStock) throw new Error("Requested quantity exceeds available stock")
 
 		if (existing) {
 			await transaction.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQuantity } })
 		} else {
-			await transaction.cartItem.create({ data: { userId, tenantId, productId, quantity, variant: normalizedVariant } })
+			await transaction.cartItem.create({ data: { userId, tenantId, productId, quantity, variant: normalizedVariant, ...(customizations ? { customizations } : {}) } })
 		}
 	})
 

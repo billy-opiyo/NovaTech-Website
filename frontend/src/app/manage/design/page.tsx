@@ -2,32 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Loader2, Upload } from "lucide-react"
-import { clientConfig } from "@/config/client.config"
 import { THEME_PRESETS } from "@/config/theme-presets"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
+import { useStoreContext } from "@/lib/store-context"
 
 type Draft = {
 	name?: string
 	logoUrl?: string
 	themePreset?: string
 	seo?: { description?: string }
-	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; aboutTitle?: string; aboutDescription?: string; categoryImages?: Partial<Record<CategorySlot, string>>; legal?: { terms?: string; privacy?: string; cookies?: string } }
+	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; heroImage?: string; heroImageAlt?: string; heroPrimaryLabel?: string; heroSecondaryLabel?: string; featuredTitle?: string; bannerTitle?: string; bannerContent?: string; aboutTitle?: string; aboutDescription?: string; categoryImages?: Record<string, string>; legal?: { terms?: string; privacy?: string; cookies?: string } }
 	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; mapLink?: string; mapEmbedUrl?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
-	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number; categoryAvailability?: Partial<Record<CategorySlot, boolean>> }
+	commerce?: { freeShippingThreshold?: number; defaultShippingCost?: number; categoryAvailability?: Record<string, boolean> }
 }
 type Version = { version: number; publishedAt: string | null; createdAt: string }
 type BusyAction = "saving" | "publishing" | "rollback" | null
 
-const CATEGORY_SLOTS = [
-	{ slug: "phones", label: "Phones" },
-	{ slug: "laptops", label: "Laptops" },
-	{ slug: "tablets", label: "Tablets" },
-	{ slug: "accessories", label: "Accessories" },
-] as const
-type CategorySlot = typeof CATEGORY_SLOTS[number]["slug"]
+type CategorySlot = string
 
 const LOCAL_DRAFT_KEY = "novatech-store-design-draft"
 
@@ -41,6 +35,8 @@ function readLocalDraft(): Draft {
 }
 
 export default function StoreDesignPage() {
+	const store = useStoreContext()
+	const categorySlots = store.homepage.categories.map(({ slug, name }) => ({ slug, label: name }))
 	const [draft, setDraft] = useState<Draft>({})
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
@@ -57,6 +53,15 @@ export default function StoreDesignPage() {
 		() => Object.values(THEME_PRESETS).find((item) => item.id === draft.themePreset) || Object.values(THEME_PRESETS)[0],
 		[draft.themePreset],
 	)
+	const industryPalette = draft.themePreset === store.themePreset ? store.themeOverrides?.colors : undefined
+	const previewPrimary = industryPalette?.primary || preset.primary
+	const previewAccent = industryPalette?.accent || preset.accent
+	const previewBackground = industryPalette?.light?.background || preset.light.background
+	const previewSurface = industryPalette?.light?.surface || preset.light.surface
+	const previewText = industryPalette?.light?.text || preset.light.text
+	const previewMuted = industryPalette?.light?.muted || preset.light.muted
+	const previewBorder = industryPalette?.light?.border || preset.light.border
+	const previewHeroImage = draft.homepage?.heroImage || store.homepage.heroImage
 
 	useEffect(() => {
 		const localDraft = readLocalDraft()
@@ -147,7 +152,7 @@ export default function StoreDesignPage() {
 
 	async function uploadCategoryImage(slot: CategorySlot, file: File | undefined) {
 		if (!file) return
-		const label = CATEGORY_SLOTS.find((item) => item.slug === slot)?.label || slot
+		const label = categorySlots.find((item) => item.slug === slot)?.label || slot
 		setUploadingCategory(slot)
 		setMessage("")
 		setError("")
@@ -217,9 +222,9 @@ export default function StoreDesignPage() {
 		setBusy(null)
 	}
 
-	const heroTitle = draft.homepage?.heroTitle || "Upgrade Your Tech"
-	const heroHighlight = draft.homepage?.heroHighlight || "With Genuine Deals"
-	const heroDescription = draft.homepage?.heroDescription || draft.seo?.description || "A polished storefront for your latest products and offers."
+	const heroTitle = draft.homepage?.heroTitle || store.homepage.heroTitle
+	const heroHighlight = draft.homepage?.heroHighlight || store.homepage.heroHighlight
+	const heroDescription = draft.homepage?.heroDescription || draft.seo?.description || store.homepage.heroDescription
 
 	return (
 		<div className="space-y-6">
@@ -253,14 +258,19 @@ export default function StoreDesignPage() {
 					</div>
 					<label className="block"><span className="text-sm font-medium">Hero title</span><input value={draft.homepage?.heroTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">Hero highlight</span><input value={draft.homepage?.heroHighlight || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroHighlight: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<label className="block"><span className="text-sm font-medium">Hero description</span><textarea value={draft.homepage?.heroDescription || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroDescription: event.target.value } })} className="mt-2 min-h-20 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<label className="block"><span className="text-sm font-medium">Hero image URL</span><input type="url" value={draft.homepage?.heroImage || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroImage: event.target.value } })} placeholder="https://images.unsplash.com/..." className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface"/><span className="mt-1 block text-xs text-gray-500">Choose an image that reflects what this store sells. Leave blank to use the industry’s default artwork.</span></label>
+					<div className="grid gap-3 sm:grid-cols-2"><label className="block"><span className="text-sm font-medium">Hero primary button</span><input value={draft.homepage?.heroPrimaryLabel || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroPrimaryLabel: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label><label className="block"><span className="text-sm font-medium">Hero secondary button</span><input value={draft.homepage?.heroSecondaryLabel || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroSecondaryLabel: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label></div>
+					<label className="block"><span className="text-sm font-medium">Featured section title</span><input value={draft.homepage?.featuredTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, featuredTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
+					<div className="grid gap-3 sm:grid-cols-2"><label className="block"><span className="text-sm font-medium">Promotional banner title</span><input value={draft.homepage?.bannerTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, bannerTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label><label className="block"><span className="text-sm font-medium">Promotional banner content</span><textarea value={draft.homepage?.bannerContent || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, bannerContent: event.target.value } })} className="mt-2 min-h-20 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label></div>
 					<label className="block"><span className="text-sm font-medium">About page title</span><input value={draft.homepage?.aboutTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, aboutTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="About our store" /></label>
 					<label className="block"><span className="text-sm font-medium">About page description</span><textarea rows={4} value={draft.homepage?.aboutDescription || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, aboutDescription: event.target.value } })} className="mt-2 min-h-24 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Tell shoppers what makes your store trusted." /></label>
 					<div className="border-t pt-5">
 						<h2 className="font-semibold">Shop by Category images</h2>
-						<p className="mt-1 text-sm text-gray-500">Choose the four images shown on your storefront homepage. The current images remain as fallbacks until you upload a replacement.</p>
+						<p className="mt-1 text-sm text-gray-500">Choose the images shown for your configured categories. The current images remain as fallbacks until you upload a replacement.</p>
 						<div className="mt-4 grid gap-4 sm:grid-cols-2">
-							{CATEGORY_SLOTS.map(({ slug, label }) => {
-								const fallback = clientConfig.homepage.categories.find((category) => category.slug === slug)?.image || ""
+							{categorySlots.map(({ slug, label }) => {
+								const fallback = store.homepage.categories.find((category) => category.slug === slug)?.image || ""
 								const image = draft.homepage?.categoryImages?.[slug] || fallback
 								const isUploading = uploadingCategory === slug
 								return (
@@ -281,7 +291,7 @@ export default function StoreDesignPage() {
 					<div className="border-t pt-5">
 						<h2 className="font-semibold">Available product categories</h2>
 						<p className="mt-1 text-sm text-gray-500">Turn off categories your store does not currently sell. Disabled categories disappear from the storefront homepage; existing products remain safely stored.</p>
-						<div className="mt-3 grid gap-3 sm:grid-cols-2">{CATEGORY_SLOTS.map(({ slug, label }) => <label key={slug} className="flex items-center gap-3 rounded-lg border p-3 text-sm"><input type="checkbox" checked={draft.commerce?.categoryAvailability?.[slug] !== false} onChange={(event) => updateDraft({ commerce: { ...draft.commerce, categoryAvailability: { ...draft.commerce?.categoryAvailability, [slug]: event.target.checked } } })} /><span>{label}</span></label>)}</div>
+						<div className="mt-3 grid gap-3 sm:grid-cols-2">{categorySlots.map(({ slug, label }) => <label key={slug} className="flex items-center gap-3 rounded-lg border p-3 text-sm"><input type="checkbox" checked={draft.commerce?.categoryAvailability?.[slug] !== false} onChange={(event) => updateDraft({ commerce: { ...draft.commerce, categoryAvailability: { ...draft.commerce?.categoryAvailability, [slug]: event.target.checked } } })} /><span>{label}</span></label>)}</div>
 					</div>
 					<div className="border-t pt-5">
 						<h2 className="font-semibold">Customer-facing legal pages</h2>
@@ -331,9 +341,12 @@ export default function StoreDesignPage() {
 					{versions.length > 0 && <div className="border-t pt-5"><h2 className="font-semibold">Published versions</h2><p className="mt-1 text-sm text-gray-500">Rolling back creates a new version, so the current version remains recoverable.</p><div className="mt-3 space-y-2">{versions.map((item) => <div className="flex items-center justify-between gap-3 rounded-lg border p-3" key={`${item.version}-${item.createdAt}`}><span className="text-sm">Version {item.version} · {item.publishedAt ? new Date(item.publishedAt).toLocaleString() : "unpublished"}</span><button type="button" disabled={busy !== null || localPreview} onClick={() => setRollbackVersion(item.version)} className="inline-flex items-center gap-1 rounded border px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy === "rollback" && <Loader2 size={13} className="animate-spin" aria-hidden="true" />}Restore</button></div>)}</div></div>}
 				</section>
 
-				<section aria-label="Storefront preview" className="overflow-hidden rounded-2xl border shadow-xl" style={{ backgroundColor: preset.light.background, color: preset.light.text, fontFamily: preset.fontBody }}>
-					<div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: preset.light.border, backgroundColor: preset.light.surface }}><span className="font-bold" style={{ fontFamily: preset.fontHeading }}>{draft.name || "Your Store"}</span><span className="text-xs" style={{ color: preset.light.muted }}>Preview only</span></div>
-					<div className="p-6 sm:p-8"><p className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: preset.primary }}>Featured storefront</p><h2 className="mt-3 text-3xl font-extrabold sm:text-4xl" style={{ fontFamily: preset.fontHeading }}>{heroTitle}</h2><p className="mt-1 text-2xl font-bold" style={{ color: preset.accent }}>{heroHighlight}</p><p className="mt-4 text-sm leading-6" style={{ color: preset.light.muted }}>{heroDescription}</p><button type="button" className="mt-6 rounded-lg px-4 py-2 font-semibold text-white" style={{ backgroundColor: preset.primary }}>Shop the collection</button><div className="mt-8 grid grid-cols-2 gap-3"><div className="rounded-xl border p-4" style={{ borderColor: preset.light.border, backgroundColor: preset.light.surface }}><span className="block h-12 rounded-lg" style={{ backgroundColor: preset.primary }} /><span className="mt-3 block text-sm font-semibold">Featured products</span></div><div className="rounded-xl border p-4" style={{ borderColor: preset.light.border, backgroundColor: preset.light.surface }}><span className="block h-12 rounded-lg" style={{ backgroundColor: preset.accent }} /><span className="mt-3 block text-sm font-semibold">Special offers</span></div></div><div className="mt-8 border-t pt-5" style={{ borderColor: preset.light.border }}><p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: preset.light.muted }}>Stay connected</p><div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold"><span className="rounded-full px-3 py-1" style={{ backgroundColor: preset.light.surface }}>Facebook</span><span className="rounded-full px-3 py-1" style={{ backgroundColor: preset.light.surface }}>Instagram</span><span className="rounded-full px-3 py-1" style={{ backgroundColor: preset.light.surface }}>TikTok</span></div></div></div>
+				<section aria-label="Storefront preview" className="overflow-hidden rounded-2xl border shadow-xl" style={{ backgroundColor: previewBackground, color: previewText, fontFamily: preset.fontBody }}>
+					<div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: previewBorder, backgroundColor: previewSurface }}><span className="font-bold" style={{ fontFamily: preset.fontHeading }}>{draft.name || "Your Store"}</span><span className="text-xs" style={{ color: previewMuted }}>Preview only</span></div>
+					<div className="relative isolate overflow-hidden">
+						{previewHeroImage && <><img src={previewHeroImage} alt={draft.homepage?.heroImageAlt || store.homepage.heroImageAlt || ""} className="absolute inset-0 z-0 h-full w-full object-cover"/><div className="absolute inset-0 z-0 bg-black/55" aria-hidden="true"/></>}
+						<div className={`relative z-10 p-6 sm:p-8 ${previewHeroImage ? "bg-black/10 text-white backdrop-blur-[1px]" : ""}`}><p className="text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: previewHeroImage ? "#ffffff" : previewPrimary }}>Featured storefront</p><h2 className="mt-3 text-3xl font-extrabold sm:text-4xl" style={{ fontFamily: preset.fontHeading }}>{heroTitle}</h2><p className="mt-1 text-2xl font-bold" style={{ color: previewHeroImage ? "#ffffff" : previewAccent }}>{heroHighlight}</p><p className="mt-4 text-sm leading-6" style={{ color: previewHeroImage ? "rgb(255 255 255 / 0.9)" : previewMuted }}>{heroDescription}</p><button type="button" className="mt-6 rounded-lg px-4 py-2 font-semibold text-white" style={{ backgroundColor: previewPrimary }}>Shop the collection</button><div className="mt-8 grid grid-cols-2 gap-3"><div className="rounded-xl border p-4 backdrop-blur-md" style={{ borderColor: previewBorder, backgroundColor: previewSurface }}><span className="block h-12 rounded-lg" style={{ backgroundColor: previewPrimary }} /><span className="mt-3 block text-sm font-semibold">Featured products</span></div><div className="rounded-xl border p-4 backdrop-blur-md" style={{ borderColor: previewBorder, backgroundColor: previewSurface }}><span className="block h-12 rounded-lg" style={{ backgroundColor: previewAccent }} /><span className="mt-3 block text-sm font-semibold">Special offers</span></div></div></div>
+					</div>
 				</section>
 			</div>
 		</div>

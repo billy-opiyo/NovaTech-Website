@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import prisma from "backend/lib/db"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { generateTenantFileKey, uploadFile } from "backend/lib/storage"
@@ -7,7 +8,6 @@ import { ImageOptimizationTooLargeError, optimizeProductImage } from "backend/li
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 
-const categorySlots = new Set(["phones", "laptops", "tablets", "accessories"])
 const imageKinds: Record<string, "JPEG" | "PNG" | "WEBP" | "GIF"> = {
 	"image/jpeg": "JPEG",
 	"image/png": "PNG",
@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
 		const file = formData.get("file")
 		const slot = formData.get("slot")
 		if (!(file instanceof File)) return NextResponse.json({ message: "Please choose a category image." }, { status: 400 })
-		if (typeof slot !== "string" || !categorySlots.has(slot)) return NextResponse.json({ message: "Choose a valid category image slot." }, { status: 400 })
+		if (typeof slot !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slot)) return NextResponse.json({ message: "Choose a valid category image slot." }, { status: 400 })
+		const category = await prisma.category.findFirst({ where: { storeId: context.storeId, tenantId: context.tenantId, slug: slot }, select: { id: true } })
+		if (!category) return NextResponse.json({ message: "That category does not belong to this store." }, { status: 404 })
 		const kind = imageKinds[file.type]
 		if (!kind) return NextResponse.json({ message: "Use a JPG, PNG, WEBP, or GIF category image." }, { status: 400 })
 		if (file.size > MAX_IMAGE_UPLOAD_BYTES) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })

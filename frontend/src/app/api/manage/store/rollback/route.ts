@@ -31,7 +31,10 @@ export async function POST(request: Request) {
 		const nextVersion = (latest._max.version || 0) + 1
 		const result = await prisma.$transaction(async (transaction) => {
 			if (!currentAcceptance) await recordMerchantLegalAcceptance({ tenantId: context.tenantId, acceptedById: session.user.id, context: "SELLING", transaction })
-			const store = await transaction.store.update({ where: { id: context.storeId }, data: { name: typeof settings.name === "string" ? settings.name : undefined, themeSettings: settings.themePreset ? { preset: settings.themePreset } : undefined, seoSettings: jsonSetting(settings.seo), contactSettings: jsonSetting(settings.contact), homepageSettings: jsonSetting(settings.homepage), commerceSettings: jsonSetting(settings.commerce), draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
+			const currentStore = await transaction.store.findUnique({ where: { id: context.storeId }, select: { themeSettings: true } })
+			const currentTheme = currentStore?.themeSettings && typeof currentStore.themeSettings === "object" && !Array.isArray(currentStore.themeSettings) ? currentStore.themeSettings as Prisma.JsonObject : {}
+			const nextTheme = typeof settings.themePreset === "string" ? { ...(currentTheme.preset === settings.themePreset ? currentTheme : {}), preset: settings.themePreset } : undefined
+			const store = await transaction.store.update({ where: { id: context.storeId }, data: { name: typeof settings.name === "string" ? settings.name : undefined, themeSettings: nextTheme as Prisma.InputJsonObject | undefined, seoSettings: jsonSetting(settings.seo), contactSettings: jsonSetting(settings.contact), homepageSettings: jsonSetting(settings.homepage), commerceSettings: jsonSetting(settings.commerce), draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
 			await transaction.storeSettingsVersion.create({ data: { tenantId: context.tenantId, storeId: context.storeId, version: nextVersion, settings: target.settings == null ? Prisma.JsonNull : target.settings as Prisma.InputJsonValue, publishedAt: new Date(), publishedBy: session.user.id } })
 			return store
 		})

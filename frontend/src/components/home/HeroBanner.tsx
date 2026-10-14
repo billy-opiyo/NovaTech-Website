@@ -9,12 +9,12 @@ import { getStoreRouteHref } from "@/lib/store-home"
 export default function HeroBanner() {
 	const store = useStoreContext()
 	const platformCopy = {
-		title: "Discover Electronics Stores",
+		title: "Discover Independent Stores",
 		highlight: "All in One Place",
-		description: "Explore trusted independent electronics stores, compare their collections, and enter the store that has what you need.",
+		description: "Explore trusted independent stores, compare their collections, and shop from merchants offering the products you need.",
 		primaryLabel: "Browse Stores",
 		primaryHref: "/stores?all=1",
-		secondaryLabel: "Learn About Nurava Tech",
+		secondaryLabel: "Learn About the Platform",
 		secondaryHref: "/about",
 	}
 	const copy = store.isPlatformHome ? platformCopy : {
@@ -27,8 +27,13 @@ export default function HeroBanner() {
 		secondaryHref: store.homepage.heroSecondaryHref,
 	}
 	return (
-		<section className="relative rounded-3xl overflow-hidden glass-card navy-glass p-6 sm:p-8 md:p-16 text-center">
+		<section data-hero-layout={store.themeLayout?.heroLayout || "centered"} className="relative isolate min-h-[24rem] overflow-hidden rounded-3xl glass-card navy-glass p-6 text-center sm:p-8 md:p-16">
+			{!store.isPlatformHome && store.homepage.heroImage && <>
+				<img src={store.homepage.heroImage} alt={store.homepage.heroImageAlt || ""} className="absolute inset-0 z-0 h-full w-full object-cover" fetchPriority="high" />
+				<div className="absolute inset-0 z-0 bg-gradient-to-r from-black/75 via-black/50 to-black/30 backdrop-blur-[1px]" aria-hidden="true" />
+			</>}
 			<motion.div
+				className="relative z-10 mx-auto max-w-4xl rounded-3xl border border-white/20 bg-black/25 p-5 shadow-2xl backdrop-blur-md sm:p-8"
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.8 }}
@@ -37,7 +42,7 @@ export default function HeroBanner() {
 					{copy.title}
 					<span className="block text-primary">{copy.highlight}</span>
 				</h1>
-				<p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+				<p className={`mb-8 mx-auto max-w-2xl text-base sm:text-lg md:text-xl ${!store.isPlatformHome && store.homepage.heroImage ? "text-white/90" : "text-gray-600 dark:text-gray-300"}`}>
 					{copy.description}
 				</p>
 				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">

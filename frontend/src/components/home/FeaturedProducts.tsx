@@ -13,9 +13,9 @@ import type { ProductRecommendation } from "backend/services/recommendation.serv
 export default function FeaturedProducts({ products }: { products: ProductRecommendation[] }) {
 	const store = useStoreContext()
 	return (
-		<section>
+		<section data-product-grid-style={store.themeLayout?.productGridStyle || "cards"}>
 			<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8">
-				<h2 className="text-2xl sm:text-3xl font-bold">Featured Products</h2>
+				<h2 className="text-2xl sm:text-3xl font-bold">{store.homepage.featuredTitle}</h2>
 				<Link
 					href={getStoreRouteHref(store, "/products")}
 					className="text-primary hover:underline flex items-center gap-1"
@@ -23,7 +23,7 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 					View All <ArrowRight size={16} />
 				</Link>
 			</div>
-			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+			<div className={`grid grid-cols-1 gap-6 ${store.themeLayout?.productGridStyle === "editorial" ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
 				{products.length === 0 ? <p className="glass-card p-6 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">No featured products yet. Products marked as featured by the merchant will appear here.</p> : products.map((product, i) => (
 					<motion.div
 						key={product.id}

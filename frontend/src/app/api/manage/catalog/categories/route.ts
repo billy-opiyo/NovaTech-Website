@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
 		const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
 		await requireStorePermission(session.user.id, context.tenantId, "MANAGE_CATALOG")
-		const categories = await prisma.category.findMany({ where: { tenantId: context.tenantId }, select: { id: true, name: true, slug: true }, orderBy: { name: "asc" } })
+		const categories = await prisma.category.findMany({ where: { tenantId: context.tenantId, storeId: context.storeId }, select: { id: true, name: true, slug: true }, orderBy: { name: "asc" } })
 		return NextResponse.json({ categories })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Product categories unavailable")
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 		const parsed = categorySchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Enter a category name", issues: parsed.error.flatten() }, { status: 400 })
 		const category = await prisma.category.create({
-			data: { tenantId: context.tenantId, name: parsed.data.name, slug: slugify(parsed.data.name), description: parsed.data.description || null },
+			data: { tenantId: context.tenantId, storeId: context.storeId, name: parsed.data.name, slug: slugify(parsed.data.name), description: parsed.data.description || null },
 			select: { id: true, name: true, slug: true, description: true },
 		})
 		return NextResponse.json({ category }, { status: 201 })

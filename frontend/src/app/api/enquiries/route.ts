@@ -6,6 +6,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { merchantEnquirySchema } from "backend/validators/merchantEnquiryValidator"
 import { resolveVariantSelection } from "backend/lib/product-variant"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { normalizeIndustryCustomizations } from "backend/lib/cake-customizations"
 
 export async function POST(request: NextRequest) {
 	const limited = await rateLimiter(request, "merchant-enquiry")
@@ -15,6 +16,8 @@ export async function POST(request: NextRequest) {
 		if (!parsed.success) return NextResponse.json({ message: "Enter your contact details, accept the enquiry consent, and select at least one product.", issues: parsed.error.flatten() }, { status: 400 })
 		const context = await resolveTenantFromRequest(request)
 		const session = await auth()
+		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { industry: { select: { slug: true } } } })
+		if (!store) return NextResponse.json({ message: "Store unavailable" }, { status: 404 })
 		const products = await prisma.product.findMany({
 			where: { tenantId: context.tenantId, id: { in: parsed.data.items.map((item) => item.productId) } },
 			select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true, variants: { where: { tenantId: context.tenantId }, select: { name: true, value: true, priceModifier: true, stock: true } } },
@@ -30,7 +33,8 @@ export async function POST(request: NextRequest) {
 		if (resolvedItems.some(({ item, selectedVariant }) => selectedVariant.stock !== null && item.quantity > selectedVariant.stock)) return NextResponse.json({ message: "One or more selected product variants do not have enough stock." }, { status: 409 })
 		const items = resolvedItems.map(({ item, product, selectedVariant }) => {
 			const unitPrice = (product.discountedPrice ?? product.price) + selectedVariant.priceModifier
-			return { productId: product.id, name: product.name, slug: product.slug, sku: product.sku, quantity: item.quantity, variant: item.variant || null, unitPrice, lineTotal: unitPrice * item.quantity }
+			const customizations = normalizeIndustryCustomizations(store.industry?.slug, item.customizations)
+			return { productId: product.id, name: product.name, slug: product.slug, sku: product.sku, quantity: item.quantity, variant: item.variant || null, ...(customizations ? { customizations } : {}), unitPrice, lineTotal: unitPrice * item.quantity }
 		})
 		const estimatedTotal = items.reduce((total, item) => total + item.lineTotal, 0)
 		const enquiry = await prisma.merchantEnquiry.create({

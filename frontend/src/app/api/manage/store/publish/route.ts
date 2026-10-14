@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 		const body = await request.json().catch(() => ({})) as { acceptLegalTerms?: boolean }
 		const context = await resolveTenantFromRequest({ headers: await headers() }, { allowUnpublished: true })
 		await requireStorePermission(session.user.id, context.tenantId, "PUBLISH_STORE")
-		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true, tenant: { select: { verificationStatus: true } } } })
+		const store = await prisma.store.findFirst({ where: { id: context.storeId, tenantId: context.tenantId }, select: { id: true, tenantId: true, draftSettings: true, themeSettings: true, tenant: { select: { verificationStatus: true } } } })
 		if (!store) return withRequestId(NextResponse.json({ message: "Store not found" }, { status: 404 }), requestId)
 		const readiness = await getLaunchReadiness(context.tenantId, context.storeId, { legalAcceptanceOverride: body.acceptLegalTerms === true })
 		if (!readiness.ready) return withRequestId(NextResponse.json({ message: "Complete the launch readiness checks before publishing.", code: "LAUNCH_READINESS_INCOMPLETE", checks: readiness.checks, requestId }, { status: 409 }), requestId)
@@ -33,11 +33,13 @@ export async function POST(request: Request) {
 		if (!currentAcceptance && body.acceptLegalTerms !== true) return NextResponse.json({ message: "Confirm the current merchant terms, privacy notice, and merchant responsibilities before publishing.", code: "MERCHANT_LEGAL_ACCEPTANCE_REQUIRED" }, { status: 409 })
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })
 		const draft = store.draftSettings as Prisma.JsonObject
+		const currentTheme = store.themeSettings && typeof store.themeSettings === "object" && !Array.isArray(store.themeSettings) ? store.themeSettings as Prisma.JsonObject : {}
+		const nextTheme = typeof draft.themePreset === "string" ? { ...(currentTheme.preset === draft.themePreset ? currentTheme : {}), preset: draft.themePreset } : undefined
 		const latest = await prisma.storeSettingsVersion.findFirst({ where: { storeId: store.id, tenantId: store.tenantId }, orderBy: { version: "desc" }, select: { version: true } })
 		const nextVersion = (latest?.version || 0) + 1
 		const updated = await prisma.$transaction(async (transaction) => {
 			if (!currentAcceptance) await recordMerchantLegalAcceptance({ tenantId: context.tenantId, acceptedById: session.user.id, context: "SELLING", transaction })
-			const result = await transaction.store.update({ where: { id: store.id }, data: { name: typeof draft.name === "string" ? draft.name : undefined, logoUrl: typeof draft.logoUrl === "string" && draft.logoUrl ? draft.logoUrl : null, themeSettings: draft.themePreset ? { preset: draft.themePreset } : undefined, seoSettings: jsonSetting(draft.seo), contactSettings: jsonSetting(draft.contact), homepageSettings: jsonSetting(draft.homepage), commerceSettings: jsonSetting(draft.commerce), draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
+			const result = await transaction.store.update({ where: { id: store.id }, data: { name: typeof draft.name === "string" ? draft.name : undefined, logoUrl: typeof draft.logoUrl === "string" && draft.logoUrl ? draft.logoUrl : null, themeSettings: nextTheme as Prisma.InputJsonObject | undefined, seoSettings: jsonSetting(draft.seo), contactSettings: jsonSetting(draft.contact), homepageSettings: jsonSetting(draft.homepage), commerceSettings: jsonSetting(draft.commerce), draftSettings: Prisma.DbNull, publicationStatus: "PUBLISHED", publishedAt: new Date() }, select: { id: true, name: true, slug: true, publicationStatus: true, publishedAt: true } })
 			await transaction.storeSettingsVersion.create({ data: { tenantId: store.tenantId, storeId: store.id, version: nextVersion, settings: draft, publishedAt: new Date(), publishedBy: session.user.id } })
 			return result
 		})

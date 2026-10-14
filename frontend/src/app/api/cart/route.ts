@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ message: "productId and integer quantity are required" }, { status: 400 })
 		}
 		const context = await resolveTenantFromRequest(req)
-		return NextResponse.json(await cartService.addCartItem(userId, body.productId, quantity, context.tenantId, body.variant), { status: 201 })
+		return NextResponse.json(await cartService.addCartItem(userId, body.productId, quantity, context.tenantId, body.variant, body.customizations), { status: 201 })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to update cart")
 	}
