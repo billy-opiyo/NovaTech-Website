@@ -13,14 +13,14 @@ type DemoProductSeed = {
 	price: number
 	stock: number
 	image: string
-	attributes?: Record<string, string | number | boolean>
+	attributes?: Record<string, string | number | boolean | string[]>
 	variants?: Array<{ name: string; value: string; priceModifier: number; stock: number; sku: string }>
 }
 
 async function seedIndustryDemoStore(input: {
 	adminUserId: string
 	planId: string
-	industrySlug: "furniture" | "cakes"
+	industrySlug: "furniture" | "cakes" | "boutiques"
 	storeName: string
 	storeSlug: string
 	tenantId: string
@@ -403,7 +403,20 @@ async function main() {
 			{ name: "Little Joy Cupcake Box", slug: "little-joy-cupcake-box", sku: "DEMO-CAKE-CUP-01", categorySlug: "cupcakes", description: "A gift-ready box of soft vanilla and cocoa cupcakes topped with our signature buttercream. Add a note for the baker when you order.", price: 1800, stock: 24, image: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?auto=format&fit=crop&w=1200&q=85", attributes: { flavor: "Vanilla", weight: 0.6, layers: 1 }, variants: [{ name: "Servings", value: "6 cupcakes", priceModifier: 0, stock: 12, sku: "DEMO-CAKE-CUP-06" }, { name: "Servings", value: "12 cupcakes", priceModifier: 1500, stock: 8, sku: "DEMO-CAKE-CUP-12" }, { name: "Servings", value: "24 cupcakes", priceModifier: 3600, stock: 4, sku: "DEMO-CAKE-CUP-24" }] },
 		],
 	})
-	console.log("✅ Furniture and cake demo stores ready")
+	await seedIndustryDemoStore({
+		adminUserId: admin.id,
+		planId: trialPlan.id,
+		industrySlug: "boutiques",
+		storeName: "Nurava Boutiques",
+		storeSlug: "nurava-boutiques",
+		tenantId: "demo-boutiques-tenant",
+		storeId: "demo-boutiques-store",
+		products: [
+			{ name: "Everyday Linen Shirt", slug: "everyday-linen-shirt", sku: "DEMO-BOUTIQUE-SHIRT-01", categorySlug: "mens-clothing", description: "An easy-fitting linen blend shirt with a clean silhouette for workdays and weekends. Available in a considered range of sizes and colours.", price: 3200, stock: 15, image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Men", clothing_size: ["S", "M", "L", "XL"], color: ["White", "Blue", "Beige"], material: "Linen blend" }, variants: [{ name: "Size", value: "S", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SHIRT-S" }, { name: "Size", value: "M", priceModifier: 0, stock: 5, sku: "DEMO-BOUTIQUE-SHIRT-M" }, { name: "Size", value: "L", priceModifier: 0, stock: 4, sku: "DEMO-BOUTIQUE-SHIRT-L" }, { name: "Size", value: "XL", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SHIRT-XL" }] },
+			{ name: "City Walk Sneakers", slug: "city-walk-sneakers", sku: "DEMO-BOUTIQUE-SNEAKER-01", categorySlug: "womens-shoes", description: "Versatile everyday sneakers with a cushioned sole and a clean finish, ready for long city days and casual outings.", price: 5800, stock: 13, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=85", attributes: { audience: "Women", shoe_size: ["37", "38", "39", "40", "41"], color: ["White", "Red"], material: "Synthetic leather" }, variants: [{ name: "EU Size", value: "37", priceModifier: 0, stock: 2, sku: "DEMO-BOUTIQUE-SNEAKER-37" }, { name: "EU Size", value: "38", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SNEAKER-38" }, { name: "EU Size", value: "39", priceModifier: 0, stock: 4, sku: "DEMO-BOUTIQUE-SNEAKER-39" }, { name: "EU Size", value: "40", priceModifier: 0, stock: 3, sku: "DEMO-BOUTIQUE-SNEAKER-40" }, { name: "EU Size", value: "41", priceModifier: 0, stock: 1, sku: "DEMO-BOUTIQUE-SNEAKER-41" }] },
+		],
+	})
+	console.log("✅ Furniture, cake, and boutique demo stores ready")
 
 	await prisma.deliveryRegion.createMany({
 		data: [

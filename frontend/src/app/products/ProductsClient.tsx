@@ -20,7 +20,8 @@ import { getProducts } from "@/services/products"
 import { useStoreContext } from "@/lib/store-context"
 import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
+import { getProductSearchPlaceholder } from "@/lib/industry-copy"
 import ProductActions from "@/components/product/ProductActions"
 
 // Types
@@ -199,7 +200,7 @@ export default function ProductsClient() {
 						/>
 						<input
 							type="text"
-							placeholder='Search products... e.g., "i7 laptop 16GB RAM"'
+							placeholder={getProductSearchPlaceholder(store.industry?.slug)}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 dark:bg-black/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-primary transition"
@@ -649,8 +650,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 				>
 					<div className="product-media relative mb-4 flex h-52 w-full items-center justify-center overflow-hidden rounded-xl">
 					<Image
-						src={getProductImage(product.images[0], product.name)}
+						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
+						onError={fallbackToProductPlaceholder}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>
@@ -744,8 +746,9 @@ function ProductListItem({
 				>
 					<div className="product-media relative flex h-40 w-40 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl">
 					<Image
-						src={getProductImage(product.images[0], product.name)}
+						src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 						alt={product.name}
+						onError={fallbackToProductPlaceholder}
 						fill
 						className="rounded-md object-contain transition-transform duration-500 group-hover:scale-105"
 					/>

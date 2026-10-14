@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Boxes } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 
@@ -37,6 +37,7 @@ export default function CategoryGrid() {
 											: cat.image
 									}
 									alt={cat.name}
+									onError={fallbackToProductPlaceholder}
 									className="block h-auto w-full rounded-xl transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 								</> : <div className="grid aspect-[4/3] place-items-center rounded-xl bg-primary/5 text-primary"><Boxes size={42} aria-hidden="true"/><span className="sr-only">{cat.name}</span></div>}

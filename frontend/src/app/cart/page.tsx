@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
+import { fallbackToProductPlaceholder } from "@/constants/productImages"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import {
@@ -158,6 +159,7 @@ export default function CartPage() {
 										<Image
 											src={item.image}
 											alt={item.name}
+											onError={fallbackToProductPlaceholder}
 											fill
 											className="object-cover"
 										/>
@@ -260,6 +262,7 @@ export default function CartPage() {
 											<Image
 												src={item.image}
 												alt={item.name}
+												onError={fallbackToProductPlaceholder}
 												fill
 												className="object-cover"
 											/>

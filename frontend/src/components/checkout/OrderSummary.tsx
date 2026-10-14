@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { fallbackToProductPlaceholder } from "@/constants/productImages"
 import type { CartItem } from "@/lib/cartContext"
 
 interface OrderSummaryProps {
@@ -23,10 +24,11 @@ export default function OrderSummary({
 				{items.map((item) => (
 					<div key={item.id} className="flex gap-2 text-sm">
 						<div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
-							<Image
-								src={item.image}
-								alt={item.name}
-								fill
+									<Image
+										src={item.image}
+										alt={item.name}
+										onError={fallbackToProductPlaceholder}
+										fill
 								className="object-cover"
 							/>
 						</div>

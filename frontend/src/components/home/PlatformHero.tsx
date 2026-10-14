@@ -39,8 +39,12 @@ const trustItems = [
 function getHeroStores(stores: HeroStore[]): HeroStore[] {
 	if (!stores.length) return []
 
+	const demoOrder = new Map([["nuravatech", 0], ["nurava-furnitures", 1], ["nurava-cakes", 2], ["nurava-boutiques", 3]])
 	return [...stores]
-		.sort((left, right) => Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0))
+		.sort((left, right) => {
+			if (left.isDemo && right.isDemo) return (demoOrder.get(left.slug) ?? 99) - (demoOrder.get(right.slug) ?? 99)
+			return Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0)
+		})
 		.slice(0, 3)
 }
 
