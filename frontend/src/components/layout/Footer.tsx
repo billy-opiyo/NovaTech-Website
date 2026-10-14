@@ -145,6 +145,15 @@ export default function Footer() {
 								</Link>
 							</li>
 						))}
+						<li>
+							<a
+					href="/downloads/nurava-hubstores.apk"
+					download="Nurava-HubStores-Android.apk"
+								className="font-semibold text-primary hover:underline"
+							>
+								Download App
+							</a>
+						</li>
 					</ul>
 				</div>
 
