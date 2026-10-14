@@ -16,7 +16,7 @@ type SystemBarsPlugin = {
 	}): Promise<void>
 }
 
-const SystemBars = registerPlugin<SystemBarsPlugin>("SystemBars")
+const NuravaSystemBars = registerPlugin<SystemBarsPlugin>("NuravaSystemBars")
 
 function readThemeColor() {
 	const styles = getComputedStyle(document.documentElement)
@@ -56,7 +56,7 @@ export default function AndroidSystemBars() {
 		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
 		const root = document.documentElement
 		root.classList.add("android-app")
-		if (!Capacitor.isPluginAvailable("SystemBars")) {
+		if (!Capacitor.isPluginAvailable("NuravaSystemBars")) {
 			return () => root.classList.remove("android-app")
 		}
 		let lastApplied = ""
@@ -68,7 +68,7 @@ export default function AndroidSystemBars() {
 			const key = `${theme.color}:${theme.surface}:${theme.text}:${theme.muted}:${theme.primary}:${theme.glassBackground}:${theme.lightIcons}`
 			if (key === lastApplied) return
 			lastApplied = key
-			void SystemBars.setColors(theme).catch(() => undefined)
+			void NuravaSystemBars.setColors(theme).catch(() => undefined)
 		}
 		const scheduleApply = () => {
 			if (pending) return

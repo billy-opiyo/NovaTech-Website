@@ -176,6 +176,24 @@ test("Android intercepts external target-blank links without changing website be
 	assert.match(provider, /document\.removeEventListener\("click", openExternalTargetBlankLink, true\)/)
 })
 
+test("Android back handler keeps launch URL recovery stable while tracking the current home route", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidBackButtonHandler.tsx", "utf8")
+	assert.match(provider, /const isPlatformHomeRef = useRef\(store\.isPlatformHome\)/)
+	assert.match(provider, /isPlatformHomeRef\.current = store\.isPlatformHome/)
+	assert.match(provider, /if \(isPlatformHomeRef\.current\)/)
+	assert.match(provider, /void App\.getLaunchUrl\(\)\.then\(\(launch\) => \{[\s\S]*?if \(launch\?\.url\) handleAppUrl\(launch\.url\)/)
+	assert.match(provider, /\}, \[\]\)/)
+})
+
+test("Android theme bridge uses a unique Capacitor plugin name", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidSystemBars.tsx", "utf8")
+	const nativePlugin = readFileSync("android/app/src/main/java/com/nurava/hubstores/SystemBarsPlugin.java", "utf8")
+	assert.match(provider, /registerPlugin<SystemBarsPlugin>\("NuravaSystemBars"\)/)
+	assert.match(provider, /Capacitor\.isPluginAvailable\("NuravaSystemBars"\)/)
+	assert.match(provider, /NuravaSystemBars\.setColors\(theme\)/)
+	assert.match(nativePlugin, /@CapacitorPlugin\(name = "NuravaSystemBars"\)/)
+})
+
 test("storefront sign-out always clears its busy state after the request settles", () => {
 	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
 	const storefrontMenu = header.slice(header.indexOf("function StoreAccountMenu"), header.indexOf("function PlatformAccountMenu"))

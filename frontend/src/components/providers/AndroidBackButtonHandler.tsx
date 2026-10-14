@@ -46,6 +46,8 @@ export default function AndroidBackButtonHandler() {
 	const store = useStoreContext()
 	const [showExitDialog, setShowExitDialog] = useState(false)
 	const exitDialogOpen = useRef(false)
+	const isPlatformHomeRef = useRef(store.isPlatformHome)
+	isPlatformHomeRef.current = store.isPlatformHome
 
 	useEffect(() => {
 		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return
@@ -57,7 +59,7 @@ export default function AndroidBackButtonHandler() {
 				return
 			}
 
-			if (store.isPlatformHome) {
+			if (isPlatformHomeRef.current) {
 				exitDialogOpen.current = true
 				setShowExitDialog(true)
 			} else if (canGoBack || window.history.length > 1) window.history.back()
@@ -108,7 +110,7 @@ export default function AndroidBackButtonHandler() {
 			void backButtonListener.then((handle) => handle.remove())
 			void urlOpenListener.then((handle) => handle.remove())
 		}
-	}, [store.isPlatformHome])
+	}, [])
 
 	if (!showExitDialog) return null
 

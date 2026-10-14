@@ -1,15 +1,31 @@
 # Final Audit Report
 
-Date: 2026-10-11
+Date: 2026-10-14
 Repository: NovaTech Website
 Branch: `saas-staging`
 Audit source of truth: [BUG_AUDIT.md](BUG_AUDIT.md)
 
 Status: **Interim — audit remains open; this is not production clearance.**
 
-> Current checkpoint: the checkout is on `saas-staging` at `ed87eee`; the local `origin/saas-staging` ref also points there. The ref has not been fetched during this continuation, so it does not establish whether a newer user push exists. The worktree contains local uncommitted source fixes, tests, APK/update artifacts, and audit-report edits beyond that commit; none have been committed, pushed, or deployed by this run. Use `BUG_AUDIT.md` as the source of truth for individual findings.
+> Current checkpoint: the checkout is on `saas-staging` at `61fd245` (also the currently stored local `origin/saas-staging` ref; no fetch was performed). Local, uncommitted audit work is recorded in `BUG_AUDIT.md`, `FINAL_AUDIT_REPORT.md`, Android/payment source, the staging APK/update manifest, the Windows staging-build verifier, and regression tests. Nothing was committed, pushed, deployed, or applied to `multi-industry-commerce`.
 
-## Current verification checkpoint — 2026-10-11
+## Current verification checkpoint — 2026-10-14
+
+- BUG-101 fixes concurrent phone-transfer payment retries by serializing each tenant/order reservation with a PostgreSQL transaction-scoped advisory lock, then checking/creating the active payment inside the transaction. Its concurrent retry regression test passes.
+- BUG-102 fixes Android listener reinitialization and possible stale cold-start URL replay by keeping the native listener/launch recovery effect stable and reading current platform-home state from a ref.
+- BUG-103 renames the custom native theme bridge to `NuravaSystemBars`, avoiding Capacitor Core's built-in `SystemBars` name collision. The duplicate-registration warning disappeared from production startup and the browser console.
+- BUG-104 fixes Windows staging APK verification when the workspace path contains spaces by preserving quoted `.bat` tool arguments.
+- `npm test` passes 194/194; focused frontend/payment regression tests pass 24/24. `npm run type-check` passes. `npm run lint` passes with 0 errors and 55 existing warnings. The last completed `npm run build` (Cycle 52) passed with 170 routes; the latest rerun is separately recorded below as interrupted during static generation. `npm run android:debug` passes with JDK 21 and the local Android SDK; the local artifact is `android/app/build/outputs/apk/debug/app-debug.apk`.
+- `tests/e2e/android-offline-theme.spec.ts`: PASS, 2/2 Chromium cases using a temporary no-server config; saved theme color validation and retry-to-target recovery pass. This is browser evidence only, not Android WebView verification.
+- `tests/e2e/android-offline-theme.spec.ts` plus `tests/e2e/checkout.spec.ts` against the live staging host: PASS, 4/4 runnable Chromium cases; the provider sandbox case was skipped because `E2E_PAYMENT_PROVIDER` is unset. Catalog and checkout use explicit `/store/nuravatech/...` tenant routes; the unscoped platform `/products` path correctly redirects to the store directory.
+- Live read-only staging health returned HTTP 200 with the application and database both `up`. The deployed update manifest is still version 1.3.13 / versionCode 17.
+- `npm run android:staging:update`: PASS with Temurin Java 21 and Android SDK 36 after fixing Windows argument quoting in `scripts/release-android-staging.mjs`. Local APK version 1.3.17 / versionCode 21 passed `aapt` and `apksigner` checks; its signer matches the prior staging identity, and the packaged and distributable APK hashes match. Artifact: `frontend/public/downloads/nurava-hubstores-staging.apk`.
+- Final full unit suite after APK versioning: PASS, 194/194. Repository type-check and lint pass (0 lint errors, 55 existing warnings). The latest Next build compiled successfully and completed its lint/type phase, then was interrupted during static generation; the last complete Next build is Cycle 52 (170 routes). No success is claimed for the interrupted rerun.
+- Android scrollbar suppression and permission scope are verified in source/build: the WebView and Android-only document class hide scrollbars without changing website scrollbar styling; app permissions are limited to Internet, package installation, and AndroidX internal needs. The native picker handles file inputs; there is no camera, location, or push service requiring broader permissions.
+- No Android device is connected (`adb devices -l` empty). The saved AVD could not launch because of a snapshot-lock access error; a temporary profile exited during graphics initialization on this Intel HD 4000 host. Native splash/system-bar appearance, offline recovery, real OAuth/deep links, file picker/upload, updater installation, and scrollbar rendering have not been verified in an Android runtime. Live Google sign-in/logout, payment settlement/webhooks, R2 upload permissions, and authenticated tenant CRUD also remain open. The last complete local production build used its documented fallback when Neon was unavailable to that process; staging's health endpoint currently reports its database up.
+- Local v21 artifacts have not been committed, pushed, or deployed; the deployed updater remains on v17 until the APK and matching update manifest are published together. No production signing credentials, database writes/migrations, deployment, commit, or push were performed. The later re-audit checklist is in `BUG_AUDIT.md`.
+
+## Prior verification checkpoint — 2026-10-11
 
 - The pushed commit contains the version 1.3.11 / versionCode 15 staging APK and update manifest, Android update/offline/theme changes, shared web changes, and BUG-089's app-only scrollbar fix.
 - A local staging APK rebuild generated version 1.3.13 / versionCode 17 at `frontend/public/downloads/nurava-hubstores-staging.apk` and updated `frontend/public/downloads/nurava-hubstores-update.json`. `:app:assembleDebug` passed with Gradle 8.14.3, Temurin JDK 21, and Android SDK 36. `aapt dump badging` and `apksigner verify` passed; its debug certificate matches version 1.3.12, and the APK/build-copy SHA-256 hashes match. These version 17 files are local, unpushed, and undeployed.
@@ -25,7 +41,7 @@ Status: **Interim — audit remains open; this is not production clearance.**
 - Cycle 43 found and fixed BUG-097: the native launch overlay now uses the last saved web palette, with brand colors as the fallback. Android `assembleDebug` passed; the version 1.3.13/versionCode 17 APK metadata, signature, and copied-artifact hash were verified. The initial Android system splash remains a fixed brand resource, and visual behavior still needs a phone or emulator.
 - Cycle 44 found and fixed BUG-098: external `target="_blank"` HTTP(S) links now open through Capacitor Browser on Android only, preserving web behavior and internal app navigation. Focused tests pass 21/21, targeted ESLint and `git diff --check` pass, and the production build completed with all 169 routes. Physical-device external handoff remains unverified.
 - Repository type-check, lint, production build, unit suite, and local Android staging APK build passed before the push, as recorded in the cycle 31 ledger. The production build used its existing fallback because Neon was unreachable.
-- The current environment cannot reach the Vercel staging host (outbound socket access is denied), so deployment completion, the live update manifest, and staging runtime behavior have not been verified after the push.
+- At the time of Cycle 34, outbound access to the Vercel staging host was blocked; Cycle 53 below records the later live staging checks.
 - Cycle 33 found and fixed BUG-090 at source level: mobile Google ticket redemption now requires an app-held PKCE verifier. Focused tests pass 3/3, full unit tests pass 156/156, type-check and focused lint pass, and the production build generates all 169 routes. The new auth fix is local and is not yet in the pushed commit or staging deployment.
 - Cycle 34 found and fixed BUG-091: Capacitor platform detection in the footer caused the server-rendered app link to disagree with the Android hydration link. Focused regression tests pass 19/19, full unit tests pass 157/157, focused ESLint and type-check pass, and production build generates all 169 routes. The Neon-unreachable store-directory fallback and existing webpack/Node warnings remain.
 - No Android device/emulator is connected. Live Google OAuth/logout, database-backed tenant flows, provider payment callbacks, real R2 uploads, and native offline/update/theme behavior remain unverified.
@@ -35,20 +51,18 @@ Status: **Interim — audit remains open; this is not production clearance.**
 
 The project-wide audit now includes the four merchant-creatable industries: electronics, cakes, furniture, and boutiques. The current transfer adds boutique-specific copy and comparison behavior, onboarding and currency checks, checkout/payment hardening, and order settlement protections. One initial boutique WhatsApp concern was a false positive: the user confirmed the boutique demo should use the same shared number as the other industry demos.
 
-The ledger records findings through BUG-098 and Cycle 44. BUG-050, BUG-052, and BUG-060 remain in progress pending live database/provider verification. BUG-094 fixes storefront sign-out busy-state recovery and passes the full 160-test suite, type-check, and production build; live authenticated logout remains unverified. BUG-095 fixes shopper-controlled Stripe metadata and passes the full 162-test suite, type-check, and production build; live Stripe checkout remains unverified. BUG-096 fixes the catch-all native updater fallback and passes focused tests, the 163-test suite, type-check, focused ESLint, and production build; actual Android installer behavior remains unverified. BUG-097 fixes source-level theme reuse in the native launch overlay, and the version 1.3.13 APK compiles and verifies; initial OS splash tint and on-device rendering remain unverified. Offline fallback theme and retry behavior passed two Chromium test cases, but the Playwright runner did not exit cleanly after its dev server stayed alive; Android WebView behavior remains unverified. App/website footer routes and native file picker were source-reviewed with no defect confirmed; actual device file selection and storage writes remain unverified. Android update recovery and scrollbar changes compile and package locally, but device behavior remains unverified; BUG-080, BUG-087, BUG-092, and BUG-093 are verified at source/test/build level. BUG-090 and BUG-091 are tested and built locally but not deployed. The required two consecutive post-repair full audits are not established. This report must not be read as final sign-off.
+The ledger now records findings through BUG-104 and Cycle 53 verification. BUG-050, BUG-052, and BUG-060 remain in progress pending live provider/database evidence. BUG-101 through BUG-104 pass their recorded source/regression/build checks; live Neon concurrency and Android runtime outcomes remain open. Staging's live health and tenant-scoped browser smoke pass. The local v21 staging APK is built and signature-verified, while staging still advertises v17 because these artifacts have not been published. Android update installation, system-bar/splash rendering, offline recovery, file picker/storage upload, and external-link handoff still need an Android runtime. The required two consecutive clean post-repair full audits are not established. This report must not be read as final sign-off.
 
-This is not a production-readiness certification. The configured Neon database could not be reached during the current production build, so live schema/migration state, current demo-store data, and database-backed tenant behavior remain unverified. No database migration, seed, or database write was run. The user pushed the current `saas-staging` commit; deployment is unverified from this environment. No work was applied to `multi-industry-commerce`.
+This is not a production-readiness certification. The configured Neon database could not be reached during the current production build, so live schema/migration state, current demo-store data, and database-backed tenant behavior remain unverified. No database migration, seed, or database write was run. The checkout and locally stored tracking ref point to `61fd245`; no fetch was performed. The user previously reported pushing the branch, but current deployment is unverified. These continuation changes remain local and uncommitted. No work was applied to `multi-industry-commerce`.
 
 ## Issue totals
 
-| Measure | Count |
-|---|---:|
-| Previously verified findings | 49 |
-| Current-cycle entries | Through BUG-098 (see authoritative ledger) |
-| Source findings awaiting live database/provider evidence | 3 (BUG-050, BUG-052, BUG-060) |
-| Android fixes awaiting physical-device verification | 10 (BUG-081–BUG-086, BUG-088–BUG-089, BUG-097, and BUG-098) |
-| Critical or High findings still in progress | 3 |
-| Consecutive post-repair clean audits for this transfer | 0 |
+| Measure | Current state |
+|---|---|
+| Latest finding / cycle | BUG-104 / Cycle 53 verification (see authoritative ledger) |
+| Database/provider checks awaiting live access | BUG-050, BUG-052, BUG-060 |
+| Android runtime checks | Open for findings marked device-pending in `BUG_AUDIT.md`; no device/emulator is connected |
+| Post-repair full clean-audit count | 0; source issues were found and fixed in this continuation |
 
 ## Repairs verified in this cycle
 
@@ -82,7 +96,7 @@ Earlier verified repairs remain recorded individually in [BUG_AUDIT.md](BUG_AUDI
 | TypeScript source/test explicit-`any` scan | PASS — no explicit annotations found |
 | `npm run type-check` | PASS — frontend TypeScript and backend `tsc` |
 | `npm run build` | PASS — exit 0; Prisma client generated and all 169 routes built (cycle 29) |
-| `npm run test:e2e` | FAIL / INCOMPLETE — catalog flow passed; auth/signup flow failed and targeted rerun timed out during navigation while Neon was unreachable; provider test skipped because `E2E_PAYMENT_PROVIDER` is unset |
+| Live staging browser smoke | PASS — 4 runnable Chromium cases; provider sandbox case skipped because `E2E_PAYMENT_PROVIDER` is unset |
 | `git diff --check` | PASS — no whitespace errors (line-ending notices only) |
 
 ## Cycle 29 continuation — 2026-10-11

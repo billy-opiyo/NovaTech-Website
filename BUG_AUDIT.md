@@ -1,6 +1,6 @@
 # Project Bug Audit
 
-Status: ongoing project-wide audit on saas-staging; latest repair recorded in Cycle 43; see the authoritative status register below
+Status: ongoing project-wide audit on saas-staging; latest verification recorded in Cycle 53; see the authoritative status register below
 Audit started: 2026-10-08; boutique-inclusive transfer audit: 2026-10-09
 Repository: NovaTech Website
 Branch: saas-staging
@@ -617,7 +617,13 @@ This register is the authoritative current status for the findings above. “Ver
 | BUG-095 | Verified | Shopper card initiation no longer accepts caller metadata; trusted Stripe reference, order ID, and client secret are merged last. Full tests/type-check/build pass; live Stripe checkout remains unverified. |
 | BUG-096 | Verified | Native update-download errors now surface in the prompt; the browser APK fallback is used only when the native updater plugin is unavailable. Native installation behavior still needs device verification. |
 | BUG-097 | Verified | The Android launch overlay now uses the last saved background/surface/primary palette with brand fallbacks. JDK 21 Android build passes and a version 1.3.13 APK verifies; physical-device rendering remains untested. |
-| BUG-098 | In Progress | Cross-origin links using `target="_blank"` navigate inside the only Android WebView instead of opening the external destination separately. |
+| BUG-098 | Verified | Android-only handling opens cross-origin HTTP(S) `_blank` links through Capacitor Browser; website and same-origin navigation are preserved. Regression test and production build pass; physical handoff remains unverified. |
+| BUG-099 | Verified | Validated app origin is persisted with the pending APK and used during receiver/resume/installer validation. Regression test and staging APK build pass; DownloadManager/installer runtime remains unverified on a device. |
+| BUG-100 | Verified | Update offers now require a positive native installed-signer compatibility check; regression, type-check, and lint pass. The published staging APK lacks this method, so it must be manually upgraded before in-app prompting works after deployment. |
+| BUG-101 | Verified | Tenant/order advisory transaction lock prevents duplicate concurrent manual phone-transfer reservations; regression, type-check, lint, and production build pass. Live Neon concurrency remains unverified. |
+| BUG-102 | Verified | Stable native listener effect reads the latest platform-home state through a ref and does not replay launch URL recovery on route changes; regression, type-check, lint, and production build pass. Physical-device back/deep-link behavior remains unverified. |
+| BUG-103 | Verified | Renamed the app-owned Android theme bridge to `NuravaSystemBars`, avoiding Capacitor Core's built-in `SystemBars`; full tests, type-check, lint, Android debug assembly, production build, and browser console check pass. Physical Android palette application remains unverified. |
+| BUG-104 | Verified | Windows staging APK verification now quotes arguments to `.bat` SDK tools, preserving APK paths that contain spaces; the staged APK build, signer check, metadata check, and hash comparison pass. |
 
 #### BUG-066 — Product cards expose electronics-only specification text in every industry
 
@@ -1569,3 +1575,85 @@ The current `saas-staging` sources were traced across the Android shell, Next.js
 - Added direct regression cases for missing native capability and negative compatibility results, and updated the frontend source guard. The production feed remains disabled; staging/production manifests and APK artifacts were not changed.
 - `npm test`: PASS, 183/183. `npm run type-check`: PASS. Focused ESLint: PASS. `git diff --check`: PASS with existing generated-file line-ending notices. The previously completed staging debug build compiled the native verifier; this cycle changed only frontend/test/documentation code, so no APK rebuild was needed.
 - No device is connected and the deployed staging site/feed could not be reached. Legacy version 17 in-app update behavior after deployment, native DownloadManager/install flows, and the trusted manual transition remain unverified. No deployment or artifact publishing was performed.
+
+### BUG-101 — Concurrent manual M-Pesa checkout requests can create duplicate pending payments
+
+- **Files:** `backend/payments/manual-shopper.ts`, `frontend/src/app/api/payments/mpesa/initiate/route.ts`
+- **Description:** Phone-transfer checkout checks for an existing pending/processing payment and then creates a new payment without a transaction or per-order lock. Concurrent retries for the same idempotent order can both pass the lookup and create separate active payment records, leaving multiple receipts for one order.
+- **Root cause:** Payment existence check and creation are separate, uncoordinated database operations.
+- **Fix:** Serialize reservation by tenant and order using a PostgreSQL transaction-scoped advisory lock, then re-read the order and active payment inside that transaction before creating a payment.
+- **Severity:** Medium
+- **Status:** Verified at source, regression-test, type-check, lint, and production-build level. Live Neon concurrency behavior remains unverified.
+
+### Cycle 47 — Manual phone-transfer payment audit — 2026-10-14
+
+- Recorded BUG-101 before modifying payment code. The API's order ownership check protects who can initiate or submit a receipt, but simultaneous retries remain able to create duplicate pending payment rows.
+- Fixed the race by taking a PostgreSQL transaction-scoped advisory lock keyed by tenant and order, and moving the payable-order check, active-payment lookup, and reservation into the same transaction.
+- Added a concurrent-retry regression test; focused service/payment tests pass 23/23. Full repository suite passed 192/192 in this continuation. Type-check and targeted ESLint pass. The production build result is recorded in Cycle 49.
+- The lock is source-verified and simulated in tests; Neon was unreachable, so actual concurrent database behavior remains unverified.
+
+### BUG-102 — Android route changes can replay a stale cold-start deep link
+
+- **File:** `frontend/src/components/providers/AndroidBackButtonHandler.tsx`
+- **Description:** The native listener effect depends on `store.isPlatformHome`, and every effect setup calls `App.getLaunchUrl()`. Capacitor retains the initial launch URL, so changing from platform home to another route can re-read that old URL and replace the current route with the original deep-link destination.
+- **Root cause:** The listener effect is coupled to route state even though it also performs one-time launch URL recovery.
+- **Fix:** Keep the native listeners and cold-start URL recovery stable for the component lifetime while reading the latest home state through a ref.
+- **Severity:** Medium
+- **Status:** Verified at source, regression-test, type-check, lint, and production-build level. Physical-device back/deep-link behavior remains unverified.
+
+### Cycle 48 — Android deep-link listener lifecycle — 2026-10-14
+
+- Recorded BUG-102 before repair. `getLaunchUrl()` is currently called again whenever the platform-home boolean changes, while the runtime retains that initial URL.
+- Moved current platform-home state into a ref; native listeners and one-time `getLaunchUrl()` recovery now use a stable effect with no route-state dependency. Added a regression test for stable setup and the latest home-state ref.
+- Focused service tests pass 23/23; type-check and targeted ESLint pass. Physical Android back-button and deep-link behavior remains unverified because no device/emulator is connected.
+
+### Cycle 49 — Completion checks and gap register — 2026-10-14
+
+- Recorded complete validation for BUG-101 and BUG-102 after the fixes, plus repository build, lint, and whitespace-check outcomes.
+- `npm test`: PASS, 192/192. Focused frontend/manual-payment regressions: PASS, 23/23. `npm run type-check`: PASS. `npm run lint`: PASS, 0 errors and 55 warnings. `npm run build`: PASS; Next.js generated all 170 routes. The existing store-directory fallback handled Neon being unreachable.
+- `npm run android:debug`: PASS with the verified workspace JDK 21 and installed Android SDK; Gradle `assembleDebug` completed. Local debug APK: `android/app/build/outputs/apk/debug/app-debug.apk` (5,045,983 bytes). No APK was installed, signed for release, uploaded, or published.
+- `git diff --check`: PASS; Git printed only pre-existing LF-to-CRLF notices for generated Capacitor Gradle files. No generated changes appeared in `git status`.
+- Current environment blockers: no Android device/emulator is attached; staging Vercel and Neon were unreachable. Live Google OAuth/logout, provider callbacks/settlement, R2 upload, published update feed/install, and Android WebView rendering therefore remain open for a later device/staging re-audit.
+- The source audit found no authorization to add feature permissions for camera, location, or push. These integrations are not implemented; Android file selection remains through the WebView native file chooser.
+
+### Cycle 50 — Audit register reconciliation — 2026-10-14
+
+- A consistency review found the authoritative status table still labeled BUG-098 `In Progress` and ended at BUG-098, while later cycle notes had verified BUG-098 and recorded BUG-099 through BUG-102.
+- Updated the table to reflect the verified status and evidence limits for BUG-098 through BUG-102. No application source changes were made in this reconciliation, and this documentation-only pass does not count as either of the required independent full audits.
+- Ran `tests/e2e/android-offline-theme.spec.ts` with a temporary Playwright config that skips the unused Next dev server: PASS, 2/2 Chromium cases. Saved-theme validation and mocked recovery to the originally requested URL pass, and the runner exits cleanly. This does not verify Android WebView behavior on a phone.
+
+### Cycle 51 — Shared auth, checkout, and navigation browser smoke — 2026-10-14
+
+- Ran `tests/e2e/checkout.spec.ts` against a local Next dev server. Catalog search and unauthenticated checkout passed. The protected admin/manage redirects, signup consent validation, and platform mobile-menu case failed once at the consent-message assertion on the initial cold run, then passed in an isolated rerun and two consecutive repeat runs (3/3 reruns). The consent validation string and state guard are present in `frontend/src/app/auth/signup/page.tsx`; no reproducible application defect was established, so no speculative source change was made.
+- The payment-provider E2E case was skipped because `E2E_PAYMENT_PROVIDER` is unset. Neon remained unreachable and the local server used the existing platform-settings fallback; these browser checks do not verify authenticated database flows or real payment providers.
+- The Next development console emitted `Capacitor plugin "SystemBars" already registered` during page transitions/HMR. Source search finds one `registerPlugin("SystemBars")` call site. Whether this dev-only warning occurs in the packaged runtime was not verified, so it is retained as a device/build follow-up rather than a confirmed bug.
+- The `npm start` follow-up could not start because Next dev had replaced the `.next` production output; no source was changed by that failed check. The earlier clean `npm run build` result remains the build evidence.
+
+### BUG-103 — Custom Android theme bridge conflicts with Capacitor's built-in SystemBars plugin
+
+- **Files:** `frontend/src/components/providers/AndroidSystemBars.tsx`, `android/app/src/main/java/com/nurava/hubstores/SystemBarsPlugin.java`
+- **Description:** The frontend custom plugin calls `registerPlugin("SystemBars")`, while Capacitor Core 8.5.3 itself registers a plugin with that name. The production server emitted Capacitor's duplicate-registration warning. This can cause the custom `setColors` API to resolve through the built-in plugin proxy instead of a clearly identified app-owned bridge.
+- **Root cause:** The app-owned system-bar plugin reused a name reserved by Capacitor Core.
+- **Recommended fix:** Rename the custom native/frontend bridge to an app-specific plugin name and verify the native method header, bridge availability check, system-bar color call, and website-safe behavior.
+- **Severity:** Medium
+- **Status:** In Progress — collision confirmed from the installed Capacitor Core source and runtime warning; unique-name repair and validation pending.
+
+### Cycle 52 — Native theme bridge name collision — 2026-10-14
+
+- Recorded BUG-103 before editing. `@capacitor/core` registers its own `SystemBars`, and the app provider/native annotation reused the same name. The production process emitted the duplicate-registration warning.
+- Renamed the Java `@CapacitorPlugin` annotation and frontend registration/availability check/call to `NuravaSystemBars`; added a source regression guard for the shared name contract.
+- Focused tests pass 24/24, repository type-check passes, and focused ESLint passes. `npm run android:debug` succeeds with JDK 21 and the installed SDK; `npm run build` generates all 170 routes. Local production `checkout.spec.ts` passes 2/2 with the payment sandbox case skipped. A browser console probe reports zero duplicate-registration warnings, and production server startup no longer emits the duplicate plugin warning.
+- `npm test`: PASS, 194/194 after the unique-name change. Full lint is covered by `npm run build` with zero errors and the repository's existing warnings.
+- Neon remains unreachable during static directory generation, and the local production server reports Auth.js `UntrustedHost` only when probed via `localhost`; the E2E run uses `127.0.0.1` and passes. No Android device is attached, so actual palette application in the WebView remains unverified.
+
+### Cycle 53 — Staging browser verification and Android update artifact — 2026-10-14
+
+- The first staging catalog smoke used the unscoped platform URL `/products`, which correctly redirects to `/stores?all=1` on the shared platform host. Updated the smoke to use the tenant-scoped `/store/nuravatech/products` and `/store/nuravatech/checkout` routes. The live tenant-scoped catalog/search/checkout flow passes; this was a test-route correction, not a staging application defect.
+- Updated the signup smoke selectors to target visible form inputs after staging rendered duplicate matching placeholders in its auth-gated signup state. The complete staging browser suite passes 4/4 runnable Chromium cases; the payment-provider case is skipped because `E2E_PAYMENT_PROVIDER` is unset. No account was created and the consent box remained unchecked.
+- Live read-only staging health returned HTTP 200 with application and database both `up` at 2026-10-14 11:21 UTC. The deployed update manifest is still version 1.3.13 / versionCode 17.
+- Fixed the Windows staging APK verifier to quote batch-tool arguments so APK paths beneath workspaces containing spaces are preserved. `npm run android:staging:update` then passed with Temurin Java 21 and Android SDK 36, producing local staging APK version 1.3.17 / versionCode 21. `aapt` metadata and `apksigner` verification passed; the signer matches the prior staging identity, and the built APK and distributable copy have identical SHA-256 hashes.
+- Recorded BUG-104: the staging verifier previously passed an unquoted APK path to Windows `.bat` tools, causing a false signature-verification failure when the workspace path contained spaces. After quoting the arguments, the complete staging APK build ran successfully.
+- Local APK: `frontend/public/downloads/nurava-hubstores-staging.apk`. The staging APK/update manifest and Android version are local only; they have not been committed, pushed, or deployed. The remote in-app updater will continue advertising v17 until the APK and matching update manifest are published together.
+- BUG-089's Android-only scrollbar suppression and permission review remain source/build verified: native WebView scrollbars are disabled and CSS suppression is Android-gated; website scrollbar styling is unchanged. The app has Internet and install-package permissions. Standard file chooser support does not require broad storage permission; camera, location, and push permissions were not added because those native features/services are absent. Physical-device visuals, file picker, notification capability, and APK installation remain unverified.
+- The locally configured AVD could not boot in this host: the saved profile failed on an inaccessible snapshot lock, and a temporary profile exited during graphics initialization (Intel HD 4000/Vulkan unavailable). No emulator remained attached. The latest Next build compiled and completed lint/type validation, but the user interrupted it during static generation; the prior Cycle 52 production build remains the last complete Next build result (170 routes).
+- This cycle did not run payment-provider mutations, database writes, authentication with real credentials, or device tests. BUG-050, BUG-052, and BUG-060 still need live provider/database evidence; the two-consecutive-clean-full-audit requirement remains unmet.

@@ -32,15 +32,20 @@ test("each exact HTTPS site origin selects only its own update manifest and APK 
 
 test("staging manifest matches package, version, pinned signer, and staging download path", () => {
 	const manifest = readManifest("nurava-hubstores-update-staging.json")
-	const validated = validateAndroidUpdateManifest(manifest, "staging", 17)
+	const androidGradle = readFileSync(path.join(projectRoot, "android", "app", "build.gradle"), "utf8")
+	const versionCode = Number(/^\s*versionCode\s+(\d+)\s*$/m.exec(androidGradle)?.[1])
+	const versionName = /^\s*versionName\s+"([^"]+)"\s*$/m.exec(androidGradle)?.[1]
+	assert.ok(Number.isSafeInteger(versionCode) && versionCode > 0)
+	assert.ok(versionName)
+	const validated = validateAndroidUpdateManifest(manifest, "staging", versionCode - 1)
 	assert.ok(validated)
 	assert.equal(validated.applicationId, "com.nurava.hubstores")
-	assert.equal(validated.versionCode, 20)
-	assert.equal(validated.versionName, "1.3.16")
+	assert.equal(validated.versionCode, versionCode)
+	assert.equal(validated.versionName, versionName)
 	assert.equal(validated.signingCertificateSha256, CURRENT_STAGING_CERTIFICATE_SHA256)
 	assert.equal(new URL(validated.apkUrl, ANDROID_UPDATE_CHANNELS.staging.origin).pathname, ANDROID_UPDATE_CHANNELS.staging.apkPath)
-	assert.equal(validateAndroidUpdateManifest(manifest, "staging", 19)?.versionCode, 20)
-	assert.equal(validateAndroidUpdateManifest(manifest, "staging", 20), null)
+	assert.equal(validateAndroidUpdateManifest(manifest, "staging", versionCode - 1)?.versionCode, versionCode)
+	assert.equal(validateAndroidUpdateManifest(manifest, "staging", versionCode), null)
 })
 
 test("production update feed stays disabled and never names a staging artifact", () => {
