@@ -27,6 +27,7 @@ export type PlatformDesignSettings = {
 	themePreset?: string
 	colors?: {
 		primary?: string
+		primaryLight?: string
 		primaryDark?: string
 		accent?: string
 		light?: Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
@@ -35,6 +36,7 @@ export type PlatformDesignSettings = {
 	typography?: {
 		bodyFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
 		headingFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
+		fontSize?: "small" | "normal" | "large" | "extraLarge"
 	}
 	glass?: {
 		blurPx?: number
@@ -153,7 +155,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 				lightMobile: "/images/NovaTech cover mobile light.png",
 			},
 		},
-		design: { themePreset: "nova-blue-orange" },
+		design: { themePreset: "nova-blue-orange", typography: { fontSize: "normal" } },
 		legal: {
 			terms: "Nurava Tech provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
 			privacy: "Nurava Tech processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",

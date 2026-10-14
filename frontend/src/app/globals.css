@@ -33,6 +33,7 @@
   }
 
   html {
+	font-size: var(--account-font-size, var(--site-font-size, 100%));
     scroll-behavior: smooth;
     scroll-padding-top: 80px;
     max-width: 100%;
