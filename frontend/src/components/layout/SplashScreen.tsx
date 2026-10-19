@@ -6,8 +6,10 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { clientConfig } from "@/config/client.config"
 import { useStoreContext } from "@/lib/store-context"
 
-const SPLASH_DURATION = 5000
-const POST_LOAD_DELAY = 2000
+const LETTER_STAGGER_DELAY = 240
+const LETTER_ANIMATION_DURATION = 450
+const SPLASH_DURATION = 1200
+const POST_LOAD_DELAY = 250
 export default function SplashScreen({ children, platformHome }: { children: ReactNode; platformHome: boolean }) {
 	const pathname = usePathname()
 	const searchParams = useSearchParams()
@@ -17,9 +19,18 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const fallbackSplashLogo = "/images/Nurava_HubStores_splash_logo.webp"
 	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
-	const splashDuration = showProgress ? SPLASH_DURATION : Math.max(450, (Array.from(splashName).length - 1) * 240 + 450)
+	const wordmarkAnimationDuration = Math.max(LETTER_ANIMATION_DURATION, (Array.from(splashName).length - 1) * LETTER_STAGGER_DELAY + LETTER_ANIMATION_DURATION)
+	const splashDuration = showProgress ? Math.max(SPLASH_DURATION, wordmarkAnimationDuration) : wordmarkAnimationDuration
 	const splashImages = splashSettings?.images || {}
+	const backgroundMode = splashSettings?.backgroundMode || "glass"
+	const centerSplashContent = backgroundMode === "glass"
+		|| (backgroundMode === "color" && splashSettings?.centerContentOnColor !== false)
+	const useBackgroundImages = backgroundMode === "images"
+	const backgroundColor = splashSettings?.backgroundColor
+	const colorChannels = backgroundColor?.match(/[\da-f]{2}/gi)?.map((channel) => Number.parseInt(channel, 16)) || [7, 26, 44]
+	const splashForeground = colorChannels[0] * 0.299 + colorChannels[1] * 0.587 + colorChannels[2] * 0.114 > 150 ? "#0f172a" : "#ffffff"
 	const splashStyle = {
+		...(backgroundColor ? { "--splash-background-color": backgroundColor, "--splash-foreground": splashForeground } : {}),
 		"--splash-dark-desktop": `url("${splashImages.darkDesktop || "/images/NovaTech cover desktop.png"}")`,
 		"--splash-dark-tablet": `url("${splashImages.darkTablet || "/images/NovaTech cover mobile.png"}")`,
 		"--splash-dark-mobile": `url("${splashImages.darkMobile || "/images/NovaTech cover mobile.png"}")`,
@@ -60,6 +71,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 		let frame = 0
 
 		const warmActiveSplashImage = () => {
+			if (!useBackgroundImages) return
 			const isLight = !document.documentElement.classList.contains("dark")
 			const isDesktop = window.matchMedia("(min-width: 1200px)").matches
 			const isTablet = window.matchMedia("(min-width: 768px)").matches
@@ -107,7 +119,7 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 			window.cancelAnimationFrame(frame)
 			if (finishTimer) window.clearTimeout(finishTimer)
 		}
-	}, [shouldShowSplash, splashDuration, splashImages.darkDesktop, splashImages.darkMobile, splashImages.lightDesktop, splashImages.lightMobile])
+	}, [shouldShowSplash, splashDuration, showProgress, useBackgroundImages, splashImages.darkDesktop, splashImages.darkTablet, splashImages.darkMobile, splashImages.lightDesktop, splashImages.lightTablet, splashImages.lightMobile])
 
 	useEffect(() => {
 		// `visible` starts true so the initial platform document can render the
@@ -143,29 +155,41 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	if (!readyToReveal) {
 		return (
 			<div
-				className="splash-screen"
+				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}${centerSplashContent ? " splash-screen--centered-content" : ""}`}
 				style={splashStyle}
 				role="status"
 				aria-live="polite"
 				aria-label={`Loading ${splashName}`}
 			>
 				<div className="splash-content relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-blue-700 dark:text-blue-200">
+					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-primary">
 						{splashSettings?.welcomeText || "Welcome to"}
 					</p>
 					<h1 className="splash-wordmark" aria-label={splashName}>
 						{Array.from(splashName).map((character, index) => (
 							<span
 								key={`${character}-${index}`}
-								style={{ animationDelay: `${index * 240}ms` }}
+								style={{ animationDelay: `${index * LETTER_STAGGER_DELAY}ms` }}
 							>
 								{character === " " ? "\u00a0" : character}
 							</span>
 						))}
 					</h1>
-					<img className="splash-logo-icon" src={splashLogo} alt="" aria-hidden="true" onError={(event) => { const image = event.currentTarget; if (image.dataset.fallbackApplied !== "true") { image.dataset.fallbackApplied = "true"; image.src = fallbackSplashLogo } }} />
+					<img
+						className="splash-logo-icon"
+						src={splashLogo}
+						alt=""
+						aria-hidden="true"
+						onError={(event) => {
+							const image = event.currentTarget
+							if (image.dataset.fallbackApplied !== "true") {
+								image.dataset.fallbackApplied = "true"
+								image.src = fallbackSplashLogo
+							}
+						}}
+					/>
 					{showProgress && <div className="splash-loading mt-10 w-full">
-						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-blue-700 dark:text-blue-200">
+						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
 							<span>{splashSettings?.loadingText || "Preparing your store"}</span>
 							<span className="tabular-nums">
 								{progress}%

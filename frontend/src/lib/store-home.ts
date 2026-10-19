@@ -5,6 +5,12 @@ export function getStoreHomeHref(store: Pick<StoreContext, "isPlatformHome" | "s
 	return store.storePathPrefix || "/"
 }
 
+/** Admin workspaces always link back to a merchant storefront, never platform home. */
+export function getMerchantStoreHomeHref(store: Pick<StoreContext, "isPlatformHome" | "storePathPrefix" | "storeSlug">) {
+	if (store.isPlatformHome) return `/store/${encodeURIComponent(store.storeSlug)}`
+	return store.storePathPrefix || "/"
+}
+
 export function getStoreRouteHref(store: Pick<StoreContext, "isPlatformHome" | "storePathPrefix" | "storeSlug">, href: string) {
 	const normalizedHref = href.startsWith("/") ? href : `/${href}`
 	if (store.isPlatformHome || !store.storePathPrefix) return normalizedHref

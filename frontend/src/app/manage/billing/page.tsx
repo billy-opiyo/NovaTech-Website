@@ -2,21 +2,26 @@
 
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import type { getBillingSnapshot } from "backend/billing/service"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
 
 type Plan = { id: string; key: string; name: string; price: number | null; currency: string; billingInterval: string | null; setupFeeAmount: number; transactionFeePercent: number }
 type Addon = { id: string; key: string; name: string; description?: string | null; price: number; currency: string; billingInterval: string }
-type BillingData = { tenant: any; subscription: any; activeAddons: any[]; pendingAddons?: any[]; billingRecord: any; invoices: any[]; payments: any[]; usage: any[]; plans: Plan[]; addons: Addon[]; paymentMethod?: { provider: string; configured: boolean; shortcode: string; env: string } }
+type PaymentMethod = { provider?: string; accountType: "PAYBILL" | "TILL" | "PHONE" | null; accountNumber: string; version: number | null; configured: boolean; env: "production" | "sandbox"; passkeyConfigured: boolean; source: "DATABASE" | "ENVIRONMENT" }
+type BillingData = Awaited<ReturnType<typeof getBillingSnapshot>> & { plans: Plan[]; addons: Addon[]; paymentMethod?: PaymentMethod; paymentMethods: PaymentMethod[] }
 
 function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }
-function date(value?: string | null) { return value ? new Date(value).toLocaleDateString() : "Not configured" }
-function daysUntil(value?: string | null) { if (!value) return null; return Math.ceil((new Date(value).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) }
+function date(value?: string | Date | null) { return value ? new Date(value).toLocaleDateString() : "Not configured" }
+function daysUntil(value?: string | Date | null) { if (!value) return null; return Math.ceil((new Date(value).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) }
+function paymentMethodKey(method: PaymentMethod) { return `${method.accountType}:${method.version ?? "environment"}` }
 
 export default function ManageBillingPage() {
 	const [data, setData] = useState<BillingData | null>(null)
 	const [message, setMessage] = useState("Loading billing…")
 	const [phone, setPhone] = useState("")
+	const [receiptCode, setReceiptCode] = useState("")
+	const [selectedPaymentMethodKey, setSelectedPaymentMethodKey] = useState("")
 	const [busy, setBusy] = useState("")
 	const [confirmCancel, setConfirmCancel] = useState(false)
 	const { addToast } = useToast()
@@ -25,7 +30,14 @@ export default function ManageBillingPage() {
 		const response = await fetch("/api/manage/billing", { cache: "no-store" })
 		const result = await response.json().catch(() => ({}))
 		if (!response.ok) throw new Error(result.message || "Billing unavailable")
-		setData(result); setMessage("")
+		setData(result)
+		setSelectedPaymentMethodKey((current) => {
+			const methods: PaymentMethod[] = result.paymentMethods || []
+			if (methods.some((method) => paymentMethodKey(method) === current && method.configured)) return current
+			const preferred = methods.find((method) => method.configured && method.accountType) || methods[0]
+			return preferred ? paymentMethodKey(preferred) : ""
+		})
+		setMessage("")
 	}
 	useEffect(() => { load().catch((error) => setMessage(error.message)) }, [])
 
@@ -36,7 +48,7 @@ export default function ManageBillingPage() {
 			const result = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(result.message || "Billing action failed")
 			if (result.url) { addToast(result.message || "Payment request created successfully.", "success"); window.location.assign(result.url) }
-			else { const message = result.message || "Billing updated successfully."; addToast(message, "success"); await load(); setMessage(result.status === "PENDING" ? `${message} The pilot or billing period will update after M-Pesa confirms payment.` : message) }
+			else { const message = result.message || "Billing updated successfully."; addToast(message, "success"); await load(); setMessage(result.status === "PENDING" && result.provider !== "mpesa-manual" ? `${message} The pilot or billing period will update after M-Pesa confirms payment.` : message) }
 		} catch (error: unknown) { const message = error instanceof Error ? error.message : "Billing action failed"; setMessage(message); addToast(message, "error") }
 		finally { setBusy("") }
 	}
@@ -46,12 +58,19 @@ export default function ManageBillingPage() {
 	const currentPlan = data.subscription?.plan || data.tenant.plan
 	const firstPayment = data.subscription?.status === "TRIALING" || !data.subscription?.currentPeriodStart
 	const trialActive = Boolean(data.subscription?.trialEndsAt && new Date(data.subscription.trialEndsAt).getTime() > Date.now())
-	const setupFeePending = Number(data.billingRecord?.setupFeeAmount || 0) > 0 && !["PAID", "WAIVED"].includes(data.billingRecord?.setupFeeStatus)
+	const setupFeePending = Number(data.tenant.billingRecord?.setupFeeAmount || 0) > 0 && !["PAID", "WAIVED"].includes(data.tenant.billingRecord?.setupFeeStatus || "")
 	const pilotDaysLeft = daysUntil(data.subscription?.trialEndsAt)
 	const graceActive = data.subscription?.status === "GRACE_PERIOD" || data.tenant.status === "GRACE_PERIOD"
 	const storeSuspended = data.subscription?.status === "SUSPENDED" || data.tenant.suspensionReason === "BILLING"
 	const paymentAction = setupFeePending ? "setup_mpesa" : "renew_mpesa"
-	const renewalControls = data.subscription ? <div className="glass-card p-5"><h2 className="text-xl font-semibold">{setupFeePending ? "Pay the one-time setup fee" : trialActive ? "Your six-month pilot" : firstPayment ? "Start your monthly subscription" : "Renewal with M-Pesa"}</h2><p className="mt-2 text-sm text-gray-500">{setupFeePending ? `Pay ${data.billingRecord?.currency || "KES"} ${(data.billingRecord?.setupFeeAmount || 0).toLocaleString()} once to start your six-month pilot on the ${currentPlan?.name || "selected"} plan. The monthly subscription is not charged now; it becomes payable in month seven after a manual M-Pesa request.` : trialActive ? `Your six-month pilot is active until ${date(data.subscription.trialEndsAt)}${pilotDaysLeft != null && pilotDaysLeft >= 0 ? ` (${pilotDaysLeft} day${pilotDaysLeft === 1 ? "" : "s"} left)` : ""}. Nothing is charged automatically. You can request a monthly payment after the pilot.` : firstPayment ? "Your pilot has ended. Request the first monthly subscription payment by M-Pesa to continue using the selected plan." : "M-Pesa renewals create an invoice and continue the next billing period only after callback confirmation."}</p>{data.paymentMethod?.shortcode ? <p className="mt-2 text-sm text-gray-500">Payment requests go to Nurava Tech PayBill <span className="font-semibold">{data.paymentMethod.shortcode}</span>{data.paymentMethod.env === "sandbox" ? " (sandbox)" : ""}. Enter the merchant phone and confirm with its M-Pesa PIN when prompted.</p> : <p className="mt-2 text-sm text-amber-700">M-Pesa collection is not configured yet; payment requests cannot be sent.</p>}{(!trialActive || setupFeePending) && <div className="mt-3 flex flex-wrap gap-2"><input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="07XXXXXXXX" className="rounded-lg border p-2 dark:bg-dark-surface"/><button disabled={!!busy || !phone} onClick={() => action(paymentAction, { phone })} className="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{busy === paymentAction && <Loader2 size={16} className="animate-spin" aria-hidden="true"/>}{setupFeePending ? "Pay setup fee" : firstPayment ? "Pay first month" : "Renew with M-Pesa"}</button></div>}</div> : null
+	const paymentMethods = data.paymentMethods.filter((method) => method.configured && method.accountType)
+	const selectedPaymentMethod = paymentMethods.find((method) => paymentMethodKey(method) === selectedPaymentMethodKey) || paymentMethods[0]
+	const renewalControls = data.subscription ? <div className="glass-card p-5"><h2 className="text-xl font-semibold">{setupFeePending ? "Pay the one-time setup fee" : trialActive ? "Your six-month pilot" : firstPayment ? "Start your monthly subscription" : "Renewal with M-Pesa"}</h2><p className="mt-2 text-sm text-gray-500">{setupFeePending ? `Pay ${data.tenant.billingRecord?.currency || "KES"} ${(data.tenant.billingRecord?.setupFeeAmount || 0).toLocaleString()} once to start your six-month pilot on the ${currentPlan?.name || "selected"} plan. The monthly subscription is not charged now; it becomes payable in month seven after a manual M-Pesa request.` : trialActive ? `Your six-month pilot is active until ${date(data.subscription.trialEndsAt)}${pilotDaysLeft != null && pilotDaysLeft >= 0 ? ` (${pilotDaysLeft} day${pilotDaysLeft === 1 ? "" : "s"} left)` : ""}. Nothing is charged automatically. You can request a monthly payment after the pilot.` : firstPayment ? "Your pilot has ended. Request the first monthly subscription payment by M-Pesa to continue using the selected plan." : "M-Pesa renewals create an invoice and continue the next billing period only after provider confirmation."}</p>
+		{paymentMethods.length > 0 ? <label className="mt-3 grid max-w-lg gap-1 text-sm font-semibold">Choose how to pay<select value={selectedPaymentMethod ? paymentMethodKey(selectedPaymentMethod) : ""} onChange={(event) => setSelectedPaymentMethodKey(event.target.value)} className="rounded-lg border p-2 font-normal dark:bg-dark-surface">{paymentMethods.map((method) => <option key={paymentMethodKey(method)} value={paymentMethodKey(method)}>{method.accountType === "PHONE" ? "Send Money to phone" : method.accountType === "TILL" ? "M-Pesa Till / Buy Goods" : "M-Pesa PayBill"} · {method.accountNumber}</option>)}</select></label> : null}
+		{selectedPaymentMethod?.accountType === "PHONE" ? <p className="mt-2 text-sm text-gray-600">Send the invoice amount using M-Pesa Send Money to the platform number <b>{selectedPaymentMethod.accountNumber}</b>. Submit the M-Pesa receipt code below. The setup fee or invoice remains pending until a platform administrator verifies it.</p> : selectedPaymentMethod?.accountType ? <p className="mt-2 text-sm text-gray-600">Payment prompts go to the platform {selectedPaymentMethod.accountType === "TILL" ? "Till" : "PayBill"} <b>{selectedPaymentMethod.accountNumber}</b>{selectedPaymentMethod.env === "sandbox" ? " (sandbox)" : ""}. Enter the merchant phone and confirm with its M-Pesa PIN when prompted.</p> : <p className="mt-2 text-sm text-amber-700">M-Pesa collection is not configured yet; payment requests cannot be sent.</p>}
+		{(!trialActive || setupFeePending) && <div className="mt-3 flex flex-wrap gap-2"><input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="07XXXXXXXX" className="rounded-lg border p-2 dark:bg-dark-surface"/><button disabled={!!busy || !phone || !selectedPaymentMethod} onClick={() => selectedPaymentMethod && action(paymentAction, { phone, destinationType: selectedPaymentMethod.accountType, destinationVersion: selectedPaymentMethod.version })} className="inline-flex items-center gap-2 rounded-lg border border-primary px-4 py-2 font-semibold text-primary">{busy === paymentAction && <Loader2 size={16} className="animate-spin" aria-hidden="true"/>}{selectedPaymentMethod?.accountType === "PHONE" ? "Prepare manual payment" : setupFeePending ? "Pay setup fee" : firstPayment ? "Pay first month" : "Renew with M-Pesa"}</button></div>}
+		{data.payments.filter((payment) => payment.provider === "mpesa-manual" && payment.status === "PENDING").map((payment) => <form key={payment.id} onSubmit={(event) => { event.preventDefault(); void action("submit_manual_receipt", { paymentId: payment.id, receiptCode }) }} className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border p-3"><label className="grid gap-1 text-sm font-semibold">M-Pesa receipt code<input required minLength={8} maxLength={12} value={receiptCode} onChange={(event) => setReceiptCode(event.target.value.toUpperCase())} placeholder="e.g. QWE1234567" className="rounded border p-2 font-normal dark:bg-dark-surface" /></label><button disabled={!!busy || !receiptCode} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">Submit receipt for review</button></form>)}
+	</div> : null
 	return <div className="space-y-6">
 		<ConfirmDialog open={confirmCancel} title="Cancel subscription at period end?" description="Your current subscription will remain active until the end of the paid period, then it will not renew." confirmLabel="Cancel subscription" busy={busy === "cancel"} onCancel={() => { if (!busy) setConfirmCancel(false) }} onConfirm={() => { setConfirmCancel(false); void action("cancel", { immediate: false }) }} />
 		<div><h1 className="text-3xl font-bold">Subscription and billing</h1><p className="mt-1 text-gray-500">Manage the merchant workspace subscription separately from shopper checkout.</p></div>
@@ -62,7 +81,7 @@ export default function ManageBillingPage() {
 		{message && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
 		<div className="grid gap-4 md:grid-cols-3">
 			<div className="glass-card p-5"><p className="text-sm text-gray-500">Selected plan</p><h2 className="mt-2 text-2xl font-semibold">{currentPlan?.name || "Not selected"}</h2><p className="mt-2 text-sm">{humanize(data.subscription?.status || data.tenant.status)}</p><p className="mt-1 text-sm text-gray-500">{currentPlan?.currency || "KES"} {Number(currentPlan?.price || 0).toLocaleString()} / month · pilot ends {date(data.subscription?.trialEndsAt)}</p>{data.subscription?.pendingPlan && <p className="mt-2 text-sm text-primary">Scheduled next renewal: {data.subscription.pendingPlan.name}</p>}</div>
-			<div className="glass-card p-5"><p className="text-sm text-gray-500">Setup fee</p><h2 className="mt-2 text-2xl font-semibold">{humanize(data.billingRecord?.setupFeeStatus || "PENDING")}</h2><p className="mt-1 text-sm text-gray-500">{data.billingRecord?.currency || "KES"} {(data.billingRecord?.setupFeeAmount || 0).toLocaleString()}</p></div>
+			<div className="glass-card p-5"><p className="text-sm text-gray-500">Setup fee</p><h2 className="mt-2 text-2xl font-semibold">{humanize(data.tenant.billingRecord?.setupFeeStatus || "PENDING")}</h2><p className="mt-1 text-sm text-gray-500">{data.tenant.billingRecord?.currency || "KES"} {(data.tenant.billingRecord?.setupFeeAmount || 0).toLocaleString()}</p></div>
 			<div className="glass-card p-5"><p className="text-sm text-gray-500">Shopper transaction fees</p><h2 className="mt-2 text-2xl font-semibold">Not applied</h2><p className="mt-1 text-sm text-gray-500">Customers pay merchants directly; Nurava Tech charges for platform services.</p></div>
 		</div>
 		<div className="glass-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Plans</h2>{data.subscription && data.subscription.status !== "INCOMPLETE" && <button disabled={!!busy} onClick={() => setConfirmCancel(true)} className="destructive-action rounded border px-2 py-1 text-sm">Cancel at period end</button>}</div><p className="mt-2 text-sm text-gray-500">Plans cover Nurava Tech platform services. Shopper payments, refunds, delivery, and warranties are handled directly by each merchant.</p><div className="mt-4 grid gap-4 md:grid-cols-3">{data.plans.map((plan) => <div key={plan.key} className={`rounded-xl border p-4 ${plan.key === currentPlan?.key ? "border-primary" : "border-gray-200"}`}><h3 className="font-semibold">{plan.name}</h3><p className="mt-2 text-lg">{plan.price == null ? "Trial" : `${plan.currency} ${plan.price.toLocaleString()} / ${plan.billingInterval?.toLowerCase()}`}</p><p className="mt-1 text-xs text-gray-500">Setup: {plan.currency} {plan.setupFeeAmount.toLocaleString()} · no shopper transaction fee</p>{plan.key === currentPlan?.key ? <span className="mt-4 inline-block text-sm text-primary">Current plan</span> : <button disabled={!!busy} onClick={() => action("change_plan", { planKey: plan.key })} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary">{busy === "change_plan" && <Loader2 size={15} className="animate-spin" aria-hidden="true" />}{plan.price && currentPlan?.price && plan.price > currentPlan.price ? "Upgrade" : "Downgrade"}</button>}</div>)}</div></div>

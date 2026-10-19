@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { getRequestedStoreSlug, resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
@@ -8,43 +9,9 @@ import type { StoreContext } from "./store-context.types"
 import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
 import { isVercelProjectHostname } from "./platform-store-route"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
+import { themeOverridesFromIndustry } from "./industry-theme"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
-
-function themeOverridesFromIndustry(theme: { colors: unknown; typography: unknown } | null | undefined) {
-	if (!theme) return undefined
-	const colors = record(theme.colors)
-	const typography = record(theme.typography)
-	const colorValue = (key: string) => typeof colors[key] === "string" && /^#[0-9a-f]{6}$/i.test(colors[key] as string) ? colors[key] as string : undefined
-	const lightPalette = {
-		...(colorValue("background") ? { background: colorValue("background") } : {}),
-		...(colorValue("surface") ? { surface: colorValue("surface") } : {}),
-		...(colorValue("text") ? { text: colorValue("text") } : {}),
-		...(colorValue("muted") ? { muted: colorValue("muted") } : {}),
-		...(colorValue("border") ? { border: colorValue("border") } : {}),
-	}
-	const darkPalette = {
-		background: colorValue("darkBackground") || "#171717",
-		surface: colorValue("darkSurface") || "#262626",
-		text: colorValue("darkText") || "#f5f5f5",
-		muted: colorValue("darkMuted") || "#b3b3b3",
-		border: colorValue("darkBorder") || "#454545",
-	}
-	const allowedFonts = new Set(["system", "inter", "georgia", "trebuchet", "verdana"])
-	const bodyFont = typeof typography.body === "string" && allowedFonts.has(typography.body) ? typography.body : undefined
-	const headingFont = typeof typography.heading === "string" && allowedFonts.has(typography.heading) ? typography.heading : undefined
-	return {
-		colors: {
-			...(colorValue("primary") ? { primary: colorValue("primary") } : {}),
-			...(colorValue("primaryLight") ? { primaryLight: colorValue("primaryLight") } : {}),
-			...(colorValue("primaryDark") ? { primaryDark: colorValue("primaryDark") } : {}),
-			...(colorValue("accent") ? { accent: colorValue("accent") } : {}),
-			light: lightPalette,
-			dark: darkPalette,
-		},
-		...(bodyFont || headingFont ? { typography: { ...(bodyFont ? { bodyFont } : {}), ...(headingFont ? { headingFont } : {}) } } : {}),
-	}
-}
 
 // Merchant storefronts must not inherit Nurava platform contact details when
 // a merchant has not configured its own public contact information yet.
@@ -105,7 +72,7 @@ function isPlatformHost(value: string | null): boolean {
 	return isLocalPreviewHost(value) || isVercelProjectHostname(hostname) || hostname === platformDomain || hostname === `www.${platformDomain}`
 }
 
-export async function getStoreContext(): Promise<StoreContext> {
+export const getStoreContext = cache(async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
 	const requestedStoreSlug = getRequestedStoreSlug(requestHeaders)
 	const platformHome = isPlatformHost(requestHeaders.get("host")) && !requestedStoreSlug
@@ -151,41 +118,75 @@ export async function getStoreContext(): Promise<StoreContext> {
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
 		const socialSettings = record(contact.social)
-		const homepage = {
-			...defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset),
-			...record(store.homepageSettings),
+		const storedHomepage = record(store.homepageSettings)
+		const industryHomepage = defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset)
+		const homepageDefaults: Record<string, unknown> = store.industry?.slug === "electronics" ? clientConfig.homepage : {
+			...clientConfig.homepage,
+			...industryHomepage,
+			aboutTitle: `About ${store.name}`,
+			aboutDescription: `${store.name} is an independent ${store.industry?.name.toLowerCase() || "retail"} store. Contact the store directly for product details, availability, orders, delivery, and support.`,
+			categories: [],
+			featuredProducts: [],
+			testimonials: [],
+			newsletterTitle: `Updates from ${store.name}`,
+			newsletterDescription: `Sign up for occasional updates about new arrivals, offers, and news from ${store.name}.`,
 		}
+		const homepage: Record<string, unknown> = { ...homepageDefaults, ...(store.industry?.slug === "electronics" ? {} : industryHomepage), ...storedHomepage }
+		delete homepage.heroImage
+		delete homepage.heroImageAlt
 		const legalSettings = record(homepage.legal)
 		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
-		const persistedCategories = Array.isArray(homepage.categories) ? homepage.categories.flatMap((value) => {
+		const storedCategorySnapshots = Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
-			const fallback = store.industry?.slug === "electronics" ? clientConfig.homepage.categories.find((item) => item.slug === category.slug) : undefined
-			const categoryTemplate = industryCategories.find((item) => item.slug === category.slug)
-			const image = typeof category.image === "string" && category.image ? category.image : typeof category.imageUrl === "string" && category.imageUrl ? category.imageUrl : categoryTemplate?.imageUrl || fallback?.image || defaultCategoryImage(store.industry?.slug || "", category.name)
-			return [{ name: category.name, slug: category.slug, image }]
-		}) : industryCategories.length
-			? industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
-			: store.industry?.slug === "electronics" ? clientConfig.homepage.categories : []
+			return [{ name: category.name, slug: category.slug, image: typeof category.image === "string" ? category.image : typeof category.imageUrl === "string" ? category.imageUrl : "" }]
+		}) : []
+		const nonElectronicsIndustry = store.industry?.slug !== "electronics"
+		const electronicsCategorySlugs = new Set<string>(clientConfig.homepage.categories.map((category) => category.slug))
+		const persistedCategories = nonElectronicsIndustry
+			? (() => {
+				const storedBySlug = new Map(storedCategorySnapshots.map((category) => [category.slug, category]))
+				const configuredCategories = industryCategories.map((category) => ({
+					name: category.name,
+					slug: category.slug,
+					image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl || storedBySlug.get(category.slug)?.image),
+				}))
+				const templateSlugs = new Set(industryCategories.map((category) => category.slug))
+				const customCategories = storedCategorySnapshots
+					.filter((category) => !templateSlugs.has(category.slug) && !electronicsCategorySlugs.has(category.slug))
+					.map((category) => ({ ...category, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.image) }))
+				return [...configuredCategories, ...customCategories]
+			})()
+			: storedCategorySnapshots.length
+				? storedCategorySnapshots.map((category) => {
+					const categoryTemplate = industryCategories.find((item) => item.slug === category.slug)
+					const fallback = clientConfig.homepage.categories.find((item) => item.slug === category.slug)
+					const configuredImage = category.image || categoryTemplate?.imageUrl || fallback?.image
+
+					return { ...category, image: defaultCategoryImage(store.industry?.slug || "", category.name, configuredImage) }
+				})
+				: store.industry?.slug === "electronics"
+					? clientConfig.homepage.categories
+					: industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
 		const categories = persistedCategories.filter((category) => categoryAvailability[category.slug] !== false).map((category) => {
 			const configuredImage = categoryImages[category.slug]
 			return typeof configuredImage === "string" && configuredImage.trim()
 				? { ...category, image: configuredImage }
 				: category
 		})
-		const defaultNavigation = store.industry?.slug && store.industry.slug !== "electronics"
+		const defaultNavigation: Array<{ name: string; href: string }> = store.industry?.slug && store.industry.slug !== "electronics"
 			? [{ name: "Home", href: "/" }, ...categories.map((category) => ({ name: category.name, href: `/category/${category.slug}` })), { name: "All Products", href: "/products" }]
-			: clientConfig.navigation
-		const configuredNavigation = Array.isArray(homepage.navigation) ? homepage.navigation.flatMap((value) => {
+			: [...clientConfig.navigation]
+		const configuredNavigation: Array<{ name: string; href: string }> = Array.isArray(storedHomepage.navigation) ? storedHomepage.navigation.flatMap((value: unknown) => {
 			const link = record(value)
 			return typeof link.name === "string" && typeof link.href === "string" ? [{ name: link.name, href: link.href }] : []
 		}) : defaultNavigation
 		const navigation = configuredNavigation.filter((link) => {
 			const categorySlug = link.href.match(/^\/category\/([^/?#]+)/)?.[1]
-			return !categorySlug || categoryAvailability[categorySlug] !== false
+			return !categorySlug || (categories.some((category) => category.slug === categorySlug) && categoryAvailability[categorySlug] !== false)
 		})
 		const configuredHeroHref = typeof homepage.heroPrimaryHref === "string" ? homepage.heroPrimaryHref : clientConfig.homepage.heroPrimaryHref
 		const hiddenHeroCategory = configuredHeroHref.match(/^\/category\/([^/?#]+)/)?.[1]
@@ -214,6 +215,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 			? contact.whatsappFloatingMessage
 			: `Hello ${store.name}, I need help with my order.`
 		const whatsappMessage = `Hello ${store.name}, I need help with my order.`
+		const configuredWhatsappNumber = typeof contact.whatsappNumber === "string" ? contact.whatsappNumber : ""
 		return {
 			...fallbackStoreContext(),
 			tenantId: store.tenantId,
@@ -224,19 +226,19 @@ export async function getStoreContext(): Promise<StoreContext> {
 			publicationStatus: store.publicationStatus,
 			themeOverrides: themeOverridesFromIndustry(effectiveTheme),
 			themeLayout: effectiveTheme ? { heroLayout: typeof effectiveTheme.heroLayout === "string" ? effectiveTheme.heroLayout : undefined, bannerStyle: typeof effectiveTheme.bannerStyle === "string" ? effectiveTheme.bannerStyle : undefined, productGridStyle: typeof effectiveTheme.productGridStyle === "string" ? effectiveTheme.productGridStyle : undefined } : undefined,
-			brand: { ...clientConfig.brand, name: store.name, ...(store.industry?.slug && store.industry.slug !== "electronics" ? { tagline: `Your trusted ${store.industry.name.toLowerCase()} store` } : {}), ...(store.logoUrl ? { logo: store.logoUrl } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
+			brand: { ...clientConfig.brand, name: store.name, logo: store.logoUrl?.trim() || "", ...(store.industry?.slug && store.industry.slug !== "electronics" ? { tagline: `Your trusted ${store.industry.name.toLowerCase()} store` } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			navigation,
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
-			contact: { ...merchantContactDefaults, ...contact, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
+			contact: { ...merchantContactDefaults, ...contact, whatsappNumber: configuredWhatsappNumber, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
 			social: {
 				...merchantSocialDefaults,
 				facebook: typeof socialSettings.facebook === "string" ? socialSettings.facebook : merchantSocialDefaults.facebook,
 				instagram: typeof socialSettings.instagram === "string" ? socialSettings.instagram : merchantSocialDefaults.instagram,
 				tiktok: typeof socialSettings.tiktok === "string" ? socialSettings.tiktok : merchantSocialDefaults.tiktok,
 			},
-			homepage: { ...clientConfig.homepage, ...homepage, heroPrimaryHref, categories },
+			homepage: { ...homepageDefaults, ...homepage, heroPrimaryHref, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
 			legal: { ...merchantLegalDefaults(store.name), terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : merchantLegalDefaults(store.name).terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : merchantLegalDefaults(store.name).privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : merchantLegalDefaults(store.name).cookies },
@@ -249,7 +251,7 @@ export async function getStoreContext(): Promise<StoreContext> {
 		console.error("Store context unavailable", error)
 		return fallbackStoreContext(platformHome)
 	}
-}
+})
 
 export function fallbackStoreContext(isPlatformHome = false, platformSettings: PlatformSiteSettings = {}): StoreContext {
 	const mergedPlatformSettings = mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), platformSettings)
@@ -268,7 +270,7 @@ export function fallbackStoreContext(isPlatformHome = false, platformSettings: P
 			features: { ...clientConfig.features, ...mergedPlatformSettings.features },
 			themePreset: mergedPlatformSettings.design?.themePreset || clientConfig.themePreset,
 			legal: mergedPlatformSettings.legal || {},
-		} : { contact: merchantContactDefaults, social: merchantSocialDefaults }),
+		} : { brand: { ...clientConfig.brand, logo: "" }, contact: merchantContactDefaults, social: merchantSocialDefaults }),
 		platformTeam: isPlatformHome ? mergedPlatformSettings.team || [] : [],
 		platformSettings: isPlatformHome ? mergedPlatformSettings : undefined,
 		tenantId: "novatech-tenant",

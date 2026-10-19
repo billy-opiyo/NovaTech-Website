@@ -10,6 +10,7 @@ export type PublishedStoreDirectoryEntry = {
 	slug: string
 	logoUrl: string | null
 	tagline: string
+	industry: { name: string; slug: string } | null
 	featuredProduct: { name: string; slug: string; price: number; image: string | null } | null
 }
 
@@ -53,6 +54,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				slug: true,
 				logoUrl: true,
 				homepageSettings: true,
+				industry: { select: { name: true, slug: true } },
 				tenant: {
 					select: {
 						products: {
@@ -74,8 +76,9 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
+				logoUrl: resolveDirectoryStoreLogo(store.logoUrl),
 				tagline,
+				industry: store.industry,
 				featuredProduct: product ? {
 					name: product.name,
 					slug: product.slug,
@@ -96,6 +99,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 			slug: "nuravatech",
 			logoUrl: clientConfig.brand.logo,
 			tagline: clientConfig.homepage.heroDescription,
+			industry: null,
 			featuredProduct: null,
 		}]
 	}
@@ -155,7 +159,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				id: store.id,
 				name: store.name,
 				slug: store.slug,
-				logoUrl: resolveDirectoryStoreLogo(store.slug, store.logoUrl, clientConfig.brand.logo),
+				logoUrl: resolveDirectoryStoreLogo(store.logoUrl),
 				tagline: typeof homepage.heroDescription === "string" ? homepage.heroDescription : "Explore this store's catalogue and merchant offers.",
 				averageRating: Math.round(review.averageRating * 10) / 10,
 				reviewCount: review.reviewCount,

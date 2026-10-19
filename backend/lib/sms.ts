@@ -1,65 +1,82 @@
-import twilio from "twilio"
 import { PLATFORM_BRAND_NAME } from "./brand"
+import { normalizeSmsPhoneNumber } from "./sms/phone"
+import {
+	SmsConfigurationError,
+	SmsDeliveryError,
+	smsErrorDiagnostic,
+	type SmsPayload,
+	type SmsProvider,
+	type SmsProviderName,
+} from "./sms/types"
 
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER
+export type { SmsPayload } from "./sms/types"
+export { normalizeSmsPhoneNumber } from "./sms/phone"
 
-let twilioClient: ReturnType<typeof twilio> | null = null
+type Environment = Record<string, string | undefined>
+type ProviderLoader = (provider: SmsProviderName) => Promise<SmsProvider>
 
-function getTwilioClient() {
-	if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-		throw new Error("Twilio credentials are not configured")
+async function loadSmsProvider(provider: SmsProviderName): Promise<SmsProvider> {
+	if (provider === "africastalking") {
+		const { createAfricaTalkingProvider } = await import("./sms/providers/africastalking")
+		return createAfricaTalkingProvider()
 	}
-
-	if (!twilioClient) {
-		twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-	}
-
-	return twilioClient
+	const { createTwilioProvider } = await import("./sms/providers/twilio")
+	return createTwilioProvider()
 }
 
-interface SmsMessage {
-	to: string
-	body: string
+function getSelectedProvider(environment: Environment): SmsProviderName {
+	const configured = environment.SMS_PROVIDER?.trim().toLowerCase() || "africastalking"
+	if (configured === "africastalking" || configured === "twilio") return configured
+	throw new SmsConfigurationError("SMS_PROVIDER_INVALID")
 }
 
-export interface SmsPayload {
-	to: string
-	message: string
-	senderId?: string
-}
+export function createSmsSender(options: {
+	getEnvironment?: () => Environment
+	loadProvider?: ProviderLoader
+	logFailure?: (details: ReturnType<typeof smsErrorDiagnostic>) => void
+} = {}) {
+	const getEnvironment = options.getEnvironment || (() => process.env)
+	const providerLoader = options.loadProvider || loadSmsProvider
+	const logFailure = options.logFailure || ((details) => console.error("SMS delivery failed", details))
 
-export async function sendSmsMessage({
-	to,
-	message,
-	senderId,
-}: SmsPayload) {
-	try {
-		// Format phone number to E.164 format if it starts with 0 (Kenyan format)
-		const formattedTo = to.startsWith("0") ? `+254${to.slice(1)}` : to
-
-		const result = await getTwilioClient().messages.create({
-			body: message,
-			from: senderId || TWILIO_PHONE_NUMBER || undefined,
-			to: formattedTo,
-		})
-
-		return {
-			ok: true,
-			provider: "sms",
-			to: formattedTo,
-			senderId: senderId || TWILIO_PHONE_NUMBER,
-			message,
-			sentAt: new Date().toISOString(),
-			messageId: result.sid,
-			status: result.status,
+	return async function sendSmsMessage({ to, message, senderId }: SmsPayload) {
+		const formattedTo = normalizeSmsPhoneNumber(to)
+		let providerName: SmsProviderName
+		try {
+			providerName = getSelectedProvider(getEnvironment())
+		} catch (error) {
+			logFailure(smsErrorDiagnostic("unknown", error))
+			throw new SmsDeliveryError("SMS_PROVIDER_INVALID")
 		}
-	} catch (error) {
-		console.error("SMS send error:", error)
-		throw error
+		try {
+			const provider = await providerLoader(providerName)
+			const receipt = await provider.send({ to: formattedTo, message, senderId })
+			return {
+				ok: true,
+				provider: "sms" as const,
+				to: formattedTo,
+				senderId: receipt.senderId,
+				message,
+				sentAt: new Date().toISOString(),
+				messageId: receipt.messageId,
+				status: receipt.status,
+			}
+		} catch (error) {
+			if (!(error instanceof SmsDeliveryError)) {
+				const diagnostic = smsErrorDiagnostic(providerName, error)
+				logFailure(diagnostic)
+				throw new SmsDeliveryError(
+					error instanceof SmsConfigurationError
+						? error.code
+						: diagnostic.category === "timeout" ? "SMS_PROVIDER_TIMEOUT" : "SMS_PROVIDER_FAILURE",
+				)
+			}
+			throw error
+		}
 	}
 }
+
+export const sendSmsMessage = createSmsSender()
 
 export async function sendOrderConfirmation(
 	phone: string,
@@ -68,7 +85,7 @@ export async function sendOrderConfirmation(
 ) {
 	return sendSmsMessage({
 		to: phone,
-message: `${PLATFORM_BRAND_NAME}: Your order #${orderId} has been confirmed. Total: KES ${total.toLocaleString()}. Thank you for shopping with us!`,
+		message: `${PLATFORM_BRAND_NAME}: Your order #${orderId} has been confirmed. Total: KES ${total.toLocaleString()}. Thank you for shopping with us!`,
 	})
 }
 
@@ -86,12 +103,11 @@ export async function sendOrderStatusUpdate(
 		CANCELLED: "Your order has been cancelled. Contact support for assistance.",
 	}
 
-	const message =
-		statusMessages[status] || `Your order #${orderId} status: ${status}`
+	const message = statusMessages[status] || `Your order #${orderId} status: ${status}`
 
 	return sendSmsMessage({
 		to: phone,
-message: `${PLATFORM_BRAND_NAME} Order Update\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
+		message: `${PLATFORM_BRAND_NAME} Order Update\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
 	})
 }
 
@@ -102,13 +118,13 @@ export async function sendPaymentRequest(
 ) {
 	return sendSmsMessage({
 		to: phone,
-message: `${PLATFORM_BRAND_NAME}: Payment request for order #${orderId}. Amount: KES ${amount.toLocaleString()}. You will receive an M-Pesa prompt shortly.`,
+		message: `${PLATFORM_BRAND_NAME}: Payment request for order #${orderId}. Amount: KES ${amount.toLocaleString()}. You will receive an M-Pesa prompt shortly.`,
 	})
 }
 
 export async function sendSupportMessage(phone: string, customerName: string) {
 	return sendSmsMessage({
 		to: phone,
-message: `Hello ${customerName}, thank you for contacting ${PLATFORM_BRAND_NAME} support. We will get back to you shortly.`,
+		message: `Hello ${customerName}, thank you for contacting ${PLATFORM_BRAND_NAME} support. We will get back to you shortly.`,
 	})
 }

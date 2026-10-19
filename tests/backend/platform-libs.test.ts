@@ -3,7 +3,9 @@ import assert from "node:assert/strict"
 import { NextRequest } from "next/server"
 import { rateLimiter } from "../../backend/middleware/rateLimiter"
 import { sendEmail } from "../../backend/lib/email"
-import { sendSmsMessage } from "../../backend/lib/sms"
+import { createAfricaTalkingProvider } from "../../backend/lib/sms/providers/africastalking"
+import { SmsConfigurationError } from "../../backend/lib/sms/types"
+import prisma from "../../backend/lib/db"
 import { sendWhatsAppMessage } from "../../backend/lib/whatsapp"
 
 test("rate limiter allows the first 60 requests and rejects the next", () => {
@@ -13,6 +15,27 @@ test("rate limiter allows the first 60 requests and rejects the next", () => {
 	const limited = rateLimiter(request())
 	assert.ok(limited)
 	assert.equal(limited?.status, 429)
+})
+
+test("scoped distributed rate limiter blocks request 61 without connecting to a database", async () => {
+	const delegate = prisma.rateLimitBucket
+	const originalUpsert = delegate.upsert
+	const originalDeleteMany = delegate.deleteMany
+	const originalRandom = Math.random
+	let count = 0
+	delegate.upsert = (async () => ({ count: ++count })) as typeof delegate.upsert
+	delegate.deleteMany = (async () => ({ count: 0 })) as typeof delegate.deleteMany
+	Math.random = () => 1
+	try {
+		const request = () => new NextRequest("http://localhost/api/test", { headers: { "x-forwarded-for": `scoped-${Date.now()}` } })
+		for (let i = 0; i < 60; i++) assert.equal(await rateLimiter(request(), "merchant-verification-phone"), null)
+		const limited = await rateLimiter(request(), "merchant-verification-phone")
+		assert.equal(limited?.status, 429)
+	} finally {
+		delegate.upsert = originalUpsert
+		delegate.deleteMany = originalDeleteMany
+		Math.random = originalRandom
+	}
 })
 
 test("email integration degrades gracefully when Resend is not configured", async (t) => {
@@ -26,9 +49,16 @@ test("email integration degrades gracefully when Resend is not configured", asyn
 	}
 })
 
-test("SMS integration reports missing Twilio credentials", async (t) => {
-	if (process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_AUTH_TOKEN) return t.skip("Twilio is configured")
-	await assert.rejects(() => sendSmsMessage({ to: "0712345678", message: "Hello" }), /Twilio credentials are not configured/)
+test("Africa's Talking provider fails closed without credentials and never sends during tests", async () => {
+	const provider = createAfricaTalkingProvider({
+		getEnvironment: () => ({}),
+		createClient: () => assert.fail("SDK client must not be created without credentials"),
+	})
+	await assert.rejects(() => provider.send({ to: "+254712345678", message: "Test" }), (error: unknown) => {
+		assert.ok(error instanceof SmsConfigurationError)
+		assert.equal(error.message, "SMS provider configuration is incomplete.")
+		return true
+	})
 })
 
 test("WhatsApp integration validates message shape before calling provider", async () => {

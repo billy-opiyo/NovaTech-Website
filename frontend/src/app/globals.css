@@ -109,7 +109,7 @@
   }
 
   .dark select option:checked {
-    background-color: #0070f3;
+    background-color: rgb(var(--color-primary));
     color: #ffffff;
   }
 
@@ -132,6 +132,23 @@
   *::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
     background-clip: padding-box;
+  }
+
+  /* Hide scrollbars only inside the native Android WebView. The website keeps
+     its existing browser scrollbar styling. */
+  html.android-app,
+  html.android-app body,
+  html.android-app * {
+    scrollbar-width: none !important;
+    scrollbar-color: transparent transparent !important;
+  }
+
+  html.android-app::-webkit-scrollbar,
+  html.android-app body::-webkit-scrollbar,
+  html.android-app *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 
@@ -273,6 +290,7 @@
 
   .search-overlay-panel>.glass-card {
     width: 100%;
+    background: linear-gradient(135deg, rgb(var(--color-theme-surface) / 0.96), rgb(var(--color-theme-surface) / 0.92));
   }
 
   @media (min-width: 1024px) {
@@ -417,13 +435,60 @@ body.splash-pending {
   isolation: isolate;
 }
 
-.splash-logo-icon {
-  display: block;
-  width: 4rem;
-  height: 4rem;
-  margin: 1.25rem auto 0;
-  border-radius: 30%;
-  object-fit: contain;
+.splash-screen.splash-screen--solid {
+	background-color: var(--splash-background-color, rgb(var(--color-theme-bg)));
+	background-image: none;
+	color: var(--splash-foreground, rgb(var(--color-theme-text)));
+}
+
+.splash-screen.splash-screen--glass {
+	background-color: rgb(var(--color-theme-bg));
+	background-image: none;
+	color: rgb(var(--color-theme-text));
+}
+
+.splash-screen--glass::before {
+	position: absolute;
+	inset: 1.25rem;
+	border: 1px solid var(--glass-border);
+	border-radius: 2rem;
+	background: linear-gradient(135deg, var(--glass-bg), rgb(var(--color-theme-surface) / 0.62));
+	box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--color-theme-text) / 0.08);
+	backdrop-filter: blur(var(--glass-blur, 16px));
+	-webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+	content: "";
+	pointer-events: none;
+}
+
+.splash-screen--solid .splash-welcome,
+.splash-screen--solid .splash-loading,
+.splash-screen--glass .splash-welcome,
+.splash-screen--glass .splash-loading {
+	color: var(--splash-foreground, rgb(var(--color-theme-text)));
+}
+
+html:not(.dark) .splash-screen.splash-screen--solid,
+html:not(.dark) .splash-screen.splash-screen--glass {
+	background-color: rgb(var(--color-theme-bg));
+	background-image: none;
+	color: rgb(var(--color-theme-text));
+}
+
+html:not(.dark) .splash-screen.splash-screen--solid {
+	background-color: var(--splash-background-color, rgb(var(--color-theme-bg)));
+	color: var(--splash-foreground, rgb(var(--color-theme-text)));
+}
+
+.dark .splash-screen--glass::before {
+	background: linear-gradient(135deg, var(--glass-bg), rgb(var(--color-theme-surface) / 0.78));
+	box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--color-theme-text) / 0.06);
+}
+
+@media (max-width: 767px) {
+	.splash-screen--glass::before {
+		inset: 0.75rem;
+		border-radius: 1.5rem;
+	}
 }
 
 @media (min-width: 768px) {
@@ -491,6 +556,14 @@ html:not(.dark) .splash-screen {
     width: auto;
   }
 
+  .splash-logo-icon {
+	position: absolute;
+	left: 50%;
+	top: 54%;
+	margin: 0;
+	transform: translate(-50%, -50%);
+  }
+
   .splash-welcome {
     top: 22%;
     margin: 0;
@@ -499,16 +572,6 @@ html:not(.dark) .splash-screen {
   .splash-wordmark {
     top: 25%;
     margin: 0;
-  }
-
-  .splash-logo-icon {
-    position: absolute;
-    top: 39%;
-    left: 50%;
-    width: 4rem;
-    height: 4rem;
-    margin: 0;
-    transform: translateX(-50%);
   }
 
   .splash-loading {
@@ -544,6 +607,10 @@ html:not(.dark) .splash-screen {
   .splash-loading {
     top: 90%;
   }
+
+  .splash-logo-icon {
+	top: 59%;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) and (orientation: landscape) {
@@ -557,6 +624,10 @@ html:not(.dark) .splash-screen {
 
   .splash-loading {
     top: 84%;
+  }
+
+  .splash-logo-icon {
+	top: 49%;
   }
 }
 
@@ -579,6 +650,16 @@ html:not(.dark) .splash-screen {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: splash-write 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.splash-logo-icon {
+	width: clamp(2.5rem, 5vw, 3rem);
+	height: clamp(2.5rem, 5vw, 3rem);
+	margin-top: 0.25rem;
+	object-fit: contain;
+	border-radius: 27%;
+	clip-path: inset(0 round 27%);
+	filter: drop-shadow(0 4px 14px rgb(0 0 0 / 0.22));
 }
 
 .splash-progress {
@@ -610,6 +691,69 @@ html:not(.dark) .splash-screen {
 
 .splash-ellipsis span:nth-child(3) {
   animation-delay: 320ms;
+}
+
+/* Image-free splash modes keep their welcome stack centered on every viewport. */
+.splash-screen--centered-content > .splash-content {
+	display: flex;
+	width: 100%;
+	height: auto;
+	max-width: 40rem;
+	padding: 0 clamp(1rem, 3vw, 2rem);
+	align-items: center;
+	justify-content: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-welcome,
+.splash-screen.splash-screen--centered-content .splash-wordmark,
+.splash-screen.splash-screen--centered-content .splash-loading {
+	position: static;
+	inset: auto;
+	width: 100%;
+	margin-top: 0;
+	margin-right: 0;
+	margin-left: 0;
+}
+
+.splash-screen.splash-screen--centered-content .splash-welcome {
+	margin-bottom: 0.75rem;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading {
+	margin-top: 0.25rem;
+	display: flex;
+	width: min(100%, clamp(18rem, 75vw, 36rem));
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.splash-screen.splash-screen--centered-content .splash-logo-icon {
+	position: static;
+	margin-top: 0.25rem;
+	transform: none;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child {
+	width: 100%;
+	flex-wrap: nowrap;
+	justify-content: space-between;
+	gap: 0.75rem;
+	text-align: left;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child > span:first-child {
+	min-width: 0;
+	text-align: left;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div:first-child > span:last-child {
+	flex-shrink: 0;
+	text-align: right;
+}
+
+.splash-screen.splash-screen--centered-content .splash-loading > div[aria-hidden="true"] {
+	width: 100%;
 }
 
 /* Merchant guide previews mirror the dark workspace UI, but must follow the
@@ -697,4 +841,12 @@ html:not(.dark) .splash-screen {
 
 [data-product-grid-style="soft-cards"] article {
 	border-radius: 1.5rem;
+}
+
+/* Keep interactive controls consistently discoverable across every page.
+   Disabled controls and explicitly aria-disabled actions retain their own cursor. */
+a[href]:not([aria-disabled="true"]):hover,
+button:not(:disabled):not([aria-disabled="true"]):hover,
+[role="button"]:not(button):not([aria-disabled="true"]):hover {
+	cursor: pointer;
 }

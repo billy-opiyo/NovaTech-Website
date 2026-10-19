@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useTheme } from "@/components/providers/ThemeProvider"
 import SearchOverlay from "@/components/search/SearchOverlay"
 import NotificationCenter from "@/components/notifications/NotificationCenter"
-import { Heart, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, User, UserRound, X } from "lucide-react"
+import { Heart, LoaderCircle, LogOut, Moon, Sun, ShoppingCart, Menu, Store as StoreIcon, User, UserRound, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
@@ -18,10 +18,18 @@ const platformNavigation = [
 	// Explicitly select the platform context so a remembered merchant store
 	// cannot turn these links into the merchant homepage.
 	{ name: "Home", href: "/?platformHome=1" },
-	{ name: "Browse Stores", href: "/stores?all=1" },
+	{ name: "Stores", href: "/stores?all=1" },
 	{ name: "Plans", href: "/?platformHome=1#plans" },
-	{ name: "Create Store", href: "/onboarding" },
+	{ name: "Start Selling", href: "/onboarding" },
 ]
+
+function getStoreNavigationFontSize(label: string, itemCount: number): string {
+	const normalizedLabel = label.trim()
+	const longestWord = Math.max(0, ...normalizedLabel.split(/\s+/).map((word) => word.length))
+	const lengthPenalty = Math.max(0, longestWord - 10) * 0.45 + Math.max(0, normalizedLabel.length - 12) * 0.25
+	const itemCountPenalty = Math.max(0, itemCount - 5) * 0.5
+	return `${Math.max(11, 15.5 - lengthPenalty - itemCountPenalty)}px`
+}
 
 export default function Header() {
 	const { theme, toggleTheme } = useTheme()
@@ -31,20 +39,21 @@ export default function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
-	const logoSource = theme === "light" ? "/images/NovaTech icon 2 light.png" : store.brand.logo
+	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
+	const logoSource = store.brand.logo?.trim() || (store.isPlatformHome ? "/images/Nurava_HubStores_app_icon_logo.png" : "")
 	const isRemoteLogo = logoSource.startsWith("https://")
 	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
 	const accountName = session?.user?.name || session?.user?.email || "Account"
 
 	return (
-		<header className="site-header sticky top-0 z-[60] glass navy-glass backdrop-blur-lg border-b border-white/10">
+		<header className="site-header sticky top-0 z-[60] glass navy-glass border-0 backdrop-blur-lg">
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
 					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-									{isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />}
+			{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
 						<span
 							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
@@ -53,20 +62,24 @@ export default function Header() {
 							{store.brand.name}
 						</span>
 					</Link>
-				<nav className="hidden gap-3 lg:flex lg:gap-6">
-					{navigation.map((link) => (
-							<Link
-								key={link.href}
-								href={link.href}
-								className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
-							>
-								{link.name}
-							</Link>
-						))}
+					<nav aria-label={store.isPlatformHome ? "Platform navigation" : `${store.brand.name} navigation`} className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain px-1 py-1 lg:block">
+						<div className="flex w-max min-w-full items-center justify-center gap-x-[clamp(0.35rem,0.7vw,0.9rem)]">
+							{navigation.map((link) => (
+								<Link
+									key={link.href}
+									href={link.href}
+									className="shrink-0 whitespace-nowrap text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+									style={!store.isPlatformHome ? { fontSize: getStoreNavigationFontSize(link.name, navigation.length) } : undefined}
+								>
+									{link.name}
+								</Link>
+							))}
+						</div>
 					</nav>
 
 					{/* Right side icons */}
 					<div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-4">
+						{store.isPlatformHome && <SearchOverlay compactTrigger />}
 						<button
 							onClick={toggleTheme}
 							className="hidden rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:inline-flex"
@@ -124,7 +137,7 @@ export default function Header() {
 								{theme === "dark" ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
 								<span>{theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}</span>
 							</button>
-						{navigation.map((link) => (
+							{mobileMenuNavigation.map((link) => (
 								<Link
 									key={link.href}
 									href={link.href}
@@ -183,6 +196,8 @@ function StoreAccountMenu({
 			await signOut({ redirect: false })
 			setOpen(false)
 		} catch {
+			// Keep the menu available so the user can retry a failed sign-out.
+		} finally {
 			setSigningOut(false)
 		}
 	}
@@ -202,8 +217,8 @@ function StoreAccountMenu({
 				{!isSignedIn && <span className="text-[9px] leading-tight sm:text-xs">Sign in</span>}
 			</button>
 			{open && (
-				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-900 dark:text-white sm:right-0">
-					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-gray-100 dark:hover:bg-gray-800">
+				<div role="menu" className="absolute right-1 top-[calc(100%+0.5rem)] z-[90] w-52 max-w-[calc(100vw-1rem)] rounded-xl border border-theme-border bg-theme-surface p-2 text-theme-text shadow-xl sm:right-0">
+					<Link href={getStoreRouteHref(store, "/account")} role="menuitem" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-theme-bg">
 						<UserRound size={17} aria-hidden="true" />
 						Account
 					</Link>

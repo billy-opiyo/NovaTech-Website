@@ -30,7 +30,7 @@ export async function GET() {
 		const { context } = await access()
 		const evidence = await prisma.merchantVerificationEvidence.findMany({ where: { tenantId: context.tenantId }, orderBy: { createdAt: "desc" }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, reviewedAt: true, reviewNote: true, createdAt: true } })
 		return NextResponse.json({ evidence })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		return apiErrorResponse(error, "Verification evidence unavailable")
 	}
 }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 		await uploadPrivateFile(fileBuffer, objectKey, file.type)
 		const evidence = await prisma.merchantVerificationEvidence.create({ data: { id: evidenceId, tenantId: context.tenantId, type: parsed.data.type, objectKey, contentType: file.type, sizeBytes: file.size, uploadedById: session.user.id }, select: { id: true, type: true, status: true, contentType: true, sizeBytes: true, createdAt: true } })
 		return NextResponse.json({ evidence }, { status: 201 })
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (objectKey) await deletePrivateFile(objectKey).catch(() => undefined)
 		return apiErrorResponse(error, "Unable to upload verification evidence")
 	}

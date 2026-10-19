@@ -1,4 +1,5 @@
 import { clientConfig } from "@/config/client.config"
+import type { FontSizeOption } from "@/lib/font-size-preference"
 
 export type PlatformTeamMember = {
 	id: string
@@ -23,11 +24,14 @@ export type PlatformResponsiveAssets = {
 	lightMobile?: string
 }
 
+export const PLATFORM_DISCOVERY_CARD_KEYS = ["businesses", "customers", "compare", "choose", "buyFromStore"] as const
+export type PlatformDiscoveryCardKey = typeof PLATFORM_DISCOVERY_CARD_KEYS[number]
+export type PlatformDiscoveryCardCopy = { title?: string; text?: string }
+
 export type PlatformDesignSettings = {
 	themePreset?: string
 	colors?: {
 		primary?: string
-		primaryLight?: string
 		primaryDark?: string
 		accent?: string
 		light?: Partial<Record<"background" | "surface" | "text" | "muted" | "border", string>>
@@ -36,7 +40,7 @@ export type PlatformDesignSettings = {
 	typography?: {
 		bodyFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
 		headingFont?: "system" | "inter" | "georgia" | "trebuchet" | "verdana"
-		fontSize?: "small" | "normal" | "large" | "extraLarge"
+		fontSize?: FontSizeOption
 	}
 	glass?: {
 		blurPx?: number
@@ -98,14 +102,20 @@ export type PlatformSiteSettings = {
 		welcomeText?: string
 		loadingText?: string
 		logo?: string
+		backgroundMode?: "images" | "color" | "glass"
+		backgroundColor?: string
+		centerContentOnColor?: boolean
+		glassOpacity?: number
 		images?: PlatformResponsiveAssets
 	}
 	hero?: {
 		title?: string
 		highlight?: string
 		description?: string
+		/** Legacy values are accepted when reading saved settings but are never merged or rendered. */
 		images?: PlatformResponsiveAssets
 	}
+	discoveryCards?: Partial<Record<PlatformDiscoveryCardKey, PlatformDiscoveryCardCopy>>
 	design?: PlatformDesignSettings
 	legal?: {
 		terms?: string
@@ -129,7 +139,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			phoneDisplay: clientConfig.contact.phoneDisplay,
 			email: clientConfig.contact.email,
 			whatsappNumber: clientConfig.contact.whatsappNumber,
-			whatsappFloatingMessage: "Hello Nurava Tech, I am a merchant and would like to learn more about creating a store on the platform.",
+			whatsappFloatingMessage: "Hello Nurava HubStores, I am a merchant and would like to learn more about creating a store on the platform.",
 			whatsappMessage: clientConfig.contact.whatsappMessage,
 			addressLine: clientConfig.contact.addressLine,
 			cityCountry: clientConfig.contact.cityCountry,
@@ -149,6 +159,8 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			showProgress: true,
 			welcomeText: "Welcome to",
 			loadingText: "Preparing your store",
+			backgroundMode: "glass",
+			centerContentOnColor: true,
 			images: {
 				darkDesktop: "/images/NovaTech cover desktop.png",
 				darkTablet: "/images/NovaTech cover mobile.png",
@@ -158,28 +170,40 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 				lightMobile: "/images/NovaTech cover mobile light.png",
 			},
 		},
+		hero: {
+			title: "Nurava HubStores is the technology platform",
+			highlight: "connecting you with trusted stores",
+			description: "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya.",
+		},
+		discoveryCards: {
+			businesses: { title: "For Businesses", text: "Create, Manage and Grow your Online Store" },
+			customers: { title: "For Customers", text: "Discover products from trusted businesses" },
+			compare: { title: "Compare", text: "Compare prices, offers and store ratings." },
+			choose: { title: "Choose", text: "Select the best store that suits you." },
+			buyFromStore: { title: "Buy from Store", text: "Complete your purchase directly on the store's site." },
+		},
 		design: { themePreset: "nova-blue-orange", typography: { fontSize: "normal" } },
 		legal: {
-			terms: "Nurava Tech provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
-			privacy: "Nurava Tech processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
-			cookies: "Nurava Tech uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
+			terms: "Nurava HubStores provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
+			privacy: "Nurava HubStores processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
+			cookies: "Nurava HubStores uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
 		},
 		team: [
 			{
 				id: "founder-developer",
-				name: "Nurava Tech Founder",
+				name: "Nurava HubStores Founder",
 				role: "Founder & Developer",
 				bio: "Leads the product vision and builds the technology that helps independent stores serve shoppers better.",
 			},
 			{
 				id: "platform-operations",
-				name: "Nurava Tech Operations",
+				name: "Nurava HubStores Operations",
 				role: "Platform Operations",
 				bio: "Keeps the platform reliable and coordinates the systems that support merchants and shoppers.",
 			},
 			{
 				id: "merchant-success",
-				name: "Nurava Tech Team",
+				name: "Nurava HubStores Team",
 				role: "Merchant Success",
 				bio: "Helps store partners present their products clearly and grow with dependable storefront tools.",
 			},
@@ -188,12 +212,27 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 }
 
 export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: PlatformSiteSettings): PlatformSiteSettings {
-	// Ignore the retired hero customizations while continuing to parse older saved
-	// records safely; the platform homepage hero now uses its original artwork.
 	const safeBase = { ...base }
 	const safePatch = { ...patch }
 	delete safeBase.hero
 	delete safePatch.hero
+	const defaults = getPlatformSiteSettingsDefaults().hero!
+	const nonBlank = (value: string | undefined, fallback: string) => value?.trim() || fallback
+	const hero = {
+		title: nonBlank(patch.hero?.title, nonBlank(base.hero?.title, defaults.title!)),
+		highlight: nonBlank(patch.hero?.highlight, nonBlank(base.hero?.highlight, defaults.highlight!)),
+		description: nonBlank(patch.hero?.description, nonBlank(base.hero?.description, defaults.description!)),
+	}
+	const defaultDiscoveryCards = getPlatformSiteSettingsDefaults().discoveryCards!
+	const discoveryCards = Object.fromEntries(PLATFORM_DISCOVERY_CARD_KEYS.map((key) => {
+		const fallback = defaultDiscoveryCards[key] ?? { title: "", text: "" }
+		const copyValue = (patchValue: string | undefined, baseValue: string | undefined, defaultValue: string) =>
+			patchValue === undefined ? nonBlank(baseValue, defaultValue) : nonBlank(patchValue, defaultValue)
+		return [key, {
+			title: copyValue(patch.discoveryCards?.[key]?.title, base.discoveryCards?.[key]?.title, fallback.title ?? ""),
+			text: copyValue(patch.discoveryCards?.[key]?.text, base.discoveryCards?.[key]?.text, fallback.text ?? ""),
+		}]
+	})) as PlatformSiteSettings["discoveryCards"]
 	const contact = { ...base.contact, ...patch.contact }
 	// Before the dedicated field existed, the platform settings screen stored
 	// this value as whatsappMessage. Treat it as the floating/social message so
@@ -201,7 +240,7 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 	if (patch.contact?.whatsappFloatingMessage === undefined && patch.contact?.whatsappMessage !== undefined) {
 		contact.whatsappFloatingMessage = patch.contact.whatsappMessage
 	}
-	return {
+	const merged: PlatformSiteSettings = {
 		...safeBase,
 		...safePatch,
 		brand: { ...base.brand, ...patch.brand },
@@ -210,7 +249,13 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		social: { ...base.social, ...patch.social },
 		seo: { ...base.seo, ...patch.seo },
 		features: { ...base.features, ...patch.features },
-		splash: { ...base.splash, ...patch.splash, images: { ...base.splash?.images, ...patch.splash?.images } },
+		splash: {
+			...base.splash,
+			...patch.splash,
+			images: { ...base.splash?.images, ...patch.splash?.images },
+		},
+		hero,
+		discoveryCards,
 		design: {
 			...base.design,
 			...patch.design,
@@ -225,4 +270,13 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		},
 		legal: { ...base.legal, ...patch.legal },
 	}
+	// Normalize older platform-owned copy in memory. Merchant storefront settings
+	// and demo-store records are loaded through a separate context.
+	const rebrand = (value: unknown): unknown => {
+		if (typeof value === "string") return value.replaceAll("Nurava Tech", "Nurava HubStores")
+		if (Array.isArray(value)) return value.map(rebrand)
+		if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rebrand(item)]))
+		return value
+	}
+	return rebrand(merged) as PlatformSiteSettings
 }

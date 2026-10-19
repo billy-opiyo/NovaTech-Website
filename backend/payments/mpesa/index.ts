@@ -13,7 +13,8 @@ import type {
 	MpesaInitiateResult,
 	MpesaVerifyResult,
 } from "../../types/payments"
-import { cancelPendingOrder } from "../../services/order.service"
+import type { DarajaCredentials } from "../../lib/daraja"
+import { cancelPendingOrder, finalizePendingOrderPayment } from "../../services/order.service"
 import type { MerchantMpesaConfig } from "../merchant-mpesa"
 
 export type MpesaPayload = {
@@ -33,6 +34,7 @@ export interface MpesaInitiateInput extends MpesaPayload {
 	callbackUrl?: string
 	paymentId?: string
 	merchantConfig?: MerchantMpesaConfig
+	platformCredentials?: DarajaCredentials
 }
 
 const mpesaInitiateResponseSchema = z.object({
@@ -56,6 +58,19 @@ export function mapMpesaQueryStatus(response: { ResponseCode: string; ResultCode
 	return { status: completed ? "COMPLETED" as const : pending ? "PENDING" as const : "FAILED" as const, completed, pending }
 }
 
+/** Keep shopper payment references tied to the complete server-created order ID. */
+export function getShopperOrderPaymentReference(orderId: string) {
+	return `ORD-${orderId}`
+}
+
+export function shopperPaymentMatchesOrder(payment: { orderId: string | null; amount: number }, orderId: string, amount: number) {
+	return payment.orderId === orderId && Math.abs(payment.amount - amount) <= 0.01
+}
+
+export function mergeMpesaPaymentMetadata(metadata: Record<string, unknown> | undefined, reference: string, merchantRequestId: string) {
+	return { ...(metadata || {}), reference, merchantRequestId }
+}
+
 export async function initiateMpesaPayment({
 	amount,
 	phone,
@@ -70,8 +85,10 @@ export async function initiateMpesaPayment({
 	callbackUrl,
 	paymentId,
 	merchantConfig,
+	platformCredentials,
 }: MpesaInitiateInput): Promise<MpesaInitiateResult> {
-	if (!isMpesaConfigured(merchantConfig)) {
+	const credentials = merchantConfig || platformCredentials
+	if (!isMpesaConfigured(credentials)) {
 		const message = merchantConfig
 			? "This merchant has not configured an active M-Pesa shopper payment route."
 			: "M-Pesa is not configured. Set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_PASSKEY and MPESA_SHORTCODE."
@@ -106,6 +123,19 @@ export async function initiateMpesaPayment({
 				where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
 			})
 	if (existing) {
+		if (orderId && !shopperPaymentMatchesOrder(existing, orderId, amount)) {
+			return {
+				ok: false,
+				provider: "mpesa",
+				reference,
+				checkoutRequestId: "",
+				phone,
+				amount,
+				currency: "KES",
+				status: "FAILED",
+				message: "This M-Pesa reference is already linked to a different order or amount.",
+			}
+		}
 		if (paymentId && !existing.providerReference) {
 			const claimed = await prisma.payment.updateMany({ where: { id: existing.id, status: "PENDING", providerReference: null }, data: { status: "PROCESSING" } })
 			if (!claimed.count) {
@@ -151,7 +181,7 @@ export async function initiateMpesaPayment({
 			phone: normalizedPhone,
 			accountReference: reference.slice(0, 12),
 			callbackUrl: callback,
-			credentials: merchantConfig,
+		credentials,
 		}))
 	} catch (error) {
 		if (existing && paymentId) await prisma.payment.update({ where: { id: existing.id }, data: { status: "FAILED", failureReason: "M-Pesa initiation failed" } }).catch(() => undefined)
@@ -167,7 +197,7 @@ export async function initiateMpesaPayment({
 					providerReference: response.CheckoutRequestID,
 					phoneNumber: normalizedPhone,
 					failureReason: response.ResponseCode === "0" ? null : response.ResponseDescription || response.CustomerMessage || "M-Pesa request rejected",
-					metadata: { ...((existing.metadata || {}) as Record<string, unknown>), merchantRequestId: response.MerchantRequestID },
+					metadata: { ...((existing.metadata || {}) as Record<string, unknown>), ...(metadata || {}), merchantRequestId: response.MerchantRequestID },
 				},
 			})
 		: await prisma.payment.create({
@@ -185,9 +215,7 @@ export async function initiateMpesaPayment({
 			providerReference: response.CheckoutRequestID,
 			phoneNumber: normalizedPhone,
 			metadata: {
-				reference,
-				merchantRequestId: response.MerchantRequestID,
-				...(metadata || {}),
+				...mergeMpesaPaymentMetadata(metadata, reference, response.MerchantRequestID),
 			},
 		},
 		})
@@ -213,6 +241,7 @@ export async function verifyMpesaPayment(
 	reference: string,
 	tenantId?: string,
 	merchantConfig?: MerchantMpesaConfig,
+	paymentId?: string,
 ): Promise<MpesaVerifyResult> {
 	if (!isMpesaConfigured(merchantConfig)) {
 		const message = merchantConfig
@@ -229,14 +258,30 @@ export async function verifyMpesaPayment(
 	}
 
 	const payment = await prisma.payment.findFirst({
-		where: {
-			...(tenantId ? { tenantId } : {}),
-			OR: [
-				{ providerReference: reference },
-				{ metadata: { path: ["reference"], equals: reference } },
-			],
-		},
+		where: paymentId
+			? { id: paymentId, provider: "mpesa", ...(tenantId ? { tenantId } : {}) }
+			: {
+				provider: "mpesa",
+				...(tenantId ? { tenantId } : {}),
+				OR: [
+					{ providerReference: reference },
+					{ metadata: { path: ["reference"], equals: reference } },
+				],
+			},
 	})
+	if (paymentId) {
+		const storedReference = (payment?.metadata as { reference?: unknown } | null)?.reference
+		if (!payment || (storedReference !== reference && payment.providerReference !== reference)) {
+			return { ok: false, provider: "mpesa", reference, checkoutRequestId: payment?.providerReference || reference, status: "FAILED", message: "Payment request does not match the requested order." }
+		}
+	}
+	const paymentWasCompleted = payment?.status === "COMPLETED"
+	const settlementRecorded = (payment?.metadata as { orderSettlement?: unknown } | null)?.orderSettlement === "ORDER_CONFIRMED"
+	// Skip another Daraja query once provider confirmation and order settlement
+	// are both recorded. Older completed records still follow reconciliation below.
+	if (payment && payment.status === "COMPLETED" && (!payment.orderId || settlementRecorded)) {
+		return { ok: true, provider: "mpesa", reference, checkoutRequestId: payment.providerReference || reference, status: "COMPLETED", message: "M-Pesa payment completed successfully." }
+	}
 
 	const checkoutRequestId = payment?.providerReference || reference
 
@@ -249,59 +294,25 @@ export async function verifyMpesaPayment(
 	const resultCode = response.ResultCode
 	const { status: queriedStatus, pending } = mapMpesaQueryStatus(response)
 
-	const status = payment?.status === "COMPLETED" && queriedStatus !== "COMPLETED" ? "COMPLETED" : queriedStatus
+	const status = paymentWasCompleted && queriedStatus !== "COMPLETED" ? "COMPLETED" : queriedStatus
 
-	if (payment) {
-		if (status === "COMPLETED" && payment.orderId && payment.status !== "COMPLETED") {
-			const orderTenantId = tenantId || payment.tenantId || undefined
-			const pendingOrder = await prisma.order.findFirst({ where: { id: payment.orderId, ...(orderTenantId ? { tenantId: orderTenantId } : {}) }, select: { id: true, status: true } })
-			if (!pendingOrder) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment order is not available in this store." }
-			if (pendingOrder.status !== "PENDING") return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment received but the order is no longer pending." }
-		}
-		await prisma.payment.update({ where: { id: payment.id }, data: { status, metadata: { ...(payment.metadata as Record<string, unknown> | undefined), verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } } })
-
-		if (status === "COMPLETED" && payment.orderId && payment.status !== "COMPLETED") {
-			const orderTenantId = tenantId || payment.tenantId || undefined
-			const claimed = await prisma.order.updateMany({ where: { id: payment.orderId, ...(orderTenantId ? { tenantId: orderTenantId } : {}), status: "PENDING" }, data: { status: "CONFIRMED" } })
-			if (claimed.count !== 1) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment received but the order is no longer pending." }
-			const updatedOrder = await prisma.order.update({
-				where: { id: payment.orderId },
-				data: { status: "CONFIRMED" },
-				include: {
-					items: {
-						include: {
-							product: {
-								select: {
-									name: true,
-									slug: true,
-									images: true,
-								},
-							},
-						},
-					},
-				},
-			})
-
-			// Send order confirmation email (non-blocking)
+	if (payment && status === "COMPLETED" && payment.orderId) {
+		const orderTenantId = tenantId || payment.tenantId
+		if (!orderTenantId) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment order is not available in this store." }
+		const settlement = await finalizePendingOrderPayment({ paymentId: payment.id, orderId: payment.orderId, tenantId: orderTenantId, metadata: { verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } })
+		if (settlement.refundRequired) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment was received after the order was cancelled. The store must review a refund." }
+		if (settlement.reviewRequired) return { ok: false, provider: "mpesa", reference, status: "FAILED", checkoutRequestId, message: "Payment was received but the order requires store review." }
+		const updatedOrder = settlement.order
+		if (updatedOrder) {
 			try {
-				const email = updatedOrder.userId
-					? (
-							await prisma.user.findUnique({
-								where: { id: updatedOrder.userId },
-								select: { email: true },
-							})
-						)?.email
-					: shippingAddressEmail(updatedOrder.shippingAddress)
-
-				if (email) {
-					await sendOrderConfirmationEmail(email, updatedOrder)
-				}
-			} catch (emailError) {
-				console.error("Failed to send order confirmation email:", emailError)
-			}
+				const email = updatedOrder.userId ? (await prisma.user.findUnique({ where: { id: updatedOrder.userId }, select: { email: true } }))?.email : shippingAddressEmail(updatedOrder.shippingAddress)
+				if (email) await sendOrderConfirmationEmail(email, updatedOrder)
+			} catch (emailError) { console.error("Failed to send order confirmation email:", emailError) }
 		}
+	} else if (payment) {
+		await prisma.payment.update({ where: { id: payment.id }, data: { status, metadata: { ...(payment.metadata as Record<string, unknown> | undefined), verifyResponseCode: response.ResponseCode, ...(resultCode === undefined ? {} : { verifyResultCode: resultCode }), verifyResultDesc: response.ResultDesc } } })
 	}
-	if (status === "FAILED" && payment?.orderId && payment.status !== "COMPLETED") await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
+	if (status === "FAILED" && payment?.orderId && !paymentWasCompleted) await cancelPendingOrder(payment.orderId, payment.tenantId || undefined)
 
 	return {
 		ok: status === "COMPLETED" || status === "PENDING",
@@ -352,7 +363,7 @@ export async function simulateMpesaPayment({
 
 export function generateTimestamp(): string {
 	const { timestamp } = generatePassword(
-		process.env.MPESA_SHORTCODE || "174379",
+		process.env.MPESA_SHORTCODE || "",
 		process.env.MPESA_PASSKEY || "",
 	)
 	return timestamp

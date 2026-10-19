@@ -8,7 +8,8 @@ const TICKET_TTL_MS = 2 * 60 * 1000
 
 export async function GET(request: NextRequest) {
 	const state = request.nextUrl.searchParams.get("state") || ""
-	if (!/^[0-9a-f-]{36}$/i.test(state)) {
+	const challenge = request.nextUrl.searchParams.get("challenge") || ""
+	if (!/^[0-9a-f-]{36}$/i.test(state) || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) {
 		return NextResponse.redirect(new URL("/auth/error?error=MobileAuthState", request.url))
 	}
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 	})
 	await prisma.verificationToken.create({
 		data: {
-			identifier: `${MOBILE_TICKET_PREFIX}${userId}`,
+			identifier: `${MOBILE_TICKET_PREFIX}${challenge}:${userId}`,
 			token,
 			expires: new Date(now.getTime() + TICKET_TTL_MS),
 		},

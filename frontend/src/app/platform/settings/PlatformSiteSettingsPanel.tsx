@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
-import { getPlatformSiteSettingsDefaults, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
+import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 import { FONT_SIZE_LABELS, FONT_SIZE_OPTIONS } from "@/lib/font-size-preference"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
+const NOVA_ORANGE_SPLASH_COLOR = "#c2410c"
 const visualSlots = [
 	["darkDesktop", "Dark desktop"],
 	["darkTablet", "Dark tablet"],
@@ -17,6 +18,13 @@ const visualSlots = [
 	["lightTablet", "Light tablet"],
 	["lightMobile", "Light mobile"],
 ] as const
+const discoveryCardFields: Array<{ id: PlatformDiscoveryCardKey; label: string }> = [
+	{ id: "businesses", label: "For Businesses" },
+	{ id: "customers", label: "For Customers" },
+	{ id: "compare", label: "Compare" },
+	{ id: "choose", label: "Choose" },
+	{ id: "buyFromStore", label: "Buy from Store" },
+]
 
 export default function PlatformSiteSettingsPanel() {
 	const [draft, setDraft] = useState<PlatformSiteSettings>(initialSettings)
@@ -46,6 +54,15 @@ export default function PlatformSiteSettingsPanel() {
 
 	const updateSection = <K extends keyof PlatformSiteSettings>(section: K, key: string, value: string | boolean) => {
 		setDraft((current) => ({ ...current, [section]: { ...(current[section] as Record<string, string | boolean> | undefined), [key]: value } }))
+	}
+	const updateDiscoveryCard = (id: PlatformDiscoveryCardKey, field: "title" | "text", value: string) => {
+		setDraft((current) => ({
+			...current,
+			discoveryCards: {
+				...current.discoveryCards,
+				[id]: { ...current.discoveryCards?.[id], [field]: value },
+			},
+		}))
 	}
 
 	const request = async (method: "PATCH" | "POST") => {
@@ -95,7 +112,7 @@ export default function PlatformSiteSettingsPanel() {
 		return Math.round(Number(match?.[1] || (property === "glassBorder" ? 0.15 : 0.5)) * 100)
 	}
 
-	function updateVisualText(section: "splash" | "design", key: string, value: string | boolean) {
+	function updateVisualText(section: "splash" | "design", key: string, value: string | boolean | number) {
 		setDraft((current) => ({ ...current, [section]: { ...current[section], [key]: value } }))
 	}
 
@@ -151,8 +168,13 @@ export default function PlatformSiteSettingsPanel() {
 			const response = await fetch("/api/platform/settings/visual", { method: "POST", body })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to upload platform visual")
-			setDraft((current) => ({ ...current, [section]: slot === "logo" ? { ...current[section], logo: data.url } : { ...current[section], images: { ...current[section]?.images, [slot]: data.url } } }))
-			setMessage(slot === "logo" ? "Splash logo uploaded. Save the draft, then publish it to make it live." : "Platform image uploaded. Save the draft, then publish it to make it live.")
+			setDraft((current) => ({
+				...current,
+				[section]: slot === "logo"
+					? { ...current[section], logo: data.url }
+					: { ...current[section], images: { ...current[section]?.images, [slot]: data.url } },
+			}))
+			setMessage("Platform image uploaded. Save the draft, then publish it to make it live.")
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : "Unable to upload platform visual")
 		} finally {
@@ -170,7 +192,7 @@ export default function PlatformSiteSettingsPanel() {
 
 	function addTeamMember() {
 		const id = `team-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-		setDraft((current) => ({ ...current, team: [...(current.team || []), { id, name: "New team member", role: "Team role", bio: "Add a short description of this team member's contribution to Nurava Tech.", social: {} }] }))
+		setDraft((current) => ({ ...current, team: [...(current.team || []), { id, name: "New team member", role: "Team role", bio: "Add a short description of this team member's contribution to Nurava HubStores.", social: {} }] }))
 	}
 
 	function removeTeamMember(id: string) {
@@ -245,7 +267,7 @@ export default function PlatformSiteSettingsPanel() {
 		<div className="space-y-6 pb-12">
 			<div>
 				<h2 className="text-3xl font-bold">Platform site settings</h2>
-				<p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-300">Manage Nurava Tech platform branding, contact details, social links, visibility, and SEO. These settings affect the platform pages only; each merchant storefront keeps its own settings.</p>
+				<p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-300">Manage Nurava HubStores platform branding, contact details, social links, visibility, and SEO. These settings affect the platform pages only; each merchant storefront keeps its own settings.</p>
 			</div>
 
 			<section className="glass-card space-y-5 p-6">
@@ -257,6 +279,26 @@ export default function PlatformSiteSettingsPanel() {
 					<div className="block"><span className="text-sm font-medium">Platform favicon</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingFavicon ? "cursor-wait opacity-60" : ""}`}>{uploadingFavicon ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingFavicon ? "Uploading…" : "Upload favicon"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingFavicon} onChange={(event) => { void uploadFavicon(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "favicon") && <img src={text("brand", "favicon")} alt="Current platform favicon" className="h-10 w-10 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF favicon up to 1MB. Save the draft, then publish it to update the platform icon.</span></div>
 					<label className="block lg:col-span-2"><span className="text-sm font-medium">Logo alt text</span><input className={inputClass} value={text("brand", "logoAlt")} onChange={(event) => updateSection("brand", "logoAlt", event.target.value)} /></label>
 					<label className="block lg:col-span-2"><span className="text-sm font-medium">Footer description</span><textarea className={inputClass} value={text("site", "footerDescription")} onChange={(event) => updateSection("site", "footerDescription", event.target.value)} rows={3} /></label>
+				</div>
+			</section>
+
+			<section className="glass-card space-y-5 p-6">
+				<div><h3 className="text-lg font-semibold">Platform homepage hero</h3><p className="mt-1 text-sm text-gray-500">Edit the heading and supporting text shown in the responsive glass hero card. Text is used in light and dark modes; hero artwork is no longer displayed.</p></div>
+				<div className="grid gap-4">
+					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: Nurava HubStores is the technology platform</span></label>
+					<label className="block"><span className="text-sm font-medium">Highlighted heading</span><input maxLength={120} className={inputClass} value={draft.hero?.highlight || ""} onChange={(event) => updateSection("hero", "highlight", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: connecting you with trusted stores</span></label>
+					<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={320} rows={3} className={inputClass} value={draft.hero?.description || ""} onChange={(event) => updateSection("hero", "description", event.target.value)} /></label>
+				</div>
+			</section>
+
+			<section className="glass-card space-y-5 p-6">
+				<div><h3 className="text-lg font-semibold">Platform homepage discovery cards</h3><p className="mt-1 text-sm text-gray-500">Edit the bold headings and supporting text shown beneath the homepage hero. The icons and card order stay fixed. Empty fields use the default wording.</p></div>
+				<div className="grid gap-5 lg:grid-cols-2">
+					{discoveryCardFields.map(({ id, label }) => <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-white/10" key={id}>
+						<h4 className="font-semibold">{label}</h4>
+						<label className="block"><span className="text-sm font-medium">Bold heading</span><input maxLength={120} className={inputClass} value={draft.discoveryCards?.[id]?.title || ""} onChange={(event) => updateDiscoveryCard(id, "title", event.target.value)} /></label>
+						<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={240} rows={2} className={inputClass} value={draft.discoveryCards?.[id]?.text || ""} onChange={(event) => updateDiscoveryCard(id, "text", event.target.value)} /></label>
+					</div>)}
 				</div>
 			</section>
 
@@ -282,12 +324,48 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
-				<div><h3 className="text-lg font-semibold">Platform splash screen</h3><p className="mt-1 text-sm text-gray-500">Keep the current images as fallbacks or upload separate light/dark assets for desktop, tablet, and mobile screens.</p></div>
+				<div><h3 className="text-lg font-semibold">Platform splash screen</h3><p className="mt-1 text-sm text-gray-500">Choose responsive artwork, a solid color, or a glassmorphism surface. Glass mode follows the platform design background and glass settings in both light and dark mode. Selecting color or glass hides the splash background images without deleting them.</p></div>
 				<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.enabled !== false} onChange={(event) => updateVisualText("splash", "enabled", event.target.checked)} /><span>Enable splash screen on platform homepage visits</span></label>
 				<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.showProgress !== false} onChange={(event) => updateVisualText("splash", "showProgress", event.target.checked)} /><span>Show progress bar, percentage, and loading ellipsis</span></label>
 				<div className="grid gap-4 md:grid-cols-2"><label className="block"><span className="text-sm font-medium">Welcome text</span><input className={inputClass} value={draft.splash?.welcomeText || ""} onChange={(event) => updateVisualText("splash", "welcomeText", event.target.value)} /></label><label className="block"><span className="text-sm font-medium">Loading text</span><input className={inputClass} value={draft.splash?.loadingText || ""} onChange={(event) => updateVisualText("splash", "loadingText", event.target.value)} /></label></div>
-				<div className="flex flex-wrap items-center gap-4 rounded-lg border border-gray-200 p-3 dark:border-white/10"><img src={draft.splash?.logo || "/images/Nurava_HubStores_splash_logo.webp"} alt="Splash logo preview" className="h-14 w-14 rounded-lg object-contain" /><div><p className="text-sm font-medium">Splash logo</p><p className="mt-1 text-xs text-gray-500">Shown between the animated platform name and loading progress. It also appears in the Android app splash. If no custom logo is uploaded, the current app splash logo is used.</p></div><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploadingVisual === "splash.logo" ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === "splash.logo" ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}{uploadingVisual === "splash.logo" ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", "logo", event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div>
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visualSlots.map(([slot, label]) => { const id = `splash.${slot}`; return <div key={id} className="rounded-lg border border-gray-200 p-3 dark:border-white/10"><p className="text-sm font-medium">{label}</p>{assetValue(slot) && <img src={assetValue(slot)} alt={`${label} splash preview`} className="mt-2 h-24 w-full rounded object-cover" />}<label className={`mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${uploadingVisual === id ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}{uploadingVisual === id ? "Uploading…" : "Upload image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", slot, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div> })}</div>
+				<div className="grid gap-4 md:grid-cols-2">
+					<label className="block"><span className="text-sm font-medium">Splash background style</span><select className={inputClass} value={draft.splash?.backgroundMode || "glass"} onChange={(event) => updateVisualText("splash", "backgroundMode", event.target.value)}><option value="glass">Platform glass theme</option><option value="color">Solid background color</option><option value="images">Responsive background images</option></select><span className="mt-1 block text-xs text-gray-500">Color and glass modes override images on every device and in both theme modes.</span></label>
+					{draft.splash?.backgroundMode === "color" && <>
+						<label className="block">
+							<span className="text-sm font-medium">Splash background color</span>
+							<div className="mt-2 flex items-center gap-3">
+								<input aria-label="Splash background color" type="color" className="h-12 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-white/10 dark:bg-dark-surface" value={draft.splash?.backgroundColor || "#071a2c"} onChange={(event) => updateVisualText("splash", "backgroundColor", event.target.value)} />
+								<span className="text-sm text-gray-500">{draft.splash?.backgroundColor || "#071a2c"}</span>
+							</div>
+							<button
+								type="button"
+								aria-label={`Use Nova Orange ${NOVA_ORANGE_SPLASH_COLOR} for the splash background`}
+								aria-pressed={(draft.splash?.backgroundColor || "").toLowerCase() === NOVA_ORANGE_SPLASH_COLOR}
+								onClick={() => updateVisualText("splash", "backgroundColor", NOVA_ORANGE_SPLASH_COLOR)}
+								className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium transition hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 dark:border-white/15"
+							>
+								<span aria-hidden="true" className="h-4 w-4 rounded-full border border-black/15" style={{ backgroundColor: NOVA_ORANGE_SPLASH_COLOR }} />
+								Use Nova Orange <span className="text-gray-500">{NOVA_ORANGE_SPLASH_COLOR}</span>
+							</button>
+						</label>
+						<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.splash?.centerContentOnColor !== false} onChange={(event) => updateVisualText("splash", "centerContentOnColor", event.target.checked)} /><span>Center welcome content on the solid-color splash</span></label>
+					</>}
+				</div>
+				<div className="rounded-lg border border-gray-200 p-4 dark:border-white/10">
+					<div>
+						<p className="text-sm font-medium">Splash logo</p>
+						<p className="mt-1 text-xs text-gray-500">Shown between the animated platform name and loading progress. It also appears in the Android app splash. If no custom logo is uploaded, the current app splash logo is used.</p>
+					</div>
+					<div className="mt-3 flex flex-wrap items-center gap-4">
+						<img src={draft.splash?.logo || "/images/Nurava_HubStores_splash_logo.webp"} alt="Splash logo preview" className="h-14 w-14 rounded-lg object-contain" />
+						<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploadingVisual === "splash.logo" ? "cursor-wait opacity-60" : ""}`}>
+							{uploadingVisual === "splash.logo" ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+							{uploadingVisual === "splash.logo" ? "Uploading…" : "Upload logo"}
+							<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", "logo", event.target.files?.[0]); event.target.value = "" }} className="sr-only" />
+						</label>
+					</div>
+				</div>
+				{draft.splash?.backgroundMode === "images" && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visualSlots.map(([slot, label]) => { const id = `splash.${slot}`; return <div key={id} className="rounded-lg border border-gray-200 p-3 dark:border-white/10"><p className="text-sm font-medium">{label}</p>{assetValue(slot) && <img src={assetValue(slot)} alt={`${label} splash preview`} className="mt-2 h-24 w-full rounded object-cover" />}<label className={`mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${uploadingVisual === id ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}{uploadingVisual === id ? "Uploading…" : "Upload image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("splash", slot, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label></div> })}</div>}
 			</section>
 
 			<section className="glass-card space-y-5 p-6">

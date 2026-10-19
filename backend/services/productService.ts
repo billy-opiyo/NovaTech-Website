@@ -4,6 +4,9 @@ import { assertTenantProductLimit } from "../billing/subscription"
 import { deleteFile } from "../lib/storage"
 import type { ProductInput } from "../validators/productValidator"
 import { validateAndNormalizeProductAttributes } from "../lib/industry"
+import type { TenantContext } from "../lib/tenant"
+
+type ProductStoreContext = Pick<TenantContext, "storeId" | "commerceSettings">
 
 type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sku" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
 		discountedPrice?: number | null
@@ -12,8 +15,18 @@ type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sk
 		categoryId?: string
 }
 
-export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<string[]> {
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, commerceSettings: true } })
+export async function getHiddenStoreCategorySlugs(tenantId: string, storeContext?: ProductStoreContext): Promise<string[]> {
+	const [store, categories] = await Promise.all([
+		storeContext
+			? Promise.resolve({ id: storeContext.storeId, commerceSettings: storeContext.commerceSettings })
+			: prisma.store.findUnique({ where: { tenantId }, select: { id: true, commerceSettings: true } }),
+		prisma.category.findMany({
+			where: storeContext
+				? { tenantId, storeId: storeContext.storeId }
+				: { tenantId, store: { is: { tenantId } } },
+			select: { slug: true, storeId: true },
+		}),
+	])
 	const commerce = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
 		? store.commerceSettings as Record<string, unknown>
 		: {}
@@ -21,13 +34,12 @@ export async function getHiddenStoreCategorySlugs(tenantId: string): Promise<str
 		? commerce.categoryAvailability as Record<string, unknown>
 		: {}
 	if (!store) return []
-	const categories = await prisma.category.findMany({ where: { tenantId, storeId: store.id }, select: { slug: true } })
-	return categories.filter(({ slug }) => availability[slug] === false).map(({ slug }) => slug)
+	return categories.filter(({ slug, storeId }) => storeId === store.id && availability[slug] === false).map(({ slug }) => slug)
 }
 
-export async function getFilteredProducts(params: URLSearchParams, tenantId: string) {
+export async function getFilteredProducts(params: URLSearchParams, tenantId: string, storeContext?: ProductStoreContext) {
 	const where: Prisma.ProductWhereInput = { tenantId }
-	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
 
 	const categorySlug = params.get("category")
 	if (categorySlug && hiddenCategories.includes(categorySlug)) {
@@ -161,8 +173,8 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 	}
 }
 
-export async function getProductBySlug(slug: string, tenantId: string) {
-	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
+export async function getProductBySlug(slug: string, tenantId: string, storeContext?: ProductStoreContext) {
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
 	const product = await prisma.product.findFirst({
 		where: { slug, tenantId, ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}) },
 		include: {
@@ -205,9 +217,9 @@ export async function getProductBySlug(slug: string, tenantId: string) {
 	}
 }
 
-export async function searchProducts(query: string, tenantId: string) {
+export async function searchProducts(query: string, tenantId: string, storeContext?: ProductStoreContext) {
 	if (!query || query.length < 2) return []
-	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId)
+	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
 
 	const products = await prisma.product.findMany({
 		where: {
@@ -238,8 +250,9 @@ export async function searchProducts(query: string, tenantId: string) {
 
 export async function createProduct(data: ProductInput, tenantId: string) {
 	await assertTenantProductLimit(tenantId)
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
+	const isElectronics = store.industry?.slug === "electronics"
 	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId, storeId: store.id }, select: { id: true } })
 	if (!category) throw new Error("Category not found")
 	const attributes = await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
@@ -256,8 +269,8 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 			price: data.price,
 			discountedPrice: data.discountedPrice,
 			stock: data.stock,
-			warranty: data.warranty,
-			specs: data.specs,
+			warranty: isElectronics ? data.warranty : undefined,
+			specs: isElectronics ? data.specs : undefined,
 			images: data.images,
 			categoryId: data.categoryId,
 			isFeatured: data.isFeatured || false,
@@ -291,8 +304,12 @@ export async function updateProduct(slug: string, data: ProductUpdateInput, tena
 	if (update.stock !== undefined) update.stock = Number(update.stock)
 	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
 	if (!product) throw new Error("Product not found")
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
+	if (store.industry?.slug !== "electronics") {
+		delete update.warranty
+		delete update.specs
+	}
 	if (update.categoryId !== undefined) {
 		if (typeof update.categoryId !== "string") throw new Error("Invalid category")
 		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId, storeId: store.id }, select: { id: true } })

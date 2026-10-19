@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -22,6 +22,8 @@ import { getMerchantWhatsAppHref } from "@/lib/merchant-contact"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
 import { getProductSearchPlaceholder } from "@/lib/industry-copy"
+import { getProductCardHighlights } from "@/lib/product-card-highlights"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 import ProductActions from "@/components/product/ProductActions"
 
 // Types
@@ -39,7 +41,8 @@ interface Product {
 	stock: number
 	variants?: { stock: number }[]
 	availableStock: number
-	specs?: Record<string, string>
+	specs?: Record<string, unknown>
+	attributeValues?: { displayValue?: string | null; value?: unknown; definition?: { name?: string | null } }[]
 }
 
 interface FilterState {
@@ -52,7 +55,7 @@ interface FilterState {
 	trending: boolean
 }
 
-const brands = [
+	const electronicsBrands = [
 	"Apple",
 	"Samsung",
 	"Sony",
@@ -74,6 +77,7 @@ const sortOptions = [
 export default function ProductsClient() {
 	const searchParams = useSearchParams()
 	const store = useStoreContext()
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
 	const categories = [{ name: "All Categories", slug: "" }, ...store.homepage.categories.map(({ name, slug }) => ({ name, slug }))]
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -89,8 +93,25 @@ export default function ProductsClient() {
 		trending: searchParams.get("trending") === "true",
 	})
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+	const [catalogBrands, setCatalogBrands] = useState<string[]>([])
 	const [isLoading, setIsLoading] = useState(false)
+	const requestGuard = useRef(createLatestRequestGuard())
 	const searchParamsKey = searchParams.toString()
+	const brands = store.industry?.slug === "electronics" ? electronicsBrands : catalogBrands
+
+	useEffect(() => () => requestGuard.current.invalidate(), [])
+
+	useEffect(() => {
+		if (!searchParams.get("q") && !searchParams.get("category") && searchParams.get("trending") !== "true") return
+		let current = true
+		getProducts({ limit: 100 }, productsEndpoint)
+			.then(({ products }) => {
+				if (!current) return
+				setCatalogBrands(Array.from(new Set(products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
+			})
+			.catch(() => { if (current) setCatalogBrands([]) })
+		return () => { current = false }
+	}, [productsEndpoint, searchParamsKey])
 
 	useEffect(() => {
 		if (filters.category && !store.homepage.categories.some((category) => category.slug === filters.category)) {
@@ -110,13 +131,18 @@ export default function ProductsClient() {
 		const nextSearch = searchParams.get("q") || ""
 		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
-		setSearchQuery(nextSearch)
-		setFilters((current) => ({ ...current, category: searchParams.get("category") || "", sortBy: nextSortBy, trending: searchParams.get("trending") === "true" }))
+		const nextCategory = searchParams.get("category") || ""
+		const nextTrending = searchParams.get("trending") === "true"
+		setSearchQuery((current) => current === nextSearch ? current : nextSearch)
+		setFilters((current) => current.category === nextCategory && current.sortBy === nextSortBy && current.trending === nextTrending
+			? current
+			: { ...current, category: nextCategory, sortBy: nextSortBy, trending: nextTrending })
 	}, [searchParamsKey])
 
 	const applyFilters = useCallback(() => {
+		const requestId = requestGuard.current.begin()
 		setIsLoading(true)
-		getProducts({
+		const query = {
 			q: searchQuery || undefined,
 			category: filters.category || undefined,
 			brands: filters.brands.length ? filters.brands.join(",") : undefined,
@@ -127,8 +153,12 @@ export default function ProductsClient() {
 			trending: filters.trending ? true : undefined,
 			sortBy: filters.sortBy,
 			limit: 100,
-		})
+		}
+		const requestsEntireCatalog = !query.q && !query.category && !query.brands && query.minPrice === undefined && query.maxPrice === undefined && !query.inStock && !query.onSale && !query.trending
+		getProducts(query, productsEndpoint)
 			.then((response) => {
+				if (!requestGuard.current.isCurrent(requestId)) return
+				if (requestsEntireCatalog) setCatalogBrands(Array.from(new Set(response.products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
 				const products = response.products.map((product) => {
 					const productWithMetrics = product as typeof product & { averageRating?: number }
 					return {
@@ -136,15 +166,16 @@ export default function ProductsClient() {
 					availableStock: product.variants?.length ? Math.max(...product.variants.map((variant: { stock: number }) => variant.stock)) : product.stock,
 					rating: productWithMetrics.averageRating ?? product.rating,
 					reviewCount: product.reviewCount,
-					specs: {},
+					specs: product.specs || {},
+					attributeValues: product.attributeValues,
 				}
 				})
 				if (filters.sortBy === "rating") products.sort((a, b) => (b.rating || 0) - (a.rating || 0))
 				setFilteredProducts(products)
 			})
-			.catch(() => setFilteredProducts([]))
-			.finally(() => setIsLoading(false))
-	}, [searchQuery, filters])
+			.catch(() => { if (requestGuard.current.isCurrent(requestId)) setFilteredProducts([]) })
+			.finally(() => { if (requestGuard.current.isCurrent(requestId)) setIsLoading(false) })
+	}, [searchQuery, filters, productsEndpoint])
 
 	useEffect(() => {
 		applyFilters()
@@ -733,6 +764,7 @@ function ProductListItem({
 }) {
 	const store = useStoreContext()
 	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
+	const highlights = getProductCardHighlights(store.industry?.slug, product.specs, product.attributeValues)
 	return (
 		<motion.div
 			initial={{ opacity: 0, x: -20 }}
@@ -779,11 +811,9 @@ function ProductListItem({
 								({product.reviewCount} reviews)
 							</span>
 						</div>
-						<p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-							{Object.entries(product.specs || {})
-								.map(([key, val]) => `${key}: ${val}`)
-								.join(" | ")}
-						</p>
+						{highlights.length > 0 && <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+							{highlights.map(({ label, value }) => `${label}: ${value}`).join(" | ")}
+						</p>}
 					</div>
 					<div className="flex items-baseline gap-2 mt-2">
 						{product.discountedPrice ? (

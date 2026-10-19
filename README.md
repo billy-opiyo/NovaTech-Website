@@ -360,6 +360,15 @@ NovaTech Website/
 | `NEXT_PUBLIC_R2_PUBLIC_URL`          | Public base URL for R2-hosted files                    |
 | `MERCHANT_VERIFICATION_ENCRYPTION_KEY` | 32-byte hex/base64 key for encrypted merchant verification details |
 | `RESEND_API_KEY`                     | Resend email API key                                   |
+| `RESEND_FROM_EMAIL`                  | Sender address verified with the production domain    |
+| `SMS_PROVIDER`                       | Production SMS provider: `africastalking` or `twilio`  |
+| `AFRICASTALKING_USERNAME`            | Africa's Talking production username                  |
+| `AFRICASTALKING_API_KEY`             | Africa's Talking production API key                   |
+| `AFRICASTALKING_SENDER_ID`           | Optional registered production sender ID              |
+| `SMS_PROVIDER_TIMEOUT_MS`            | SMS provider request timeout in milliseconds          |
+| `TWILIO_ACCOUNT_SID`                 | Twilio account SID when `SMS_PROVIDER=twilio`          |
+| `TWILIO_AUTH_TOKEN`                  | Twilio auth token when `SMS_PROVIDER=twilio`           |
+| `TWILIO_PHONE_NUMBER`                | Twilio sender number when `SMS_PROVIDER=twilio`        |
 | `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
 | `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |
 | `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
@@ -371,31 +380,19 @@ NovaTech Website/
 | `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
 | `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
-| `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
-| `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
+| `MPESA_SHORTCODE`                    | Production-registered M-Pesa business shortcode        |
+| `MPESA_ENV`                          | Production M-Pesa environment (`production`)          |
 | `MPESA_BUSINESS_NAME`                | Platform SaaS billing descriptor; production must be `Nurava Tech` |
-| `SHOPPER_PAYMENTS_TEST_MODE`         | Explicit staging-only test switch for the Nurava Tech demo store; keep `false` in production |
-| `SHOPPER_PAYMENTS_TEST_TENANT_SLUG`  | Must be `nuravatech` for the staging-only test switch to activate |
-| `NURAVA_DEPLOYMENT_TIER`              | Deployment identity used by the staging Vercel Production environment; set `staging` only on the staging deployment |
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
 | `SEED_ADMIN_PASSWORD`                | Required only for development database seeding         |
 | `INITIAL_ADMIN_EMAIL`                | Production admin initialization email                  |
 | `INITIAL_ADMIN_PASSWORD`             | Production admin initialization password               |
-| `STAGING_URL`                        | Deployed staging URL for health checks                 |
 | `BACKUP_DATABASE_URL`                 | Source database URL for backup verification             |
 | `RESTORE_DATABASE_URL`                | Disposable restore target for backup verification      |
-| `E2E_PAYMENT_PROVIDER`                | Payment provider used by sandbox browser tests          |
 
 ---
-
-The staging-only shopper payment fixture is fail-closed and is restricted to
-the `nuravatech` store, non-production deployments, and `MPESA_ENV=sandbox`.
-When enabled, shopper payments reuse the existing sandbox Daraja environment
-credentials without creating a merchant payment profile or bypassing sign-in
-and store-admin permissions. It must be disabled before any production
-deployment.
 
 ## 🚀 Getting Started
 

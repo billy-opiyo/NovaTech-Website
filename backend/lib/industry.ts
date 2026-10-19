@@ -62,6 +62,40 @@ export function parseIndustryAttributeInputs(input: unknown): IndustryAttributeI
 	})
 }
 
+export function normalizeIndustryAttributeInputs(
+	definitions: readonly { id: string; name: string; type: ProductAttributeType; options: string[]; required: boolean }[],
+	input: unknown,
+) {
+	const inputs = parseIndustryAttributeInputs(input)
+	const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]))
+	const seen = new Set<string>()
+	const values = inputs.map((attribute) => {
+		if (seen.has(attribute.definitionId)) throw new Error("Each product attribute may be supplied only once")
+		seen.add(attribute.definitionId)
+		const definition = definitionsById.get(attribute.definitionId)
+		if (!definition) throw new Error("That product attribute is not available for this store")
+		return { definitionId: definition.id, ...normalizeIndustryAttributeValue(definition, attribute.value) }
+	})
+	for (const definition of definitions) {
+		if (definition.required && !seen.has(definition.id)) throw new Error(`The ${definition.name} attribute is required`)
+	}
+	return values
+}
+
+export function normalizeIndustryAttributeRecord(
+	definitions: readonly { id: string; key: string; name: string; type: ProductAttributeType; options: string[]; required: boolean }[],
+	input: unknown,
+) {
+	if (!isRecord(input)) throw new Error("Industry attributes must be a JSON object")
+	const definitionsByKey = new Map(definitions.map((definition) => [definition.key, definition]))
+	const values = Object.entries(input).map(([key, value]) => {
+		const definition = definitionsByKey.get(key)
+		if (!definition) throw new Error(`Unknown industry attribute '${key}'`)
+		return { definitionId: definition.id, value }
+	})
+	return normalizeIndustryAttributeInputs(definitions, values)
+}
+
 export async function getStoreIndustry(storeId: string, tenantId: string) {
 	return prisma.store.findFirst({
 		where: { id: storeId, tenantId },
@@ -86,19 +120,5 @@ export async function validateAndNormalizeProductAttributes(
 ) {
 	const store = await getStoreIndustry(storeId, tenantId)
 	if (!store?.industry) throw new Error("This store has no active industry configuration")
-	const inputs = parseIndustryAttributeInputs(input)
-	const definitions = new Map(store.industry.attributeDefinitions.map((definition) => [definition.id, definition]))
-	const seen = new Set<string>()
-	const values = inputs.map((attribute) => {
-		if (seen.has(attribute.definitionId)) throw new Error("Each product attribute may be supplied only once")
-		seen.add(attribute.definitionId)
-		const definition = definitions.get(attribute.definitionId)
-		if (!definition) throw new Error("That product attribute is not available for this store")
-		const normalized = normalizeIndustryAttributeValue(definition, attribute.value)
-		return { definitionId: definition.id, ...normalized }
-	})
-	for (const definition of store.industry.attributeDefinitions) {
-		if (definition.required && !seen.has(definition.id)) throw new Error(`The ${definition.name} attribute is required`)
-	}
-	return values
+	return normalizeIndustryAttributeInputs(store.industry.attributeDefinitions, input)
 }

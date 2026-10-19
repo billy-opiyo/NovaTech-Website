@@ -38,7 +38,7 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 						<div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl">
 								{/* Keep one responsive artwork viewport so every card aligns while the full image remains visible. */}
 								<img
-									src={getProductImage(product.images[0], product.name)}
+									src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 									alt={product.name}
 									onError={fallbackToProductPlaceholder}
 									className="block h-full w-full rounded-xl object-contain transition-transform duration-500 lg:group-hover:scale-105"
@@ -67,7 +67,7 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 							</div>
 						</Link>
 						<div className="absolute inset-x-3 bottom-3">
-							<ProductActions productId={product.id} name={product.name} brand={product.brand} image={product.images[0]} price={product.discountedPrice ?? product.price} stock={product.stock} slug={product.slug} hasVariants={product.hasVariants} merchantHref={getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })} />
+							<ProductActions productId={product.id} name={product.name} brand={product.brand} image={product.images[0]} price={product.discountedPrice ?? product.price} stock={product.stock} slug={product.slug} hasVariants={product.hasVariants} merchantHref={getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })} />
 						</div>
 						</article>
 					</motion.div>

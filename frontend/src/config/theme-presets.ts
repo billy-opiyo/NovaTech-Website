@@ -2,7 +2,7 @@
  * Developer-managed visual presets.
  *
  * Keep these presets free of client data. Client-specific branding belongs in
- * client.config.ts, while this file contains reusable electronics-store UI
+ * client.config.ts, while this file contains reusable multi-industry storefront UI
  * systems that can be selected from that config.
  */
 
@@ -25,6 +25,7 @@ export type ThemePreset = {
 	name: string
 	description: string
 	primary: string
+	primaryLight?: string
 	primaryDark: string
 	accent: string
 	light: ThemeModeColors
@@ -59,6 +60,20 @@ export const THEME_PRESETS = {
 		fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif",
 		cardRadius: "1rem",
 	},
+	"nova-orange-navy-blue": {
+		id: "nova-orange-navy-blue",
+		name: "Nova Orange & navy Blue",
+		description: "Warm orange actions balanced by confident navy surfaces and text.",
+		primary: "#c2410c",
+		primaryLight: "#fb923c",
+		primaryDark: "#9a3412",
+		accent: "#f97316",
+		light: mode({ background: "#eef3f9", surface: "#ffffff", text: "#10243b", muted: "#52677f", border: "#cbd7e5", glassBackground: "rgba(255, 255, 255, 0.76)", glassBorder: "rgba(23, 59, 99, 0.2)", glassShadow: "0 8px 32px rgba(12, 35, 61, 0.14)", scrollbarTrack: "rgba(23, 59, 99, 0.12)", scrollbarThumb: "rgba(194, 65, 12, 0.72)", scrollbarThumbHover: "rgba(154, 52, 18, 0.95)" }),
+		dark: mode({ background: "#08182a", surface: "#10243b", text: "#edf4fc", muted: "#a9bbcf", border: "#29435f", glassBackground: "rgba(4, 15, 28, 0.72)", glassBorder: "rgba(249, 115, 22, 0.2)", glassShadow: "0 8px 32px rgba(0, 0, 0, 0.46)", scrollbarTrack: "rgba(8, 24, 42, 0.9)", scrollbarThumb: "rgba(249, 115, 22, 0.72)", scrollbarThumbHover: "rgba(251, 146, 60, 0.95)" }),
+		fontBody: "Inter, ui-sans-serif, system-ui, sans-serif",
+		fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif",
+		cardRadius: "1rem",
+	},
 	"midnight-cyan": {
 		id: "midnight-cyan",
 		name: "Midnight Cyan",
@@ -88,7 +103,7 @@ export const THEME_PRESETS = {
 	"royal-purple": {
 		id: "royal-purple",
 		name: "Royal Purple",
-		description: "Confident violet and gold for premium lifestyle electronics.",
+		description: "Confident violet and gold for a polished, premium storefront.",
 		primary: "#7c3aed",
 		primaryDark: "#6d28d9",
 		accent: "#f59e0b",
@@ -114,7 +129,7 @@ export const THEME_PRESETS = {
 	"ocean-teal": {
 		id: "ocean-teal",
 		name: "Ocean Teal",
-		description: "Calm teal and coral for approachable everyday electronics.",
+		description: "Calm teal and coral for approachable everyday commerce.",
 		primary: "#0f766e",
 		primaryDark: "#115e59",
 		accent: "#f97316",
@@ -250,7 +265,7 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	const darkScrollbar = scrollbarColors("dark")
 	return {
 	"--color-primary": hexToRgb(primary),
-	"--color-primary-light": overrides?.colors?.primaryLight || primary,
+	"--color-primary-light": overrides?.colors?.primaryLight || theme.primaryLight || primary,
 	"--color-primary-dark": hexToRgb(primaryDark),
 	"--color-accent": hexToRgb(accent),
 	"--color-bg-light": hexToRgb(color("light", "background")),

@@ -36,7 +36,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
-import { getStoreHomeHref, getStoreRouteHref } from "@/lib/store-home"
+import { getMerchantStoreHomeHref, getStoreRouteHref } from "@/lib/store-home"
 
 const sidebarLinks = (basePath: string, store: ReturnType<typeof useStoreContext>) => [
 	{
@@ -187,11 +187,13 @@ function SidebarContent({
 	const store = useStoreContext()
 	const activePathname = pathname.includes(basePath) ? pathname.slice(pathname.indexOf(basePath)) : pathname
 	const [signingOut, setSigningOut] = useState(false)
+	const storeHomeHref = getMerchantStoreHomeHref(store)
+	const storeHomeLabel = store.isPlatformHome ? "Storefront Home" : `${store.brand.name || store.storeSlug} Home`
 
 	async function handleSignOut() {
 		setSigningOut(true)
 		try {
-			await signOut({ callbackUrl: getStoreHomeHref(store) })
+			await signOut({ callbackUrl: storeHomeHref })
 		} catch {
 			setSigningOut(false)
 		}
@@ -213,13 +215,13 @@ function SidebarContent({
 			<nav className="flex-1 overflow-y-auto p-4">
 				<div className="mb-6">
 					<Link
-						href={getStoreHomeHref(store)}
+						href={storeHomeHref}
 						onClick={onClose}
-						title={`${store.brand.name || store.storeSlug} Home`}
+						title={storeHomeLabel}
 						className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-gray-600 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
 					>
 						<Home size={20} className="flex-shrink-0" />
-						{!collapsed && <span className="text-sm font-medium">{store.brand.name || store.storeSlug} Home</span>}
+						{!collapsed && <span className="text-sm font-medium">{storeHomeLabel}</span>}
 					</Link>
 				</div>
 				{sidebarLinks(basePath, store).map((section) => (

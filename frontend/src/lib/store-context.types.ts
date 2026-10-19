@@ -5,8 +5,6 @@ import type { PlatformThemeOverrides } from "@/config/theme-presets"
 export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	homepage: Omit<ClientConfig["homepage"], "categories"> & {
 		categories: Array<{ name: string; slug: string; image: string }>
-		heroImage?: string
-		heroImageAlt?: string
 	}
 	tenantId: string
 	storeId: string

@@ -62,6 +62,10 @@ export default function SignUpPage() {
 			setError("Password must be at least 8 characters")
 			return
 		}
+		if (!formData.acceptedTerms) {
+			setError("Please agree to the Terms and Conditions, Privacy Policy, and Cookie Policy first")
+			return
+		}
 
 		setIsLoading(true)
 
@@ -73,6 +77,7 @@ export default function SignUpPage() {
 					name: formData.name,
 					email: formData.email,
 					password: formData.password,
+					acceptedTerms: formData.acceptedTerms,
 					callbackUrl: (() => {
 						const value = new URLSearchParams(window.location.search).get("callbackUrl")
 						return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined
@@ -138,7 +143,7 @@ export default function SignUpPage() {
 					<AuthCloseButton fallback={getStoreHomeHref(store)} skipHistory />
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold mb-2">Create an Account</h1>
-						<p className="text-gray-500">Create an account to manage your Nurava Tech shopping experience.</p>
+						<p className="text-gray-500">Create an account to manage your {store.isPlatformHome ? "Nurava HubStores" : store.brand.name} shopping experience.</p>
 					</div>
 
 					{error && (
@@ -271,7 +276,7 @@ export default function SignUpPage() {
 								checked={formData.acceptedTerms}
 								onChange={(e) => setFormData({ ...formData, acceptedTerms: e.target.checked })}
 								className="mt-1 accent-primary"
-								required
+								aria-required="true"
 							/>
 							<span>
 								I agree to the <Link href="/terms" className="text-primary hover:underline">Terms and Conditions</Link>, <Link href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>, and <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.

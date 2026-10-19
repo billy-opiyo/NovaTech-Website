@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import {
@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 
 interface MetricCard {
 	title: string
@@ -90,12 +91,10 @@ export default function AdminAnalyticsPage() {
 	const [growthData, setGrowthData] = useState<GrowthData | null>(null)
 	const [advancedAvailable, setAdvancedAvailable] = useState(true)
 	const [exporting, setExporting] = useState<"csv" | "json" | null>(null)
+	const [requestGuard] = useState(createLatestRequestGuard)
 
-	useEffect(() => {
-		fetchAnalytics()
-	}, [timeRange])
-
-	const fetchAnalytics = async () => {
+	const fetchAnalytics = useCallback(async () => {
+		const requestId = requestGuard.begin()
 		try {
 			setLoading(true)
 			setError(null)
@@ -106,6 +105,7 @@ export default function AdminAnalyticsPage() {
 			}
 
 			const data: AnalyticsResponse = await response.json()
+			if (!requestGuard.isCurrent(requestId)) return
 			setAdvancedAvailable(data.advancedAvailable !== false)
 
 			// Store growth data
@@ -178,12 +178,18 @@ export default function AdminAnalyticsPage() {
 			// Transform payment methods
 			setPaymentMethods(data.paymentMethods)
 		} catch (err: unknown) {
+			if (!requestGuard.isCurrent(requestId)) return
 			setError(err instanceof Error ? err.message : "Unable to load analytics")
 			console.error("Error fetching analytics:", err)
 		} finally {
-			setLoading(false)
+			if (requestGuard.isCurrent(requestId)) setLoading(false)
 		}
-	}
+	}, [timeRange, requestGuard])
+
+	useEffect(() => {
+		void fetchAnalytics()
+		return () => requestGuard.invalidate()
+	}, [fetchAnalytics, requestGuard])
 
 	const handleExport = async (format: "csv" | "json") => {
 		setExporting(format)

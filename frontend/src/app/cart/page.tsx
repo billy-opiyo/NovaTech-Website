@@ -23,6 +23,7 @@ import {
 import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getProductSupportDescription } from "@/lib/industry-copy"
 
 export default function CartPage() {
 	const {
@@ -365,7 +366,7 @@ export default function CartPage() {
 						<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Shield size={14} className="text-green-500" />
-								Secure browsing on Nurava Tech
+								Secure shopping with {store.brand.name}
 							</div>
 							<div className="flex items-center gap-2 text-xs text-gray-500">
 								<Truck size={14} className="text-primary" />
@@ -374,7 +375,7 @@ export default function CartPage() {
 						</div>
 
 						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-gray-600 dark:text-gray-300">
-							This selection is sent to the independent store for confirmation. The merchant handles payment, delivery, refunds, and warranty directly.
+							{getProductSupportDescription(store.industry?.slug)}
 						</div>
 
 						{/* Merchant handoff */}

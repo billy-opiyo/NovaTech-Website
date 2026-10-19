@@ -7,6 +7,8 @@ import { ArrowLeft, Minus, Plus, Search, Star, X } from "lucide-react"
 import { getProductImage } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getIndustryComparisonFields, getStoreCompareStorageKey } from "@/lib/industry-compare"
+import { getProductSpecsWithAttributes } from "@/lib/product-specs"
 
 type CompareProduct = {
 	id: string
@@ -18,12 +20,13 @@ type CompareProduct = {
 	discountedPrice?: number | null
 	averageRating: number
 	specs: Record<string, unknown>
+	attributeValues?: { value?: unknown; displayValue?: string | null; definition?: { name?: string | null; key?: string | null } }[]
 }
-
-const allSpecs = ["Processor", "RAM", "Storage", "Display", "Battery", "Camera", "OS", "Weight", "GPU", "Ports"]
 
 export default function ComparePage() {
 	const store = useStoreContext()
+	const storageKey = getStoreCompareStorageKey(store.storeId)
+	const allSpecs = getIndustryComparisonFields(store.industry?.slug)
 	const [compareItems, setCompareItems] = useState<CompareProduct[]>([])
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [searchQuery, setSearchQuery] = useState("")
@@ -33,15 +36,15 @@ export default function ComparePage() {
 
 	useEffect(() => {
 		try {
-			const saved = localStorage.getItem("novatech-compare")
+			const saved = localStorage.getItem(storageKey)
 			if (saved) setCompareItems(JSON.parse(saved))
 		} catch { /* Ignore invalid client storage and start empty. */ }
 		setHydrated(true)
-	}, [])
+	}, [storageKey])
 
 	useEffect(() => {
-		if (hydrated) localStorage.setItem("novatech-compare", JSON.stringify(compareItems))
-	}, [compareItems, hydrated])
+		if (hydrated) localStorage.setItem(storageKey, JSON.stringify(compareItems))
+	}, [compareItems, hydrated, storageKey])
 
 	useEffect(() => {
 		if (!searchOpen || searchQuery.trim().length < 2) {
@@ -84,7 +87,7 @@ export default function ComparePage() {
 			{compareItems.length === 0 ? (
 				<div className="glass-card py-20 text-center"><p className="text-gray-500">Select products from the live catalog to compare specifications.</p></div>
 			) : (
-				<div className="glass-card overflow-x-auto p-4"><table className="w-full min-w-[720px] border-collapse text-sm"><thead><tr><th className="w-40 p-3 text-left text-gray-500">Product</th>{compareItems.map((product) => <th key={product.id} className="relative p-3 text-center align-top"><button onClick={() => removeFromCompare(product.id)} className="absolute right-1 top-1 text-red-500" aria-label={`Remove ${product.name}`}><X size={16} /></button><div className="relative mx-auto mb-2 h-24 w-24 overflow-hidden rounded-lg bg-gray-100"><Image src={getProductImage(product.images?.[0], product.name)} alt={product.name} fill className="object-cover" /></div><p className="text-xs text-gray-500">{product.brand}</p><Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="font-semibold hover:text-primary">{product.name}</Link><div className="mt-1 flex items-center justify-center gap-1"><Star size={13} className="fill-yellow-500 text-yellow-500" /> {product.averageRating?.toFixed(1) || "—"}</div><p className="mt-1 font-bold text-primary">KES {(product.discountedPrice ?? product.price).toLocaleString()}</p></th>)}</tr></thead><tbody>{allSpecs.map((spec) => <tr key={spec} className="border-t"><th className="bg-black/5 p-3 text-left font-medium">{spec}</th>{compareItems.map((product) => <td key={`${product.id}-${spec}`} className="p-3 text-center">{formatSpec(product.specs?.[spec]) || <Minus size={14} className="mx-auto text-gray-300" />}</td>)}</tr>)}</tbody></table></div>
+				<div className="glass-card overflow-x-auto p-4"><table className="w-full min-w-[720px] border-collapse text-sm"><thead><tr><th className="w-40 p-3 text-left text-gray-500">Product</th>{compareItems.map((product) => <th key={product.id} className="relative p-3 text-center align-top"><button onClick={() => removeFromCompare(product.id)} className="absolute right-1 top-1 text-red-500" aria-label={`Remove ${product.name}`}><X size={16} /></button><div className="relative mx-auto mb-2 h-24 w-24 overflow-hidden rounded-lg bg-gray-100"><Image src={getProductImage(product.images?.[0], product.name)} alt={product.name} fill className="object-cover" /></div><p className="text-xs text-gray-500">{product.brand}</p><Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="font-semibold hover:text-primary">{product.name}</Link><div className="mt-1 flex items-center justify-center gap-1"><Star size={13} className="fill-yellow-500 text-yellow-500" /> {product.averageRating?.toFixed(1) || "—"}</div><p className="mt-1 font-bold text-primary">KES {(product.discountedPrice ?? product.price).toLocaleString()}</p></th>)}</tr></thead><tbody>{allSpecs.map((spec) => <tr key={spec} className="border-t"><th className="bg-black/5 p-3 text-left font-medium">{spec}</th>{compareItems.map((product) => <td key={`${product.id}-${spec}`} className="p-3 text-center">{formatSpec(getProductSpecsWithAttributes(product.specs, product.attributeValues)[spec]) || <Minus size={14} className="mx-auto text-gray-300" />}</td>)}</tr>)}</tbody></table></div>
 			)}
 
 			{searchOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSearchOpen(false)}><div className="glass-card w-full max-w-lg p-6" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Add product</h2><button onClick={() => setSearchOpen(false)}><X size={20} /></button></div><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search the catalog" className="w-full rounded-lg border bg-transparent py-3 pl-10 pr-3" /></div><div className="mt-4 max-h-80 space-y-2 overflow-y-auto">{loading && <p className="p-4 text-sm text-gray-500">Searching…</p>}{results.filter((product) => !compareItems.some((item) => item.id === product.id)).map((product) => <button key={product.id} onClick={() => addToCompare(product)} className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-black/5"><div className="relative h-12 w-12 overflow-hidden rounded-lg bg-gray-100"><Image src={getProductImage(product.images?.[0], product.name)} alt="" fill className="object-cover" /></div><span className="flex-1"><span className="block font-medium">{product.name}</span><span className="text-xs text-gray-500">{product.brand}</span></span><Plus size={18} className="text-primary" /></button>)}{!loading && searchQuery.length >= 2 && !results.length && <p className="p-4 text-sm text-gray-500">No catalog products found.</p>}</div></div></div>}

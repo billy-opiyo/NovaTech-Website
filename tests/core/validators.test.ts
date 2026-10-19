@@ -7,9 +7,13 @@ import { reviewSchema, updateReviewSchema, deleteReviewSchema } from "../../back
 import { contactSchema, ticketSchema, updateTicketSchema, ticketReplySchema } from "../../backend/validators/supportValidator"
 import { resolveVariantSelection } from "../../backend/lib/product-variant"
 import { storeSettingsPatchSchema } from "../../backend/validators/storeSettingsValidator"
+import { storeOnboardingSchema } from "../../backend/validators/storeValidator"
 
 test("auth schemas accept valid credentials and reject malformed input", () => {
-	assert.equal(registerSchema.safeParse({ name: "Ada Lovelace", email: "ada@example.com", password: "Password1" }).success, true)
+	const registration = { name: "Ada Lovelace", email: "ada@example.com", password: "Password1" }
+	assert.equal(registerSchema.safeParse({ ...registration, acceptedTerms: true }).success, true)
+	assert.equal(registerSchema.safeParse({ ...registration, acceptedTerms: false }).success, false)
+	assert.equal(registerSchema.safeParse(registration).success, false)
 	assert.equal(registerSchema.safeParse({ name: "A", email: "bad", password: "short" }).success, false)
 	assert.equal(loginSchema.safeParse({ email: "ada@example.com", password: "x" }).success, true)
 	assert.equal(loginSchema.safeParse({ email: "bad", password: "" }).success, false)
@@ -66,4 +70,11 @@ test("store settings accept secure social links and reject unsafe links", () => 
 	assert.equal(valid.success, true)
 	assert.equal(storeSettingsPatchSchema.safeParse({ contact: { social: { facebook: "http://facebook.com/nurava" } } }).success, false)
 	assert.equal(storeSettingsPatchSchema.safeParse({ contact: { social: { facebook: "javascript:alert(1)" } } }).success, false)
+})
+
+test("store onboarding rejects currencies the current storefront cannot display and charge", () => {
+	const base = { name: "Example Store", acceptLegalTerms: true as const }
+	assert.equal(storeOnboardingSchema.safeParse(base).success, true)
+	assert.equal(storeOnboardingSchema.safeParse({ ...base, currency: "kes" }).success, true)
+	assert.equal(storeOnboardingSchema.safeParse({ ...base, currency: "USD" }).success, false)
 })

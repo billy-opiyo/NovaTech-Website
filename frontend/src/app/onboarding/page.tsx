@@ -16,7 +16,9 @@ export default function OnboardingPage() {
 	const [stores, setStores] = useState<ExistingStore[]>([])
 	const [plans, setPlans] = useState<Plan[]>([])
 	const [industries, setIndustries] = useState<Industry[]>([])
-	const [industrySlug, setIndustrySlug] = useState("electronics")
+	const [industrySlug, setIndustrySlug] = useState("")
+	const [industriesLoading, setIndustriesLoading] = useState(true)
+	const [industriesError, setIndustriesError] = useState("")
 	const [planKey, setPlanKey] = useState("STARTER")
 	const [plansLoading, setPlansLoading] = useState(true)
 	const [acceptLegalTerms, setAcceptLegalTerms] = useState(false)
@@ -45,14 +47,16 @@ export default function OnboardingPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Industries are unavailable")
 			const options = Array.isArray(data.industries) ? data.industries as Industry[] : []
+			if (!options.length) throw new Error("No industries are currently available. Please try again shortly.")
 			setIndustries(options)
-			if (options.length && !options.some((industry) => industry.slug === "electronics")) setIndustrySlug(options[0].slug)
-		}).catch(() => setIndustries([{ id: "electronics-fallback", name: "Electronics", slug: "electronics", description: "Phones, computers, and technology products.", icon: "cpu" }]))
+			setIndustrySlug((current) => options.some((industry) => industry.slug === current) ? current : options.find((industry) => industry.slug === "electronics")?.slug || options[0].slug)
+		}).catch((reason: unknown) => setIndustriesError(reason instanceof Error ? reason.message : "Industries are unavailable. Please try again.")).finally(() => setIndustriesLoading(false))
 	}, [])
 
 	async function submit(event: FormEvent) {
 		event.preventDefault()
 		if (!selectedPlan) { setError("Choose an available monthly plan before creating the store."); return }
+		if (!industries.some((industry) => industry.slug === industrySlug)) { setError(industriesError || "Choose an available industry before creating the store."); return }
 		setSaving(true)
 		setError("")
 		const response = await fetch("/api/onboarding/store", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, slug: slug || undefined, industrySlug, planKey: selectedPlan.key, acceptLegalTerms }) })
@@ -77,13 +81,15 @@ export default function OnboardingPage() {
 	}
 
 	return <main className="mx-auto min-h-screen max-w-2xl space-y-8 px-4 py-16">
-		<div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Nurava Tech SaaS</p><h1 className="mt-2 text-3xl font-bold">Create your store</h1><p className="mt-2 text-gray-500">Choose a monthly plan, create your workspace, then pay its one-time setup fee. Your six-month pilot begins after payment is confirmed.</p></div>
-		<div className="rounded-xl border border-primary/40 bg-primary/5 p-5"><p className="font-semibold">One-time setup fee, then six months to grow</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">The setup fee is paid once when you create your store. It starts a six-month pilot on the plan you choose. From month seven, you can manually renew that plan by M-Pesa; Nurava Tech does not automatically charge your account.</p></div>
+		<div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Nurava HubStores</p><h1 className="mt-2 text-3xl font-bold">Create your store</h1><p className="mt-2 text-gray-500">Choose a monthly plan, create your workspace, then pay its one-time setup fee. Your six-month pilot begins after payment is confirmed.</p></div>
+		<div className="rounded-xl border border-primary/40 bg-primary/5 p-5"><p className="font-semibold">One-time setup fee, then six months to grow</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">The setup fee is paid once when you create your store. It starts a six-month pilot on the plan you choose. From month seven, you can manually renew that plan by M-Pesa; Nurava HubStores does not automatically charge your account.</p></div>
 		{stores.length > 0 && <div className="glass-card p-5"><p className="font-semibold">Your stores</p>{stores.map((store) => <button key={store.slug} onClick={() => router.push(`/manage?store=${store.slug}`)} className="mt-3 block text-left text-primary hover:underline">{store.name} <span className="text-sm text-gray-500">({store.publicationStatus})</span></button>)}</div>}
 		<form onSubmit={submit} className="glass-card space-y-5 p-6">
-			<fieldset disabled={!industries.length}>
+			<fieldset disabled={industriesLoading || Boolean(industriesError) || !industries.length}>
 				<legend className="font-semibold">Choose your industry</legend>
 				<p className="mt-1 text-sm text-gray-500">We’ll prepare relevant categories, product fields, theme, and homepage content for your store.</p>
+				{industriesLoading && <p className="mt-3 text-sm text-gray-500">Loading available industries…</p>}
+				{industriesError && <p role="alert" className="mt-3 text-sm text-red-600">{industriesError} Refresh the page to try again.</p>}
 				<div className="mt-3 grid gap-3 sm:grid-cols-3">{industries.map((industry) => <label key={industry.id} className={`cursor-pointer rounded-xl border p-4 transition ${industrySlug === industry.slug ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"}`}><span className="flex items-start gap-3"><input type="radio" name="industry" value={industry.slug} checked={industrySlug === industry.slug} onChange={() => setIndustrySlug(industry.slug)} className="mt-1 accent-primary"/><span><span className="block font-semibold">{industry.name}</span><span className="mt-1 block text-xs text-gray-500">{industry.description}</span></span></span></label>)}</div>
 			</fieldset>
 			<fieldset disabled={plansLoading || !availablePlans.length}>
@@ -91,8 +97,8 @@ export default function OnboardingPage() {
 				<p className="mt-1 text-sm text-gray-500">This is the plan and product capacity your store uses during the pilot and after it.</p>
 				{plansLoading ? <p className="mt-3 text-sm text-gray-500">Loading plans…</p> : <div className="mt-3 grid gap-3 sm:grid-cols-2">{availablePlans.map((plan) => <label key={plan.key} className={`cursor-pointer rounded-xl border p-4 transition ${selectedPlan?.key === plan.key ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"}`}><span className="flex items-start gap-3"><input type="radio" name="plan" value={plan.key} checked={selectedPlan?.key === plan.key} onChange={() => setPlanKey(plan.key)} className="mt-1 accent-primary"/><span><span className="block font-semibold">{plan.name}</span><span className="mt-1 block text-sm">{plan.currency} {plan.price?.toLocaleString()} / month from month seven</span><span className="mt-1 block text-xs text-gray-500">One-time setup: {plan.currency} {plan.setupFeeAmount.toLocaleString()}</span></span></span></label>)}</div>}
 			</fieldset>
-			<label className="block"><span className="text-sm font-medium">Store name</span><input required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Acme Electronics" /></label>
-			<label className="block"><span className="text-sm font-medium">Platform slug <span className="text-gray-500">(optional)</span></span><input pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="acme-electronics" /></label>
+			<label className="block"><span className="text-sm font-medium">Store name</span><input required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Acme Store" /></label>
+			<label className="block"><span className="text-sm font-medium">Platform slug <span className="text-gray-500">(optional)</span></span><input pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="acme-store" /></label>
 			<label className="flex items-start gap-3 text-sm"><input type="checkbox" required checked={acceptLegalTerms} onChange={(event) => setAcceptLegalTerms(event.target.checked)} className="mt-1" /><span>I confirm that I have reviewed the current <a href="/terms" target="_blank" rel="noreferrer" className="text-primary underline">merchant terms</a> and <a href="/privacy-policy" target="_blank" rel="noreferrer" className="text-primary underline">privacy notice</a>, and understand that the merchant is responsible for its store sales, customers, delivery, refunds, taxes, and warranties.</span></label>
 			{error && <p className="text-sm text-red-600">{error}</p>}
 			<button disabled={saving || plansLoading || !selectedPlan} className="btn-primary w-full">{saving ? "Creating…" : selectedPlan ? `Create store · ${selectedPlan.currency} ${selectedPlan.setupFeeAmount.toLocaleString()} setup` : "No monthly plans available"}</button>

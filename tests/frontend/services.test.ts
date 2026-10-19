@@ -7,8 +7,9 @@ import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from ".
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
-import { getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
+import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
+import { getExternalHttpLinkUrl } from "../../frontend/src/lib/android-app-download"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -108,15 +109,17 @@ test("store navigation keeps merchant routes inside the active storefront", () =
 	const merchant = { isPlatformHome: false, storePathPrefix: "/store/demo", storeSlug: "demo" }
 	const platform = { isPlatformHome: true, storePathPrefix: "", storeSlug: "nuravatech" }
 	assert.equal(getStoreHomeHref(merchant), "/store/demo")
+	assert.equal(getMerchantStoreHomeHref(merchant), "/store/demo")
+	assert.equal(getMerchantStoreHomeHref(platform), "/store/nuravatech")
 	assert.equal(getStoreRouteHref(merchant, "/category/phones"), "/store/demo/category/phones")
 	assert.equal(getStoreRouteHref(merchant, "/store/demo/products"), "/store/demo/products")
 	assert.equal(getStoreRouteHref(platform, "/stores?all=1"), "/stores?all=1")
 })
 
 test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {
-	assert.equal(resolveDirectoryStoreLogo("nuravatech", null, "/images/nurava-logo.png"), "/images/nurava-logo.png")
-	assert.equal(resolveDirectoryStoreLogo("nuravatech", "https://cdn.example.com/store-logo.webp", "/images/nurava-logo.png"), "https://cdn.example.com/store-logo.webp")
-	assert.equal(resolveDirectoryStoreLogo("another-store", null, "/images/nurava-logo.png"), null)
+	assert.equal(resolveDirectoryStoreLogo(null), null)
+	assert.equal(resolveDirectoryStoreLogo("https://cdn.example.com/store-logo.webp"), "https://cdn.example.com/store-logo.webp")
+	assert.equal(resolveDirectoryStoreLogo("  "), null)
 })
 
 test("platform store card destinations open the selected storefront directly", () => {
@@ -130,6 +133,114 @@ test("platform store cards request a fresh tenant-scoped storefront page", () =>
 	const card = hero.slice(hero.indexOf("function StoreCard"), hero.indexOf("function TrustStrip"))
 	assert.match(card, /<a\s+href={store\.href}/)
 	assert.doesNotMatch(card, /<Link\s+href={store\.href}/)
+	assert.match(hero, /nurava-furnitures/)
+	assert.match(hero, /nurava-cakes/)
+	const seed = readFileSync("backend/prisma/seed.ts", "utf8")
+	assert.match(seed, /storeName: "Nurava Furnitures"[\s\S]*?storeSlug: "nurava-furnitures"/)
+	assert.match(seed, /storeName: "Nurava Cakes"[\s\S]*?storeSlug: "nurava-cakes"/)
+})
+
+test("storefront hero actions remain centered at mobile and desktop widths", () => {
+	const hero = readFileSync("frontend/src/components/home/HeroBanner.tsx", "utf8")
+	assert.match(hero, /mx-auto flex w-full flex-col items-center justify-center gap-3 sm:flex-row/)
+})
+
+test("storefront footer copy is store-specific while platform footer copy remains configurable", () => {
+	const footer = readFileSync("frontend/src/components/layout/Footer.tsx", "utf8")
+	assert.match(footer, /store\.isPlatformHome[\s\S]*?store\.site\.footerDescription[\s\S]*?: store\.homepage\.heroDescription/)
+	assert.match(footer, /Explore the products and offers available from \$\{store\.brand\.name\}/)
+})
+
+test("footer detects the Android host after hydration to keep SSR and app links aligned", () => {
+	const footer = readFileSync("frontend/src/components/layout/Footer.tsx", "utf8")
+	assert.match(footer, /const \[isAndroidApp, setIsAndroidApp\] = useState\(false\)/)
+	assert.match(footer, /useEffect\(\(\) => \{\s*setIsAndroidApp\(Capacitor\.isNativePlatform\(\) && Capacitor\.getPlatform\(\) === "android"\)/)
+	assert.doesNotMatch(footer, /const isAndroidApp = Capacitor\.isNativePlatform\(\)/)
+})
+
+test("Android external-link routing only hands cross-origin HTTP(S) links to the browser", () => {
+	const origin = "https://nuravatech-saas-staging.vercel.app"
+	assert.equal(getExternalHttpLinkUrl("/products/phone", origin), null)
+	assert.equal(getExternalHttpLinkUrl(origin + "/stores", origin), null)
+	assert.equal(getExternalHttpLinkUrl("https://wa.me/254700123456", origin), "https://wa.me/254700123456")
+	assert.equal(getExternalHttpLinkUrl("mailto:support@example.com", origin), null)
+	assert.equal(getExternalHttpLinkUrl("javascript:alert(1)", origin), null)
+})
+
+test("Android intercepts external target-blank links without changing website behavior", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidBackButtonHandler.tsx", "utf8")
+	assert.match(provider, /const openExternalTargetBlankLink = \(event: MouseEvent\)/)
+	assert.match(provider, /a\[target="_blank"\]/)
+	assert.match(provider, /Browser\.open\(\{ url: destination \}\)/)
+	assert.match(provider, /document\.addEventListener\("click", openExternalTargetBlankLink, true\)/)
+	assert.match(provider, /document\.removeEventListener\("click", openExternalTargetBlankLink, true\)/)
+})
+
+test("Android back handler keeps launch URL recovery stable while tracking the current home route", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidBackButtonHandler.tsx", "utf8")
+	assert.match(provider, /const isPlatformHomeRef = useRef\(store\.isPlatformHome\)/)
+	assert.match(provider, /isPlatformHomeRef\.current = store\.isPlatformHome/)
+	assert.match(provider, /if \(isPlatformHomeRef\.current\)/)
+	assert.match(provider, /void App\.getLaunchUrl\(\)\.then\(\(launch\) => \{[\s\S]*?if \(launch\?\.url\) handleAppUrl\(launch\.url\)/)
+	assert.match(provider, /\}, \[\]\)/)
+})
+
+test("Android theme bridge uses a unique Capacitor plugin name", () => {
+	const provider = readFileSync("frontend/src/components/providers/AndroidSystemBars.tsx", "utf8")
+	const nativePlugin = readFileSync("android/app/src/main/java/com/nurava/hubstores/SystemBarsPlugin.java", "utf8")
+	assert.match(provider, /registerPlugin<SystemBarsPlugin>\("NuravaSystemBars"\)/)
+	assert.match(provider, /Capacitor\.isPluginAvailable\("NuravaSystemBars"\)/)
+	assert.match(provider, /NuravaSystemBars\.setColors\(theme\)/)
+	assert.match(nativePlugin, /@CapacitorPlugin\(name = "NuravaSystemBars"\)/)
+})
+
+test("storefront sign-out always clears its busy state after the request settles", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const storefrontMenu = header.slice(header.indexOf("function StoreAccountMenu"), header.indexOf("function PlatformAccountMenu"))
+	assert.match(storefrontMenu, /async function handleSignOut\(\)[\s\S]*?try \{[\s\S]*?await signOut\(\{ redirect: false \}\)[\s\S]*?finally \{\s*setSigningOut\(false\)\s*\}/)
+})
+
+test("public card intent requests cannot supply payment metadata", () => {
+	const route = readFileSync("frontend/src/app/api/payments/card/create-intent/route.ts", "utf8")
+	const schema = route.slice(route.indexOf("const cardIntentSchema"), route.indexOf("export async function POST"))
+	assert.doesNotMatch(schema, /metadata\s*:/)
+	assert.doesNotMatch(route, /metadata:\s*validated\.metadata/)
+})
+
+test("update offers fail closed unless the installed app passes native compatibility checks", () => {
+	const prompt = readFileSync("frontend/src/components/providers/AndroidAppUpdatePrompt.tsx", "utf8")
+	assert.match(prompt, /const hasNativeCompatibilityCheck = Capacitor\.isPluginAvailable\("AppUpdater"\)/)
+	assert.match(prompt, /const compatibility = await AppUpdater\.checkUpdateCompatibility/)
+	assert.match(prompt, /isNativeUpdateCompatible\(hasNativeCompatibilityCheck, compatibility\)/)
+	assert.doesNotMatch(prompt, /Browser\.open/)
+})
+test("interactive links and enabled buttons show pointer cursors site-wide", () => {
+	const styles = readFileSync("frontend/src/app/globals.css", "utf8")
+	assert.match(styles, /a\[href\]:not\(\[aria-disabled="true"\]\):hover,[\s\S]*?button:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover,[\s\S]*?cursor: pointer/)
+})
+
+test("platform header reuses search overlay with available-store suggestions", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const search = readFileSync("frontend/src/components/search/SearchOverlay.tsx", "utf8")
+	const endpoint = readFileSync("frontend/src/app/api/public/store-search/route.ts", "utf8")
+	assert.match(header, /store\.isPlatformHome && <SearchOverlay compactTrigger \/>/)
+	assert.match(search, /\/api\/public\/store-search\?q=/)
+	assert.match(search, /h-9 w-9 min-w-9 shrink-0/)
+	assert.match(search, /!compactTrigger && <>[\s\S]*?Search pages &amp; products[\s\S]*?<kbd/)
+	assert.match(search, /Search size=\{compactTrigger \? 20 : 16\}/)
+	assert.match(search, /Search pages and stores\.\.\./)
+	assert.match(search, /\[\.\.\.controlPlaneSuggestions, \.\.\.pageSuggestions, \.\.\.storeSuggestions\]/)
+	assert.match(search, /Platform control plane[\s\S]*?\/platform\/operations/)
+	assert.match(search, /canOpenPlatformPage\(page\.access, role, platformRole\)/)
+	assert.match(search, /\/api\/manage\/readiness/)
+	assert.match(search, /getStoreRouteHref\(store, "\/manage\/dashboard"\)/)
+	assert.match(search, /type: "workspace"/)
+	assert.match(search, /platformSuggestion\.href/)
+	assert.match(search, /workspaceSuggestion\.href/)
+	assert.match(search, /suggestions\[selectedIndex\]\.type === "store"\) window\.location\.assign/)
+	assert.match(search, /suggestion\.type === "store"[\s\S]*?<a key=\{i\} href=\{suggestion\.href\}/)
+	assert.match(endpoint, /getPublishedStores\(\)/)
+	assert.match(endpoint, /getStorePublicUrl\(store\.slug\)/)
 })
 
 test("merchant WhatsApp links normalize customer contact numbers", () => {

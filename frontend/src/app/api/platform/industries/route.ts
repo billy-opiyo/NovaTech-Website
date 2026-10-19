@@ -15,17 +15,22 @@ async function platformAccess() {
 export async function GET() {
 	const access = await platformAccess()
 	if ("response" in access) return access.response
-	const industries = await prisma.industry.findMany({
-		include: {
-			defaultTheme: true,
-			themes: { where: { active: true }, orderBy: { name: "asc" } },
-			categoryTemplates: { orderBy: { displayOrder: "asc" } },
-			attributeDefinitions: { orderBy: { displayOrder: "asc" } },
-			_count: { select: { stores: true } },
-		},
-		orderBy: [{ active: "desc" }, { name: "asc" }],
-	})
-	return NextResponse.json({ industries })
+	try {
+		const industries = await prisma.industry.findMany({
+			include: {
+				defaultTheme: true,
+				themes: { where: { active: true }, orderBy: { name: "asc" } },
+				categoryTemplates: { orderBy: { displayOrder: "asc" } },
+				attributeDefinitions: { orderBy: { displayOrder: "asc" } },
+				_count: { select: { stores: true } },
+			},
+			orderBy: [{ active: "desc" }, { name: "asc" }],
+		})
+		return NextResponse.json({ industries })
+	} catch (error: unknown) {
+		console.error("Industry list failed", error)
+		return NextResponse.json({ message: "Unable to load industry settings" }, { status: 503 })
+	}
 }
 
 export async function POST(request: Request) {

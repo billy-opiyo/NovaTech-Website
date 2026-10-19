@@ -19,6 +19,8 @@ export default function PlatformDiscoveryHome({ stores, plans, plansUnavailable,
 	const topRated = stores.filter((store) => store.category === "TOP_RATED")
 	const mostReviewed = stores.filter((store) => store.category === "MOST_REVIEWED")
 	const newAndGrowing = stores.filter((store) => store.category === "NEW_AND_GROWING")
+	const nuravaTech = stores.find((store) => store.slug === "nuravatech")
+	if (nuravaTech && !newAndGrowing.some((store) => store.id === nuravaTech.id)) newAndGrowing.unshift(nuravaTech)
 	const industries = Array.from(new Map(stores.flatMap((store) => store.industry ? [[store.industry.slug, store.industry.name] as const] : [])).entries()).map(([slug, name]) => ({ slug, name })).sort((left, right) => left.name.localeCompare(right.name))
 	return <div className="space-y-16">
 		<PlatformHero stores={stores} />

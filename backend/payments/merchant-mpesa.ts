@@ -1,7 +1,6 @@
 import prisma from "../lib/db"
 import { decryptMerchantPaymentDetails } from "../lib/merchant-verification-secrets"
 import { normalizePhone } from "../lib/daraja"
-import { getNuravaShopperPaymentTestConfig } from "../lib/shopper-payment-test-mode"
 import { isMerchantVerificationRequired } from "../lib/merchant-verification"
 
 export type MerchantMpesaConfig = {
@@ -23,14 +22,10 @@ export async function getMerchantMpesaConfig(tenantId: string): Promise<Merchant
 		select: {
 			verificationStatus: true,
 			verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } },
-			store: { select: { slug: true } },
 			shopperPaymentProfile: { select: { accountType: true, shortcode: true, credentialsCiphertext: true, status: true, verifiedAt: true } },
 		},
 	})
 	if (!tenant) return null
-	const testConfig = getNuravaShopperPaymentTestConfig(tenant.store?.slug)
-	if (testConfig) return testConfig
-
 	const profile = tenant.shopperPaymentProfile
 	if (!profile) return null
 	if (profile.accountType !== "PAYBILL" && profile.accountType !== "TILL") return null

@@ -20,8 +20,8 @@ export async function getProducts(req: NextRequest) {
 	try {
 		const url = new URL(req.url)
 		const searchParams = url.searchParams
-		const context = await resolveTenantFromRequest(req)
-		const result = await productService.getFilteredProducts(searchParams, context.tenantId)
+		const context = await resolveTenantFromRequest(req, { includeCommerceSettings: true })
+		const result = await productService.getFilteredProducts(searchParams, context.tenantId, context)
 		return NextResponse.json(result)
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Products unavailable")
@@ -30,8 +30,8 @@ export async function getProducts(req: NextRequest) {
 
 export async function getProductBySlug(req: NextRequest, slug: string) {
 	try {
-		const context = await resolveTenantFromRequest(req)
-		const product = await productService.getProductBySlug(slug, context.tenantId)
+		const context = await resolveTenantFromRequest(req, { includeCommerceSettings: true })
+		const product = await productService.getProductBySlug(slug, context.tenantId, context)
 		if (!product) {
 			return NextResponse.json(
 				{ message: "Product not found" },
@@ -66,8 +66,8 @@ export async function searchProducts(req: NextRequest) {
 	try {
 		const url = new URL(req.url)
 		const query = url.searchParams.get("q") || ""
-		const context = await resolveTenantFromRequest(req)
-		const results = await productService.searchProducts(query, context.tenantId)
+		const context = await resolveTenantFromRequest(req, { includeCommerceSettings: true })
+		const results = await productService.searchProducts(query, context.tenantId, context)
 		return NextResponse.json(results)
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Product search unavailable")

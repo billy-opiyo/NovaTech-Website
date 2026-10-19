@@ -21,6 +21,7 @@ import { FaWhatsapp } from "react-icons/fa"
 import clsx from "clsx"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
+import { getWhatsAppChatHref } from "@/lib/merchant-contact"
 import { useToast } from "@/components/ui/Toast"
 
 interface FAQ {
@@ -86,11 +87,42 @@ const shopperFaqs: FAQ[] = [
 	},
 ]
 
+function getStoreFaqs(industrySlug?: string | null): FAQ[] {
+	if (!industrySlug || industrySlug === "electronics") return shopperFaqs
+
+	const commonFaqs: FAQ[] = [
+		{ category: "Orders & Delivery", question: "How do I arrange delivery or collection?", answer: "Delivery and collection options are set by the store. Contact the merchant to confirm availability, timing, and any related costs before placing your order." },
+		{ category: "Orders & Delivery", question: "How can I check my order status?", answer: "The store provides order updates directly. Contact the merchant using the details on this page if you need help with an order." },
+		{ category: "Payments", question: "Which payment methods can I use?", answer: "Payment options are selected by the store and shown or confirmed by the merchant during ordering. Contact the store if you need clarification before paying." },
+		{ category: "Store policies", question: "Can I change or cancel an order?", answer: "Change and cancellation options depend on the order and the store's policy. Contact the merchant as soon as possible to discuss your request." },
+	]
+
+	if (industrySlug === "cakes") return [
+		...commonFaqs,
+		{ category: "Cakes & Celebrations", question: "Can I request a custom cake?", answer: "Contact the store with your preferred flavour, size, design, date, and any dietary requirements. The merchant will confirm what can be prepared and the price." },
+		{ category: "Cakes & Celebrations", question: "How far in advance should I order?", answer: "Preparation times vary by design and availability. Contact the store with your event date so the merchant can confirm a suitable order deadline." },
+	]
+
+	if (industrySlug === "furniture") return [
+		...commonFaqs,
+		{ category: "Furniture & Home", question: "How can I confirm dimensions and materials?", answer: "Check the product details and contact the store to confirm measurements, materials, finishes, and any options before ordering." },
+		{ category: "Furniture & Home", question: "Does the store offer assembly?", answer: "Assembly and delivery arrangements vary by item and location. Ask the merchant to confirm the available service and any extra cost." },
+	]
+
+	if (industrySlug === "boutiques") return [
+		...commonFaqs,
+		{ category: "Clothing & Style", question: "How can I choose the right size or fit?", answer: "Review the product's size and fit details, then contact the store if you need measurements or help choosing an option." },
+		{ category: "Clothing & Style", question: "Can I ask about colours or materials?", answer: "Contact the store to confirm the available colours, fabric or material details, and current stock before ordering." },
+	]
+
+	return commonFaqs
+}
+
 const merchantFaqs: FAQ[] = [
 	{
 		category: "Platform & onboarding",
-		question: "What does Nurava Tech provide to merchants?",
-		answer: "Nurava Tech provides store discovery, storefront technology, hosting, merchant tools, and platform support. Each merchant remains responsible for its own products and customer relationships.",
+		question: "What does Nurava HubStores provide to merchants?",
+		answer: "Nurava HubStores provides store discovery, storefront technology, hosting, merchant tools, and platform support. Each merchant remains responsible for its own products and customer relationships.",
 	},
 	{
 		category: "Platform & onboarding",
@@ -105,12 +137,12 @@ const merchantFaqs: FAQ[] = [
 	{
 		category: "Plans & billing",
 		question: "Who handles shopper payments, refunds, and warranties?",
-		answer: "The individual merchant handles product sales, shopper payments, delivery, refunds, replacements, warranties, and related customer support. Nurava Tech provides the platform connection and merchant technology.",
+		answer: "The individual merchant handles product sales, shopper payments, delivery, refunds, replacements, warranties, and related customer support. Nurava HubStores provides the platform connection and merchant technology.",
 	},
 	{
 		category: "Platform support",
 		question: "What can merchant support help with?",
-		answer: "Nurava Tech support can help with platform access, store setup, hosting, domains, subscription billing, and technical issues. Product and shopper issues should be handled by the merchant that made the sale.",
+		answer: "Nurava HubStores support can help with platform access, store setup, hosting, domains, subscription billing, and technical issues. Product and shopper issues should be handled by the merchant that made the sale.",
 	},
 ]
 
@@ -118,10 +150,11 @@ export default function ContactPage() {
 	const store = useStoreContext()
 	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
-	const faqs = isPlatformHome ? merchantFaqs : shopperFaqs
+	const platformName = "Nurava HubStores"
+	const faqs = isPlatformHome ? merchantFaqs : getStoreFaqs(store.industry?.slug)
 	const showContactCards = store.features.showContactCards as boolean
 	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
-	const whatsappHref = `https://wa.me/${store.contact.whatsappNumber}?text=${encodeURIComponent(store.contact.whatsappMessage)}`
+	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage)
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -182,7 +215,7 @@ export default function ContactPage() {
 				<h1 className="text-4xl font-bold mb-4">{isPlatformHome ? "Merchant Support" : "How Can We Help?"}</h1>
 				<p className="text-lg text-gray-500 max-w-2xl mx-auto">
 					{isPlatformHome
-						? "Contact Nurava Tech about store setup, platform access, subscriptions, domains, hosting, or technical support."
+					? `Contact ${platformName} about store setup, platform access, subscriptions, domains, hosting, or technical support.`
 						: "Get in touch with the store's support team about products, orders, delivery, returns, warranties, or other shopper questions."}
 				</p>
 			</motion.div>
@@ -213,7 +246,7 @@ export default function ContactPage() {
 						href: whatsappHref,
 						color: "bg-green-600",
 					},
-				].filter((card) => card.title !== "WhatsApp" || showWhatsAppContact !== false).map((card, index) => (
+				].filter((card) => card.title !== "WhatsApp" || (showWhatsAppContact !== false && Boolean(whatsappHref))).map((card, index) => (
 					<motion.div
 						key={card.title}
 						initial={{ opacity: 0, y: 20 }}
@@ -373,7 +406,7 @@ export default function ContactPage() {
 						</> : <>
 							<option value="order">Order Inquiry</option>
 							<option value="product">Product Question</option>
-							<option value="warranty">Warranty Claim</option>
+							{store.industry?.slug === "electronics" && <option value="warranty">Warranty Claim</option>}
 							<option value="return">Return Request</option>
 							<option value="payment">Payment Issue</option>
 						</>}
@@ -525,9 +558,9 @@ export default function ContactPage() {
 						<Shield className="mx-auto mb-3 text-primary" size={32} />
 						<h3 className="font-semibold mb-2">Trust & Security</h3>
 						<p className="text-sm text-gray-500">
-							{isPlatformHome ? "Secure platform • Merchant-first support" : "SSL Encrypted • Genuine Products"}
+							{isPlatformHome ? "Secure platform • Merchant-first support" : store.industry?.slug === "cakes" ? "Made-to-order details confirmed by the store" : store.industry?.slug === "furniture" ? "Product details confirmed by the store" : "SSL Encrypted • Genuine Products"}
 							<br />
-							{isPlatformHome ? "Store sales remain the merchant's responsibility" : "Merchant-set warranty • Direct payment with store"}
+							{isPlatformHome ? "Store sales remain the merchant's responsibility" : store.industry?.slug === "cakes" ? "Flavours • ingredients • collection details" : store.industry?.slug === "furniture" ? "Materials • dimensions • delivery details" : store.industry?.slug === "electronics" ? "Merchant-set warranty • Direct payment with store" : "Product support • Direct payment with store"}
 						</p>
 					</div>
 				</div>

@@ -93,9 +93,9 @@ const imageBySourceId: Record<string, string> = {
 }
 
 export function getProductImage(source: string | undefined, name?: string, industrySlug?: string | null) {
-	if (industrySlug && industrySlug !== "electronics") {
-		return source || "/images/product-placeholder.svg"
-	}
+	const isNonElectronicsStore = Boolean(industrySlug && industrySlug !== "electronics")
+	if (isNonElectronicsStore) return source?.trim() || "/images/product-placeholder.svg"
+
 	const normalizedName = name?.trim().toLowerCase()
 	if (normalizedName && productImageByName[normalizedName]) {
 		return productImageByName[normalizedName]
@@ -103,6 +103,24 @@ export function getProductImage(source: string | undefined, name?: string, indus
 
 	const sourceId = source?.match(/photo-([\w-]+)/)?.[1]
 	return (sourceId && imageBySourceId[sourceId]) || source || productImageByName["macbook"]
+}
+
+export function getCategoryCardImage(source: string | undefined, name?: string, industrySlug?: string | null) {
+	const imageSource = getProductImage(source, name, industrySlug)
+	try {
+		const url = new URL(imageSource, typeof window === "undefined" ? "https://nurava.local" : window.location.origin)
+		if (url.hostname === "images.unsplash.com") {
+			url.searchParams.set("auto", "format")
+			url.searchParams.set("fit", "crop")
+			url.searchParams.set("w", "1000")
+			url.searchParams.set("h", "750")
+			url.searchParams.set("q", "80")
+			return url.toString()
+		}
+	} catch {
+		// Keep local, uploaded, and otherwise valid image sources unchanged.
+	}
+	return imageSource
 }
 
 export function fallbackToProductPlaceholder(event: SyntheticEvent<HTMLImageElement>) {

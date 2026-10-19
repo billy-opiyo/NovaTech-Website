@@ -24,7 +24,7 @@ export default function PlatformTeamSection() {
 			<div className="mb-8 text-center">
 				<p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">The people behind the platform</p>
 				<h2 id="team-heading" className="mt-2 text-3xl font-bold sm:text-4xl">Meet our team</h2>
-				<p className="mx-auto mt-3 max-w-2xl text-gray-600 dark:text-gray-400">Meet the people helping Nurava Tech make store discovery and merchant growth simpler.</p>
+				<p className="mx-auto mt-3 max-w-2xl text-gray-600 dark:text-gray-400">Meet the people helping Nurava HubStores make store discovery and merchant growth simpler.</p>
 			</div>
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
 				{store.platformTeam.map((member) => (

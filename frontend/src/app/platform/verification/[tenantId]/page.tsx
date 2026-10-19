@@ -1,11 +1,13 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useToast } from "@/components/ui/Toast"
+import { createLatestRequestGuard } from "@/lib/latest-request-guard"
 
 type Evidence = { id: string; type: string; status: string; contentType: string; sizeBytes: number; reviewedAt: string | null; reviewNote: string | null; createdAt: string }
 type ReviewData = { tenant: { id: string; legalName: string | null; status: string; verificationStatus: string; verificationSubmittedAt: string | null; verificationReviewedAt: string | null; verificationNotes: string | null; verificationProfile: { businessType: string; taxStatus: string; locationType: string; settlementAccountType: string; phoneVerifiedAt: string | null; updatedAt: string; details: Record<string, string> } | null; verificationEvidence: Evidence[] } }
+type ApiMessage = { message?: string; downloadUrl?: string }
 const labels: Record<string, string> = { GOVERNMENT_ID: "Government-issued ID", BUSINESS_REGISTRATION: "Business registration", KRA_PIN: "KRA PIN evidence", LOCATION_PROOF: "Location proof", MPESA_OWNERSHIP: "M-Pesa ownership", OWNER_DECLARATION: "Owner declaration" }
 
 function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }
@@ -17,34 +19,48 @@ export default function VerificationReviewPage() {
 	const [data, setData] = useState<ReviewData | null>(null)
 	const [message, setMessage] = useState("Loading verification review…")
 	const [busy, setBusy] = useState<string | null>(null)
+	const [requestGuard] = useState(createLatestRequestGuard)
 	const { addToast } = useToast()
 
-	async function load() {
-		const response = await fetch(`/api/platform/verification/${tenantId}`, { cache: "no-store" })
-		const result = await response.json().catch(() => ({}))
-		if (!response.ok) throw new Error(result.message || "Verification review unavailable")
-		setData(result)
-		setMessage("")
-	}
+	const load = useCallback(async (rethrowOnCurrentError = false) => {
+		if (!tenantId) return
+		const requestId = requestGuard.begin()
+		try {
+			const response = await fetch(`/api/platform/verification/${tenantId}`, { cache: "no-store" })
+			const result = await response.json().catch(() => ({})) as ReviewData & ApiMessage
+			if (!response.ok) throw new Error(result.message || "Verification review unavailable")
+			if (!requestGuard.isCurrent(requestId)) return
+			setData(result)
+			setMessage("")
+		} catch (error) {
+			if (!requestGuard.isCurrent(requestId)) return
+			setMessage(error instanceof Error ? error.message : "Verification review unavailable")
+			if (rethrowOnCurrentError) throw error
+		}
+	}, [tenantId, requestGuard])
 
-	useEffect(() => { if (tenantId) load().catch((error) => setMessage(error.message)) }, [tenantId])
+	useEffect(() => {
+		setMessage("Loading verification review…")
+		void load()
+		return () => requestGuard.invalidate()
+	}, [load, requestGuard])
 
 	async function reviewEvidence(evidenceId: string, status: string) {
 		setBusy(evidenceId)
-		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to review evidence"); await load(); addToast(`Evidence ${status.toLowerCase()} successfully.`, "success") } catch (error: any) { const message = error.message || "Unable to review evidence"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
+		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); const result = await response.json().catch(() => ({})) as ApiMessage; if (!response.ok) throw new Error(result.message || "Unable to review evidence"); await load(true); addToast(`Evidence ${status.toLowerCase()} successfully.`, "success") } catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to review evidence"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
 	}
 
 	async function downloadEvidence(evidenceId: string) {
 		setBusy(evidenceId)
-		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to open evidence"); window.open(result.downloadUrl, "_blank", "noopener,noreferrer") } catch (error: any) { setMessage(error.message || "Unable to open evidence") } finally { setBusy(null) }
+		try { const response = await fetch(`/api/platform/verification/${tenantId}/evidence/${evidenceId}`); const result = await response.json().catch(() => ({})) as ApiMessage; if (!response.ok) throw new Error(result.message || "Unable to open evidence"); if (!result.downloadUrl) throw new Error("Evidence download link is unavailable"); window.open(result.downloadUrl, "_blank", "noopener,noreferrer") } catch (error: unknown) { setMessage(error instanceof Error ? error.message : "Unable to open evidence") } finally { setBusy(null) }
 	}
 
 	async function changeTenant(action: "approve_verification" | "reject_verification") {
 		setBusy(action)
-		try { const response = await fetch("/api/platform/operations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, tenantId }) }); const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.message || "Unable to update merchant status"); await load(); addToast("Merchant status updated successfully.", "success") } catch (error: any) { const message = error.message || "Unable to update merchant status"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
+		try { const response = await fetch("/api/platform/operations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, tenantId }) }); const result = await response.json().catch(() => ({})) as ApiMessage; if (!response.ok) throw new Error(result.message || "Unable to update merchant status"); await load(true); addToast("Merchant status updated successfully.", "success") } catch (error: unknown) { const message = error instanceof Error ? error.message : "Unable to update merchant status"; setMessage(message); addToast(message, "error") } finally { setBusy(null) }
 	}
 
-	if (!data) return <div className="glass-card p-6"><p>{message}</p></div>
+	if (!data || data.tenant.id !== tenantId) return <div className="glass-card p-6"><p>{message || "Loading verification review…"}</p></div>
 	const profile = data.tenant.verificationProfile
 	const details = profile?.details || {}
 	return <div className="space-y-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm text-gray-500">Merchant verification review</p><h1 className="text-3xl font-bold">{data.tenant.legalName || data.tenant.id}</h1><p className="mt-1 text-gray-500">Status: {humanize(data.tenant.verificationStatus)}</p></div><div className="flex gap-2"><button disabled={busy !== null} onClick={() => void changeTenant("reject_verification")} className="destructive-action rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50">Reject</button><button disabled={busy !== null} onClick={() => void changeTenant("approve_verification")} className="btn-primary disabled:opacity-50">Approve merchant</button></div></div>{message && <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{message}</p>}

@@ -113,13 +113,25 @@ export const platformSiteSettingsPatchSchema = z.object({
 		welcomeText: optionalText(120),
 		loadingText: optionalText(120),
 		logo: optionalHttpsOrPath.optional(),
+		backgroundMode: z.enum(["images", "color", "glass"]).optional(),
+		backgroundColor: hexColor,
+		centerContentOnColor: z.boolean().optional(),
+		glassOpacity: z.number().int().min(0).max(100).optional(),
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),
 	hero: z.object({
 		title: optionalText(180),
 		highlight: optionalText(120),
 		description: optionalText(320),
+		// Legacy saved artwork remains parseable for compatibility; merge strips it.
 		images: responsiveAssetsSchema.optional(),
+	}).strict().optional(),
+	discoveryCards: z.object({
+		businesses: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		customers: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		compare: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		choose: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
+		buyFromStore: z.object({ title: optionalText(120), text: optionalText(240) }).strict().optional(),
 	}).strict().optional(),
 	design: platformDesignSchema.optional(),
 	legal: z.object({

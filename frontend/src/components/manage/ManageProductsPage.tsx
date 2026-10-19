@@ -1,12 +1,13 @@
 "use client"
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { ImagePlus, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react"
 import { useStoreContext } from "@/lib/store-context"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
 import { optimizeImageForUpload } from "@/lib/image-upload"
+import { getStoreRouteHref } from "@/lib/store-home"
 
 type Category = { id: string; name: string; slug: string }
 type AttributeDefinition = { id: string; name: string; key: string; type: "TEXT" | "NUMBER" | "BOOLEAN" | "DROPDOWN" | "MULTI_SELECT"; required: boolean; options: string[] }
@@ -75,7 +76,12 @@ function parseSpecs(value: string) {
 }
 
 export default function ManageProductsPage() {
-	const { storeSlug } = useStoreContext()
+	const store = useStoreContext()
+	const { industry } = store
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
+	const categoriesEndpoint = getStoreRouteHref(store, "/api/manage/catalog/categories")
+	const attributesEndpoint = getStoreRouteHref(store, "/api/manage/catalog/attributes")
+	const uploadEndpoint = getStoreRouteHref(store, "/api/products/upload")
 	const { addToast } = useToast()
 	const [products, setProducts] = useState<Product[]>([])
 	const [categories, setCategories] = useState<Category[]>([])
@@ -94,29 +100,39 @@ export default function ManageProductsPage() {
 	const [categoryBusy, setCategoryBusy] = useState(false)
 	const [draft, setDraft] = useState<Draft>(emptyDraft)
 	const editorRef = useRef<HTMLFormElement>(null)
+	const loadRequestId = useRef(0)
 
-	const load = async () => {
+	const load = useCallback(async () => {
+		const requestId = ++loadRequestId.current
 		setLoading(true); setError("")
 		try {
 			const [productsResponse, categoriesResponse, attributesResponse] = await Promise.all([
-				fetch("/api/products?limit=100", { cache: "no-store" }),
-				fetch("/api/manage/catalog/categories", { cache: "no-store" }),
-				fetch("/api/manage/catalog/attributes", { cache: "no-store" }),
+				fetch(`${productsEndpoint}?limit=100`, { cache: "no-store" }),
+				fetch(categoriesEndpoint, { cache: "no-store" }),
+				fetch(attributesEndpoint, { cache: "no-store" }),
 			])
 			const productsBody = await productsResponse.json()
 			const categoriesBody = await categoriesResponse.json()
 			const attributesBody = await attributesResponse.json()
 			if (!productsResponse.ok) throw new Error(productsBody.message || "Products unavailable")
 			if (!categoriesResponse.ok) throw new Error(categoriesBody.message || "Product categories unavailable")
+			if (!attributesResponse.ok) throw new Error(attributesBody.message || "Industry product attributes unavailable")
+			if (requestId !== loadRequestId.current) return
 			setProducts(productsBody.products || [])
 			setCategories(categoriesBody.categories || [])
-			if (attributesResponse.ok) setDefinitions(attributesBody.definitions || [])
+			setDefinitions(attributesBody.definitions || [])
 		} catch (reason) {
+			if (requestId !== loadRequestId.current) return
+			setProducts([]); setCategories([]); setDefinitions([])
 			setError(reason instanceof Error ? reason.message : "Unable to load catalog")
-		} finally { setLoading(false) }
-	}
+		} finally { if (requestId === loadRequestId.current) setLoading(false) }
+	}, [attributesEndpoint, categoriesEndpoint, productsEndpoint])
 
-	useEffect(() => { void load() }, [])
+	useEffect(() => {
+		setProducts([]); setCategories([]); setDefinitions([])
+		setEditorOpen(false); setEditing(null); setDraft(emptyDraft)
+		void load()
+	}, [load, store.storeId, industry?.id])
 
 	useEffect(() => {
 		if (!editorOpen) return
@@ -130,7 +146,7 @@ export default function ManageProductsPage() {
 		if (!categoryName.trim()) return
 		setCategoryBusy(true); setError(""); setNotice("")
 		try {
-			const response = await fetch("/api/manage/catalog/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: categoryName }) })
+			const response = await fetch(categoriesEndpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: categoryName }) })
 			const body = await response.json()
 			if (!response.ok) throw new Error(body.message || "Unable to create category")
 			setCategories((current) => [...current, body.category].sort((a: Category, b: Category) => a.name.localeCompare(b.name)))
@@ -148,7 +164,8 @@ export default function ManageProductsPage() {
 		event.preventDefault(); setSaving(true); setError(""); setNotice("")
 		try {
 			const images = parseLines(draft.images)
-			const specs = parseSpecs(draft.specs)
+			const isElectronicsStore = industry?.slug === "electronics"
+			const specs = isElectronicsStore ? parseSpecs(draft.specs) : undefined
 			const attributes: Array<{ definitionId: string; value: unknown }> = []
 			for (const definition of definitions) {
 				const raw = draft.attributes[definition.id]
@@ -171,11 +188,11 @@ export default function ManageProductsPage() {
 			const payload = {
 				name: draft.name.trim(), description: draft.description.trim(), brand: draft.brand.trim(), price,
 				discountedPrice, stock: Number(draft.stock),
-				warranty: draft.warranty.trim() || undefined, categoryId: draft.categoryId, images, specs: Object.keys(specs).length ? specs : undefined, attributes,
+				...(isElectronicsStore ? { warranty: draft.warranty.trim() || undefined, specs: specs && Object.keys(specs).length ? specs : undefined } : {}), categoryId: draft.categoryId, images, attributes,
 				isFeatured: draft.isFeatured, isNewArrival: draft.isNewArrival, isTrending: draft.isTrending,
 				...(editing ? {} : { sku: draft.sku.trim(), slug: slugify(draft.name) }),
 			}
-			const response = await fetch(editing ? `/api/products/${editing.slug}` : "/api/products", {
+			const response = await fetch(editing ? `${productsEndpoint}/${encodeURIComponent(editing.slug)}` : productsEndpoint, {
 				method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 			})
 			const body = await response.json()
@@ -198,7 +215,7 @@ export default function ManageProductsPage() {
 			for (const file of selectedFiles) optimizedFiles.push(await optimizeImageForUpload(file))
 			for (const file of optimizedFiles) {
 				const formData = new FormData(); formData.append("file", file); formData.append("productId", editing?.id || "general")
-				const response = await fetch("/api/products/upload", { method: "POST", body: formData }); const body = await response.json()
+				const response = await fetch(uploadEndpoint, { method: "POST", body: formData }); const body = await response.json()
 				if (!response.ok) throw new Error(body.message || `Unable to upload ${file.name}`)
 				urls.push(body.url)
 			}
@@ -218,7 +235,7 @@ export default function ManageProductsPage() {
 		if (!productToDelete) return
 		setDeleting(true); setError(""); setNotice("")
 		try {
-			const response = await fetch(`/api/products/${productToDelete.slug}`, { method: "DELETE" }); const body = await response.json()
+			const response = await fetch(`${productsEndpoint}/${encodeURIComponent(productToDelete.slug)}`, { method: "DELETE" }); const body = await response.json()
 			if (!response.ok) throw new Error(body.message || "Unable to delete product")
 			setProducts((items) => items.filter((item) => item.id !== productToDelete.id)); setNotice("Product deleted"); addToast("Product deleted successfully.", "success"); setProductToDelete(null)
 		} catch (reason) {
@@ -232,7 +249,7 @@ export default function ManageProductsPage() {
 		{error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</p>}{notice && <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{notice}</p>}
 		<div className="glass-card flex items-center gap-3 p-4"><Search className="text-gray-400" size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, brand, SKU, or category" className="w-full bg-transparent outline-none" /></div>
 		{editorOpen && <form ref={editorRef} onSubmit={save} className="glass-card scroll-mt-24 space-y-5 p-5"><div className="flex items-center justify-between"><div><h2 className="text-xl font-bold">{editing ? "Edit product" : "Add product"}</h2><p className="text-sm text-gray-500">Fields are saved to this store only.</p></div><button type="button" onClick={closeEditor} aria-label="Close editor"><X /></button></div>
-		<div className="grid grid-cols-1 gap-4 md:grid-cols-2"><label className="text-sm">Name *<input required minLength={3} value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Brand *<input required value={draft.brand} onChange={(event) => updateDraft("brand", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">SKU *{editing ? <span className="ml-1 text-xs text-gray-500">(cannot change)</span> : null}<input required disabled={Boolean(editing)} value={draft.sku} onChange={(event) => updateDraft("sku", event.target.value)} className="mt-1 w-full rounded-lg border p-2 disabled:opacity-60 dark:bg-dark-surface" /></label><div className="text-sm"><label>Category *<select required value={draft.categoryId} onChange={(event) => updateDraft("categoryId", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><div className="mt-2 flex gap-2"><input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="New category" className="min-w-0 flex-1 rounded-lg border p-2 dark:bg-dark-surface" /><button type="button" onClick={() => { void addCategory() }} disabled={categoryBusy || !categoryName.trim()} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50">{categoryBusy ? "Adding…" : "Add category"}</button></div></div><label className="text-sm">Price (KES) *<input required min="0.01" step="0.01" type="number" value={draft.price} onChange={(event) => updateDraft("price", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Sale price (KES)<input min="0.01" max={draft.price || undefined} step="0.01" type="number" value={draft.discountedPrice} onChange={(event) => updateDraft("discountedPrice", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /><span className="mt-1 block text-xs text-gray-500">Must be equal to or lower than the regular price.</span></label><label className="text-sm">Stock *<input required min="0" step="1" type="number" value={draft.stock} onChange={(event) => updateDraft("stock", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Warranty<input value={draft.warranty} onChange={(event) => updateDraft("warranty", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label></div>
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2"><label className="text-sm">Name *<input required minLength={3} value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Brand *<input required value={draft.brand} onChange={(event) => updateDraft("brand", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">SKU *{editing ? <span className="ml-1 text-xs text-gray-500">(cannot change)</span> : null}<input required disabled={Boolean(editing)} value={draft.sku} onChange={(event) => updateDraft("sku", event.target.value)} className="mt-1 w-full rounded-lg border p-2 disabled:opacity-60 dark:bg-dark-surface" /></label><div className="text-sm"><label>Category *<select required value={draft.categoryId} onChange={(event) => updateDraft("categoryId", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><div className="mt-2 flex gap-2"><input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="New category" className="min-w-0 flex-1 rounded-lg border p-2 dark:bg-dark-surface" /><button type="button" onClick={() => { void addCategory() }} disabled={categoryBusy || !categoryName.trim()} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50">{categoryBusy ? "Adding…" : "Add category"}</button></div></div><label className="text-sm">Price (KES) *<input required min="0.01" step="0.01" type="number" value={draft.price} onChange={(event) => updateDraft("price", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label><label className="text-sm">Sale price (KES)<input min="0.01" max={draft.price || undefined} step="0.01" type="number" value={draft.discountedPrice} onChange={(event) => updateDraft("discountedPrice", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /><span className="mt-1 block text-xs text-gray-500">Must be equal to or lower than the regular price.</span></label><label className="text-sm">Stock *<input required min="0" step="1" type="number" value={draft.stock} onChange={(event) => updateDraft("stock", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>{industry?.slug === "electronics" && <label className="text-sm">Warranty<input value={draft.warranty} onChange={(event) => updateDraft("warranty", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>}</div>
 			<label className="block text-sm">Description *<textarea required minLength={10} rows={3} value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>
 			<div className="space-y-3 text-sm"><div><p className="font-medium">Gallery images *</p><p className="mt-1 text-xs text-gray-500">Upload one or more product images. Images are optimized and limited to 1 MB each.</p></div><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploading ? "cursor-not-allowed opacity-60" : ""}`}>{uploading ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={17} />} {uploading ? "Uploading…" : "Upload gallery images"}<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => { void uploadGallery(event.target.files); event.target.value = "" }} className="sr-only" /></label>{parseLines(draft.images).length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{parseLines(draft.images).map((image, index) => <div key={`${image}-${index}`} className="relative overflow-hidden rounded-lg border bg-gray-50 dark:bg-dark-surface"><img src={image} alt={`Product gallery image ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeGalleryImage(image)} disabled={uploading || saving} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white disabled:opacity-50" aria-label={`Remove gallery image ${index + 1}`}><X size={14} /></button></div>)}</div> : <p className="rounded-lg border border-dashed p-4 text-xs text-gray-500">No gallery images uploaded yet. Upload at least one image before saving.</p>}</div>
 			{definitions.length > 0 && <fieldset className="space-y-4 rounded-xl border p-4"><legend className="px-2 text-sm font-semibold">Industry product attributes</legend><div className="grid gap-4 sm:grid-cols-2">{definitions.map((definition) => {
@@ -242,10 +259,10 @@ export default function ManageProductsPage() {
 				if (definition.type === "MULTI_SELECT") return <fieldset key={definition.id} className="text-sm"><legend>{definition.name}{definition.required ? " *" : ""}</legend><div className="mt-2 flex flex-wrap gap-3">{definition.options.map((option) => <label key={option} className="inline-flex items-center gap-2"><input type="checkbox" checked={Array.isArray(value) && value.includes(option)} onChange={(event) => { const selected = Array.isArray(value) ? value : []; updateAttribute(definition.id, event.target.checked ? [...selected, option] : selected.filter((item) => item !== option)) }} />{option}</label>)}</div></fieldset>
 				return <label key={definition.id} className="text-sm">{definition.name}{definition.required ? " *" : ""}<input required={definition.required} type={definition.type === "NUMBER" ? "number" : "text"} step={definition.type === "NUMBER" ? "any" : undefined} value={typeof value === "string" ? value : ""} onChange={(event) => updateAttribute(definition.id, event.target.value)} className="mt-1 w-full rounded-lg border p-2 dark:bg-dark-surface" /></label>
 			})}</div></fieldset>}
-			<label className="block text-sm">Legacy specifications (optional)<textarea rows={4} value={draft.specs} onChange={(event) => updateDraft("specs", event.target.value)} placeholder="Additional key=value details" className="mt-1 w-full rounded-lg border p-2 font-mono dark:bg-dark-surface" /></label>
+			{industry?.slug === "electronics" && <label className="block text-sm">Specifications (optional)<textarea rows={4} value={draft.specs} onChange={(event) => updateDraft("specs", event.target.value)} placeholder="Additional key=value details" className="mt-1 w-full rounded-lg border p-2 font-mono dark:bg-dark-surface" /></label>}
 			<div className="flex flex-wrap gap-5 text-sm"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isFeatured} onChange={(event) => updateDraft("isFeatured", event.target.checked)} /> Featured</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isNewArrival} onChange={(event) => updateDraft("isNewArrival", event.target.checked)} /> New arrival</label><label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.isTrending} onChange={(event) => updateDraft("isTrending", event.target.checked)} /> Trending</label></div>
 			{!categories.length && <p className="text-sm text-amber-600">No categories are available for this store. Add tenant categories before creating a product.</p>}<div className="flex justify-end gap-3"><button type="button" onClick={closeEditor} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || uploading || !categories.length} className="btn-primary inline-flex items-center gap-2">{saving && <Loader2 size={17} className="animate-spin" />} {saving ? "Saving…" : "Save product"}</button></div>
 		</form>}
-		<div className="glass-card overflow-x-auto">{loading ? <p className="p-10 text-center text-gray-500">Loading catalog…</p> : <table className="w-full min-w-[980px]"><thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Product</th><th className="p-4">Category</th><th className="p-4">Price</th><th className="p-4">Stock</th><th className="p-4">Gallery</th><th className="p-4" /></tr></thead><tbody>{filtered.map((product) => <tr key={product.id} className="border-b last:border-0"><td className="p-4"><p className="font-medium">{product.name}</p><p className="text-xs text-gray-500">{product.brand} · {product.sku}</p></td><td className="p-4 text-sm">{product.category?.name || "—"}</td><td className="p-4">{product.discountedPrice ? <><span className="font-semibold">KES {product.discountedPrice.toLocaleString()}</span><span className="ml-2 text-xs text-gray-500 line-through">KES {product.price.toLocaleString()}</span></> : `KES ${product.price.toLocaleString()}`}</td><td className="p-4">{product.stock}</td><td className="p-4 text-sm">{product.images.length} image{product.images.length === 1 ? "" : "s"}</td><td className="p-4"><div className="flex items-center gap-3"><button onClick={() => startEdit(product)} className="inline-flex items-center gap-1 text-sm text-primary"><Pencil size={15} /> Edit</button><Link href={`/store/${storeSlug}/products/${product.slug}`} target="_blank" className="text-sm text-primary">View</Link><button onClick={() => setProductToDelete(product)} aria-label={`Delete ${product.name}`} className="destructive-action rounded border p-1"><Trash2 size={17} /></button></div></td></tr>)}</tbody></table>}{!loading && !filtered.length && <p className="p-10 text-center text-gray-500">No products found.</p>}</div>
+		<div className="glass-card overflow-x-auto">{loading ? <p className="p-10 text-center text-gray-500">Loading catalog…</p> : <table className="w-full min-w-[980px]"><thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Product</th><th className="p-4">Category</th><th className="p-4">Price</th><th className="p-4">Stock</th><th className="p-4">Gallery</th><th className="p-4" /></tr></thead><tbody>{filtered.map((product) => <tr key={product.id} className="border-b last:border-0"><td className="p-4"><p className="font-medium">{product.name}</p><p className="text-xs text-gray-500">{product.brand} · {product.sku}</p></td><td className="p-4 text-sm">{product.category?.name || "—"}</td><td className="p-4">{product.discountedPrice ? <><span className="font-semibold">KES {product.discountedPrice.toLocaleString()}</span><span className="ml-2 text-xs text-gray-500 line-through">KES {product.price.toLocaleString()}</span></> : `KES ${product.price.toLocaleString()}`}</td><td className="p-4">{product.stock}</td><td className="p-4 text-sm">{product.images.length} image{product.images.length === 1 ? "" : "s"}</td><td className="p-4"><div className="flex items-center gap-3"><button onClick={() => startEdit(product)} className="inline-flex items-center gap-1 text-sm text-primary"><Pencil size={15} /> Edit</button><Link href={getStoreRouteHref(store, `/products/${product.slug}`)} target="_blank" className="text-sm text-primary">View</Link><button onClick={() => setProductToDelete(product)} aria-label={`Delete ${product.name}`} className="destructive-action rounded border p-1"><Trash2 size={17} /></button></div></td></tr>)}</tbody></table>}{!loading && !filtered.length && <p className="p-10 text-center text-gray-500">No products found.</p>}</div>
 	</div>
 }

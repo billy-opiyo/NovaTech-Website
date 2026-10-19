@@ -140,7 +140,7 @@ export default function PlatformOperationsPage() {
 			/>
 			<div>
 				<h2 className="text-3xl font-bold">Platform operations</h2>
-				<p className="mt-2 text-gray-600 dark:text-gray-300">Global merchant-store visibility for authorized Nurava Tech platform operators.</p>
+				<p className="mt-2 text-gray-600 dark:text-gray-300">Global merchant-store visibility for authorized Nurava HubStores platform operators.</p>
 				{message && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{message}</p>}
 			</div>
 
