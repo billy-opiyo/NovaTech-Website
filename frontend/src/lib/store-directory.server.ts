@@ -111,6 +111,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 	try {
 		const stores = await prisma.store.findMany({
 			where: {
+				slug: { notIn: [...HIDDEN_STAGING_DEMO_STORE_SLUGS] },
 				publicationStatus: "PUBLISHED",
 				tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" },
 			},
