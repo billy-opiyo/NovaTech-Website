@@ -667,7 +667,7 @@ export default function ProductsClient() {
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
 	const store = useStoreContext()
-	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
+	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
@@ -763,7 +763,7 @@ function ProductListItem({
 	index: number
 }) {
 	const store = useStoreContext()
-	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
+	const merchantHref = getMerchantWhatsAppHref({ number: store.contact.whatsappNumber, storeName: store.brand.name, industrySlug: store.industry?.slug, items: [{ name: product.name, price: product.discountedPrice ?? product.price }] })
 	const highlights = getProductCardHighlights(store.industry?.slug, product.specs, product.attributeValues)
 	return (
 		<motion.div

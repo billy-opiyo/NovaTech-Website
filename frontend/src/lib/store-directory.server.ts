@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import { HIDDEN_STAGING_DEMO_STORE_SLUGS } from "backend/lib/tenant"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "./platform-store-route"
 
 export type PublishedStoreDirectoryEntry = {
@@ -44,6 +45,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 	try {
 		const stores = await prisma.store.findMany({
 			where: {
+				slug: { notIn: [...HIDDEN_STAGING_DEMO_STORE_SLUGS] },
 				publicationStatus: "PUBLISHED",
 				tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" },
 			},

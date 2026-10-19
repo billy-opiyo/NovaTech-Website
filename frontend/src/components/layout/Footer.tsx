@@ -96,6 +96,13 @@ export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
 	const [isAndroidApp, setIsAndroidApp] = useState(false)
+	const customerServiceLinks = [...shopperServiceLinks, {
+		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
+		href: "/warranty",
+	}]
+	const footerDescription = store.isPlatformHome
+		? store.site.footerDescription || `${store.brand.tagline}. Discover independent stores and contact merchants directly.`
+		: store.homepage.heroDescription?.trim() || `Explore the products and offers available from ${store.brand.name}. Contact the store directly for assistance.`
 	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
 	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
@@ -121,14 +128,14 @@ export default function Footer() {
 				<div className="mx-auto max-w-xs lg:mx-0">
 					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						{store.isPlatformHome && store.site.footerDescription ? store.site.footerDescription : store.homepage.heroDescription || `Explore the products and offers available from ${store.brand.name}`}
+						{footerDescription}
 					</p>
 				</div>
 
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">{store.isPlatformHome ? "Merchant Support" : "Customer Service"}</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{(store.isPlatformHome ? merchantServiceLinks : shopperServiceLinks).map(({ label, href }) => (
+						{(store.isPlatformHome ? merchantServiceLinks : customerServiceLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}

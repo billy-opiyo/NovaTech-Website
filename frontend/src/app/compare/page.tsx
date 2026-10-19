@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Minus, Plus, Search, Star, X } from "lucide-react"
-import { getProductImage } from "@/constants/productImages"
+import { getProductImage as getProductImageForIndustry } from "@/constants/productImages"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getIndustryComparisonFields, getStoreCompareStorageKey } from "@/lib/industry-compare"
@@ -25,7 +25,9 @@ type CompareProduct = {
 
 export default function ComparePage() {
 	const store = useStoreContext()
+	const getProductImage = (image: string | undefined, name: string) => getProductImageForIndustry(image, name, store.industry?.slug)
 	const storageKey = getStoreCompareStorageKey(store.storeId)
+	const productsEndpoint = getStoreRouteHref(store, "/api/products")
 	const allSpecs = getIndustryComparisonFields(store.industry?.slug)
 	const [compareItems, setCompareItems] = useState<CompareProduct[]>([])
 	const [searchOpen, setSearchOpen] = useState(false)
@@ -53,13 +55,13 @@ export default function ComparePage() {
 		}
 		const controller = new AbortController()
 		setLoading(true)
-		fetch(getStoreRouteHref(store, `/api/products?q=${encodeURIComponent(searchQuery)}&limit=8`), { signal: controller.signal, cache: "no-store" })
+		fetch(`${productsEndpoint}?q=${encodeURIComponent(searchQuery)}&limit=8`, { signal: controller.signal, cache: "no-store" })
 			.then((response) => response.ok ? response.json() : Promise.reject(new Error("Search failed")))
 			.then((data) => setResults(data.products || []))
 			.catch((error) => { if (error.name !== "AbortError") setResults([]) })
 			.finally(() => setLoading(false))
 		return () => controller.abort()
-	}, [searchOpen, searchQuery, store])
+	}, [productsEndpoint, searchOpen, searchQuery])
 
 	const addToCompare = (product: CompareProduct) => {
 		if (compareItems.length < 4 && !compareItems.some((item) => item.id === product.id)) {

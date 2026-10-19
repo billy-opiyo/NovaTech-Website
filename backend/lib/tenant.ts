@@ -3,6 +3,12 @@ import type { Prisma } from "@prisma/client"
 import { getPlatformDomain } from "./platform-domain"
 import { canMerchantSell } from "./merchant-verification"
 
+export const HIDDEN_STAGING_DEMO_STORE_SLUGS = ["nurava-furnitures", "nurava-cakes", "nurava-boutiques"] as const
+
+function isHiddenStagingDemoStore(slug: string): boolean {
+	return (HIDDEN_STAGING_DEMO_STORE_SLUGS as readonly string[]).includes(slug)
+}
+
 export type TenantContext = {
 	tenantId: string
 	storeId: string
@@ -80,6 +86,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	const isCanonicalPlatformHost = hostname === platformDomain || hostname === `www.${platformDomain}` || isVercelProjectHost
 	const requestedStoreSlug = getRequestedStoreSlug(request.headers)
 	if (requestedStoreSlug && isCanonicalPlatformHost) {
+		if (isHiddenStagingDemoStore(requestedStoreSlug)) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 		const store = await prisma.store.findUnique({
 			where: { slug: requestedStoreSlug },
 			select: { id: true, tenantId: true, slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } },
@@ -108,6 +115,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 			})
 
 	if (domain) {
+		if (isHiddenStagingDemoStore(domain.store.slug)) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 		if (domain.verificationStatus !== "VERIFIED") {
 			throw new TenantResolutionError("UNVERIFIED_DOMAIN", "This domain is awaiting verification.", 409)
 		}
@@ -135,6 +143,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 				? hostname.slice(0, -(`.${platformDomain}`).length)
 				: ""
 	if (!slug) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
+	if (isHiddenStagingDemoStore(slug)) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
 
 	const store = await prisma.store.findUnique({
 		where: { slug },
