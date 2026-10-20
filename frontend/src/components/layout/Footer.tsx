@@ -96,6 +96,7 @@ export default function Footer() {
 	const year = new Date().getFullYear()
 	const store = useStoreContext()
 	const [isAndroidApp, setIsAndroidApp] = useState(false)
+	const [isAndroidDevice, setIsAndroidDevice] = useState(false)
 	const customerServiceLinks = [...shopperServiceLinks, {
 		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
 		href: "/warranty",
@@ -108,7 +109,9 @@ export default function Footer() {
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
 
 	useEffect(() => {
-		setIsAndroidApp(Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android")
+		const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
+		setIsAndroidApp(isNativeAndroid)
+		setIsAndroidDevice(isNativeAndroid || /Android/i.test(window.navigator.userAgent))
 	}, [])
 
 	useEffect(() => {
@@ -160,11 +163,18 @@ export default function Footer() {
 							</li>
 						))}
 						<li>
-			{isAndroidApp ? (
-				<a href="#" onClick={handleOpenWebsiteClick} className="font-semibold text-primary hover:underline">Open Website</a>
-			) : (
-				<a href={APP_DOWNLOAD_PATH} download={APP_DOWNLOAD_FILENAME} onClick={handleOpenAppClick} className="font-semibold text-primary hover:underline">Open App</a>
-			)}
+							{isAndroidApp ? (
+								<a href="#" onClick={handleOpenWebsiteClick} className="font-semibold text-primary hover:underline">Open Website</a>
+							) : (
+							<a
+								href={APP_DOWNLOAD_PATH}
+								download={APP_DOWNLOAD_FILENAME}
+								onClick={handleOpenAppClick}
+								className="font-semibold text-primary hover:underline"
+							>
+								{isAndroidDevice ? "Open App" : "Download Android App"}
+							</a>
+							)}
 						</li>
 					</ul>
 				</div>
