@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { SupportTicketSource } from "@prisma/client"
 import { getServerSession } from "@/lib/auth"
 import * as supportService from "../services/support.service"
 import { contactSchema, updateTicketSchema, ticketReplySchema } from "../validators/supportValidator"
@@ -7,6 +8,8 @@ import { resolveTenantFromRequest } from "../lib/tenant"
 import { requireStorePermission } from "../lib/tenant-access"
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
+import { getPlatformDomain } from "../lib/platform-domain"
+import { normalizeHostname } from "../lib/tenant"
 
 async function storeSupportAccess(req: NextRequest) {
 	const session = await getServerSession()
@@ -118,6 +121,16 @@ export async function replyToTicket(
 export async function submitContact(req: NextRequest) {
 	try {
 		const context = await resolveTenantFromRequest(req)
+		const hostname = normalizeHostname(req.headers.get("host"))
+		const explicitStoreSlug = req.headers.get("x-nurava-store-slug")?.trim()
+		const platformDomain = getPlatformDomain()
+		const isPlatformHost = hostname === "localhost"
+			|| hostname === "127.0.0.1"
+			|| hostname === platformDomain
+			|| hostname === `www.${platformDomain}`
+			|| hostname === "vercel.app"
+			|| hostname.endsWith(".vercel.app")
+		const isPlatformContact = !explicitStoreSlug && isPlatformHost
 		const body = await req.json()
 		const validated = contactSchema.parse(body)
 		if (validated.website) {
@@ -125,7 +138,7 @@ export async function submitContact(req: NextRequest) {
 		}
 
 		const ticket = await supportService.createTicket({
-			tenantId: context.tenantId,
+			tenantId: isPlatformContact ? null : context.tenantId,
 			customerName: validated.name,
 			customerEmail: validated.email,
 			customerPhone: validated.phone || "",
@@ -133,6 +146,7 @@ export async function submitContact(req: NextRequest) {
 			description: `${validated.message}\n\nOrder: ${validated.orderNumber || "N/A"}`,
 			category: validated.category || "other",
 			priority: "medium",
+			source: isPlatformContact ? SupportTicketSource.PLATFORM_CONTACT : SupportTicketSource.STOREFRONT_CONTACT,
 		})
 
 		return NextResponse.json(

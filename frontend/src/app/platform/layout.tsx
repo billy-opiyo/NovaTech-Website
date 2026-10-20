@@ -1,6 +1,7 @@
 import { requirePlatformSession } from "@/lib/tenant-auth"
 import FloatingActions from "@/components/layout/FloatingActions"
 import PlatformNavigation from "./PlatformNavigation"
+import { hasPlatformSupportAccess } from "backend/lib/platform-access"
 
 export const metadata = {
 	robots: { index: false, follow: false },
@@ -16,7 +17,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nurava HubStores platform</p>
 						<h1 className="text-2xl font-bold">Control plane</h1>
 					</div>
-					<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} canManageContent={session.user.role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")} />
+					<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} canManageContent={session.user.role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")} canManageSupport={hasPlatformSupportAccess(session)} />
 				</div>
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>
