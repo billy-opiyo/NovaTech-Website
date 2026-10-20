@@ -1,6 +1,6 @@
 import prisma from "../lib/db"
 import { sendEmail } from "../lib/email"
-import { TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
+import { SupportTicketSource, TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
 import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { normalizePagination } from "../lib/pagination"
 import { escapeHtml, safeEmailSubject } from "../lib/html"
@@ -9,7 +9,7 @@ import type { Prisma } from "@prisma/client"
 const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
 
 export interface SupportTicketData {
-	tenantId: string
+	tenantId?: string | null
 	customerName: string
 	customerEmail: string
 	customerPhone: string
@@ -19,6 +19,7 @@ export interface SupportTicketData {
 	priority: "low" | "medium" | "high" | "urgent"
 	orderId?: string
 	attachments?: string[]
+	source?: SupportTicketSource
 }
 
 export interface UpdateTicketData {
@@ -42,7 +43,7 @@ export async function getAllTickets(filters?: {
 	const limit = pagination.limit
 	const skip = pagination.skip
 
-	const where: Prisma.SupportTicketWhereInput = { tenantId: filters?.tenantId }
+	const where: Prisma.SupportTicketWhereInput = { tenantId: filters?.tenantId, source: SupportTicketSource.STOREFRONT_CONTACT }
 
 	if (filters?.status && filters.status !== "All") {
 		where.status = filters.status.toLowerCase().replace(" ", "_") as TicketStatus
@@ -79,9 +80,9 @@ export async function getAllTickets(filters?: {
 	}
 }
 
-export async function getTicketById(id: string, tenantId: string) {
+export async function getTicketById(id: string, tenantId: string | null, source = SupportTicketSource.STOREFRONT_CONTACT) {
 	const ticket = await prisma.supportTicket.findFirst({
-		where: { id, tenantId },
+		where: { id, tenantId, source },
 		include: {
 			replies: {
 				where: { tenantId },
@@ -100,7 +101,7 @@ export async function getTicketById(id: string, tenantId: string) {
 export async function createTicket(data: SupportTicketData) {
 	const ticket = await prisma.supportTicket.create({
 		data: {
-			tenantId: data.tenantId,
+			...(data.tenantId ? { tenantId: data.tenantId } : {}),
 			customerName: data.customerName,
 			customerEmail: data.customerEmail,
 			customerPhone: data.customerPhone,
@@ -110,10 +111,11 @@ export async function createTicket(data: SupportTicketData) {
 			priority: data.priority.toUpperCase() as TicketPriority,
 			orderId: data.orderId,
 			attachments: data.attachments || [],
+			source: data.source || SupportTicketSource.STOREFRONT_CONTACT,
 			status: TicketStatus.OPEN,
 		},
 		include: {
-		replies: { where: { tenantId: data.tenantId } },
+			replies: { where: { tenantId: data.tenantId ?? null } },
 		},
 	})
 
@@ -160,8 +162,8 @@ export async function createTicket(data: SupportTicketData) {
 	return ticket
 }
 
-export async function updateTicket(id: string, tenantId: string, data: UpdateTicketData) {
-	const existing = await prisma.supportTicket.findFirst({ where: { id, tenantId }, select: { id: true } })
+export async function updateTicket(id: string, tenantId: string | null, data: UpdateTicketData, source = SupportTicketSource.STOREFRONT_CONTACT) {
+	const existing = await prisma.supportTicket.findFirst({ where: { id, tenantId, source }, select: { id: true } })
 	if (!existing) throw new Error("Ticket not found")
 	const ticket = await prisma.supportTicket.update({
 		where: { id: existing.id },
@@ -212,12 +214,12 @@ export async function updateTicket(id: string, tenantId: string, data: UpdateTic
 	return ticket
 }
 
-export async function addTicketReply(ticketId: string, tenantId: string, reply: string, isAdmin: boolean = false) {
-	const ticket = await prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId }, select: { id: true, customerName: true, customerEmail: true, subject: true } })
+export async function addTicketReply(ticketId: string, tenantId: string | null, reply: string, isAdmin: boolean = false, source = SupportTicketSource.STOREFRONT_CONTACT) {
+	const ticket = await prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId, source }, select: { id: true, customerName: true, customerEmail: true, subject: true } })
 	if (!ticket) throw new Error("Ticket not found")
 	const ticketReply = await prisma.ticketReply.create({
 		data: {
-			tenantId,
+			...(tenantId ? { tenantId } : {}),
 			ticketId,
 			reply,
 			isAdmin,
@@ -252,12 +254,12 @@ export async function addTicketReply(ticketId: string, tenantId: string, reply: 
 
 export async function getTicketStats(tenantId: string) {
 	const [total, open, inProgress, waiting, resolved, closed] = await Promise.all([
-		prisma.supportTicket.count({ where: { tenantId } }),
-		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.OPEN } }),
-		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.IN_PROGRESS } }),
-		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.WAITING_CUSTOMER } }),
-		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.RESOLVED } }),
-		prisma.supportTicket.count({ where: { tenantId, status: TicketStatus.CLOSED } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT, status: TicketStatus.OPEN } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT, status: TicketStatus.IN_PROGRESS } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT, status: TicketStatus.WAITING_CUSTOMER } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT, status: TicketStatus.RESOLVED } }),
+		prisma.supportTicket.count({ where: { tenantId, source: SupportTicketSource.STOREFRONT_CONTACT, status: TicketStatus.CLOSED } }),
 	])
 
 	return {

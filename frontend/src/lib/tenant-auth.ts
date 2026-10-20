@@ -4,6 +4,7 @@ import type { MembershipRole } from "@prisma/client"
 import { auth } from "./auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership } from "backend/lib/tenant-access"
+import { hasPlatformSupportAccess } from "backend/lib/platform-access"
 
 const platformRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
 
@@ -41,5 +42,14 @@ export async function requirePlatformSession() {
 	if (!platformRoles.has(session.user.platformRole || "") && session.user.role !== "SUPERADMIN") {
 		redirectToAuthGate("platform", callbackUrl)
 	}
+	return session
+}
+
+export async function requirePlatformSupportSession() {
+	const session = await auth()
+	const requestHeaders = await headers()
+	const callbackUrl = requestHeaders.get("x-nurava-request-path") || "/platform/messages"
+	if (!session?.user?.id) redirectToAuthGate("platform", callbackUrl)
+	if (!hasPlatformSupportAccess(session)) redirectToAuthGate("platform", callbackUrl)
 	return session
 }
