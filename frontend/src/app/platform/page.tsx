@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { requirePlatformSession } from "@/lib/tenant-auth"
+import { hasPlatformSupportAccess } from "backend/lib/platform-access"
 
 export default async function PlatformPage() {
 	const session = await requirePlatformSession()
@@ -18,6 +19,10 @@ export default async function PlatformPage() {
 					<h3 className="font-semibold">Plans and billing</h3>
 					<p className="mt-2 text-sm text-gray-500">Plan, entitlement, and subscription monitoring.</p>
 				</Link>
+				{hasPlatformSupportAccess(session) && <Link href="/platform/messages" className="glass-card block p-6">
+					<h3 className="font-semibold">Platform messages</h3>
+					<p className="mt-2 text-sm text-gray-500">Read and reply to messages submitted through the platform contact form.</p>
+				</Link>}
 				{session.user.role === "SUPERADMIN" && <Link href="/platform/access" className="glass-card block p-6">
 					<h3 className="font-semibold">Platform access</h3>
 					<p className="mt-2 text-sm text-gray-500">Invite and manage trusted platform operators.</p>

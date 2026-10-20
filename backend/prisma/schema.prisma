@@ -1416,6 +1416,7 @@ model SupportTicket {
   orderId       String?
   assignedTo    String?
   attachments   String[]
+  source        SupportTicketSource @default(STOREFRONT_CONTACT)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -1423,6 +1424,12 @@ model SupportTicket {
   tenant  Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
+  @@index([source, status, createdAt])
+}
+
+enum SupportTicketSource {
+  STOREFRONT_CONTACT
+  PLATFORM_CONTACT
 }
 
 enum TicketCategory {

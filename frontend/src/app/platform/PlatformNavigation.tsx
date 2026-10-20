@@ -12,11 +12,18 @@ const links = [
 	{ label: "Site settings", href: "/platform/settings" },
 	{ label: "Industries", href: "/platform/industries" },
 	{ label: "Blog", href: "/platform/blog" },
+	{ label: "Messages", href: "/platform/messages" },
 ] as const
 
-export default function PlatformNavigation({ isSuperAdmin, canManageContent }: { isSuperAdmin: boolean; canManageContent: boolean }) {
+export default function PlatformNavigation({ isSuperAdmin, canManageContent, canManageSupport }: { isSuperAdmin: boolean; canManageContent: boolean; canManageSupport: boolean }) {
 	const pathname = usePathname()
-	const visibleLinks = isSuperAdmin ? links : canManageContent ? [...links.slice(0, 3), links[6], links[5]] : links.slice(0, 3)
+	const visibleLinks = isSuperAdmin
+		? links
+		: [
+			...links.slice(0, 3),
+			...(canManageSupport ? [links[7]] : []),
+			...(canManageContent ? [links[6], links[5]] : []),
+		]
 
 	return (
 		<nav aria-label="Platform navigation" className="w-full min-w-0 overflow-x-auto pb-1 lg:w-auto">
