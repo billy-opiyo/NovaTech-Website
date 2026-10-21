@@ -24,8 +24,8 @@ export const clientConfig = {
 	contact: {
 		phoneDisplay: "+254 700 123 456",
 		phoneHref: "tel:+254700123456",
-		email: "support@nuravatech.com",
-		emailHref: "mailto:support@nuravatech.com",
+		email: "support@nuravahubstores.com",
+		emailHref: "mailto:support@nuravahubstores.com",
 		whatsappNumber: "254740470381",
 		// Storefront floating/social message. Platform defaults are supplied by
 		// platform-site-settings.ts; this fallback is for merchant storefronts.

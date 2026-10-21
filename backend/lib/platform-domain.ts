@@ -1,4 +1,4 @@
-export const DEFAULT_PLATFORM_DOMAIN = "nuravatech.com"
+export const DEFAULT_PLATFORM_DOMAIN = "nuravahubstores.com"
 
 export function normalizePlatformDomain(value: string | null | undefined) {
 	return (value || DEFAULT_PLATFORM_DOMAIN)

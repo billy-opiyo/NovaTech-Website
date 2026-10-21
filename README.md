@@ -428,7 +428,7 @@ npm run db:seed        # Seed admin user, categories, products
 The seed creates a **SUPERADMIN** account:
 
 ```
-Email:    support@nuravatech.com
+Email:    support@nuravahubstores.com
 Password: admin123
 ```
 
