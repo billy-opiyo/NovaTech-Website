@@ -192,7 +192,7 @@ export default function PlatformSiteSettingsPanel() {
 
 	function addTeamMember() {
 		const id = `team-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-		setDraft((current) => ({ ...current, team: [...(current.team || []), { id, name: "New team member", role: "Team role", bio: "Add a short description of this team member's contribution to Nurava HubStores.", social: {} }] }))
+		setDraft((current) => ({ ...current, team: [...(current.team || []), { id, name: "New team member", role: "Team role", bio: `Add a short description of this team member's contribution to ${draft.brand?.name || "the platform"}.`, social: {} }] }))
 	}
 
 	function removeTeamMember(id: string) {
@@ -267,13 +267,13 @@ export default function PlatformSiteSettingsPanel() {
 		<div className="space-y-6 pb-12">
 			<div>
 				<h2 className="text-3xl font-bold">Platform site settings</h2>
-				<p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-300">Manage Nurava HubStores platform branding, contact details, social links, visibility, and SEO. These settings affect the platform pages only; each merchant storefront keeps its own settings.</p>
+				<p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-300">Manage {draft.brand?.name || "platform"} branding, contact details, social links, visibility, and SEO. These settings affect the platform pages only; each merchant storefront keeps its own settings.</p>
 			</div>
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Branding and footer</h3><p className="mt-1 text-sm text-gray-500">Leave an asset path unchanged to keep the configured default.</p></div>
 				<div className="grid gap-4 lg:grid-cols-2">
-					<label className="block"><span className="text-sm font-medium">Platform name</span><input className={inputClass} value={text("brand", "name")} onChange={(event) => updateSection("brand", "name", event.target.value)} /></label>
+					<label className="block"><span className="text-sm font-medium">Platform name</span><input maxLength={120} className={inputClass} value={text("brand", "name")} onChange={(event) => updateSection("brand", "name", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">Published name is used across platform pages, support messages, and platform email branding.</span></label>
 					<label className="block"><span className="text-sm font-medium">Tagline</span><input className={inputClass} value={text("brand", "tagline")} onChange={(event) => updateSection("brand", "tagline", event.target.value)} /></label>
 					<div className="block"><span className="text-sm font-medium">Platform logo</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingLogo ? "cursor-wait opacity-60" : ""}`}>{uploadingLogo ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingLogo ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingLogo} onChange={(event) => { void uploadLogo(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "logo") && <img src={text("brand", "logo")} alt="Current platform logo" className="h-12 w-12 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB. Save the draft, then publish it to make the logo live on platform pages.</span></div>
 					<div className="block"><span className="text-sm font-medium">Platform favicon</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingFavicon ? "cursor-wait opacity-60" : ""}`}>{uploadingFavicon ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingFavicon ? "Uploading…" : "Upload favicon"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingFavicon} onChange={(event) => { void uploadFavicon(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{text("brand", "favicon") && <img src={text("brand", "favicon")} alt="Current platform favicon" className="h-10 w-10 rounded-lg border object-contain" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF favicon up to 1MB. Save the draft, then publish it to update the platform icon.</span></div>
@@ -285,7 +285,7 @@ export default function PlatformSiteSettingsPanel() {
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Platform homepage hero</h3><p className="mt-1 text-sm text-gray-500">Edit the heading and supporting text shown in the responsive glass hero card. Text is used in light and dark modes; hero artwork is no longer displayed.</p></div>
 				<div className="grid gap-4">
-					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: Nurava HubStores is the technology platform</span></label>
+					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: {draft.brand?.name || "Your platform"} is the technology platform</span></label>
 					<label className="block"><span className="text-sm font-medium">Highlighted heading</span><input maxLength={120} className={inputClass} value={draft.hero?.highlight || ""} onChange={(event) => updateSection("hero", "highlight", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: connecting you with trusted stores</span></label>
 					<label className="block"><span className="text-sm font-medium">Supporting text</span><textarea maxLength={320} rows={3} className={inputClass} value={draft.hero?.description || ""} onChange={(event) => updateSection("hero", "description", event.target.value)} /></label>
 				</div>

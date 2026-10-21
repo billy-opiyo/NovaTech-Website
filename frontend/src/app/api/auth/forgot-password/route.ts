@@ -4,6 +4,7 @@ import prisma from "backend/lib/db"
 import { sendEmail } from "backend/lib/email"
 import { rateLimiter } from "backend/middleware/rateLimiter"
 import { hashPasswordResetToken, passwordResetIdentifier } from "backend/lib/password-reset-token"
+import { getRequestBrandName } from "@/lib/store-context.server"
 
 export async function POST(req: NextRequest) {
 	const limited = await rateLimiter(req, "auth-forgot-password")
@@ -22,9 +23,11 @@ export async function POST(req: NextRequest) {
 				data: { identifier, token: hashPasswordResetToken(token), expires: new Date(Date.now() + 60 * 60 * 1000) },
 			})
 			const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+			const platformName = await getRequestBrandName()
 			await sendEmail({
 				to: normalizedEmail,
-				subject: "Reset your Nurava Tech password",
+				subject: `Reset your ${platformName} password`,
+				fromName: platformName,
 				html: `<p>We received a request to reset your password.</p><p><a href="${appUrl}/auth/reset-password?token=${token}">Reset your password</a></p><p>This link expires in one hour.</p>`,
 			})
 		}

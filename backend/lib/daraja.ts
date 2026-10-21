@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { PLATFORM_BRAND_NAME } from "./brand"
+import { PLATFORM_MPESA_BUSINESS_NAME } from "./brand"
 
 const SANDBOX_BASE_URL = "https://sandbox.safaricom.co.ke"
 const PRODUCTION_BASE_URL = "https://api.safaricom.co.ke"
@@ -31,7 +31,7 @@ function envCredentials(): DarajaCredentials | null {
 
 export function isMpesaConfigured(credentials?: DarajaCredentials): boolean {
 	if (credentials) return Boolean(credentials.consumerKey && credentials.consumerSecret && credentials.passkey && credentials.shortcode)
-	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_BRAND_NAME) return false
+	if (process.env.MPESA_ENV === "production" && process.env.MPESA_BUSINESS_NAME !== PLATFORM_MPESA_BUSINESS_NAME) return false
 	return Boolean(envCredentials())
 }
 
@@ -130,7 +130,7 @@ export async function stkPush({
 	amount,
 	phone,
 	accountReference,
-	transactionDesc = `${PLATFORM_BRAND_NAME} Payment`,
+	transactionDesc,
 	callbackUrl,
 	credentials,
 }: StkPushParams) {
@@ -143,6 +143,7 @@ export async function stkPush({
 
 	const { password, timestamp } = generatePassword(shortcode, passkey)
 	const normalizedPhone = normalizePhone(phone)
+	const resolvedTransactionDesc = transactionDesc || "Payment"
 
 	return darajaRequest({
 		path: "/mpesa/stkpush/v1/processrequest",
@@ -158,7 +159,7 @@ export async function stkPush({
 			PhoneNumber: normalizedPhone,
 			CallBackURL: callbackUrl,
 			AccountReference: accountReference,
-			TransactionDesc: transactionDesc,
+			TransactionDesc: resolvedTransactionDesc,
 		},
 	})
 }

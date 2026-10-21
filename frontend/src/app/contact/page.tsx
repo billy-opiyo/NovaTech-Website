@@ -41,7 +41,7 @@ const shopperFaqs: FAQ[] = [
 		category: "Orders & Shipping",
 		question: "How can I track my order?",
 		answer:
-			"The merchant provides order and delivery updates directly. Nurava Tech does not create or manage the merchant's customer order unless the store tells you otherwise.",
+			"The merchant provides order and delivery updates directly. The platform does not create or manage the merchant's customer order unless the store tells you otherwise.",
 	},
 	{
 		category: "Orders & Shipping",
@@ -71,13 +71,13 @@ const shopperFaqs: FAQ[] = [
 		category: "Payments",
 		question: "What payment methods do you accept?",
 		answer:
-			"Each merchant chooses its own payment options. Nurava Tech does not collect shopper payments; the store will provide payment instructions directly.",
+			"Each merchant chooses its own payment options. The platform does not collect shopper payments; the store will provide payment instructions directly.",
 	},
 	{
 		category: "Payments",
 		question: "Is it safe to pay online?",
 		answer:
-			"Nurava Tech protects the platform with HTTPS and security controls. Payment questions and payment security for a purchase should be confirmed with the merchant because the transaction is handled directly by that store.",
+			"The platform uses HTTPS and security controls. Payment questions and payment security for a purchase should be confirmed with the merchant because the transaction is handled directly by that store.",
 	},
 	{
 		category: "Products",
@@ -150,8 +150,14 @@ export default function ContactPage() {
 	const store = useStoreContext()
 	const { addToast } = useToast()
 	const isPlatformHome = store.isPlatformHome
-	const platformName = "Nurava HubStores"
-	const faqs = isPlatformHome ? merchantFaqs : getStoreFaqs(store.industry?.slug)
+	const platformName = isPlatformHome ? store.platformBrandName : ""
+	const faqs = isPlatformHome
+		? merchantFaqs.map((faq) => ({
+			...faq,
+			question: faq.question.replace(/Nurava Tech|Nurava HubStores/g, store.platformBrandName),
+			answer: faq.answer.replace(/Nurava Tech|Nurava HubStores/g, store.platformBrandName),
+		}))
+		: getStoreFaqs(store.industry?.slug)
 	const showContactCards = store.features.showContactCards as boolean
 	const showWhatsAppContact = store.features.showWhatsAppContact as boolean
 	const whatsappHref = getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappMessage)

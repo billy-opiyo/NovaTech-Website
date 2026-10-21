@@ -4,7 +4,7 @@ import { getStoreContext } from "@/lib/store-context.server"
 export default async function TermsPage() {
 	const store = await getStoreContext()
 	if (store.isPlatformHome) {
-		if (store.platformSettings?.legal?.terms) return <InfoPage title="Merchant Platform Terms" description="The current terms that apply when merchants create and operate stores on Nurava HubStores." sections={[{ title: "Current platform terms", content: store.platformSettings.legal.terms }]} />
+		if (store.platformSettings?.legal?.terms) return <InfoPage title="Merchant Platform Terms" description={`The current terms that apply when merchants create and operate stores on ${store.platformBrandName}.`} sections={[{ title: "Current platform terms", content: store.platformSettings.legal.terms }]} />
 		return <InfoPage title="Merchant Platform Terms" description="Merchant Platform Terms, version merchant-terms-v1. These terms apply when a merchant creates and operates a store on Nurava HubStores." sections={[
 			{ title: "Using the platform", content: "Merchants must provide accurate business and account information, keep login credentials secure, and use Nurava HubStores only for lawful business activity. A merchant is responsible for its store content, catalogue, customer communications, and compliance obligations." },
 			{ title: "Platform services and billing", content: "Nurava HubStores provides store discovery, hosting, storefront technology, merchant tools, and platform support. The selected plan, one-time setup fee, subscription charges, included limits, and paid add-ons are shown during onboarding or in the merchant workspace. Platform billing is for Nurava HubStores services and is not payment for a shopper's product order." },

@@ -3,8 +3,10 @@
 import { Suspense, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
+import { useStoreContext } from "@/lib/store-context"
 
 function MobileGoogleStart() {
+	const store = useStoreContext()
 	const searchParams = useSearchParams()
 	const state = searchParams.get("state") || ""
 	const challenge = searchParams.get("challenge") || ""
@@ -30,7 +32,7 @@ function MobileGoogleStart() {
 		<main className="flex min-h-[70vh] items-center justify-center px-4">
 			<div className="glass-card w-full max-w-md p-8 text-center">
 				<h1 className="text-xl font-semibold">Continue with Google</h1>
-				<p className="mt-2 text-sm text-theme-muted">Secure sign-in is opening in your browser. Return to Nurava HubStores when Google finishes.</p>
+				<p className="mt-2 text-sm text-theme-muted">Secure sign-in is opening in your browser. Return to {store.isPlatformHome ? store.platformBrandName : store.brand.name} when Google finishes.</p>
 			</div>
 		</main>
 	)

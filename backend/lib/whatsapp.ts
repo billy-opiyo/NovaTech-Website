@@ -2,7 +2,6 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN!
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!
 const API_VERSION = "v18.0"
 const BASE_URL = `https://graph.facebook.com/${API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}`
-import { PLATFORM_BRAND_NAME } from "./brand"
 
 export interface WhatsAppPayload {
 	to: string
@@ -91,6 +90,7 @@ export async function sendOrderStatusUpdate(
 	phone: string,
 	orderId: string,
 	status: string,
+	brandName = "Your store",
 ) {
 	const statusMessages: Record<string, string> = {
 		CONFIRMED: "Your order has been confirmed and is being prepared.",
@@ -105,7 +105,7 @@ export async function sendOrderStatusUpdate(
 
 	return sendWhatsAppMessage({
 		to: phone.replace(/^0/, "254"),
-text: `📦 *${PLATFORM_BRAND_NAME} Order Update*\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack your order: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
+		text: `📦 *${brandName} Order Update*\n\nOrder: #${orderId}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack your order: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${orderId}`,
 	})
 }
 

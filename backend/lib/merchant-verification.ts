@@ -18,8 +18,8 @@ export function canMerchantSell(status: MerchantVerificationStatus) {
 }
 
 export function merchantVerificationMessage(status: MerchantVerificationStatus) {
-	if (status === "PENDING_REVIEW") return "Merchant verification is awaiting Nurava review before the store can sell."
+	if (status === "PENDING_REVIEW") return "Merchant verification is awaiting platform review before the store can sell."
 	if (status === "REJECTED") return "Merchant verification needs correction before the store can sell."
-	if (status === "SUSPENDED") return "Merchant verification is suspended. Contact Nurava support."
+	if (status === "SUSPENDED") return "Merchant verification is suspended. Contact platform support."
 	return "Merchant verification must be approved before the store can sell."
 }

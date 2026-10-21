@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { LoaderCircle, Mail, MessageSquareText, RefreshCw, Send } from "lucide-react"
+import { useStoreContext } from "@/lib/store-context"
 
 type PlatformMessage = {
 	id: string
@@ -25,6 +26,7 @@ function label(value: string) {
 }
 
 export default function PlatformMessagesPanel() {
+	const store = useStoreContext()
 	const [messages, setMessages] = useState<PlatformMessage[]>([])
 	const [selected, setSelected] = useState<PlatformMessage | null>(null)
 	const [search, setSearch] = useState("")
@@ -120,7 +122,7 @@ export default function PlatformMessagesPanel() {
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
 					<h2 className="text-3xl font-bold">Platform messages</h2>
-					<p className="mt-2 text-gray-600 dark:text-gray-300">Contact form messages sent to Nurava HubStores support.</p>
+					<p className="mt-2 text-gray-600 dark:text-gray-300">Contact form messages sent to {store.platformBrandName} support.</p>
 				</div>
 				<button type="button" onClick={() => void loadMessages()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold hover:bg-black/5 disabled:opacity-50 dark:border-white/10">
 					<RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh

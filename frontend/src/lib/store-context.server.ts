@@ -76,12 +76,16 @@ function isPlatformHost(value: string | null): boolean {
 export const getStoreContext = cache(async function getStoreContext(): Promise<StoreContext> {
 	const requestHeaders = await headers()
 	const requestedStoreSlug = getRequestedStoreSlug(requestHeaders)
-	const platformHome = isPlatformHost(requestHeaders.get("host")) && !requestedStoreSlug
+	const platformHost = isPlatformHost(requestHeaders.get("host"))
+	const platformHome = platformHost && !requestedStoreSlug
+	// Published platform branding and settings are fetched only for platform
+	// routes. Merchant storefront resolution must not consume platform settings.
+	const platformSettings = platformHome ? await getPublishedPlatformSettings() : {}
 	if (platformHome) {
 		// Platform discovery is independent of any merchant domain mapping. Keep
 		// the root host on platform defaults; the homepage loads its store
 		// directory separately and never inherits a merchant storefront context.
-		return fallbackStoreContext(true, await getPublishedPlatformSettings())
+		return fallbackStoreContext(true, platformSettings)
 	}
 
 	try {
@@ -109,7 +113,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				industry: { select: { id: true, name: true, slug: true, homepagePreset: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { name: true, slug: true, imageUrl: true } }, defaultTheme: { select: { colors: true, typography: true, heroLayout: true, bannerStyle: true, productGridStyle: true } } } },
 			},
 		})
-		if (!store) return fallbackStoreContext(platformHome)
+		if (!store) return fallbackStoreContext(platformHome, platformSettings)
 
 		const theme = record(store.themeSettings)
 		const themeSnapshot = record(theme.themeSnapshot)
@@ -218,7 +222,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const whatsappMessage = `Hello ${store.name}, I need help with my order.`
 		const configuredWhatsappNumber = resolveStoreWhatsAppNumber(store.slug, typeof contact.whatsappNumber === "string" ? contact.whatsappNumber : undefined)
 		return {
-			...fallbackStoreContext(),
+			...fallbackStoreContext(false),
 			tenantId: store.tenantId,
 			storeId: store.id,
 			storeSlug: store.slug,
@@ -227,7 +231,20 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			publicationStatus: store.publicationStatus,
 			themeOverrides: themeOverridesFromIndustry(effectiveTheme),
 			themeLayout: effectiveTheme ? { heroLayout: typeof effectiveTheme.heroLayout === "string" ? effectiveTheme.heroLayout : undefined, bannerStyle: typeof effectiveTheme.bannerStyle === "string" ? effectiveTheme.bannerStyle : undefined, productGridStyle: typeof effectiveTheme.productGridStyle === "string" ? effectiveTheme.productGridStyle : undefined } : undefined,
-			brand: { ...clientConfig.brand, name: store.name, logo: store.logoUrl?.trim() || "", ...(store.industry?.slug && store.industry.slug !== "electronics" ? { tagline: `Your trusted ${store.industry.name.toLowerCase()} store` } : {}), ...(store.faviconUrl ? { favicon: store.faviconUrl } : {}) },
+			// Tenant branding is sourced only from the resolved merchant record.
+			// Do not inherit the platform name, logo, or favicon when a merchant
+			// has not configured those fields.
+			brand: {
+				...clientConfig.brand,
+				name: store.name,
+				shortName: store.name,
+				logo: store.logoUrl?.trim() || "",
+				logoAlt: `${store.name} logo`,
+				favicon: store.faviconUrl?.trim() || "",
+				tagline: store.industry?.slug && store.industry.slug !== "electronics"
+					? `Your trusted ${store.industry.name.toLowerCase()} store`
+					: `Welcome to ${store.name}`,
+			},
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			navigation,
 			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
@@ -248,31 +265,54 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		} as unknown as StoreContext
 	} catch (error) {
 		if (process.env.NODE_ENV === "production" && error instanceof TenantResolutionError) throw error
-		if (process.env.NODE_ENV !== "production") return fallbackStoreContext(platformHome)
+		if (process.env.NODE_ENV !== "production") return fallbackStoreContext(platformHome, platformSettings)
 		console.error("Store context unavailable", error)
-		return fallbackStoreContext(platformHome)
+		return fallbackStoreContext(platformHome, platformSettings)
 	}
 })
 
+export async function getRequestBrandName() {
+	const store = await getStoreContext()
+	return store.isPlatformHome ? store.platformBrandName : store.brand.name
+}
+
 export function fallbackStoreContext(isPlatformHome = false, platformSettings: PlatformSiteSettings = {}): StoreContext {
-	const mergedPlatformSettings = mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), platformSettings)
-	const platformContact = { ...clientConfig.contact, ...mergedPlatformSettings.contact, whatsappMessage: clientConfig.contact.whatsappMessage }
+	const mergedPlatformSettings = isPlatformHome
+		? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), platformSettings)
+		: undefined
+	const platformBrandName = isPlatformHome
+		? mergedPlatformSettings?.brand?.name || clientConfig.brand.name
+		: ""
+	const platformContact = { ...clientConfig.contact, ...mergedPlatformSettings?.contact, whatsappMessage: (mergedPlatformSettings?.contact?.whatsappMessage || clientConfig.contact.whatsappMessage).replace(/Nurava Tech|Nurava HubStores/g, platformBrandName) }
 	const platformPhone = platformContact.phoneDisplay || clientConfig.contact.phoneDisplay
 	const platformEmail = platformContact.email || clientConfig.contact.email
 	return {
 		...clientConfig,
 		industry: null,
+		platformBrandName,
 		...(isPlatformHome ? {
-			brand: { ...clientConfig.brand, ...mergedPlatformSettings.brand },
-			site: { ...clientConfig.site, ...mergedPlatformSettings.site },
+			brand: { ...clientConfig.brand, ...mergedPlatformSettings?.brand },
+			site: { ...clientConfig.site, ...mergedPlatformSettings?.site },
 			contact: { ...platformContact, phoneDisplay: platformPhone, phoneHref: `tel:${platformPhone.replace(/[^\d+]/g, "")}`, email: platformEmail, emailHref: `mailto:${platformEmail}` },
-			social: { ...clientConfig.social, ...mergedPlatformSettings.social },
-			seo: { ...clientConfig.seo, ...mergedPlatformSettings.seo },
-			features: { ...clientConfig.features, ...mergedPlatformSettings.features },
-			themePreset: mergedPlatformSettings.design?.themePreset || clientConfig.themePreset,
-			legal: mergedPlatformSettings.legal || {},
-		} : { brand: { ...clientConfig.brand, logo: "" }, contact: merchantContactDefaults, social: merchantSocialDefaults }),
-		platformTeam: isPlatformHome ? mergedPlatformSettings.team || [] : [],
+			social: { ...clientConfig.social, ...mergedPlatformSettings?.social },
+			seo: { ...clientConfig.seo, ...mergedPlatformSettings?.seo },
+			features: { ...clientConfig.features, ...mergedPlatformSettings?.features },
+			themePreset: mergedPlatformSettings?.design?.themePreset || clientConfig.themePreset,
+			legal: mergedPlatformSettings?.legal || {},
+		} : {
+			brand: {
+				...clientConfig.brand,
+				name: "Your Store",
+				shortName: "Store",
+				logo: "",
+				logoAlt: "Store logo",
+				favicon: "",
+				tagline: "Independent merchant storefront",
+			},
+			contact: merchantContactDefaults,
+			social: merchantSocialDefaults,
+		}),
+		platformTeam: isPlatformHome ? mergedPlatformSettings?.team || [] : [],
 		platformSettings: isPlatformHome ? mergedPlatformSettings : undefined,
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",

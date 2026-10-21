@@ -1,12 +1,21 @@
 import prisma from "../lib/db"
 import { sendEmail } from "../lib/email"
 import { SupportTicketSource, TicketCategory, TicketPriority, TicketStatus } from "@prisma/client"
-import { PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
+import { getPlatformDisplayName, PLATFORM_SUPPORT_EMAIL } from "../lib/brand"
 import { normalizePagination } from "../lib/pagination"
 import { escapeHtml, safeEmailSubject } from "../lib/html"
 import type { Prisma } from "@prisma/client"
 
 const SUPPORT_EMAIL = PLATFORM_SUPPORT_EMAIL
+
+async function getTicketBrandName(source: SupportTicketSource, tenantId: string | null | undefined) {
+	if (source === SupportTicketSource.PLATFORM_CONTACT) return getPlatformDisplayName()
+	if (tenantId) {
+		const store = await prisma.store.findFirst({ where: { tenantId }, select: { name: true } })
+		return store?.name || "Your store"
+	}
+	return "Your store"
+}
 
 export interface SupportTicketData {
 	tenantId?: string | null
@@ -99,6 +108,8 @@ export async function getTicketById(id: string, tenantId: string | null, source:
 }
 
 export async function createTicket(data: SupportTicketData) {
+	const source = data.source || SupportTicketSource.STOREFRONT_CONTACT
+	const brandName = await getTicketBrandName(source, data.tenantId)
 	const ticket = await prisma.supportTicket.create({
 		data: {
 			...(data.tenantId ? { tenantId: data.tenantId } : {}),
@@ -111,7 +122,7 @@ export async function createTicket(data: SupportTicketData) {
 			priority: data.priority.toUpperCase() as TicketPriority,
 			orderId: data.orderId,
 			attachments: data.attachments || [],
-			source: data.source || SupportTicketSource.STOREFRONT_CONTACT,
+			source,
 			status: TicketStatus.OPEN,
 		},
 		include: {
@@ -124,6 +135,7 @@ export async function createTicket(data: SupportTicketData) {
 		await sendEmail({
 			to: SUPPORT_EMAIL,
 			subject: safeEmailSubject(`New Support Ticket: ${ticket.subject}`),
+			fromName: brandName,
 			html: `
 				<h2>New Support Request</h2>
 				<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
@@ -146,9 +158,10 @@ export async function createTicket(data: SupportTicketData) {
 		await sendEmail({
 			to: ticket.customerEmail,
 			subject: safeEmailSubject(`We received your request: ${ticket.subject}`),
+			fromName: brandName,
 			html: `
 				<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
-				<p>Thank you for contacting Nurava Tech support. We have received your request and our team will get back to you within 24 hours.</p>
+				<p>Thank you for contacting ${escapeHtml(brandName)} support. We have received your request and our team will get back to you within 24 hours.</p>
 				<p><strong>Ticket ID:</strong> ${escapeHtml(ticket.id)}</p>
 				<p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
 				<p><strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>
@@ -163,8 +176,9 @@ export async function createTicket(data: SupportTicketData) {
 }
 
 export async function updateTicket(id: string, tenantId: string | null, data: UpdateTicketData, source: SupportTicketSource = SupportTicketSource.STOREFRONT_CONTACT) {
-	const existing = await prisma.supportTicket.findFirst({ where: { id, tenantId, source }, select: { id: true } })
+	const existing = await prisma.supportTicket.findFirst({ where: { id, tenantId, source }, select: { id: true, source: true } })
 	if (!existing) throw new Error("Ticket not found")
+	const brandName = await getTicketBrandName(existing.source, tenantId)
 	const ticket = await prisma.supportTicket.update({
 		where: { id: existing.id },
 		data: {
@@ -199,6 +213,7 @@ export async function updateTicket(id: string, tenantId: string | null, data: Up
 			await sendEmail({
 				to: ticket.customerEmail,
 				subject: safeEmailSubject(`Support Ticket #${ticket.id.slice(-8).toUpperCase()} status updated`),
+				fromName: brandName,
 				html: `
 					<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
 					<p>Your support ticket regarding <strong>"${escapeHtml(ticket.subject)}"</strong> has been updated to status: <strong>${escapeHtml(statusLabels[data.status] || data.status)}</strong>.</p>
@@ -215,8 +230,9 @@ export async function updateTicket(id: string, tenantId: string | null, data: Up
 }
 
 export async function addTicketReply(ticketId: string, tenantId: string | null, reply: string, isAdmin: boolean = false, source: SupportTicketSource = SupportTicketSource.STOREFRONT_CONTACT) {
-	const ticket = await prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId, source }, select: { id: true, customerName: true, customerEmail: true, subject: true } })
+	const ticket = await prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId, source }, select: { id: true, customerName: true, customerEmail: true, subject: true, source: true } })
 	if (!ticket) throw new Error("Ticket not found")
+	const brandName = await getTicketBrandName(ticket.source, tenantId)
 	const ticketReply = await prisma.ticketReply.create({
 		data: {
 			...(tenantId ? { tenantId } : {}),
@@ -233,6 +249,7 @@ export async function addTicketReply(ticketId: string, tenantId: string | null, 
 				await sendEmail({
 					to: ticket.customerEmail,
 					subject: safeEmailSubject(`New reply on your support ticket #${ticket.id.slice(-8).toUpperCase()}`),
+					fromName: brandName,
 					html: `
 						<h2>Hello ${escapeHtml(ticket.customerName)},</h2>
 						<p>You have a new reply on your support ticket regarding <strong>"${escapeHtml(ticket.subject)}"</strong>:</p>

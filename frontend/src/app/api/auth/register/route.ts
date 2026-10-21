@@ -7,6 +7,7 @@ import { registerSchema } from "backend/validators/authValidator"
 import crypto from "crypto"
 import { escapeHtml } from "backend/lib/html"
 import { hashEmailVerificationCode } from "backend/lib/email-verification"
+import { getRequestBrandName } from "@/lib/store-context.server"
 
 function verificationIdentifier(email: string) {
 	return `verify:${email}`
@@ -49,16 +50,18 @@ export async function POST(req: NextRequest) {
 		})
 		const verification = await createVerificationCode(email)
 		const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+		const platformName = await getRequestBrandName()
 		const { emailWasAccepted, sendEmail } = await import("backend/lib/email")
 		try {
 			const delivery = await sendEmail({
 				to: email,
-				subject: "Verify your Nurava Tech email",
+				subject: `Verify your ${platformName} email`,
+				fromName: platformName,
 					html: (() => {
 						const verificationUrl = new URL("/auth/verify-email", appUrl)
 						verificationUrl.searchParams.set("email", email)
 						if (input.callbackUrl) verificationUrl.searchParams.set("callbackUrl", input.callbackUrl)
-						return `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">Nurava Tech</h1><p>Hi ${escapeHtml(input.name.trim())},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${escapeHtml(verification.code)}</p><p>This code expires in 15 minutes.</p><p><a href="${escapeHtml(verificationUrl.toString())}">Open verification page</a></p></div>`
+						return `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="color:#0070f3">${escapeHtml(platformName)}</h1><p>Hi ${escapeHtml(input.name.trim())},</p><p>Use this verification code to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0070f3">${escapeHtml(verification.code)}</p><p>This code expires in 15 minutes.</p><p><a href="${escapeHtml(verificationUrl.toString())}">Open verification page</a></p></div>`
 					})(),
 			})
 			if (!emailWasAccepted(delivery)) throw new Error("Verification email provider is not configured")

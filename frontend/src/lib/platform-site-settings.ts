@@ -270,10 +270,11 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		},
 		legal: { ...base.legal, ...patch.legal },
 	}
-	// Normalize older platform-owned copy in memory. Merchant storefront settings
-	// and demo-store records are loaded through a separate context.
+	// Normalize platform-owned copy from prior names to the currently configured
+	// name. Merchant storefront settings and demo-store records are separate.
+	const platformName = merged.brand?.name?.trim() || clientConfig.brand.name
 	const rebrand = (value: unknown): unknown => {
-		if (typeof value === "string") return value.replaceAll("Nurava Tech", "Nurava HubStores")
+		if (typeof value === "string") return value.replace(/Nurava Tech|Nurava HubStores/g, platformName)
 		if (Array.isArray(value)) return value.map(rebrand)
 		if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, rebrand(item)]))
 		return value

@@ -9,6 +9,8 @@ export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	tenantId: string
 	storeId: string
 	storeSlug: string
+	/** Configurable platform name. Empty in merchant storefront contexts. */
+	platformBrandName: string
 	industry: { id: string; name: string; slug: string } | null
 	/** URL prefix used when this store is reached through the platform host. */
 	storePathPrefix: string

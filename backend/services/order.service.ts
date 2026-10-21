@@ -3,7 +3,6 @@ import { normalizePagination } from "../lib/pagination"
 import { Prisma, OrderStatus } from "@prisma/client"
 import { sendOrderStatusUpdate } from "../notifications/sms"
 import { sendWhatsAppMessage } from "../notifications/whatsapp"
-import { PLATFORM_BRAND_NAME } from "../lib/brand"
 import { getTenantEntitlement } from "../billing/subscription"
 import { resolveVariantSelection } from "../lib/product-variant"
 import { normalizeIndustryCustomizations } from "../lib/cake-customizations"
@@ -405,6 +404,8 @@ export async function updateOrderStatus(
 		? order.shippingAddress as { phone?: unknown }
 		: {}
 	const shippingPhone = typeof shippingAddress.phone === "string" ? shippingAddress.phone : undefined
+	const store = await prisma.store.findFirst({ where: { tenantId }, select: { name: true } })
+	const storeName = store?.name || "Your store"
 
 	// Send SMS notification if phone number exists
 	if (shippingPhone && order.user?.orderUpdates !== false) {
@@ -413,6 +414,7 @@ export async function updateOrderStatus(
 				shippingPhone,
 				order.id.slice(-8).toUpperCase(),
 				status,
+				storeName,
 			)
 		} catch (error) {
 			// The SMS boundary records provider, status, and error code without PII.
@@ -436,10 +438,9 @@ export async function updateOrderStatus(
 			const message =
 				statusMessages[status] ||
 				`Your order #${order.id.slice(-8).toUpperCase()} status: ${status}`
-
 			await sendWhatsAppMessage({
 				to: shippingPhone.replace(/^0/, "254"),
-text: `${PLATFORM_BRAND_NAME} Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
+				text: `${storeName} Order Update\n\nOrder: #${order.id.slice(-8).toUpperCase()}\nStatus: ${status.replace(/_/g, " ")}\n\n${message}\n\nTrack: ${process.env.NEXT_PUBLIC_APP_URL}/account/orders/${order.id}/track`,
 			})
 		} catch (error) {
 			console.error("Failed to send WhatsApp notification:", error)

@@ -53,13 +53,13 @@ export async function PATCH(request: Request) {
 		if (!parsed.success) return NextResponse.json({ message: "Enter a valid merchant M-Pesa route and credentials.", issues: parsed.error.flatten() }, { status: 400 })
 		const testConfig = getNuravaShopperPaymentTestConfig(current.context.storeSlug)
 		if (testConfig) {
-			if (parsed.data.accountType === "PHONE") return NextResponse.json({ message: "The Nurava Tech staging test store uses its configured sandbox Paybill route." }, { status: 409 })
+			if (parsed.data.accountType === "PHONE") return NextResponse.json({ message: "The configured staging demo store uses its configured sandbox Paybill route." }, { status: 409 })
 			const shortcode = parsed.data.shortcode.replace(/\D/g, "")
-			if (parsed.data.accountType !== testConfig.accountType || shortcode !== testConfig.shortcode) return NextResponse.json({ message: "Use the configured staging sandbox Paybill route for the Nurava Tech test store." }, { status: 409 })
+			if (parsed.data.accountType !== testConfig.accountType || shortcode !== testConfig.shortcode) return NextResponse.json({ message: "Use the configured staging sandbox Paybill route for the configured staging demo store." }, { status: 409 })
 			for (const [name, value, expected] of [["consumer key", parsed.data.consumerKey, testConfig.consumerKey], ["consumer secret", parsed.data.consumerSecret, testConfig.consumerSecret], ["STK passkey", parsed.data.passkey, testConfig.passkey]] as const) {
 				if (value && value !== expected) return NextResponse.json({ message: `The ${name} must match the staging sandbox environment value.` }, { status: 400 })
 			}
-			return NextResponse.json({ message: "Nurava Tech staging sandbox payment route is active. Credentials are being read from the staging environment.", testMode: true, profile: { accountType: testConfig.accountType, shortcode: testConfig.shortcode, accountName: "Nurava Tech", status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } })
+			return NextResponse.json({ message: "Staging sandbox payment route is active. Credentials are being read from the staging environment.", testMode: true, profile: { accountType: testConfig.accountType, shortcode: testConfig.shortcode, accountName: "Nurava Tech", status: "ACTIVE", verifiedAt: new Date(), credentialsConfigured: true } })
 		}
 
 		const verificationRequired = isMerchantVerificationRequired()
