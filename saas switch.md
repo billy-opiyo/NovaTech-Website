@@ -243,7 +243,7 @@ pre-billing state.
 
 - Updated current Markdown documentation, platform copy, metadata, public URLs, and operational messaging to use the Nurava Tech brand.
 - Set the canonical platform domain to `nuravatech.com` and documented the production DNS/SSL target as `nuravatech.com` with `*.nuravatech.com` for tenant subdomains.
-- Standardized platform email usage to `hello@nuravatech.com` for outbound mail and `support@nuravatech.com` for support routing.
+- Standardized platform email usage to `hello@nuravahubstores.com` for outbound mail and `support@nuravahubstores.com` for support routing.
 - Preserved internal migration names, legacy browser keys, seeded compatibility identifiers, asset filenames, and historical repository paths so existing data and runtime lookups remain safe.
 - Verification at that time: documentation links and current platform-brand/domain references used Nurava Tech. The current platform trading brand is Nurava HubStores; references in this dated section record the former branding.
 
