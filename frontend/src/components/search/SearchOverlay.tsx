@@ -101,12 +101,18 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 
 	useEffect(() => {
 		const normalizedQuery = query.trim().toLowerCase()
+		const brandName = store.isPlatformHome ? store.platformBrandName : store.brand.name
 		if (!normalizedQuery) {
 			setSuggestions([])
 			return
 		}
 
 		const pageSuggestions: SearchSuggestion[] = publicPages
+			.map((page) => ({
+				...page,
+				text: page.text.replace(/Nurava Tech|Nurava HubStores/g, brandName),
+				description: page.description.replace(/Nurava Tech|Nurava HubStores/g, brandName),
+			}))
 			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)
 			.map((page) => ({ type: "page", text: page.text, href: getStoreRouteHref(store, page.href), description: page.description }))

@@ -1,19 +1,20 @@
 import { Resend } from "resend"
 import { PLATFORM_BRAND_NAME, PLATFORM_HELLO_EMAIL } from "./brand"
+import prisma from "./db"
 import { escapeHtml } from "./html"
 
 const resend = process.env.RESEND_API_KEY
 	? new Resend(process.env.RESEND_API_KEY)
 	: null
-const FROM_EMAIL = `${PLATFORM_BRAND_NAME} <${PLATFORM_HELLO_EMAIL}>`
 
 interface EmailOptions {
 	to: string
 	subject: string
 	html: string
+	fromName?: string
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions) {
+export async function sendEmail({ to, subject, html, fromName }: EmailOptions) {
 	if (!resend) {
 		console.warn("RESEND_API_KEY is not configured. Skipping email send.")
 		return { id: null }
@@ -21,7 +22,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 
 	try {
 		const data = await resend.emails.send({
-			from: FROM_EMAIL,
+			from: `${fromName || PLATFORM_BRAND_NAME} <${PLATFORM_HELLO_EMAIL}>`,
 			to,
 			subject,
 			html,
@@ -41,6 +42,7 @@ interface OrderConfirmationItem {
 
 interface OrderConfirmation {
 	id: string
+	tenantId?: string | null
 	total: number
 	items: OrderConfirmationItem[]
 	shippingAddress: unknown
@@ -60,13 +62,15 @@ export function emailWasAccepted(result: unknown) {
 }
 
 export async function sendOrderConfirmationEmail(email: string, order: OrderConfirmation) {
+	const store = order.tenantId ? await prisma.store.findFirst({ where: { tenantId: order.tenantId }, select: { name: true } }) : null
+	const brandName = store?.name || "Your store"
 	const address = order.shippingAddress && typeof order.shippingAddress === "object" && !Array.isArray(order.shippingAddress)
 		? order.shippingAddress as Record<string, unknown>
 		: {}
 	const html = `
     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
       <div style="background: linear-gradient(135deg, #0070f3, #f97316); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-<h1 style="color: white; margin: 0;">${escapeHtml(PLATFORM_BRAND_NAME)}</h1>
+<h1 style="color: white; margin: 0;">${escapeHtml(brandName)}</h1>
         <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Order Confirmation</p>
       </div>
       <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px;">
@@ -110,6 +114,7 @@ export async function sendOrderConfirmationEmail(email: string, order: OrderConf
 	return sendEmail({
 		to: email,
 		subject: `Order Confirmed #${order.id.slice(-8).toUpperCase()}`,
+		fromName: brandName,
 		html,
 	})
 }

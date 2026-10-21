@@ -74,7 +74,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 	const storeContext = useStoreContext()
 	const isLight = theme === "light"
 	const hero = storeContext.isPlatformHome ? storeContext.platformSettings?.hero : undefined
-	const heroTitle = hero?.title?.trim() || "Nurava HubStores is the technology platform"
+	const heroTitle = hero?.title?.trim() || `${storeContext.platformBrandName} is the technology platform`
 	const heroHighlight = hero?.highlight?.trim() || "connecting you with trusted stores"
 	const heroDescription = hero?.description?.trim() || "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya."
 	const [industrySlug, setIndustrySlug] = useState("all")

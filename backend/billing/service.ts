@@ -211,7 +211,7 @@ function recurringLineItem(name: string, price: number, currency: string, interv
 }
 
 export async function createStripeCheckoutSession(input: { tenantId: string; ownerUserId: string; email: string; planKey: string; addonKeys?: string[]; successUrl: string; cancelUrl: string }) {
-	if (isMpesaOnlySaasBilling()) throw new BillingError("M-Pesa is the only supported Nurava billing method at launch", 409, "MPESA_ONLY_BILLING")
+	if (isMpesaOnlySaasBilling()) throw new BillingError("M-Pesa is the only supported platform billing method at launch", 409, "MPESA_ONLY_BILLING")
 	if (!isStripeConfigured()) throw new BillingError("Stripe is not configured", 503, "STRIPE_NOT_CONFIGURED")
 	const { plan, addons } = await getPlanAndAddons(input.planKey, input.addonKeys || [])
 	await verifyStripePriceConfiguration(plan.stripePriceId, plan.price || 0, plan.currency, plan.billingInterval === "YEAR" ? "year" : "month")
@@ -492,7 +492,7 @@ export async function unsubscribeFromAddon(tenantId: string, addonKey: string) {
 }
 
 export async function createCustomerPortalSession(tenantId: string, returnUrl: string) {
-	if (isMpesaOnlySaasBilling()) throw new BillingError("M-Pesa is the only supported Nurava billing method at launch", 409, "MPESA_ONLY_BILLING")
+	if (isMpesaOnlySaasBilling()) throw new BillingError("M-Pesa is the only supported platform billing method at launch", 409, "MPESA_ONLY_BILLING")
 	if (!isStripeConfigured()) throw new BillingError("Stripe is not configured", 503, "STRIPE_NOT_CONFIGURED")
 	const customer = await prisma.billingCustomer.findUnique({ where: { tenantId } })
 	if (!customer?.stripeCustomerId) throw new BillingError("No Stripe customer is linked to this tenant", 409, "STRIPE_CUSTOMER_NOT_FOUND")

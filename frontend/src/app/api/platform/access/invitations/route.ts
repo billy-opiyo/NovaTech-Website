@@ -9,6 +9,7 @@ import { createInvitationToken, hashInvitationToken } from "backend/lib/invitati
 import { escapeHtml } from "backend/lib/html"
 import { sendEmail } from "backend/lib/email"
 import { getPublicAppUrl } from "backend/lib/platform-domain"
+import { getPlatformDisplayName } from "backend/lib/brand"
 
 const inviteRoles = ["PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"] as const
 const inviteSchema = z.object({
@@ -79,11 +80,13 @@ export async function POST(request: NextRequest) {
 
 		const roleName = invitation.role.replace("PLATFORM_", "").replaceAll("_", " ")
 		const safeRole = escapeHtml(roleName)
+		const platformName = escapeHtml(await getPlatformDisplayName())
 		const inviteLink = new URL(`/auth/accept-platform-invitation?token=${encodeURIComponent(token)}`, `${getPublicAppUrl()}/`).toString()
 		await sendEmail({
 			to: invitation.email,
-			subject: "You have been invited to Nurava HubStores platform access",
-			html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>Nurava HubStores</h1><p>You have been invited to join the Nurava HubStores platform as <strong>${safeRole}</strong>.</p><p>This invitation expires in seven days and can only be accepted by ${escapeHtml(invitation.email)}.</p><p><a href="${escapeHtml(inviteLink)}" style="display:inline-block;background:#0070f3;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Accept platform access</a></p><p>If you were not expecting this invitation, you can ignore this email.</p></div>`,
+			subject: `You have been invited to ${platformName} platform access`,
+			fromName: platformName,
+			html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1>${platformName}</h1><p>You have been invited to join the ${platformName} platform as <strong>${safeRole}</strong>.</p><p>This invitation expires in seven days and can only be accepted by ${escapeHtml(invitation.email)}.</p><p><a href="${escapeHtml(inviteLink)}" style="display:inline-block;background:#0070f3;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Accept platform access</a></p><p>If you were not expecting this invitation, you can ignore this email.</p></div>`,
 		}).catch((error) => console.error("Platform invitation email could not be sent:", error))
 		await createActionRecord("CREATED_PLATFORM_INVITATION", { adminId: access.session.user.id, email: invitation.email, role: invitation.role }).catch(() => undefined)
 

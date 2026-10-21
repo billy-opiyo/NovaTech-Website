@@ -14,6 +14,7 @@ import type {
 	MpesaVerifyResult,
 } from "../../types/payments"
 import type { DarajaCredentials } from "../../lib/daraja"
+import { getPlatformDisplayName } from "../../lib/brand"
 import { cancelPendingOrder, finalizePendingOrderPayment } from "../../services/order.service"
 import type { MerchantMpesaConfig } from "../merchant-mpesa"
 
@@ -173,6 +174,9 @@ export async function initiateMpesaPayment({
 	const callback =
 		callbackUrl ||
 		`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/payments/webhooks/mpesa/stk-callback`
+	const transactionBrandName = merchantConfig
+		? (tenantId ? await prisma.store.findFirst({ where: { tenantId }, select: { name: true } }) : null)?.name || "Merchant"
+		: await getPlatformDisplayName()
 
 	let response: z.infer<typeof mpesaInitiateResponseSchema>
 	try {
@@ -180,6 +184,7 @@ export async function initiateMpesaPayment({
 			amount,
 			phone: normalizedPhone,
 			accountReference: reference.slice(0, 12),
+			transactionDesc: `${transactionBrandName} Payment`,
 			callbackUrl: callback,
 		credentials,
 		}))

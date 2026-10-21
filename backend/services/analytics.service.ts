@@ -402,7 +402,8 @@ export async function getAnalyticsExport(tenantId: string, timeRange: string = "
 
 	// CSV format
 	const csvRows: string[] = []
-	csvRows.push("Nurava Tech Analytics Export")
+	const store = await prisma.store.findFirst({ where: { tenantId }, select: { name: true } })
+	csvRows.push(`${csvCell(store?.name || "Store")} Analytics Export`)
 	csvRows.push(`${csvCell("Time Range")},${csvCell(timeRange)}`)
 	csvRows.push(`${csvCell("Exported At")},${csvCell(new Date().toISOString())}`)
 	csvRows.push("")

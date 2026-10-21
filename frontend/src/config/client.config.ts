@@ -29,8 +29,8 @@ export const clientConfig = {
 		whatsappNumber: "254740470381",
 		// Storefront floating/social message. Platform defaults are supplied by
 		// platform-site-settings.ts; this fallback is for merchant storefronts.
-		whatsappFloatingMessage: "Hello Nurava Tech, I need help with my order.",
-		whatsappMessage: "Hello Nurava Tech, I need help with my order.",
+		whatsappFloatingMessage: "Hello Nurava HubStores, I need help with my order.",
+		whatsappMessage: "Hello Nurava HubStores, I need help with my order.",
 		addressLine: "Kimathi Street, CBD",
 		cityCountry: "Nairobi, Kenya",
 		businessHours: "Mon - Sat, 8AM - 6PM",

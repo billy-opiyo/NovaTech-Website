@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ message: !phoneVerified ? "Details saved. Verify the merchant phone before submitting for review." : "Details saved. Upload the required verification evidence before submitting for review.", code: !phoneVerified ? "PHONE_VERIFICATION_REQUIRED" : "EVIDENCE_REQUIRED", missingEvidence, verificationStatus: "IN_PROGRESS" }, { status: 409 })
 		}
 		const verification = await prisma.tenant.update({ where: { id: context.tenantId }, data: { verificationStatus: "PENDING_REVIEW", verificationSubmittedAt: new Date(), verificationReviewedAt: null, verificationReviewerId: null, verificationNotes: null }, select: { verificationStatus: true, verificationSubmittedAt: true } })
-		return NextResponse.json({ message: "Verification request submitted for Nurava review.", verification })
+		return NextResponse.json({ message: "Verification request submitted for platform review.", verification })
 	} catch (error: unknown) {
 		if (error instanceof Error && error.message === "Invalid Kenyan phone number format") return NextResponse.json({ message: error.message }, { status: 400 })
 		return apiErrorResponse(error, "Unable to submit verification")
