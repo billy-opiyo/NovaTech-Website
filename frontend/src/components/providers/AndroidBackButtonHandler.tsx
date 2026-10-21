@@ -135,7 +135,7 @@ export default function AndroidBackButtonHandler() {
 				>
 					<X aria-hidden="true" size={18} />
 				</button>
-				<h2 className="pr-10 text-xl font-bold" id="android-exit-dialog-title">Exit Nurava HubStores?</h2>
+				<h2 className="pr-10 text-xl font-bold" id="android-exit-dialog-title">Exit {store.isPlatformHome ? store.platformBrandName : store.brand.name}?</h2>
 				<p className="mt-3 text-sm text-theme-muted">Are you sure you want to close the app?</p>
 				<div className="mt-7 flex justify-between gap-3">
 					<button className="min-h-11 flex-1 rounded-xl border border-theme-border px-4 font-semibold transition hover:bg-theme-surface/60" onClick={closeExitDialog} type="button">

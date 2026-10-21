@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { hashMerchantVerificationOtp } from "./merchant-verification-secrets"
 import { SmsDeliveryError } from "./sms/types"
+import { getPlatformDisplayName } from "./brand"
 
 export const MERCHANT_PHONE_OTP_COOLDOWN_MS = 60_000
 export const MERCHANT_PHONE_OTP_LIFETIME_MS = 10 * 60_000
@@ -60,7 +61,8 @@ export async function sendMerchantPhoneOtp(options: {
 	if (!claimed) return "cooldown"
 
 	try {
-		await options.sendSms(options.phone, `Nurava Tech verification code: ${code}. It expires in 10 minutes. Do not share this code.`)
+		const brandName = await getPlatformDisplayName()
+		await options.sendSms(options.phone, `${brandName} verification code: ${code}. It expires in 10 minutes. Do not share this code.`)
 	} catch (error) {
 		// A timeout is ambiguous: the provider may still deliver the in-flight SMS.
 		// Keep that code valid so a late-arriving message is not unexpectedly rejected.

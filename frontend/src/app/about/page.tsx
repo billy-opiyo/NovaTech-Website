@@ -4,6 +4,7 @@ import { getStoreContext } from "@/lib/store-context.server"
 
 export default async function AboutPage() {
 	const store = await getStoreContext()
+	const brandName = store.platformBrandName
 	if (!store.isPlatformHome) return <InfoPage
 		title={store.homepage.aboutTitle || `About ${store.brand.name}`}
 		description={store.homepage.aboutDescription || `${store.brand.name} is an independent store serving its customers directly.`}
@@ -15,13 +16,13 @@ export default async function AboutPage() {
 	return (
 		<>
 			<InfoPage
-				title="About Nurava HubStores"
-				description="Nurava HubStores is a multi-industry platform that helps diverse independent stores reach and serve shoppers across Kenya."
+				title={`About ${brandName}`}
+				description={`${brandName} is a multi-industry platform that helps diverse independent stores reach and serve shoppers across Kenya.`}
 				sections={[
 					{
 						title: "Who we are",
 						content:
-							"Nurava HubStores provides independent merchants with flexible storefronts, product and business tools, and a shared way to connect with shoppers. The platform is designed for diverse stores across multiple industries.",
+						`${brandName} provides independent merchants with flexible storefronts, product and business tools, and a shared way to connect with shoppers. The platform is designed for diverse stores across multiple industries.`,
 					},
 					{
 						title: "What we value",

@@ -1,5 +1,5 @@
 import prisma from "../lib/db"
-import { PLATFORM_BRAND_NAME } from "../lib/brand"
+import { getPlatformDisplayName, PLATFORM_BRAND_NAME } from "../lib/brand"
 import { emailWasAccepted, sendEmail } from "../lib/email"
 import { escapeHtml } from "../lib/html"
 import { sendWhatsAppMessage } from "../lib/whatsapp"
@@ -48,8 +48,8 @@ type ReminderSubscription = {
 	}
 }
 
-function reminderHtml(heading: string, message: string, billingUrl: string) {
-	return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0070f3,#f97316);padding:24px;text-align:center;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;">${escapeHtml(PLATFORM_BRAND_NAME)}</h1></div><div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;color:#1f2937;"><h2 style="margin-top:0;">${escapeHtml(heading)}</h2><p style="color:#4b5563;line-height:1.6;">${escapeHtml(message)}</p><a href="${billingUrl}" style="display:inline-block;background:#0070f3;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Open billing</a></div></div>`
+function reminderHtml(heading: string, message: string, billingUrl: string, brandName: string) {
+	return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0070f3,#f97316);padding:24px;text-align:center;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;">${escapeHtml(brandName)}</h1></div><div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;color:#1f2937;"><h2 style="margin-top:0;">${escapeHtml(heading)}</h2><p style="color:#4b5563;line-height:1.6;">${escapeHtml(message)}</p><a href="${billingUrl}" style="display:inline-block;background:#0070f3;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Open billing</a></div></div>`
 }
 
 async function dispatchReminder(subscription: ReminderSubscription, stage: PilotReminderStage, dueDate: Date) {
@@ -58,13 +58,15 @@ async function dispatchReminder(subscription: ReminderSubscription, stage: Pilot
 	if (existing) return false
 	const storeName = subscription.tenant.store?.name || "your store"
 	const copy = stageCopy[stage]
+	const brandName = await getPlatformDisplayName()
 	const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 	const message = copy.body.split("{store}").join(storeName).split("{date}").join(dueDate.toLocaleDateString())
 	let delivered = 0
 	for (const membership of subscription.tenant.memberships) {
 		if (membership.user?.email) {
 			try {
-				const result = await sendEmail({ to: membership.user.email, subject: copy.subject, html: reminderHtml(copy.heading, message, `${appUrl}/manage/billing`) })
+				const subject = copy.subject.replace(/Nurava Tech|Nurava HubStores/g, brandName)
+				const result = await sendEmail({ to: membership.user.email, subject, fromName: brandName, html: reminderHtml(copy.heading, message, `${appUrl}/manage/billing`, brandName) })
 				if (emailWasAccepted(result)) delivered += 1
 			} catch (error) {
 				console.error("Pilot reminder email failed", { tenantId: subscription.tenantId, stage, message: error instanceof Error ? error.message : String(error) })

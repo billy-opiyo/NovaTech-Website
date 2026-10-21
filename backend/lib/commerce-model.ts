@@ -1,6 +1,6 @@
 /**
- * Nurava Tech is a merchant-direct marketplace: each store is the seller of
- * its products, while Nurava Tech provides discovery, hosting, and merchant
+ * Nurava HubStores is a merchant-direct marketplace: each store is the seller of
+ * its products, while Nurava HubStores provides discovery, hosting, and merchant
  * SaaS tools. Shopper checkout is opt-in through MERCHANT_ROUTED mode and
  * still keeps the merchant as merchant of record.
  */

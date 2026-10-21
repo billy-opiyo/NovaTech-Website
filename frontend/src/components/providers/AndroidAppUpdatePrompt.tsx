@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Capacitor, registerPlugin } from "@capacitor/core"
 import { App } from "@capacitor/app"
 import { usePathname } from "next/navigation"
+import { useStoreContext } from "@/lib/store-context"
 import { Download, LoaderCircle, X } from "lucide-react"
 import {
 	ANDROID_UPDATE_CHANNELS,
@@ -26,6 +27,7 @@ type AppUpdaterPlugin = {
 const AppUpdater = registerPlugin<AppUpdaterPlugin>("AppUpdater")
 
 export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { showOnPlatformHomepage: boolean }) {
+	const store = useStoreContext()
 	const pathname = usePathname()
 	const isPlatformHomepage = showOnPlatformHomepage && pathname === "/"
 	const [update, setUpdate] = useState<AndroidUpdateManifest | null>(null)
@@ -236,7 +238,7 @@ export default function AndroidAppUpdatePrompt({ showOnPlatformHomepage }: { sho
 				<button type="button" onClick={() => setDismissedVersionCode(update.versionCode)} className="absolute right-3 top-3 rounded-full p-2 text-gray-500 transition hover:bg-black/10 hover:text-theme-text dark:hover:bg-white/10" aria-label="Remind me later"><X size={18} /></button>
 				<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary"><Download size={25} aria-hidden="true" /></div>
 				<h2 id="app-update-title" className="mt-4 text-xl font-bold sm:text-2xl">App update available</h2>
-				<p id="app-update-description" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">Nurava HubStores {update.versionName} is ready. The Android install screen will open after the download finishes.</p>
+				<p id="app-update-description" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{store.platformBrandName} {update.versionName} is ready. The Android install screen will open after the download finishes.</p>
 				{update.releaseNotes && <p className="mt-2 text-sm leading-6 text-gray-500">{update.releaseNotes}</p>}
 				{error && <p className={`mt-4 text-sm leading-5 ${downloading ? "text-gray-500" : "text-primary"}`} role="status">{error}</p>}
 				<div className="mt-6 flex flex-col-reverse justify-center gap-3 sm:flex-row">

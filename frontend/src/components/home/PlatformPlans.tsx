@@ -1,6 +1,9 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRight, Check, Sparkles } from "lucide-react"
 import type { PublicPlan, PublicPlanCatalogSource } from "@/lib/public-plans.server"
+import { useStoreContext } from "@/lib/store-context"
 
 function money(value: number | null, currency: string) {
 	return value == null ? "Contact us" : `${currency} ${value.toLocaleString()}`
@@ -12,19 +15,19 @@ function featureList(plan: PublicPlan) {
 	const staffAccounts = typeof entitlements.staffAccounts === "number" ? `${entitlements.staffAccounts} staff account${entitlements.staffAccounts === 1 ? "" : "s"}` : null
 	const storageGb = typeof entitlements.storageGb === "number" ? `${entitlements.storageGb} GB storage` : null
 	const analytics = entitlements.analyticsLevel === "advanced" ? "Advanced analytics" : entitlements.analyticsLevel === "basic" ? "Basic analytics" : null
-	const customDomainCount = typeof entitlements.customDomainCount === "number" ? `Up to ${entitlements.customDomainCount} custom domains` : entitlements.customDomain === true ? "One custom domain" : "Nurava subdomain"
+	const customDomainCount = typeof entitlements.customDomainCount === "number" ? `Up to ${entitlements.customDomainCount} custom domains` : entitlements.customDomain === true ? "One custom domain" : "Platform subdomain"
 
 	return [productLimit, staffAccounts, storageGb, analytics, customDomainCount].filter((feature): feature is string => Boolean(feature))
 }
 
-function planDescription(key: string) {
+function planDescription(key: string, brandName: string) {
 	if (key === "STARTER") return "The essentials for launching your first online store."
 	if (key === "BUSINESS") return "More capacity and advanced tools for a growing operation."
 	if (key === "ENTERPRISE") return "Higher limits and multi-domain support for established teams."
-	return "A flexible Nurava HubStores plan for your store."
+	return `A flexible ${brandName} plan for your store.`
 }
 
-function PlanCard({ plan, featured }: { plan: PublicPlan; featured: boolean }) {
+function PlanCard({ plan, featured, brandName }: { plan: PublicPlan; featured: boolean; brandName: string }) {
 	const features = featureList(plan)
 	return (
 		<article className={`relative flex h-full flex-col rounded-3xl border p-6 shadow-lg ${featured ? "border-primary bg-primary/[0.08] shadow-primary/10" : "border-white/10 bg-white/[0.04] dark:bg-white/[0.03]"}`}>
@@ -33,7 +36,7 @@ function PlanCard({ plan, featured }: { plan: PublicPlan; featured: boolean }) {
 				<p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{plan.name}</p>
 				<h3 className="mt-3 text-2xl font-extrabold">{money(plan.price, plan.currency)}<span className="text-sm font-medium text-gray-500 dark:text-gray-400">{plan.price != null && plan.billingInterval ? ` / ${plan.billingInterval.toLowerCase()}` : ""}</span></h3>
 				<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">One-time setup: <span className="font-semibold text-gray-700 dark:text-gray-200">{money(plan.setupFeeAmount, plan.currency)}</span></p>
-				<p className="mt-4 min-h-12 text-sm leading-6 text-gray-600 dark:text-gray-300">{planDescription(plan.key)}</p>
+				<p className="mt-4 min-h-12 text-sm leading-6 text-gray-600 dark:text-gray-300">{planDescription(plan.key, brandName)}</p>
 			</div>
 			<ul className="mt-5 flex-1 space-y-3 border-t border-white/10 pt-5 text-sm text-gray-700 dark:text-gray-200">
 				{features.map((feature) => <li key={feature} className="flex items-start gap-2"><Check size={17} className="mt-0.5 shrink-0 text-emerald-500" /> <span>{feature}</span></li>)}
@@ -45,16 +48,17 @@ function PlanCard({ plan, featured }: { plan: PublicPlan; featured: boolean }) {
 }
 
 export default function PlatformPlans({ plans, unavailable, source }: { plans: PublicPlan[]; unavailable: boolean; source: PublicPlanCatalogSource }) {
+	const store = useStoreContext()
 	return (
 		<section id="plans" aria-labelledby="platform-plans-title" className="scroll-mt-24 rounded-3xl border border-primary/15 bg-gradient-to-b from-primary/[0.08] to-transparent p-5 sm:p-8">
 			<div className="mx-auto max-w-3xl text-center">
 				<p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Plans for store partners</p>
 				<h2 id="platform-plans-title" className="mt-2 text-3xl font-extrabold sm:text-4xl">Simple billing, clear capacity</h2>
 				<p className="mt-3 font-semibold text-primary">Choose your plan and pay its one-time setup fee to start a six-month pilot.</p>
-				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. From month seven, you can manually renew it monthly through M-Pesa. Nurava HubStores does not automatically charge your account.</p>
-				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : "Prices shown from the approved Nurava HubStores launch catalog; live billing is confirmed during setup."}</p>
+				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. From month seven, you can manually renew it monthly through M-Pesa. {store.platformBrandName} does not automatically charge your account.</p>
+				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : `Prices shown from the approved ${store.platformBrandName} launch catalog; live billing is confirmed during setup.`}</p>
 			</div>
-			{unavailable ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">Plan pricing is temporarily unavailable while the billing catalog is being connected. Please try again shortly.</div> : plans.length === 0 ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">No public plans are currently configured.</div> : <div className="mt-8 grid gap-5 lg:grid-cols-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} featured={plan.key === "BUSINESS"} />)}</div>}
+			{unavailable ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">Plan pricing is temporarily unavailable while the billing catalog is being connected. Please try again shortly.</div> : plans.length === 0 ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">No public plans are currently configured.</div> : <div className="mt-8 grid gap-5 lg:grid-cols-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} featured={plan.key === "BUSINESS"} brandName={store.platformBrandName} />)}</div>}
 			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">The one-time setup fee is paid before the pilot starts. Your selected plan&apos;s monthly subscription becomes payable from month seven and is renewed manually. Optional add-ons are billed according to the active catalog.</p>
 		</section>
 	)
