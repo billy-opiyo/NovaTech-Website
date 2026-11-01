@@ -44,6 +44,23 @@
 			h1 { margin: 1.25rem 0 0; font-size: 1.25rem; line-height: 1.3; font-weight: 700; }
 			p { margin: .75rem 0 0; font-size: .875rem; line-height: 1.5rem; color: var(--offline-muted); }
 			.description { margin-top: .5rem; }
+			.retry {
+				margin-top: 1.25rem;
+				min-height: 2.75rem;
+				padding: .7rem 1.25rem;
+				border: 1px solid color-mix(in srgb, var(--offline-primary) 70%, transparent);
+				border-radius: .75rem;
+				background: var(--offline-primary);
+				color: var(--offline-primary-text, #fff);
+				font: inherit;
+				font-size: .95rem;
+				font-weight: 700;
+				cursor: pointer;
+				box-shadow: 0 8px 22px color-mix(in srgb, var(--offline-primary) 25%, transparent);
+			}
+			.retry:hover { filter: brightness(1.08); }
+			.retry:focus-visible { outline: 3px solid color-mix(in srgb, var(--offline-primary) 45%, white); outline-offset: 3px; }
+			.retry:disabled { cursor: progress; opacity: .8; }
 			@media (max-width: 360px) { .dialog { padding: 1.75rem 1.25rem; } }
 			@media (min-width: 640px) { .dialog { padding: 2.25rem; } h1 { font-size: 1.5rem; } }
 		</style>
@@ -63,6 +80,7 @@
 			<h1 id="offline-title">Connection Unavailable</h1>
 			<p>Please check you Internet Connection.</p>
 			<p id="offline-description" class="description">Some features may be temporarily unavailable. We’ll reconnect automatically when your connection returns.</p>
+			<button id="retry-button" class="retry" type="button">Retry</button>
 		</main>
 		<script>
 			(() => {
@@ -91,6 +109,14 @@
 				if (!targetUrl) return;
 				let checking = false;
 				let retryTimer;
+				const retryButton = document.getElementById("retry-button");
+				const retryDescription = document.getElementById("offline-description");
+				const primary = getComputedStyle(document.documentElement).getPropertyValue("--offline-primary").trim();
+				const rgb = primary.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+				if (rgb?.length === 3) {
+					const luminance = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114) / 255;
+					document.documentElement.style.setProperty("--offline-primary-text", luminance > 0.62 ? "#111827" : "#ffffff");
+				}
 				const checkConnection = async () => {
 					if (checking) return;
 					checking = true;
@@ -102,9 +128,17 @@
 						window.location.replace(targetUrl);
 					} catch {
 						checking = false;
+						if (retryDescription) retryDescription.textContent = "Still offline. We’ll keep checking automatically, or you can tap Retry.";
 						retryTimer = window.setTimeout(checkConnection, 2000);
 					}
 				};
+				retryButton?.addEventListener("click", () => {
+					window.clearTimeout(retryTimer);
+					if (retryDescription) retryDescription.textContent = "Retrying your previous page…";
+					// Go straight back to the exact URL that failed. If it is still
+					// unreachable, Android's main-frame error handler shows this page again.
+					window.location.replace(targetUrl);
+				});
 				const retryWhenVisible = () => {
 					if (document.visibilityState === "visible") {
 						window.clearTimeout(retryTimer);

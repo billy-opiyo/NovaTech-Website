@@ -46,6 +46,94 @@ const mode = (
 	},
 ): ThemeModeColors => colors
 
+type ThemePaletteSpec = {
+	id: string
+	name: string
+	description: string
+	primary: string
+	primaryDark: string
+	accent: string
+	tone: "cool" | "warm" | "sage" | "rose" | "sand"
+	fontBody: string
+	fontHeading: string
+	cardRadius: string
+}
+
+const additionalPaletteTones = {
+	cool: {
+		light: { background: "#f4f7fb", surface: "#ffffff", text: "#172033", muted: "#64748b", border: "#d9e2ef" },
+		dark: { background: "#0b1220", surface: "#151f31", text: "#e8eef8", muted: "#a6b2c5", border: "#2b374b" },
+	},
+	warm: {
+		light: { background: "#faf7f2", surface: "#fffdf9", text: "#29231e", muted: "#756c63", border: "#e8dfd4" },
+		dark: { background: "#1c1917", surface: "#292521", text: "#f5efe7", muted: "#b5a89a", border: "#403a33" },
+	},
+	sage: {
+		light: { background: "#f3f8f4", surface: "#ffffff", text: "#1e3025", muted: "#65766b", border: "#dce8dd" },
+		dark: { background: "#101b15", surface: "#1b2a20", text: "#e8f5eb", muted: "#a5b8a9", border: "#334a39" },
+	},
+	rose: {
+		light: { background: "#fff6f8", surface: "#ffffff", text: "#3d2630", muted: "#876c78", border: "#f0dce4" },
+		dark: { background: "#21141b", surface: "#32202a", text: "#faeaf1", muted: "#c5a6b4", border: "#513646" },
+	},
+	sand: {
+		light: { background: "#faf8f1", surface: "#fffefa", text: "#302d24", muted: "#797461", border: "#e9e3d0" },
+		dark: { background: "#1d1b15", surface: "#2b291f", text: "#f6f2e4", muted: "#bcb69c", border: "#454235" },
+	},
+} as const
+
+const hexRgb = (hex: string) => {
+	const value = Number.parseInt(hex.slice(1), 16)
+	return `${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}`
+}
+
+const createAdditionalThemePreset = (spec: ThemePaletteSpec): ThemePreset => {
+	const tone = additionalPaletteTones[spec.tone]
+	const colors = (scheme: "light" | "dark"): ThemeModeColors => {
+		const base = tone[scheme]
+		const opacity = scheme === "light" ? 0.12 : 0.2
+		return mode({
+			...base,
+			glassBackground: scheme === "light" ? "rgba(255, 255, 255, 0.76)" : "rgba(5, 10, 18, 0.72)",
+			glassBorder: `rgba(${hexRgb(spec.primary)}, ${opacity})`,
+			glassShadow: scheme === "light" ? "0 8px 30px rgba(15, 23, 42, 0.12)" : "0 10px 34px rgba(0, 0, 0, 0.4)",
+			scrollbarTrack: `rgba(${hexRgb(spec.primary)}, ${scheme === "light" ? 0.1 : 0.2})`,
+			scrollbarThumb: `rgba(${hexRgb(spec.primary)}, 0.7)`,
+			scrollbarThumbHover: `rgba(${hexRgb(spec.primaryDark)}, 0.92)`,
+		})
+	}
+	return {
+		...spec,
+		light: colors("light"),
+		dark: colors("dark"),
+	}
+}
+
+// Five additional options for each of the four seeded industries. They remain
+// universal presets so any merchant can select any palette for their store.
+const ADDITIONAL_THEME_PRESETS = {
+	"arctic-cobalt": createAdditionalThemePreset({ id: "arctic-cobalt", name: "Arctic Cobalt", description: "Crisp cobalt and cyan for electronics and modern tech stores.", primary: "#1d4ed8", primaryDark: "#1e40af", accent: "#0891b2", tone: "cool", fontBody: "Inter, ui-sans-serif, sans-serif", fontHeading: "Space Grotesk, Inter, sans-serif", cardRadius: "0.8rem" }),
+	"silicon-graphite": createAdditionalThemePreset({ id: "silicon-graphite", name: "Silicon Graphite", description: "Quiet graphite surfaces with a bright blue signal accent.", primary: "#475569", primaryDark: "#334155", accent: "#0284c7", tone: "cool", fontBody: "Roboto, Inter, sans-serif", fontHeading: "Roboto, Inter, sans-serif", cardRadius: "0.65rem" }),
+	"circuit-emerald": createAdditionalThemePreset({ id: "circuit-emerald", name: "Circuit Emerald", description: "Confident emerald with amber details for trusted technology retail.", primary: "#047857", primaryDark: "#065f46", accent: "#d97706", tone: "sage", fontBody: "DM Sans, Inter, sans-serif", fontHeading: "Manrope, DM Sans, sans-serif", cardRadius: "0.9rem" }),
+	"gamer-ember": createAdditionalThemePreset({ id: "gamer-ember", name: "Gamer Ember", description: "Performance red and ember orange with compact squared cards.", primary: "#b91c1c", primaryDark: "#991b1b", accent: "#ea580c", tone: "cool", fontBody: "Barlow, Inter, sans-serif", fontHeading: "Rajdhani, Barlow, sans-serif", cardRadius: "0.5rem" }),
+	"studio-violet": createAdditionalThemePreset({ id: "studio-violet", name: "Studio Violet", description: "Creative violet paired with clear cyan accents for digital gear.", primary: "#6d28d9", primaryDark: "#5b21b6", accent: "#0891b2", tone: "cool", fontBody: "Inter, ui-sans-serif, sans-serif", fontHeading: "Sora, Inter, sans-serif", cardRadius: "1.1rem" }),
+	"oak-and-clay": createAdditionalThemePreset({ id: "oak-and-clay", name: "Oak & Clay", description: "Natural oak neutrals and clay accents for furniture and home goods.", primary: "#9a3412", primaryDark: "#7c2d12", accent: "#4d7c0f", tone: "warm", fontBody: "Lato, Inter, sans-serif", fontHeading: "Merriweather Sans, Lato, sans-serif", cardRadius: "0.85rem" }),
+	"linen-sage": createAdditionalThemePreset({ id: "linen-sage", name: "Linen Sage", description: "Soft linen backgrounds with a calm, botanical green.", primary: "#4d7c0f", primaryDark: "#3f6212", accent: "#a16207", tone: "sage", fontBody: "Source Sans 3, Inter, sans-serif", fontHeading: "Plus Jakarta Sans, Source Sans 3, sans-serif", cardRadius: "1.2rem" }),
+	"walnut-brass": createAdditionalThemePreset({ id: "walnut-brass", name: "Walnut Brass", description: "Deep walnut, antique brass, and editorial serif headings.", primary: "#854d0e", primaryDark: "#713f12", accent: "#0f766e", tone: "warm", fontBody: "Merriweather Sans, Inter, sans-serif", fontHeading: "Georgia, 'Times New Roman', serif", cardRadius: "0.7rem" }),
+	"coastal-home": createAdditionalThemePreset({ id: "coastal-home", name: "Coastal Home", description: "Sea-glass blue and warm terracotta for relaxed living spaces.", primary: "#0369a1", primaryDark: "#075985", accent: "#c2410c", tone: "cool", fontBody: "Nunito Sans, Inter, sans-serif", fontHeading: "Nunito Sans, Inter, sans-serif", cardRadius: "1.25rem" }),
+	"terracotta-living": createAdditionalThemePreset({ id: "terracotta-living", name: "Terracotta Living", description: "Sunbaked terracotta and deep teal over warm, natural surfaces.", primary: "#c2410c", primaryDark: "#9a3412", accent: "#0f766e", tone: "sand", fontBody: "DM Sans, Inter, sans-serif", fontHeading: "Outfit, DM Sans, sans-serif", cardRadius: "1rem" }),
+	"berry-cream": createAdditionalThemePreset({ id: "berry-cream", name: "Berry Cream", description: "Berry pink and soft violet for cakes, gifts, and celebrations.", primary: "#be185d", primaryDark: "#9d174d", accent: "#7c3aed", tone: "rose", fontBody: "Nunito Sans, Inter, sans-serif", fontHeading: "Playfair Display, Georgia, serif", cardRadius: "1.35rem" }),
+	"cocoa-mint": createAdditionalThemePreset({ id: "cocoa-mint", name: "Cocoa & Mint", description: "Rich cocoa brown balanced with a fresh mint green accent.", primary: "#7c2d12", primaryDark: "#64230e", accent: "#047857", tone: "warm", fontBody: "Lato, Inter, sans-serif", fontHeading: "Lora, Georgia, serif", cardRadius: "1rem" }),
+	"patisserie-lilac": createAdditionalThemePreset({ id: "patisserie-lilac", name: "Patisserie Lilac", description: "Elegant lilac and rose for boutique bakeries and patisseries.", primary: "#7e22ce", primaryDark: "#6b21a8", accent: "#db2777", tone: "rose", fontBody: "DM Sans, Inter, sans-serif", fontHeading: "Cormorant Garamond, Georgia, serif", cardRadius: "1.4rem" }),
+	"citrus-bakery": createAdditionalThemePreset({ id: "citrus-bakery", name: "Citrus Bakery", description: "Zesty orange and garden green with bright bakery-counter warmth.", primary: "#c2410c", primaryDark: "#9a3412", accent: "#15803d", tone: "sand", fontBody: "Nunito Sans, Inter, sans-serif", fontHeading: "Baloo 2, Nunito Sans, sans-serif", cardRadius: "1.1rem" }),
+	"rosewater": createAdditionalThemePreset({ id: "rosewater", name: "Rosewater", description: "Polished rose and apricot for refined celebration brands.", primary: "#9d174d", primaryDark: "#831843", accent: "#ea580c", tone: "rose", fontBody: "Inter, ui-sans-serif, sans-serif", fontHeading: "DM Serif Display, Georgia, serif", cardRadius: "1.2rem" }),
+	"atelier-noir": createAdditionalThemePreset({ id: "atelier-noir", name: "Atelier Noir", description: "Tailored charcoal and muted bronze for premium boutiques.", primary: "#374151", primaryDark: "#1f2937", accent: "#a16207", tone: "warm", fontBody: "Work Sans, Inter, sans-serif", fontHeading: "Cormorant Garamond, Georgia, serif", cardRadius: "0.55rem" }),
+	"runway-wine": createAdditionalThemePreset({ id: "runway-wine", name: "Runway Wine", description: "Editorial wine red with a soft violet highlight.", primary: "#881337", primaryDark: "#701a35", accent: "#7e22ce", tone: "rose", fontBody: "Manrope, Inter, sans-serif", fontHeading: "Playfair Display, Georgia, serif", cardRadius: "0.75rem" }),
+	"denim-ivory": createAdditionalThemePreset({ id: "denim-ivory", name: "Denim & Ivory", description: "Everyday denim blue with energetic orange details.", primary: "#1d4ed8", primaryDark: "#1e40af", accent: "#ea580c", tone: "sand", fontBody: "Lato, Inter, sans-serif", fontHeading: "Montserrat, Lato, sans-serif", cardRadius: "0.8rem" }),
+	"market-olive": createAdditionalThemePreset({ id: "market-olive", name: "Market Olive", description: "Earthy olive and harvest amber for curated local collections.", primary: "#3f6212", primaryDark: "#365314", accent: "#b45309", tone: "sage", fontBody: "Source Sans 3, Inter, sans-serif", fontHeading: "Merriweather, Georgia, serif", cardRadius: "0.9rem" }),
+	"monsoon-teal": createAdditionalThemePreset({ id: "monsoon-teal", name: "Monsoon Teal", description: "Deep monsoon teal and berry accents for expressive fashion stores.", primary: "#0f766e", primaryDark: "#115e59", accent: "#be123c", tone: "cool", fontBody: "DM Sans, Inter, sans-serif", fontHeading: "Outfit, DM Sans, sans-serif", cardRadius: "1rem" }),
+} satisfies Record<string, ThemePreset>
+
 export const THEME_PRESETS = {
 	"nova-blue-orange": {
 		id: "nova-blue-orange",
@@ -204,6 +292,7 @@ export const THEME_PRESETS = {
 		fontHeading: "Raleway, Work Sans, sans-serif",
 		cardRadius: "0.9rem",
 	},
+	...ADDITIONAL_THEME_PRESETS,
 } satisfies Record<string, ThemePreset>
 
 export type ThemePresetId = keyof typeof THEME_PRESETS
