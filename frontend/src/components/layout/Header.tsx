@@ -52,7 +52,7 @@ export default function Header() {
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
 					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
-						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
+						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-[18%] shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 			{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
 						<span
