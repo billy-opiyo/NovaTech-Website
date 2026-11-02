@@ -7,6 +7,7 @@ export type PlatformTeamMember = {
 	role: string
 	bio: string
 	image?: string
+	website?: string
 	social?: {
 		linkedin?: string
 		instagram?: string

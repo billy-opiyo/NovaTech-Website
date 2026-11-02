@@ -59,6 +59,7 @@ const teamMemberSchema = z.object({
 	role: z.string().trim().min(1).max(120),
 	bio: z.string().trim().max(600),
 	image: optionalHttpsOrPath.optional(),
+	website: optionalHttpsOrPath.optional(),
 	social: z.object({
 		linkedin: optionalHttpsOrPath.optional(),
 		instagram: optionalHttpsOrPath.optional(),

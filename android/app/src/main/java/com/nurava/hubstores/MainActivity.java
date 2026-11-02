@@ -272,7 +272,7 @@ public class MainActivity extends BridgeActivity {
         logo.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, android.graphics.Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 0.27f);
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 0.18f);
             }
         });
         int logoWidth = dp(96);

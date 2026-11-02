@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { FaGithub, FaInstagram, FaLinkedinIn, FaTwitter } from "react-icons/fa"
+import { FaGithub, FaGlobe, FaInstagram, FaLinkedinIn, FaTwitter } from "react-icons/fa"
 import { useStoreContext } from "@/lib/store-context"
 
 const socialLinks = [
@@ -36,6 +36,7 @@ export default function PlatformTeamSection() {
 						<p className="mt-1 font-medium text-primary">{member.role}</p>
 						<p className="mt-4 flex-1 leading-7 text-gray-600 dark:text-gray-400">{member.bio}</p>
 						<div className="mt-5 flex items-center justify-center gap-3">
+							{member.website && <Link href={member.website} target="_blank" rel="noreferrer" aria-label={`${member.name} website`} className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 text-primary transition hover:bg-primary hover:text-white"><FaGlobe size={16} /></Link>}
 							{socialLinks.map(({ key, label, icon: Icon }) => {
 								const href = member.social?.[key]
 								return href ? <Link key={key} href={href} target="_blank" rel="noreferrer" aria-label={`${member.name} on ${label}`} className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 text-primary transition hover:bg-primary hover:text-white"><Icon size={16} /></Link> : null

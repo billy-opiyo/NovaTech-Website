@@ -416,6 +416,7 @@ export default function PlatformSiteSettingsPanel() {
 								<label className="block text-sm font-medium">Name<input className={inputClass} value={member.name} onChange={(event) => updateTeamMember(member.id, { name: event.target.value })} /></label>
 								<label className="block text-sm font-medium">Role<input className={inputClass} value={member.role} onChange={(event) => updateTeamMember(member.id, { role: event.target.value })} /></label>
 								<label className="block text-sm font-medium md:col-span-2">Short bio<textarea className={inputClass} rows={3} value={member.bio} onChange={(event) => updateTeamMember(member.id, { bio: event.target.value })} /></label>
+								<label className="block text-sm font-medium">Website URL<input type="url" className={inputClass} value={member.website || ""} onChange={(event) => updateTeamMember(member.id, { website: event.target.value })} placeholder="https://example.com" /></label>
 								{(["linkedin", "instagram", "x", "github"] as const).map((key) => <label className="block text-sm font-medium" key={key}>{key === "x" ? "X / Twitter" : `${key[0].toUpperCase()}${key.slice(1)}`} URL<input type="url" className={inputClass} value={member.social?.[key] || ""} onChange={(event) => updateTeamSocial(member.id, key, event.target.value)} placeholder="https://" /></label>)}
 							</div>
 							<p className="mt-3 text-xs text-gray-500">JPG, PNG, WEBP, or GIF up to 1MB.</p>
