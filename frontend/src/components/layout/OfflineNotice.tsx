@@ -42,7 +42,7 @@ export default function OfflineNotice() {
 						setRetrying(true)
 						window.location.reload()
 					}}
-					className="btn-primary mt-6 inline-flex min-h-11 min-w-28 items-center justify-center rounded-lg px-6 py-3 font-semibold disabled:cursor-wait disabled:opacity-70"
+					className="btn-primary mt-6 inline-flex min-h-11 min-w-28 items-center justify-center rounded-lg px-6 py-3 font-semibold [-webkit-tap-highlight-color:transparent] disabled:cursor-wait disabled:opacity-70"
 				>
 					{retrying ? "Retrying…" : "Retry"}
 				</button>

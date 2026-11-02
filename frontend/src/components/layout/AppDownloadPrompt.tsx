@@ -55,26 +55,27 @@ export default function AppDownloadPrompt({ showOnPlatformHomepage }: { showOnPl
 	return (
 		<aside
 			aria-label="Download the Android app"
-			className="glass-card navy-glass fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md md:hidden sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
+			className="glass-card navy-glass fixed inset-x-3 bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] z-[45] mx-auto max-w-md px-4 pb-4 pt-10 text-center md:hidden sm:inset-x-auto sm:right-5 sm:bottom-5 sm:left-auto sm:w-[min(26rem,calc(100vw_-_2.5rem))]"
 		>
-			<div className="flex items-center gap-2">
-				<a
-					href={APP_DOWNLOAD_PATH}
-					download={APP_DOWNLOAD_FILENAME}
-					onClick={handleAppDownloadClick}
-					className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-				>
-					Download Mobile App
-				</a>
-				<button
-					type="button"
-					aria-label="Close app download prompt"
-					onClick={() => setVisible(false)}
-					className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-theme-border text-theme-muted transition hover:bg-theme-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-				>
-					<X size={18} aria-hidden="true" />
-				</button>
-			</div>
+			<button
+				type="button"
+				aria-label="Close app download prompt"
+				onClick={() => setVisible(false)}
+				className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-theme-muted transition hover:bg-theme-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+			>
+				<X size={16} aria-hidden="true" />
+			</button>
+			<p className="mx-auto max-w-[17rem] text-xs leading-5 text-theme-muted sm:text-sm">
+				Take your store with you, wherever you go.
+			</p>
+			<a
+				href={APP_DOWNLOAD_PATH}
+				download={APP_DOWNLOAD_FILENAME}
+				onClick={handleAppDownloadClick}
+				className="mx-auto mt-3 flex min-h-11 w-full max-w-[15rem] items-center justify-center rounded-xl bg-primary px-3 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+			>
+				Download Mobile App
+			</a>
 			<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 text-sm text-theme-muted">
 				<input
 					type="checkbox"
