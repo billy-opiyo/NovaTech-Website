@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 
 export default function OfflineNotice() {
 	const [isOffline, setIsOffline] = useState(false)
+	const [retrying, setRetrying] = useState(false)
 
 	useEffect(() => {
 		const updateConnectionStatus = () => setIsOffline(!navigator.onLine)
@@ -33,7 +34,18 @@ export default function OfflineNotice() {
 				</div>
 				<h1 id="offline-notice-title" className="mt-5 text-xl font-bold text-theme-text sm:text-2xl">Connection Unavailable</h1>
 				<p className="mt-3 text-sm leading-6 text-theme-muted">Please check you Internet Connection.</p>
-				<p id="offline-notice-description" className="mt-2 text-sm leading-6 text-theme-muted">Some features may be temporarily unavailable. We’ll reconnect automatically when your connection returns.</p>
+				<p id="offline-notice-description" className="mt-2 text-sm leading-6 text-theme-muted">{retrying ? "Retrying your current page…" : "Some features may be temporarily unavailable. We’ll reconnect automatically when your connection returns."}</p>
+				<button
+					type="button"
+					disabled={retrying}
+					onClick={() => {
+						setRetrying(true)
+						window.location.reload()
+					}}
+					className="btn-primary mt-6 inline-flex min-h-11 min-w-28 items-center justify-center rounded-lg px-6 py-3 font-semibold disabled:cursor-wait disabled:opacity-70"
+				>
+					{retrying ? "Retrying…" : "Retry"}
+				</button>
 			</section>
 		</div>
 	)
