@@ -12,6 +12,7 @@
 		"android:add": "node scripts/android-build.mjs staging add",
 		"android:sync": "node scripts/android-build.mjs staging sync",
 		"android:sync:production": "node scripts/android-build.mjs production sync",
+		"android:icons": "node scripts/generate-android-launcher-icons.mjs",
 		"android:open": "node scripts/android-build.mjs staging open",
 		"android:open:production": "node scripts/android-build.mjs production open",
 		"android:debug": "node scripts/android-build.mjs staging debug",

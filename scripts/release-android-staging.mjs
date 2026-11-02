@@ -110,8 +110,12 @@ try {
 	gradleChanged = true
 
 	run("npm", ["run", "android:sync"])
-	const gradleCommand = process.platform === "win32" ? ".\\gradlew.bat" : "./gradlew"
-	run(gradleCommand, ["assembleDebug"], path.join(projectRoot, "android"))
+	const gradleCommand = process.env.NURAVA_ANDROID_GRADLE_EXECUTABLE?.trim()
+		|| (process.platform === "win32" ? ".\\gradlew.bat" : "./gradlew")
+	const gradleArgs = process.env.NURAVA_ANDROID_GRADLE_PROJECT_CACHE?.trim()
+		? ["--project-cache-dir", path.resolve(process.env.NURAVA_ANDROID_GRADLE_PROJECT_CACHE), "assembleDebug"]
+		: ["assembleDebug"]
+	run(gradleCommand, gradleArgs, path.join(projectRoot, "android"))
 	if (!existsSync(builtApkPath)) throw new Error(`Android build completed without producing ${builtApkPath}.`)
 	const builtArtifact = verifyStagingApk(builtApkPath)
 	if (builtArtifact.signingCertificateSha256 !== publishedArtifact.signingCertificateSha256) {
