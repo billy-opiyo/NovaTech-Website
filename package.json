@@ -9,6 +9,7 @@
 		"dev": "npm --workspace frontend run dev",
 		"dev:open": "start \"\" http://localhost:3000 && npm --workspace frontend run dev",
 		"build": "npm --workspace frontend run build",
+		"android:icons": "node scripts/generate-android-launcher-icons.mjs",
 		"android:sync:production": "node scripts/android-build.mjs production sync",
 		"android:open:production": "node scripts/android-build.mjs production open",
 		"android:debug:production": "node scripts/android-build.mjs production debug",
