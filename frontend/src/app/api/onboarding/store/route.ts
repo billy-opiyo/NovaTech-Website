@@ -7,6 +7,7 @@ import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { DEFAULT_STORE_CATEGORIES } from "backend/lib/default-categories"
 import { pilotTrialEndsAt } from "backend/billing/mvp-policy"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
+import { isApprovedMerchantIndustry } from "backend/lib/merchant-industry-policy"
 
 export async function GET() {
 	const session = await auth()
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
 	const parsed = storeOnboardingSchema.safeParse(await request.json().catch(() => null))
 	if (!parsed.success) return NextResponse.json({ message: "Invalid store details", issues: parsed.error.flatten() }, { status: 400 })
 	const data = parsed.data
+	if (!isApprovedMerchantIndustry(data.industrySlug)) return NextResponse.json({ message: "Merchant stores currently support Electronics, Cakes, Furniture, and Boutiques." }, { status: 400 })
 	const slug = data.slug || normalizeStoreSlug(data.name)
 	if (slug.length < 3) return NextResponse.json({ message: "Choose a longer store name or slug" }, { status: 400 })
 	const platformDomain = getPlatformDomain()
@@ -73,8 +75,8 @@ export async function POST(request: Request) {
 			} })
 			await transaction.membership.create({ data: { tenantId: tenant.id, userId: session.user.id, role: "STORE_OWNER", active: true, acceptedAt: new Date() } })
 			await transaction.category.createMany({ data: industry.categoryTemplates.length
-				? industry.categoryTemplates.map((category) => ({ tenantId: tenant.id, storeId: store.id, name: category.name, slug: category.slug, description: category.description, imageUrl: category.imageUrl }))
-				: (industry.slug === "electronics" ? DEFAULT_STORE_CATEGORIES : []).map((category) => ({ tenantId: tenant.id, storeId: store.id, ...category })) })
+				? industry.categoryTemplates.map((category) => ({ tenantId: tenant.id, storeId: store.id, industryId: industry.id, name: category.name, slug: category.slug, description: category.description, imageUrl: category.imageUrl }))
+				: (industry.slug === "electronics" ? DEFAULT_STORE_CATEGORIES : []).map((category) => ({ tenantId: tenant.id, storeId: store.id, industryId: industry.id, ...category })) })
 			await recordMerchantLegalAcceptance({ tenantId: tenant.id, acceptedById: session.user.id, context: "TRIAL_START", transaction })
 			await transaction.subscription.create({ data: { tenantId: tenant.id, planId: plan.id, status: setupFeePaid ? "TRIALING" : "INCOMPLETE", trialStartsAt: trialStartsAt || undefined, trialEndsAt: trialEndsAt || undefined } })
 			await transaction.billingCustomer.create({ data: { tenantId: tenant.id, ownerUserId: session.user.id } })

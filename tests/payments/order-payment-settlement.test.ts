@@ -27,6 +27,7 @@ function mockTransaction(orderStatus: string, cancellationWinsBeforeClaim = fals
 				return { count: 1 }
 			},
 		},
+		supplierFulfillment: { updateMany: async () => ({ count: 0 }) },
 	}
 	return { tx, get status() { return currentStatus }, get payment() { return savedPayment } }
 }

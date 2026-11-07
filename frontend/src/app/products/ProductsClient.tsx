@@ -100,9 +100,9 @@ export default function ProductsClient() {
 	useEffect(() => {
 		// On a deep-linked filtered page, keep the complete brand facet available.
 		// The unfiltered page derives brands from its main product response below.
-		if (!searchParams.get("q") && !searchParams.get("category") && searchParams.get("trending") !== "true") return
+		if (!searchParams.get("q") && !searchParams.get("category") && !searchParams.get("industry") && searchParams.get("trending") !== "true") return
 		let current = true
-		getProducts({ limit: 100 }, productsEndpoint)
+		getProducts({ limit: 100, industry: searchParams.get("industry") || undefined }, productsEndpoint)
 			.then(({ products }) => {
 				if (!current) return
 				setCatalogBrands(Array.from(new Set(products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
@@ -144,6 +144,7 @@ export default function ProductsClient() {
 		const query = {
 			q: searchQuery || undefined,
 			category: filters.category || undefined,
+			industry: searchParams.get("industry") || undefined,
 			brands: filters.brands.length ? filters.brands.join(",") : undefined,
 			minPrice: filters.priceRange[0] || undefined,
 			maxPrice: filters.priceRange[1] < 200000 ? filters.priceRange[1] : undefined,
@@ -153,7 +154,7 @@ export default function ProductsClient() {
 			sortBy: filters.sortBy,
 			limit: 100,
 		}
-		const requestsEntireCatalog = !query.q && !query.category && !query.brands && query.minPrice === undefined && query.maxPrice === undefined && !query.inStock && !query.onSale && !query.trending
+		const requestsEntireCatalog = !query.q && !query.category && !query.industry && !query.brands && query.minPrice === undefined && query.maxPrice === undefined && !query.inStock && !query.onSale && !query.trending
 		getProducts(query, productsEndpoint)
 			.then((response) => {
 				if (requestsEntireCatalog) setCatalogBrands(Array.from(new Set(response.products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))

@@ -306,7 +306,7 @@ export async function createMpesaInvoicePayment(input: { tenantId: string; owner
 			: await transaction.invoice.create({ data: { tenantId: input.tenantId, subscriptionId: subscription.id, kind, status: "OPEN", provider: billingProvider, subtotal: billingPlan.price || 0, addonTotal, setupFeeAmount: firstActivation ? setupFeeAmount : 0, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingPlan.currency, dueDate: new Date(Date.now() + 3 * 86400000), metadata: { platformPaymentDestination: destinationMetadata } } })
 		const creditAmount = existing ? existing.creditAmount : await reserveBillingCredits(transaction, input.tenantId, billingPlan.currency, totals.grossAmount, invoice.id)
 		const updatedInvoice = existing ? invoice : await transaction.invoice.update({ where: { id: invoice.id }, data: { creditAmount, total: totals.grossAmount - creditAmount } })
-		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: updatedInvoice.total === 0 ? "internal-credit" : billingProvider, amount: updatedInvoice.total, currency: updatedInvoice.currency, status: updatedInvoice.total === 0 ? "COMPLETED" : "PENDING", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `INV-${invoice.id}`, invoiceKind: invoice.kind, operation: "subscription-invoice", platformPaymentDestination: destinationMetadata } } })
+		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, subscriptionId: subscription.id, billingRecordId: firstActivation && setupFeeAmount > 0 ? tenant.billingRecord?.id : undefined, provider: updatedInvoice.total === 0 ? "internal-credit" : billingProvider, amount: updatedInvoice.total, currency: updatedInvoice.currency, status: updatedInvoice.total === 0 ? "COMPLETED" : "PENDING", kind: firstActivation ? BillingPaymentKind.SUBSCRIPTION : BillingPaymentKind.RENEWAL, purpose: firstActivation ? "SAAS_SUBSCRIPTION" : "SAAS_RENEWAL", phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `INV-${invoice.id}`, invoiceKind: invoice.kind, operation: "subscription-invoice", platformPaymentDestination: destinationMetadata } } })
 		return { invoice: updatedInvoice, payment, created: true }
 	})
 	const invoice = billingAttempt.invoice
@@ -367,7 +367,7 @@ export async function createSetupFeeMpesaPayment(input: { tenantId: string; owne
 		const invoice = existingInvoice
 			? await transaction.invoice.update({ where: { id: existingInvoice.id }, data: { status: InvoiceStatus.OPEN, paidAt: null, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", metadata: { ...(existingInvoice.metadata && typeof existingInvoice.metadata === "object" && !Array.isArray(existingInvoice.metadata) ? existingInvoice.metadata as Record<string, unknown> : {}), platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } as Prisma.InputJsonValue } })
 			: await transaction.invoice.create({ data: { tenantId: input.tenantId, kind: InvoiceKind.SETUP_FEE, status: InvoiceStatus.OPEN, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", subtotal: billingRecord.setupFeeAmount, setupFeeAmount: billingRecord.setupFeeAmount, grossTotal: totals.grossAmount, taxableAmount: totals.netAmount, taxRate: totals.vatRate, taxAmount: totals.taxAmount, total: totals.grossAmount, currency: billingRecord.currency, dueDate: new Date(Date.now() + 3 * 86400000), metadata: { operation: "one-time-store-setup", platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } } })
-		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, billingRecordId: billingRecord.id, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", amount: invoice.total, currency: invoice.currency, status: "PENDING", kind: BillingPaymentKind.SETUP_FEE, phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `SET-${invoice.id}`, operation: "one-time-store-setup", platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } } })
+		const payment = await transaction.payment.create({ data: { tenantId: input.tenantId, invoiceId: invoice.id, billingRecordId: billingRecord.id, provider: manualPhonePayment ? "mpesa-manual" : "mpesa", amount: invoice.total, currency: invoice.currency, status: "PENDING", kind: BillingPaymentKind.SETUP_FEE, purpose: "SAAS_SETUP_FEE", phoneNumber: manualPhonePayment ? payerPhone : undefined, metadata: { invoiceId: invoice.id, reference: `SET-${invoice.id}`, operation: "one-time-store-setup", platformPaymentDestination: { accountType: destination.accountType, accountNumber: destination.accountNumber, version: destination.version } } } })
 		return { invoice, payment }
 	})
 	const { invoice, payment } = reservation
@@ -536,7 +536,7 @@ export async function applyStripeInvoiceEvent(invoiceObject: StripeProviderPaylo
 	})
 	const paymentIntentId = typeof invoiceObject.payment_intent === "string" ? invoiceObject.payment_intent : undefined
 	if (paymentIntentId && localInvoice.tenantId) {
-		await prisma.payment.upsert({ where: { providerReference: paymentIntentId }, update: { status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, failureReason: failed ? "Stripe invoice payment failed" : undefined }, create: { tenantId: localInvoice.tenantId, invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, provider: "stripe", providerReference: paymentIntentId, amount: Number(invoiceObject.amount_paid || invoiceObject.amount_due || 0) / 100, currency: localInvoice.currency, status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", kind: "RENEWAL", metadata: { providerInvoiceId } } })
+		await prisma.payment.upsert({ where: { providerReference: paymentIntentId }, update: { status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", purpose: "SAAS_RENEWAL", invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, failureReason: failed ? "Stripe invoice payment failed" : undefined }, create: { tenantId: localInvoice.tenantId, invoiceId: localInvoice.id, subscriptionId: localSubscription?.id, provider: "stripe", providerReference: paymentIntentId, amount: Number(invoiceObject.amount_paid || invoiceObject.amount_due || 0) / 100, currency: localInvoice.currency, status: paid ? "COMPLETED" : failed ? "FAILED" : "PENDING", kind: "RENEWAL", purpose: "SAAS_RENEWAL", metadata: { providerInvoiceId } } })
 	}
 	if (localSubscription) await prisma.subscription.update({ where: { id: localSubscription.id }, data: { status: paid ? "ACTIVE" : failed ? "PAST_DUE" : localSubscription.status } })
 	if (paid && localSubscription) await restoreTenantAfterBillingPayment(localSubscription.tenantId, localSubscription.planId)
@@ -586,16 +586,16 @@ export async function markBillingPaymentFromMpesa(payment: { id: string; status:
 }
 
 export async function recordOrderCommission(paymentId: string) {
-	if (!isShopperCheckoutEnabled()) return null
-	const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { tenant: { include: { plan: true } } } })
+	const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { tenant: { include: { plan: true } }, store: { select: { ownerType: true, platformOwnerKey: true } } } })
 	if (!payment?.tenantId || !payment.orderId || payment.status !== "COMPLETED") return null
+	if (!isShopperCheckoutEnabled() && !(payment.store?.ownerType === "PLATFORM" && payment.store.platformOwnerKey === "nurava-hubstores")) return null
 	// Merchant-routed shopper sales never generate platform commission. Keep a
 	// zero-valued transaction audit row so reconciliation can prove the payment
 	// was processed without treating it as SaaS revenue.
 	const rate = 0
 	return prisma.transaction.upsert({
 		where: { paymentId },
-		update: { grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION" } },
-		create: { tenantId: payment.tenantId, orderId: payment.orderId, paymentId, currency: payment.currency, grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION" } },
+		update: { storeId: payment.storeId || undefined, purpose: payment.purpose, grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION", purpose: payment.purpose } },
+		create: { tenantId: payment.tenantId, orderId: payment.orderId, storeId: payment.storeId || undefined, purpose: payment.purpose, paymentId, currency: payment.currency, grossAmount: payment.amount, commissionRate: rate, commissionAmount: 0, status: "COMPLETED", metadata: { commissionPolicy: "ZERO_PRODUCT_COMMISSION", purpose: payment.purpose } },
 	})
 }

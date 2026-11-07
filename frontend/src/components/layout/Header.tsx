@@ -19,6 +19,7 @@ const platformNavigation = [
 	// cannot turn these links into the merchant homepage.
 	{ name: "Home", href: "/?platformHome=1" },
 	{ name: "Stores", href: "/stores?all=1" },
+	{ name: "Shop", href: "/store/nurava-marketplace" },
 	{ name: "Plans", href: "/?platformHome=1#plans" },
 	{ name: "Start Selling", href: "/onboarding" },
 ]

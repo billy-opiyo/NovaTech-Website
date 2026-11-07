@@ -11,6 +11,7 @@ const links = [
 	{ label: "Platform access", href: "/platform/access" },
 	{ label: "Site settings", href: "/platform/settings" },
 	{ label: "Industries", href: "/platform/industries" },
+	{ label: "Platform store", href: "/platform/store" },
 	{ label: "Blog", href: "/platform/blog" },
 	{ label: "Messages", href: "/platform/messages" },
 ] as const
@@ -21,8 +22,8 @@ export default function PlatformNavigation({ isSuperAdmin, canManageContent, can
 		? links
 		: [
 			...links.slice(0, 3),
-			...(canManageSupport ? [links[7]] : []),
-			...(canManageContent ? [links[6], links[5]] : []),
+			...(canManageSupport ? [links[8]] : []),
+			...(canManageContent ? [links[7], links[6], links[5]] : []),
 		]
 
 	return (

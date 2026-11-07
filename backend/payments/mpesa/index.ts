@@ -23,6 +23,7 @@ export type MpesaPayload = {
 	phone: string
 	reference: string
 	tenantId?: string
+	storeId?: string
 	orderId?: string
 	metadata?: Record<string, unknown>
 	invoiceId?: string
@@ -77,6 +78,7 @@ export async function initiateMpesaPayment({
 	phone,
 	reference,
 	tenantId,
+	storeId,
 	orderId,
 	metadata,
 	invoiceId,
@@ -121,7 +123,7 @@ export async function initiateMpesaPayment({
 	const existing = paymentId
 		? await prisma.payment.findFirst({ where: { id: paymentId, provider: "mpesa", ...(tenantId ? { tenantId } : {}) } })
 		: await prisma.payment.findFirst({
-				where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
+				where: { provider: "mpesa", ...(tenantId ? { tenantId } : {}), ...(orderId ? { storeId, orderId, purpose: "PRODUCT_SALE" } : {}), metadata: { path: ["reference"], equals: reference } },
 			})
 	if (existing) {
 		if (orderId && !shopperPaymentMatchesOrder(existing, orderId, amount)) {
@@ -208,6 +210,7 @@ export async function initiateMpesaPayment({
 		: await prisma.payment.create({
 		data: {
 			tenantId,
+			storeId,
 			orderId,
 			provider: "mpesa",
 			amount,
@@ -217,6 +220,7 @@ export async function initiateMpesaPayment({
 			subscriptionId,
 			billingRecordId,
 			kind,
+			purpose: orderId ? "PRODUCT_SALE" : kind === "SETUP_FEE" ? "SAAS_SETUP_FEE" : kind === "SUBSCRIPTION" ? "SAAS_SUBSCRIPTION" : kind === "ADDON" ? "SAAS_ADDON" : kind === "RENEWAL" ? "SAAS_RENEWAL" : "PRODUCT_SALE",
 			providerReference: response.CheckoutRequestID,
 			phoneNumber: normalizedPhone,
 			metadata: {
@@ -245,12 +249,12 @@ export async function initiateMpesaPayment({
 export async function verifyMpesaPayment(
 	reference: string,
 	tenantId?: string,
-	merchantConfig?: MerchantMpesaConfig,
+	credentials?: DarajaCredentials,
 	paymentId?: string,
 ): Promise<MpesaVerifyResult> {
-	if (!isMpesaConfigured(merchantConfig)) {
-		const message = merchantConfig
-			? "This merchant has not configured an active M-Pesa shopper payment route."
+	if (!isMpesaConfigured(credentials)) {
+		const message = credentials
+			? "This M-Pesa shopper payment route is not configured."
 			: "M-Pesa is not configured. Set MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_PASSKEY and MPESA_SHORTCODE."
 		return {
 			ok: false,
@@ -290,7 +294,7 @@ export async function verifyMpesaPayment(
 
 	const checkoutRequestId = payment?.providerReference || reference
 
-	const responseResult = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials: merchantConfig }))
+	const responseResult = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials }))
 	if (!responseResult.success) {
 		return { ok: false, provider: "mpesa", reference, checkoutRequestId, status: "PENDING", message: "M-Pesa returned an incomplete verification response. Please retry." }
 	}

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { isPlatformAdmin } from "backend/lib/platform-access"
 import { industryCreateSchema } from "backend/validators/industryValidator"
+import { syncPlatformStoreIndustryCategories } from "backend/lib/platform-store-catalog"
 
 async function platformAccess() {
 	const session = await auth()
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
 			},
 			include: { categoryTemplates: true, attributeDefinitions: true },
 		})
+		await syncPlatformStoreIndustryCategories(industry.id)
 		return NextResponse.json({ industry }, { status: 201 })
 	} catch (error: unknown) {
 		if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return NextResponse.json({ message: "That industry slug or attribute key is already in use" }, { status: 409 })

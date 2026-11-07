@@ -1,7 +1,9 @@
 import prisma from "./db"
+import type { MerchantVerificationStatus } from "@prisma/client"
 import type { Prisma } from "@prisma/client"
 import { getPlatformDomain } from "./platform-domain"
 import { canMerchantSell } from "./merchant-verification"
+import { isPlatformOwnedStore } from "./platform-store"
 
 export type TenantContext = {
 	tenantId: string
@@ -9,6 +11,7 @@ export type TenantContext = {
 	storeSlug: string
 	hostname: string
 	publicationStatus: "DRAFT" | "PUBLISHED" | "SUSPENDED"
+	ownerType: "MERCHANT" | "PLATFORM"
 	commerceSettings?: Prisma.JsonValue | null
 }
 
@@ -62,6 +65,18 @@ function unavailableStore(context: { status: string; publicationStatus?: string 
 	return new TenantResolutionError("UNAVAILABLE_STORE", "This store has not been published.", 404)
 }
 
+function assertStoreRequestAccess(store: { ownerType: string; platformOwnerKey: string | null; tenant: { kind: string; status: string; verificationStatus: MerchantVerificationStatus }; publicationStatus: string }, options: { allowUnpublished: boolean; allowSuspended: boolean }) {
+	const platformOwned = isPlatformOwnedStore(store)
+	if (platformOwned) {
+		if (store.tenant.kind !== "PLATFORM" || store.tenant.status !== "ACTIVE") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+	} else {
+		if (store.tenant.kind !== "MERCHANT") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+		if (!options.allowUnpublished && !(options.allowSuspended && store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+		if (!options.allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
+	}
+	if (!options.allowUnpublished && !(options.allowSuspended && store.publicationStatus === "SUSPENDED") && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+}
+
 /**
  * Resolve the store from the request host. Callers must use the returned IDs
  * for every tenant-owned query; request bodies and query strings are not used.
@@ -82,13 +97,11 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 	if (requestedStoreSlug && isCanonicalPlatformHost) {
 		const store = await prisma.store.findUnique({
 			where: { slug: requestedStoreSlug },
-			select: { id: true, tenantId: true, slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } },
+			select: { id: true, tenantId: true, slug: true, ownerType: true, platformOwnerKey: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { kind: true, status: true, verificationStatus: true } } },
 		})
 		if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
-		if (!allowUnpublished && !(allowSuspended && store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
-		if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
-		if (!allowUnpublished && !(allowSuspended && store.publicationStatus === "SUSPENDED") && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
-		return { tenantId: store.tenantId, storeId: store.id, storeSlug: store.slug, hostname, publicationStatus: store.publicationStatus, ...(includeCommerceSettings ? { commerceSettings: store.commerceSettings } : {}) }
+		assertStoreRequestAccess(store, { allowUnpublished, allowSuspended })
+		return { tenantId: store.tenantId, storeId: store.id, storeSlug: store.slug, hostname, ownerType: store.ownerType as TenantContext["ownerType"], publicationStatus: store.publicationStatus as TenantContext["publicationStatus"], ...(includeCommerceSettings ? { commerceSettings: store.commerceSettings } : {}) }
 	}
 
 	// The canonical platform hosts must win over any stale or misconfigured
@@ -103,7 +116,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 					verificationStatus: true,
 					tenantId: true,
 					storeId: true,
-					store: { select: { slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } } },
+					store: { select: { slug: true, ownerType: true, platformOwnerKey: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { kind: true, status: true, verificationStatus: true } } } },
 				},
 			})
 
@@ -111,17 +124,14 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		if (domain.verificationStatus !== "VERIFIED") {
 			throw new TenantResolutionError("UNVERIFIED_DOMAIN", "This domain is awaiting verification.", 409)
 		}
-		if (!allowUnpublished && !(allowSuspended && domain.store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(domain.store.tenant.status)) {
-			throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
-		}
-		if (!allowUnpublished && !canMerchantSell(domain.store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
-		if (!allowUnpublished && !(allowSuspended && domain.store.publicationStatus === "SUSPENDED") && domain.store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: domain.store.tenant.status, publicationStatus: domain.store.publicationStatus })
+		assertStoreRequestAccess(domain.store, { allowUnpublished, allowSuspended })
 		return {
 			tenantId: domain.tenantId,
 			storeId: domain.storeId,
 			storeSlug: domain.store.slug,
 			hostname,
 			publicationStatus: domain.store.publicationStatus,
+			ownerType: domain.store.ownerType as TenantContext["ownerType"],
 			...(includeCommerceSettings ? { commerceSettings: domain.store.commerceSettings } : {}),
 		}
 	}
@@ -138,12 +148,10 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 
 	const store = await prisma.store.findUnique({
 		where: { slug },
-		select: { id: true, tenantId: true, slug: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { status: true, verificationStatus: true } } },
+		select: { id: true, tenantId: true, slug: true, ownerType: true, platformOwnerKey: true, publicationStatus: true, commerceSettings: includeCommerceSettings, tenant: { select: { kind: true, status: true, verificationStatus: true } } },
 	})
 	if (!store) throw new TenantResolutionError("UNKNOWN_HOST", "No store is configured for this host.")
-	if (!allowUnpublished && !(allowSuspended && store.tenant.status === "SUSPENDED") && !isPublicTenantStatus(store.tenant.status)) throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
-	if (!allowUnpublished && !canMerchantSell(store.tenant.verificationStatus)) throw new TenantResolutionError("UNAVAILABLE_STORE", "This merchant store is awaiting verification.", 404)
-	if (!allowUnpublished && !(allowSuspended && store.publicationStatus === "SUSPENDED") && store.publicationStatus !== "PUBLISHED") throw unavailableStore({ status: store.tenant.status, publicationStatus: store.publicationStatus })
+	assertStoreRequestAccess(store, { allowUnpublished, allowSuspended })
 
 	return {
 		tenantId: store.tenantId,
@@ -151,6 +159,7 @@ export async function resolveTenantFromRequest(request: { headers: Headers }, op
 		storeSlug: store.slug,
 		hostname,
 		publicationStatus: store.publicationStatus,
+		ownerType: store.ownerType as TenantContext["ownerType"],
 		...(includeCommerceSettings ? { commerceSettings: store.commerceSettings } : {}),
 	}
 }

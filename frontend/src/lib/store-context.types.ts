@@ -9,6 +9,7 @@ export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	tenantId: string
 	storeId: string
 	storeSlug: string
+	ownerType: "MERCHANT" | "PLATFORM"
 	/** Configurable platform name. Empty in merchant storefront contexts. */
 	platformBrandName: string
 	industry: { id: string; name: string; slug: string } | null

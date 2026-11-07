@@ -6,7 +6,7 @@ import type { ProductInput } from "../validators/productValidator"
 import { validateAndNormalizeProductAttributes } from "../lib/industry"
 import type { TenantContext } from "../lib/tenant"
 
-type ProductStoreContext = Pick<TenantContext, "storeId" | "commerceSettings">
+type ProductStoreContext = Pick<TenantContext, "storeId" | "commerceSettings" | "ownerType">
 
 type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sku" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
 		discountedPrice?: number | null
@@ -38,19 +38,20 @@ export async function getHiddenStoreCategorySlugs(tenantId: string, storeContext
 }
 
 export async function getFilteredProducts(params: URLSearchParams, tenantId: string, storeContext?: ProductStoreContext) {
-	const where: Prisma.ProductWhereInput = { tenantId }
+	const where: Prisma.ProductWhereInput = { tenantId, ...(storeContext ? { storeId: storeContext.storeId } : {}), ...(storeContext?.ownerType === "PLATFORM" ? { isPublished: true } : {}) }
 	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
+	const andFilters: Prisma.ProductWhereInput[] = []
+	andFilters.push({ category: { is: { active: true, ...(storeContext?.ownerType === "PLATFORM" ? { industry: { is: { active: true } } } : {}) } } })
 
 	const categorySlug = params.get("category")
 	if (categorySlug && hiddenCategories.includes(categorySlug)) {
 		const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1)
 		return { products: [], total: 0, page, totalPages: 0 }
 	}
-	if (categorySlug) {
-		where.category = { slug: categorySlug }
-	} else if (hiddenCategories.length) {
-		where.category = { slug: { notIn: hiddenCategories } }
-	}
+	if (categorySlug) andFilters.push({ category: { is: { slug: categorySlug } } })
+	else if (hiddenCategories.length) andFilters.push({ category: { is: { slug: { notIn: hiddenCategories } } } })
+	const industrySlug = params.get("industry")
+	if (industrySlug) andFilters.push({ category: { is: { industry: { is: { slug: industrySlug, active: true } } } } })
 
 	const brands = params.get("brands")?.split(",")
 	if (brands?.length) {
@@ -69,7 +70,6 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 	}
 
 	const search = params.get("q") || params.get("search")
-	const andFilters: Prisma.ProductWhereInput[] = []
 	if (search) {
 		andFilters.push({ OR: [
 			{ name: { contains: search, mode: "insensitive" } },
@@ -176,7 +176,7 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 export async function getProductBySlug(slug: string, tenantId: string, storeContext?: ProductStoreContext) {
 	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
 	const product = await prisma.product.findFirst({
-		where: { slug, tenantId, ...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}) },
+		where: { slug, tenantId, ...(storeContext ? { storeId: storeContext.storeId } : {}), ...(storeContext?.ownerType === "PLATFORM" ? { isPublished: true } : {}), category: { is: { active: true, ...(storeContext?.ownerType === "PLATFORM" ? { industry: { is: { active: true } } } : {}), ...(hiddenCategories.length ? { slug: { notIn: hiddenCategories } } : {}) } } },
 		include: {
 			category: true,
 			attributeValues: { include: { definition: true } },
@@ -224,7 +224,9 @@ export async function searchProducts(query: string, tenantId: string, storeConte
 	const products = await prisma.product.findMany({
 		where: {
 			tenantId,
-			...(hiddenCategories.length ? { category: { slug: { notIn: hiddenCategories } } } : {}),
+			...(storeContext ? { storeId: storeContext.storeId } : {}),
+			...(storeContext?.ownerType === "PLATFORM" ? { isPublished: true } : {}),
+			category: { is: { active: true, ...(storeContext?.ownerType === "PLATFORM" ? { industry: { is: { active: true } } } : {}), ...(hiddenCategories.length ? { slug: { notIn: hiddenCategories } } : {}) } },
 			OR: [
 				{ name: { contains: query, mode: "insensitive" } },
 				{ brand: { contains: query, mode: "insensitive" } },
@@ -250,17 +252,18 @@ export async function searchProducts(query: string, tenantId: string, storeConte
 
 export async function createProduct(data: ProductInput, tenantId: string) {
 	await assertTenantProductLimit(tenantId)
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, ownerType: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
-	const isElectronics = store.industry?.slug === "electronics"
-	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId, storeId: store.id }, select: { id: true } })
+	const category = await prisma.category.findFirst({ where: { id: data.categoryId, tenantId, storeId: store.id }, select: { id: true, industryId: true, industry: { select: { slug: true } } } })
 	if (!category) throw new Error("Category not found")
-	const attributes = await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
+	const attributes = await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes, category.id)
+	const isElectronics = (category.industry?.slug || store.industry?.slug) === "electronics"
 	return prisma.$transaction(async (transaction) => {
 		const product = await transaction.product.create({
 			data: {
 			tenantId,
 			storeId: store.id,
+			isPublished: store.ownerType !== "PLATFORM",
 			name: data.name,
 			slug: data.slug,
 			description: data.description,
@@ -297,16 +300,18 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 }
 
 export async function updateProduct(slug: string, data: ProductUpdateInput, tenantId: string) {
-	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "isTrending", "categoryId"]
+	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "isTrending", "isPublished", "categoryId"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
 	if (update.stock !== undefined) update.stock = Number(update.stock)
-	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true } })
+	const product = await prisma.product.findFirst({ where: { slug, tenantId }, select: { id: true, price: true, images: true, categoryId: true } })
 	if (!product) throw new Error("Product not found")
-	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, industry: { select: { slug: true } } } })
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { id: true, ownerType: true, industry: { select: { slug: true } } } })
 	if (!store) throw new Error("Store not found")
-	if (store.industry?.slug !== "electronics") {
+	const nextCategoryId = typeof update.categoryId === "string" ? update.categoryId : product.categoryId
+	const categoryIndustry = await prisma.category.findFirst({ where: { id: nextCategoryId, tenantId, storeId: store.id }, select: { industry: { select: { slug: true } } } })
+	if ((categoryIndustry?.industry?.slug || store.industry?.slug) !== "electronics") {
 		delete update.warranty
 		delete update.specs
 	}
@@ -315,7 +320,7 @@ export async function updateProduct(slug: string, data: ProductUpdateInput, tena
 		const category = await prisma.category.findFirst({ where: { id: update.categoryId, tenantId, storeId: store.id }, select: { id: true } })
 		if (!category) throw new Error("Category not found")
 	}
-	const attributeValues = data.attributes === undefined ? undefined : await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes)
+	const attributeValues = data.attributes === undefined ? undefined : await validateAndNormalizeProductAttributes(store.id, tenantId, data.attributes, nextCategoryId)
 	const nextPrice = update.price === undefined ? product.price : Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null && Number(update.discountedPrice) > nextPrice) {
 		throw new Error("discountedPrice cannot exceed price")

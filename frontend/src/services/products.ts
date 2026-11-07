@@ -32,6 +32,7 @@ export interface ProductQuery {
 	page?: number
 	limit?: number
 	category?: string
+	industry?: string
 	search?: string
 	sort?: string
 	minPrice?: number

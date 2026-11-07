@@ -50,7 +50,7 @@ export async function createOrder(data: CreateOrderData) {
 			const existing = await tx.order.findFirst({ where: { idempotencyKey: data.idempotencyKey, tenantId: data.tenantId }, include: { items: { where: { tenantId: data.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			if (existing) return existing
 		}
-		const store = await tx.store.findFirst({ where: { tenantId: data.tenantId }, select: { id: true, commerceSettings: true, industry: { select: { slug: true } } } })
+		const store = await tx.store.findFirst({ where: { tenantId: data.tenantId }, select: { id: true, ownerType: true, commerceSettings: true, industry: { select: { slug: true } } } })
 		const commerceSettings = store?.commerceSettings && typeof store.commerceSettings === "object" && !Array.isArray(store.commerceSettings)
 			? store.commerceSettings as Record<string, unknown>
 			: {}
@@ -63,15 +63,16 @@ export async function createOrder(data: CreateOrderData) {
 		// Prices, discounts, shipping, and stock are authoritative on the server.
 		const products = await Promise.all(
 			data.items.map((item) => tx.product.findFirst({
-				where: { id: item.productId, tenantId: data.tenantId },
+				where: { id: item.productId, tenantId: data.tenantId, ...(store?.id ? { storeId: store.id } : {}), ...(store?.ownerType === "PLATFORM" ? { isPublished: true } : {}) },
 				select: {
 					id: true,
 					stock: true,
 					name: true,
-					category: { select: { slug: true } },
+					category: { select: { slug: true, active: true, industry: { select: { slug: true, active: true } } } },
 					price: true,
 					discountedPrice: true,
 					variants: { where: { tenantId: data.tenantId }, select: { id: true, name: true, value: true, priceModifier: true, stock: true } },
+					supplierProduct: { select: { supplierId: true, supplierReference: true, supplierCost: true, currency: true, availability: true } },
 				},
 			})),
 		)
@@ -86,6 +87,7 @@ export async function createOrder(data: CreateOrderData) {
 			if (!product) {
 				throw new Error(`Product not found: ${item.productId}`)
 			}
+			if (!product.category.active || (store?.ownerType === "PLATFORM" && product.category.industry?.active !== true)) throw new Error(`${product.name} is not currently offered by this store`)
 			if (hiddenCategorySlugs.has(product.category.slug)) {
 				throw new Error(`${product.category.slug} are not currently offered by this store`)
 			}
@@ -93,12 +95,17 @@ export async function createOrder(data: CreateOrderData) {
 			if (!selectedVariant.valid) throw new Error(`Selected variant is unavailable for ${product.name}`)
 			const unitPrice = (product.discountedPrice ?? product.price) + selectedVariant.priceModifier
 			const availableStock = selectedVariant.stock ?? product.stock
-			if (availableStock < item.quantity) {
+			if (product.supplierProduct && ["OUT_OF_STOCK", "DISCONTINUED"].includes(product.supplierProduct.availability)) throw new Error(`${product.name} is not currently available from its supplier`)
+			const supplierFulfilled = store?.ownerType === "PLATFORM" && Boolean(product.supplierProduct)
+			if (!supplierFulfilled && availableStock < item.quantity) {
 				throw new Error(
 					`Insufficient stock for ${product.name}. Available: ${availableStock}`,
 				)
 			}
-			if (selectedVariant.selected.length > 0) {
+			if (supplierFulfilled) {
+				// Supplier availability is authoritative for platform resale products;
+				// local stock is not decremented for manual dropship orders.
+			} else if (selectedVariant.selected.length > 0) {
 				for (const variant of selectedVariant.selected) {
 					if (!variant.id) throw new Error(`Selected variant is unavailable for ${product.name}`)
 					requestedVariantQuantities.set(variant.id, (requestedVariantQuantities.get(variant.id) || 0) + item.quantity)
@@ -148,6 +155,7 @@ export async function createOrder(data: CreateOrderData) {
 		const order = await tx.order.create({
 			data: {
 				tenantId: data.tenantId,
+				storeId: store?.id,
 				userId: data.userId,
 				guestEmail: data.guestEmail,
 				status: "PENDING",
@@ -177,6 +185,14 @@ export async function createOrder(data: CreateOrderData) {
 				},
 			},
 		})
+		if (store?.ownerType === "PLATFORM") {
+			const supplierByProduct = new Map(products.filter((product) => product?.supplierProduct).map((product) => [product!.id, product!.supplierProduct!]))
+			for (const item of order.items) {
+				const supplier = supplierByProduct.get(item.productId)
+				if (!supplier) continue
+				await tx.supplierFulfillment.create({ data: { orderItemId: item.id, supplierId: supplier.supplierId, supplierReference: supplier.supplierReference, supplierCost: supplier.supplierCost, currency: supplier.currency, idempotencyKey: `supplier-fulfillment:${order.id}:${item.id}` } })
+			}
+		}
 
 		if (data.couponCode) {
 			const updatedCoupon = await tx.coupon.updateMany({
@@ -317,10 +333,12 @@ async function cancelOrderAndRestoreInventory(orderId: string, tenantId: string)
 									where: { tenantId },
 									select: { id: true, name: true, value: true, priceModifier: true, stock: true },
 								},
+								supplierProduct: { select: { id: true } },
 							},
 						},
 					},
 				},
+				store: { select: { ownerType: true } },
 			},
 		})
 		if (!order) throw new Error("Order not found")
@@ -328,7 +346,9 @@ async function cancelOrderAndRestoreInventory(orderId: string, tenantId: string)
 			if (!ORDER_STATUS_TRANSITIONS[order.status].includes("CANCELLED")) throw new Error(`Order cannot move from ${order.status} to CANCELLED`)
 			const claimed = await transaction.order.updateMany({ where: { id: order.id, tenantId, status: order.status }, data: { status: "CANCELLED" } })
 			if (claimed.count !== 1) throw new Error("Order status changed while it was being cancelled")
+			await transaction.supplierFulfillment.updateMany({ where: { orderItem: { orderId: order.id }, status: { in: ["PENDING", "READY_TO_FORWARD"] } }, data: { status: "REJECTED", notes: "Order was cancelled before supplier forwarding." } })
 			for (const item of order.items) {
+				if (order.store?.ownerType === "PLATFORM" && item.product.supplierProduct) continue
 				const selectedVariant = resolveVariantSelection(item.product.variants, item.variant)
 				if (!selectedVariant.valid) throw new Error("Unable to restore stock for an invalid product variant")
 				if (selectedVariant.selected.length) {
@@ -608,6 +628,7 @@ export async function finalizePendingOrderPayment(input: { paymentId: string; or
 		const confirmedOrder = claimed.count === 1 || (settledOrderStatus !== undefined && settledOrderStatus !== "PENDING" && settledOrderStatus !== "CANCELLED")
 			? await tx.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, include: { items: { where: { tenantId: input.tenantId }, include: { product: { select: { name: true, slug: true, images: true } } } } } })
 			: null
+		if (confirmedOrder) await tx.supplierFulfillment.updateMany({ where: { status: "PENDING", orderItem: { orderId: input.orderId } }, data: { status: "READY_TO_FORWARD" } })
 		return { payment: updatedPayment, order: confirmedOrder, refundRequired, reviewRequired: !confirmedOrder && !refundRequired }
 	})
 }

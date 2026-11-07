@@ -38,18 +38,20 @@ test("canonical platform hosts bypass merchant domain mappings", async () => {
 			verificationStatus: "VERIFIED",
 			tenantId: "merchant-tenant",
 			storeId: "merchant-store",
-			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE", verificationStatus: "APPROVED" } },
+			store: { slug: "merchant", ownerType: "MERCHANT", platformOwnerKey: null, publicationStatus: "PUBLISHED", tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" } },
 		}
 	})
 	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "nuravatech" ? {
 		id: "platform-store",
 		tenantId: "platform-tenant",
 		slug: "nuravatech",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-			tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null)
 	try {
-		for (const hostname of ["nuravatech.com:3000", "www.nuravatech.com:3000"]) {
+		for (const hostname of ["nuravahubstores.com:3000", "www.nuravahubstores.com:3000"]) {
 			const context = await resolveTenantFromRequest({ headers: new Headers({ host: hostname }) })
 			assert.equal(context.storeSlug, "nuravatech")
 			assert.equal(context.tenantId, "platform-tenant")
@@ -71,8 +73,10 @@ test("Vercel platform hosts resolve an explicitly scoped store slug", async () =
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null)
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-store-slug": "demo" }) })
@@ -91,8 +95,10 @@ test("Vercel platform store paths remain scoped when the middleware slug header 
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
 	} : null)
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-request-path": "/store/demo" }) })
@@ -111,9 +117,11 @@ test("local store subdomains resolve by store slug", async () => {
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
 		commerceSettings,
-			tenant: { status: "TRIALING", verificationStatus: "APPROVED" },
+			tenant: { kind: "MERCHANT", status: "TRIALING", verificationStatus: "APPROVED" },
 	} : null)
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) }, { includeCommerceSettings: true })
@@ -123,12 +131,32 @@ test("local store subdomains resolve by store slug", async () => {
 			storeSlug: "demo",
 			hostname: "demo.localhost",
 			publicationStatus: "PUBLISHED",
+			ownerType: "MERCHANT",
 			commerceSettings,
 		})
 	} finally {
 		restoreDomain()
 		restoreStore()
 	}
+})
+
+test("platform-owned storefront resolves without merchant verification or subscription state", async () => {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "nurava-marketplace" ? {
+		id: "nurava-hubstores-store",
+		tenantId: "platform-nurava-hubstores",
+		slug: "nurava-marketplace",
+		ownerType: "PLATFORM",
+		platformOwnerKey: "nurava-hubstores",
+		publicationStatus: "PUBLISHED",
+		tenant: { kind: "PLATFORM", status: "ACTIVE", verificationStatus: "NOT_STARTED" },
+	} : null)
+	try {
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravahubstores.com", "x-nurava-request-path": "/store/nurava-marketplace" }) })
+		assert.equal(context.tenantId, "platform-nurava-hubstores")
+		assert.equal(context.storeId, "nurava-hubstores-store")
+		assert.equal(context.ownerType, "PLATFORM")
+	} finally { restoreDomain(); restoreStore() }
 })
 
 test("membership authorization cannot be widened by another tenant id", async () => {

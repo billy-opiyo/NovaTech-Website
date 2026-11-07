@@ -11,6 +11,7 @@ import { apiErrorResponse } from "backend/lib/api-handler"
 import { normalizePhone } from "backend/lib/daraja"
 import { canAccessShopperOrder } from "backend/payments/shopper-order-access"
 import { createManualShopperPayment, getManualShopperPaymentDestination, submitManualShopperReceipt } from "backend/payments/manual-shopper"
+import { getActivePlatformStorePaymentRoute } from "backend/payments/platform-store"
 
 const shopperPhoneSchema = z.string().trim().refine((value) => {
 	try {
@@ -31,9 +32,13 @@ const manualStatusSchema = z.object({ mode: z.literal("CHECK_STATUS"), phone: sh
 const requestSchema = z.union([manualReceiptSchema, manualPaymentSchema, manualStatusSchema, mpesaInitiateSchema])
 
 export async function GET(req: NextRequest) {
-	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	try {
 		const context = await resolveTenantFromRequest(req)
+		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
+		if (context.ownerType === "PLATFORM") {
+			const route = await getActivePlatformStorePaymentRoute()
+			return NextResponse.json({ stkAvailable: route?.provider === "MPESA", manualTransfer: null, paymentPurpose: "PRODUCT_SALE" })
+		}
 		const [stkConfig, manualDestination] = await Promise.all([getMerchantMpesaConfig(context.tenantId), getManualShopperPaymentDestination(context.tenantId)])
 		return NextResponse.json({ stkAvailable: Boolean(stkConfig), manualTransfer: manualDestination })
 	} catch (error) {
@@ -42,7 +47,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	const rateLimitResponse = await rateLimiter(req, "mpesa-initiate")
 	if (rateLimitResponse) return rateLimitResponse
 
@@ -50,14 +54,16 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = requestSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
+		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 		const order = await prisma.order.findFirst({
 			where: { id: validated.orderId, tenantId: context.tenantId },
-			select: { id: true, userId: true, shippingAddress: true, total: true, status: true, paymentMethod: true },
+			select: { id: true, storeId: true, userId: true, shippingAddress: true, total: true, status: true, paymentMethod: true },
 		})
 		const session = await getServerSession()
 		if (!order || !canAccessShopperOrder(order, session?.user?.id, validated.phone)) {
 			return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
 		}
+		if (context.ownerType === "PLATFORM" && validated.mode && validated.mode !== "STK") return NextResponse.json({ message: "Manual transfer and receipt review are not configured for the platform store." }, { status: 409 })
 		if (validated.mode === "CHECK_STATUS") {
 			const payment = await prisma.payment.findFirst({ where: { id: validated.paymentId, tenantId: context.tenantId, orderId: order.id, provider: "mpesa-manual", kind: "ORDER" }, select: { status: true, metadata: true } })
 			if (!payment || (payment.metadata as { manualMode?: unknown } | null)?.manualMode !== "PHONE_TRANSFER") return NextResponse.json({ message: "Phone-transfer payment not found." }, { status: 404 })
@@ -70,7 +76,8 @@ export async function POST(req: NextRequest) {
 		const amount = order.total
 		if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ message: "The order has an invalid payable total." }, { status: 409 })
 		if (validated.mode === "PHONE_TRANSFER") {
-			const payment = await createManualShopperPayment({ tenantId: context.tenantId, orderId: order.id, phone: validated.phone })
+			if (context.ownerType === "PLATFORM") return NextResponse.json({ message: "Manual phone transfers are not enabled for the platform store." }, { status: 409 })
+			const payment = await createManualShopperPayment({ tenantId: context.tenantId, storeId: context.storeId, orderId: order.id, phone: validated.phone })
 			return NextResponse.json({ ok: true, provider: "mpesa-manual", ...payment, message: "Send the exact order amount to the merchant phone number, then submit the M-Pesa receipt code. The order remains pending until the store verifies it." }, { status: 201 })
 		}
 		if (validated.mode === "SUBMIT_RECEIPT") {
@@ -98,8 +105,9 @@ export async function POST(req: NextRequest) {
 				message: "An M-Pesa request is already pending for this order.",
 			}, { status: 200 })
 		}
-		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
-		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
+		const platformRoute = context.ownerType === "PLATFORM" ? await getActivePlatformStorePaymentRoute() : null
+		const merchantConfig = context.ownerType === "PLATFORM" ? null : await getMerchantMpesaConfig(context.tenantId)
+		if (context.ownerType === "PLATFORM" ? platformRoute?.provider !== "MPESA" : !merchantConfig) return NextResponse.json({ code: context.ownerType === "PLATFORM" ? "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED" : "MERCHANT_MPESA_NOT_READY", message: context.ownerType === "PLATFORM" ? "Platform product-sale M-Pesa collection is not configured and authorized." : "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 
 		const result = await initiateMpesaPayment({
 			amount,
@@ -107,9 +115,11 @@ export async function POST(req: NextRequest) {
 			reference: getShopperOrderPaymentReference(validated.orderId),
 			orderId: validated.orderId,
 			tenantId: context.tenantId,
+			storeId: context.storeId,
 			kind: "ORDER",
 			callbackUrl: new URL("/api/payments/webhooks/mpesa/stk-callback", req.nextUrl.origin).toString(),
-			merchantConfig,
+			merchantConfig: merchantConfig || undefined,
+			platformCredentials: platformRoute?.provider === "MPESA" ? platformRoute.credentials : undefined,
 		})
 
 		if (!result.ok) {

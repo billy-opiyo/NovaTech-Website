@@ -97,6 +97,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			select: {
 				id: true,
 				tenantId: true,
+				ownerType: true,
 				name: true,
 				slug: true,
 				publicationStatus: true,
@@ -110,6 +111,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				contactSettings: true,
 				homepageSettings: true,
 				commerceSettings: true,
+				categories: { where: { active: true, industry: { is: { active: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }], select: { name: true, slug: true, imageUrl: true, industry: { select: { slug: true } } } },
 				industry: { select: { id: true, name: true, slug: true, homepagePreset: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { name: true, slug: true, imageUrl: true } }, defaultTheme: { select: { colors: true, typography: true, heroLayout: true, bannerStyle: true, productGridStyle: true } } } },
 			},
 		})
@@ -144,12 +146,14 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
-		const storedCategorySnapshots = Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
+		const storedCategorySnapshots = store.ownerType === "PLATFORM"
+			? store.categories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
+			: Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
 			return [{ name: category.name, slug: category.slug, image: typeof category.image === "string" ? category.image : typeof category.imageUrl === "string" ? category.imageUrl : "" }]
 		}) : []
-		const nonElectronicsIndustry = store.industry?.slug !== "electronics"
+		const nonElectronicsIndustry = store.ownerType === "PLATFORM" || store.industry?.slug !== "electronics"
 		const electronicsCategorySlugs = new Set<string>(clientConfig.homepage.categories.map((category) => category.slug))
 		const persistedCategories = nonElectronicsIndustry
 			? (() => {
@@ -182,7 +186,12 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				? { ...category, image: configuredImage }
 				: category
 		})
-		const defaultNavigation: Array<{ name: string; href: string }> = store.industry?.slug && store.industry.slug !== "electronics"
+		const platformStoreIndustries = store.ownerType === "PLATFORM"
+			? await prisma.industry.findMany({ where: { active: true }, select: { name: true, slug: true }, orderBy: [{ name: "asc" }, { slug: "asc" }] })
+			: []
+		const defaultNavigation: Array<{ name: string; href: string }> = store.ownerType === "PLATFORM"
+			? [{ name: "Home", href: "/" }, ...platformStoreIndustries.map((industry) => ({ name: industry.name, href: `/products?industry=${encodeURIComponent(industry.slug)}` })), { name: "All Products", href: "/products" }]
+			: store.industry?.slug && store.industry.slug !== "electronics"
 			? [{ name: "Home", href: "/" }, ...categories.map((category) => ({ name: category.name, href: `/category/${category.slug}` })), { name: "All Products", href: "/products" }]
 			: [...clientConfig.navigation]
 		const configuredNavigation: Array<{ name: string; href: string }> = Array.isArray(storedHomepage.navigation) ? storedHomepage.navigation.flatMap((value: unknown) => {
@@ -226,6 +235,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			tenantId: store.tenantId,
 			storeId: store.id,
 			storeSlug: store.slug,
+			ownerType: store.ownerType,
 			industry: store.industry ? { id: store.industry.id, name: store.industry.name, slug: store.industry.slug } : null,
 			storePathPrefix: isPlatformHost(requestHeaders.get("host")) ? `/store/${encodeURIComponent(store.slug)}` : "",
 			publicationStatus: store.publicationStatus,
@@ -317,6 +327,7 @@ export function fallbackStoreContext(isPlatformHome = false, platformSettings: P
 		tenantId: "novatech-tenant",
 		storeId: "novatech-store",
 		storeSlug: "nuravatech",
+		ownerType: "MERCHANT",
 		storePathPrefix: isPlatformHome ? "" : "/store/nuravatech",
 		publicationStatus: "PUBLISHED",
 		isPlatformHome,

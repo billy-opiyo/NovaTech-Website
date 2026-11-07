@@ -12,6 +12,7 @@ import { apiErrorResponse } from "../lib/api-handler"
 import { getMerchantMpesaConfig } from "../payments/merchant-mpesa"
 import { getManualShopperPaymentDestination } from "../payments/manual-shopper"
 import { createOrderIdempotencyKey } from "../lib/order-idempotency"
+import { getActivePlatformStorePaymentRoute } from "../payments/platform-store"
 
 export async function getOrders(req: NextRequest) {
 	try {
@@ -33,14 +34,16 @@ export async function getOrders(req: NextRequest) {
 
 export async function createOrder(req: NextRequest) {
 	try {
-		if (!isShopperCheckoutEnabled()) {
-			return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
-		}
 		const session = await getServerSession()
 		const body = await req.json()
 		const validated = orderSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
-		if (validated.paymentMethod === "MPESA" && !await getMerchantMpesaConfig(context.tenantId) && !await getManualShopperPaymentDestination(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
+		if (validated.paymentMethod === "MPESA") {
+			if (context.ownerType === "PLATFORM" && (await getActivePlatformStorePaymentRoute())?.provider !== "MPESA") return NextResponse.json({ code: "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED", message: "Platform product-sale M-Pesa collection is not configured and authorized." }, { status: 409 })
+			if (context.ownerType !== "PLATFORM" && !await getMerchantMpesaConfig(context.tenantId) && !await getManualShopperPaymentDestination(context.tenantId)) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its verified M-Pesa shopper payment setup." }, { status: 409 })
+		}
+		if (validated.paymentMethod === "CARD" && context.ownerType === "PLATFORM" && (await getActivePlatformStorePaymentRoute())?.provider !== "STRIPE") return NextResponse.json({ code: "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED", message: "Platform product-sale card collection is not configured and authorized." }, { status: 409 })
 
 		const rawIdempotencyKey = req.headers.get("idempotency-key")?.trim()
 		const ownerScope = session?.user?.id ? `user:${session.user.id}` : `guest:${validated.shippingAddress.email.trim().toLowerCase()}`

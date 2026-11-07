@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { isPlatformAdmin } from "backend/lib/platform-access"
 import { categoryTemplateSchema } from "backend/validators/industryValidator"
+import { syncPlatformStoreIndustryCategories } from "backend/lib/platform-store-catalog"
 
 async function platformAccess() {
 	const session = await auth()
@@ -28,6 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 	if (!parsed.success) return NextResponse.json({ message: "Invalid category preset", issues: parsed.error.flatten() }, { status: 400 })
 	try {
 		const category = await prisma.industryCategoryTemplate.create({ data: { industryId: id, ...parsed.data } })
+		await syncPlatformStoreIndustryCategories(id)
 		return NextResponse.json({ category }, { status: 201 })
 	} catch (error: unknown) {
 		if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return NextResponse.json({ message: "That category slug already exists in this industry" }, { status: 409 })

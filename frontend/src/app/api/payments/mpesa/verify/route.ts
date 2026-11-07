@@ -11,6 +11,7 @@ import { canAccessShopperOrder } from "backend/payments/shopper-order-access"
 import { markBillingPaymentFromMpesa, recordOrderCommission } from "backend/billing/service"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getActivePlatformStorePaymentRoute } from "backend/payments/platform-store"
 
 const mpesaVerifySchema = z.object({
 	orderId: z.string().min(1),
@@ -25,7 +26,6 @@ const mpesaVerifySchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	const rateLimitResponse = await rateLimiter(req, "mpesa-verify")
 	if (rateLimitResponse) return rateLimitResponse
 
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = mpesaVerifySchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
+		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 		const order = await prisma.order.findFirst({
 			where: { id: validated.orderId, tenantId: context.tenantId },
 			select: { id: true, userId: true, shippingAddress: true },
@@ -42,14 +43,15 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ message: "You cannot verify payment for this order." }, { status: 403 })
 		}
 		const payment = await prisma.payment.findFirst({
-			where: { tenantId: context.tenantId, orderId: order.id, provider: "mpesa", kind: "ORDER" },
+			where: { tenantId: context.tenantId, storeId: context.storeId, orderId: order.id, provider: "mpesa", kind: "ORDER", purpose: "PRODUCT_SALE" },
 			orderBy: { createdAt: "desc" },
 		})
 		if (!payment) return NextResponse.json({ message: "Shopper payment request not found for this order." }, { status: 404 })
 		const referenceValue = (payment.metadata as { reference?: unknown } | null)?.reference
 		if (typeof referenceValue !== "string" || referenceValue.length < 3) return NextResponse.json({ message: "This order's payment request cannot be verified. Contact the store." }, { status: 409 })
-		const merchantConfig = await getMerchantMpesaConfig(context.tenantId)
-		if (!merchantConfig) return NextResponse.json({ code: "MERCHANT_MPESA_NOT_READY", message: "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
+		const platformRoute = context.ownerType === "PLATFORM" ? await getActivePlatformStorePaymentRoute() : null
+		const merchantConfig = context.ownerType === "PLATFORM" ? (platformRoute?.provider === "MPESA" ? platformRoute.credentials : null) : await getMerchantMpesaConfig(context.tenantId)
+		if (!merchantConfig) return NextResponse.json({ code: context.ownerType === "PLATFORM" ? "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED" : "MERCHANT_MPESA_NOT_READY", message: context.ownerType === "PLATFORM" ? "Platform product-sale M-Pesa collection is not configured and authorized." : "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 		const result = await verifyMpesaPayment(referenceValue, context.tenantId, merchantConfig, payment.id)
 		if (payment && result.status !== "PENDING") {
 			// Order payment state is reconciled by verifyMpesaPayment. SaaS billing

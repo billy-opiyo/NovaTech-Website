@@ -16,6 +16,7 @@ import { z } from "zod"
 import { getMerchantMpesaConfig } from "../merchant-mpesa"
 import type { MerchantMpesaConfig } from "../merchant-mpesa"
 import { getPlatformMpesaCredentials, getPlatformMpesaEnvironmentCredentials } from "../../lib/platform-mpesa-destination"
+import { getActivePlatformStorePaymentRoute } from "../platform-store"
 
 const mpesaStkCallbackSchema = z.object({
 	Body: z.object({
@@ -202,30 +203,36 @@ export async function handleMpesaStkCallback(
 	const checkoutRequestId = stkCallback.CheckoutRequestID
 	const resultCode = stkCallback.ResultCode
 	const completed = resultCode === 0
-	let paymentForQuery: { kind: string; tenantId: string | null; metadata: unknown } | null = null
+	let paymentForQuery: { kind: string; tenantId: string | null; metadata: unknown; store: { ownerType: string; platformOwnerKey: string | null } | null } | null = null
 	let merchantConfig: MerchantMpesaConfig | null | undefined
 	let platformCredentials: DarajaCredentials | undefined
 	let platformConfigVersion: number | undefined
 	let platformUsesEnvironmentConfig = false
 	try {
-		paymentForQuery = await prisma.payment.findFirst({ where: { provider: "mpesa", providerReference: checkoutRequestId }, select: { kind: true, tenantId: true, metadata: true } })
+		paymentForQuery = await prisma.payment.findFirst({ where: { provider: "mpesa", providerReference: checkoutRequestId }, select: { kind: true, tenantId: true, metadata: true, store: { select: { ownerType: true, platformOwnerKey: true } } } })
 		merchantConfig = paymentForQuery?.kind === "ORDER" && paymentForQuery.tenantId
 			? await getMerchantMpesaConfig(paymentForQuery.tenantId)
 			: undefined
+		const platformStorePayment = paymentForQuery?.store?.ownerType === "PLATFORM" && paymentForQuery.store.platformOwnerKey === "nurava-hubstores"
+		if (platformStorePayment) {
+			const route = await getActivePlatformStorePaymentRoute()
+			if (route?.provider === "MPESA") platformCredentials = route.credentials
+		}
 		const metadata = paymentForQuery?.metadata as { platformMpesaDestinationVersion?: unknown; platformMpesaDestinationEnvironment?: unknown } | null
 		platformConfigVersion = typeof metadata?.platformMpesaDestinationVersion === "number" ? metadata.platformMpesaDestinationVersion : undefined
 		platformUsesEnvironmentConfig = metadata?.platformMpesaDestinationEnvironment === true
-		if (paymentForQuery?.kind !== "ORDER" && platformConfigVersion !== undefined) platformCredentials = (await getPlatformMpesaCredentials(platformConfigVersion)).credentials || undefined
-		else if (paymentForQuery?.kind !== "ORDER" && platformUsesEnvironmentConfig) platformCredentials = getPlatformMpesaEnvironmentCredentials() || undefined
+		if (!platformStorePayment && paymentForQuery?.kind !== "ORDER" && platformConfigVersion !== undefined) platformCredentials = (await getPlatformMpesaCredentials(platformConfigVersion)).credentials || undefined
+		else if (!platformStorePayment && paymentForQuery?.kind !== "ORDER" && platformUsesEnvironmentConfig) platformCredentials = getPlatformMpesaEnvironmentCredentials() || undefined
 	} catch {
 		// The normal payment update below retains its retryable/no-database behavior.
 		paymentForQuery = null
 		merchantConfig = undefined
 		platformCredentials = undefined
 	}
-	const callbackCredentials = paymentForQuery?.kind === "ORDER" ? merchantConfig || undefined : platformCredentials
-	const hasExplicitPlatformConfig = platformConfigVersion !== undefined || platformUsesEnvironmentConfig
-	const callbackConfigured = paymentForQuery?.kind === "ORDER" ? Boolean(merchantConfig) : hasExplicitPlatformConfig ? Boolean(platformCredentials && isMpesaConfigured(platformCredentials)) : isMpesaConfigured()
+	const platformStorePayment = paymentForQuery?.store?.ownerType === "PLATFORM" && paymentForQuery.store.platformOwnerKey === "nurava-hubstores"
+	const callbackCredentials = paymentForQuery?.kind === "ORDER" && !platformStorePayment ? merchantConfig || undefined : platformCredentials
+	const hasExplicitPlatformConfig = platformStorePayment || platformConfigVersion !== undefined || platformUsesEnvironmentConfig
+	const callbackConfigured = paymentForQuery?.kind === "ORDER" && !platformStorePayment ? Boolean(merchantConfig) : hasExplicitPlatformConfig ? Boolean(platformCredentials && isMpesaConfigured(platformCredentials)) : isMpesaConfigured()
 	if (completed && callbackConfigured) {
 		const providerCheck = mpesaQueryResponseSchema.safeParse(await stkQuery({ checkoutRequestId, credentials: callbackCredentials }))
 		if (!providerCheck.success || providerCheck.data.ResponseCode !== "0" || providerCheck.data.ResultCode !== 0) return { ok: false, received: false, provider: "mpesa", event: "stk-callback", receivedAt, message: "M-Pesa callback could not be confirmed with the provider." }

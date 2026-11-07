@@ -67,9 +67,9 @@ async function seedIndustryDemoStore(input: {
 	const categoryBySlug = new Map<string, string>()
 	for (const template of industry.categoryTemplates) {
 		const category = await prisma.category.upsert({
-			where: { tenantId_slug: { tenantId: tenant.id, slug: template.slug } },
+			where: { tenantId_industryId_slug: { tenantId: tenant.id, industryId: industry.id, slug: template.slug } },
 			update: { storeId: store.id, name: template.name, description: template.description, imageUrl: defaultCategoryImage(industry.slug, template.name, template.imageUrl) },
-			create: { tenantId: tenant.id, storeId: store.id, name: template.name, slug: template.slug, description: template.description, imageUrl: defaultCategoryImage(industry.slug, template.name, template.imageUrl) },
+			create: { tenantId: tenant.id, storeId: store.id, industryId: industry.id, name: template.name, slug: template.slug, description: template.description, imageUrl: defaultCategoryImage(industry.slug, template.name, template.imageUrl) },
 		})
 		categoryBySlug.set(category.slug, category.id)
 	}

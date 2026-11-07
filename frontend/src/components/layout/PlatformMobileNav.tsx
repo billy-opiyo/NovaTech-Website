@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, PlusCircle, Store } from "lucide-react"
+import { Home, PlusCircle, Store, ShoppingBag } from "lucide-react"
 import clsx from "clsx"
 
 const baseNavItems = [
 	{ icon: Home, label: "Home", href: "/" },
 	{ icon: Store, label: "Stores", href: "/stores?all=1", match: "/stores" },
+	{ icon: ShoppingBag, label: "Shop", href: "/store/nurava-marketplace", match: "/store/nurava-marketplace" },
 	{ icon: PlusCircle, label: "Start Selling", href: "/onboarding", match: "/onboarding" },
 ]
 
