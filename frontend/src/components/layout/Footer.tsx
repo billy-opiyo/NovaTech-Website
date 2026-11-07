@@ -173,6 +173,7 @@ export default function Footer() {
 							<li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Platform Homepage</a></li>
 							<li><a href={platformBrowseStoresLink} className="hover:text-primary transition-colors">Browse Stores</a></li>
 						</>}
+						{!store.isPlatformHome && store.ownerType === "PLATFORM" && <li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Platform Homepage</a></li>}
 						{(store.isPlatformHome ? platformQuickLinks : store.ownerType === "PLATFORM" ? platformStoreQuickLinks : quickLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
