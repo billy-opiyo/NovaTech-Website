@@ -40,7 +40,13 @@ export default function Header() {
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || (!/^\/stores(?:\/|\?|$)/.test(link.href) && !/^\/?(?:\?platformHome=1)?(?:#|$)/.test(link.href) && !/^\/onboarding(?:\/|\?|$)/.test(link.href) && !/^\/platform/.test(link.href))).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
-	const logoSource = store.brand.logo?.trim() || (store.isPlatformHome ? "/images/Nurava_HubStores_app_icon_logo.png" : "")
+	const platformLogo = store.platformSettings?.brand?.logo?.trim()
+	const logoSource = store.isPlatformHome || store.ownerType === "PLATFORM"
+		? platformLogo || "/images/Nurava_HubStores_app_icon_logo.png"
+		: store.brand.logo?.trim() || ""
+	const logoAlt = store.ownerType === "PLATFORM"
+		? store.platformSettings?.brand?.logoAlt || store.platformSettings?.brand?.name || store.platformBrandName || store.brand.logoAlt
+		: store.brand.logoAlt
 	const isRemoteLogo = logoSource.startsWith("https://")
 	const platformAccountHref = `/auth/signin?callbackUrl=${encodeURIComponent("/?platformHome=1")}`
 	const isSignedIn = sessionStatus === "authenticated" && Boolean(session?.user)
@@ -53,7 +59,7 @@ export default function Header() {
 					{/* Logo */}
 					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-[18%] shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-			{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={store.brand.logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={store.brand.logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
+							{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
 						<span
 							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
