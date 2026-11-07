@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -77,7 +77,15 @@ export default function ProductsClient() {
 	const searchParams = useSearchParams()
 	const store = useStoreContext()
 	const productsEndpoint = getStoreRouteHref(store, "/api/products")
-	const categories = [{ name: "All Categories", slug: "" }, ...store.homepage.categories.map(({ name, slug }) => ({ name, slug }))]
+	const [selectedIndustry, setSelectedIndustry] = useState(searchParams.get("industry") || "")
+	const categories = useMemo(() => {
+		const visible = store.homepage.categories.filter((category) => !selectedIndustry || !category.industrySlug || category.industrySlug === selectedIndustry)
+		return [{ name: "All Categories", slug: "", industrySlug: "" }, ...visible.map((category) => ({
+			name: !selectedIndustry && category.industryName ? `${category.name} · ${category.industryName}` : category.name,
+			slug: category.slug,
+			industrySlug: category.industrySlug || store.industry?.slug || "",
+		}))]
+	}, [selectedIndustry, store.homepage.categories, store.industry?.slug])
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 	const initialSort = searchParams.get("sortBy") || searchParams.get("sort")
@@ -102,7 +110,7 @@ export default function ProductsClient() {
 		// The unfiltered page derives brands from its main product response below.
 		if (!searchParams.get("q") && !searchParams.get("category") && !searchParams.get("industry") && searchParams.get("trending") !== "true") return
 		let current = true
-		getProducts({ limit: 100, industry: searchParams.get("industry") || undefined }, productsEndpoint)
+		getProducts({ limit: 100, industry: selectedIndustry || undefined }, productsEndpoint)
 			.then(({ products }) => {
 				if (!current) return
 				setCatalogBrands(Array.from(new Set(products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
@@ -111,13 +119,13 @@ export default function ProductsClient() {
 				if (current) setCatalogBrands([])
 			})
 		return () => { current = false }
-	}, [productsEndpoint, searchParamsKey])
+	}, [productsEndpoint, searchParamsKey, selectedIndustry])
 
 	useEffect(() => {
-		if (filters.category && !store.homepage.categories.some((category) => category.slug === filters.category)) {
+		if (filters.category && !categories.some((category) => category.slug === filters.category)) {
 			setFilters((current) => ({ ...current, category: "" }))
 		}
-	}, [filters.category, store.homepage.categories])
+	}, [categories, filters.category])
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia("(max-width: 1023px)")
@@ -128,11 +136,13 @@ export default function ProductsClient() {
 	}, [])
 
 	useEffect(() => {
+		const nextIndustry = searchParams.get("industry") || ""
 		const nextSearch = searchParams.get("q") || ""
 		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
 		const nextCategory = searchParams.get("category") || ""
 		const nextTrending = searchParams.get("trending") === "true"
+		setSelectedIndustry((current) => current === nextIndustry ? current : nextIndustry)
 		setSearchQuery((current) => current === nextSearch ? current : nextSearch)
 		setFilters((current) => current.category === nextCategory && current.sortBy === nextSortBy && current.trending === nextTrending
 			? current
@@ -144,7 +154,7 @@ export default function ProductsClient() {
 		const query = {
 			q: searchQuery || undefined,
 			category: filters.category || undefined,
-			industry: searchParams.get("industry") || undefined,
+			industry: selectedIndustry || undefined,
 			brands: filters.brands.length ? filters.brands.join(",") : undefined,
 			minPrice: filters.priceRange[0] || undefined,
 			maxPrice: filters.priceRange[1] < 200000 ? filters.priceRange[1] : undefined,
@@ -173,7 +183,7 @@ export default function ProductsClient() {
 			})
 			.catch(() => setFilteredProducts([]))
 			.finally(() => setIsLoading(false))
-	}, [searchQuery, filters, productsEndpoint])
+	}, [searchQuery, filters, productsEndpoint, selectedIndustry])
 
 	useEffect(() => {
 		applyFilters()
@@ -199,6 +209,10 @@ export default function ProductsClient() {
 			trending: false,
 		})
 		setSearchQuery("")
+	}
+	const selectCategory = (category: (typeof categories)[number]) => {
+		setSelectedIndustry(category.industrySlug)
+		setFilters((current) => ({ ...current, category: category.slug }))
 	}
 
 	const activeFilterCount =
@@ -437,9 +451,9 @@ export default function ProductsClient() {
 							<div className="space-y-2">
 								{categories.map((cat) => (
 									<button
-										key={cat.slug}
+										key={`${cat.industrySlug}:${cat.slug}`}
 										onClick={() =>
-											setFilters({ ...filters, category: cat.slug })
+												selectCategory(cat)
 										}
 										className={clsx(
 											"block w-full text-left px-3 py-2 rounded-lg transition text-sm",
@@ -559,9 +573,9 @@ export default function ProductsClient() {
 									<div className="space-y-2">
 										{categories.map((cat) => (
 											<button
-												key={cat.slug}
+													key={`${cat.industrySlug}:${cat.slug}`}
 												onClick={() =>
-													setFilters({ ...filters, category: cat.slug })
+													selectCategory(cat)
 												}
 												className={clsx(
 													"block w-full text-left px-3 py-2 rounded-lg transition text-sm",

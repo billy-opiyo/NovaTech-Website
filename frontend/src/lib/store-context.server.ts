@@ -119,7 +119,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				contactSettings: true,
 				homepageSettings: true,
 				commerceSettings: true,
-				categories: { where: { active: true, industry: { is: { active: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }], select: { name: true, slug: true, imageUrl: true, industry: { select: { slug: true } } } },
+				categories: { where: { active: true, industry: { is: { active: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }], select: { name: true, slug: true, imageUrl: true, industry: { select: { name: true, slug: true } } } },
 				industry: { select: { id: true, name: true, slug: true, homepagePreset: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { name: true, slug: true, imageUrl: true } }, defaultTheme: { select: { colors: true, typography: true, heroLayout: true, bannerStyle: true, productGridStyle: true } } } },
 			},
 		})
@@ -180,16 +180,46 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
-		const storedCategorySnapshots = store.ownerType === "PLATFORM"
-			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
+		const platformIndustryOrder = ["electronics", "boutiques", "cakes", "furniture"]
+		const platformStoreIndustries = store.ownerType === "PLATFORM"
+			? (await prisma.industry.findMany({
+				where: { active: true },
+				select: {
+					name: true,
+					slug: true,
+					categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { slug: true } },
+				},
+			})).sort((left, right) => {
+				const leftRank = platformIndustryOrder.indexOf(left.slug)
+				const rightRank = platformIndustryOrder.indexOf(right.slug)
+				return (leftRank < 0 ? platformIndustryOrder.length : leftRank) - (rightRank < 0 ? platformIndustryOrder.length : rightRank) || left.name.localeCompare(right.name)
+			})
+			: []
+		const industryRank = new Map(platformStoreIndustries.map((industry, index) => [industry.slug, index]))
+		const categoryRank = new Map(platformStoreIndustries.flatMap((industry) => industry.categoryTemplates.map((category, index) => [`${industry.slug}:${category.slug}`, index] as const)))
+		const storedCategorySnapshots: Array<{ name: string; slug: string; image: string; industrySlug?: string; industryName?: string }> = store.ownerType === "PLATFORM"
+			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", industryName: category.industry?.name || "Other", image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
 			: Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
 			return [{ name: category.name, slug: category.slug, image: typeof category.image === "string" ? category.image : typeof category.imageUrl === "string" ? category.imageUrl : "" }]
 		}) : []
+		if (store.ownerType === "PLATFORM") {
+			storedCategorySnapshots.sort((left, right) => {
+				const leftIndustrySlug = left.industrySlug || "general"
+				const rightIndustrySlug = right.industrySlug || "general"
+				const leftIndustryRank = industryRank.get(leftIndustrySlug) ?? platformIndustryOrder.length
+				const rightIndustryRank = industryRank.get(rightIndustrySlug) ?? platformIndustryOrder.length
+				const leftCategoryRank = categoryRank.get(`${leftIndustrySlug}:${left.slug}`) ?? Number.MAX_SAFE_INTEGER
+				const rightCategoryRank = categoryRank.get(`${rightIndustrySlug}:${right.slug}`) ?? Number.MAX_SAFE_INTEGER
+				return leftIndustryRank - rightIndustryRank || leftCategoryRank - rightCategoryRank || left.name.localeCompare(right.name)
+			})
+		}
 		const nonElectronicsIndustry = store.ownerType === "PLATFORM" || store.industry?.slug !== "electronics"
 		const electronicsCategorySlugs = new Set<string>(clientConfig.homepage.categories.map((category) => category.slug))
-		const persistedCategories = nonElectronicsIndustry
+		const persistedCategories = store.ownerType === "PLATFORM"
+			? storedCategorySnapshots
+			: nonElectronicsIndustry
 			? (() => {
 				const storedBySlug = new Map(storedCategorySnapshots.map((category) => [category.slug, category]))
 				const configuredCategories = industryCategories.map((category) => ({
@@ -214,16 +244,17 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				: store.industry?.slug === "electronics"
 					? clientConfig.homepage.categories
 					: industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
-		const categories = persistedCategories.filter((category) => categoryAvailability[category.slug] !== false).map((category) => {
+		const categories = persistedCategories.filter((category) => {
+			const industrySlug = "industrySlug" in category ? category.industrySlug : store.industry?.slug || "general"
+			const scopedAvailability = categoryAvailability[`${industrySlug}:${category.slug}`]
+			return scopedAvailability === undefined ? categoryAvailability[category.slug] !== false : scopedAvailability !== false
+		}).map((category) => {
 			const industrySlug = "industrySlug" in category ? category.industrySlug : store.industry?.slug || "general"
 			const configuredImage = categoryImages[`${industrySlug}:${category.slug}`] || categoryImages[category.slug]
 			return typeof configuredImage === "string" && configuredImage.trim()
 				? { ...category, image: configuredImage }
 				: category
 		})
-		const platformStoreIndustries = store.ownerType === "PLATFORM"
-			? await prisma.industry.findMany({ where: { active: true }, select: { name: true, slug: true }, orderBy: [{ name: "asc" }, { slug: "asc" }] })
-			: []
 		const defaultNavigation: Array<{ name: string; href: string }> = store.ownerType === "PLATFORM"
 			? [{ name: "Home", href: "/" }, ...platformStoreIndustries.map((industry) => ({ name: industry.name, href: `/products?industry=${encodeURIComponent(industry.slug)}` })), { name: "All Products", href: "/products" }]
 			: store.industry?.slug && store.industry.slug !== "electronics"
@@ -233,7 +264,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			const link = record(value)
 			return typeof link.name === "string" && typeof link.href === "string" ? [{ name: link.name, href: link.href }] : []
 		}) : defaultNavigation
-		const navigation = configuredNavigation.filter((link) => {
+		const navigation = (store.ownerType === "PLATFORM" ? defaultNavigation : configuredNavigation).filter((link) => {
 			if (store.ownerType === "PLATFORM" && (/^\/stores(?:\/|\?|$)/.test(link.href) || /^\/onboarding(?:\/|\?|$)/.test(link.href) || /^\/platform/.test(link.href) || link.name.toLowerCase() === "browse stores")) return false
 			const categorySlug = link.href.match(/^\/category\/([^/?#]+)/)?.[1]
 			return !categorySlug || (categories.some((category) => category.slug === categorySlug) && categoryAvailability[categorySlug] !== false)

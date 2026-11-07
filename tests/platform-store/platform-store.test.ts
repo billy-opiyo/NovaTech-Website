@@ -7,6 +7,7 @@ import { isPlatformOwnedStore } from "../../backend/lib/platform-store"
 import { summarizePlatformStoreFinancials } from "../../backend/lib/platform-store-report"
 import { resolveStoreTheme } from "../../frontend/src/lib/store-theme"
 import { getFilteredProducts } from "../../backend/services/productService"
+import { getPlatformStoreHomepageProducts } from "../../backend/services/recommendation.service"
 import { mockPrismaMethod } from "../tenant/mock-prisma-method"
 
 test("platform store ownership requires the canonical owner type and key", () => {
@@ -77,8 +78,26 @@ test("unpublished platform catalog products stay out of public product queries",
 		assert.ok(queries.length >= 2)
 		assert.equal(queries.every((where) => where.isPublished === true), true)
 		queries.length = 0
+		await getFilteredProducts(new URLSearchParams("industry=electronics&category=phones"), "platform-tenant", { storeId: "platform-store", ownerType: "PLATFORM", commerceSettings: null })
+		assert.ok(JSON.stringify(queries[0]).includes('"slug":"phones"'))
+		assert.ok(JSON.stringify(queries[0]).includes('"slug":"electronics"'))
+		queries.length = 0
 		await getFilteredProducts(new URLSearchParams(), "merchant-tenant", { storeId: "merchant-store", ownerType: "MERCHANT", commerceSettings: null })
 		assert.ok(queries.length >= 2)
 		assert.equal(queries.every((where) => !("isPublished" in where)), true)
 	} finally { restoreCategories(); restoreProducts(); restoreCount() }
+})
+
+test("platform homepage product query includes the full published catalog and stays store scoped", async () => {
+	let productQuery: { where: Record<string, unknown>; take?: number } | undefined
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async () => ({ id: "platform-store", tenantId: "platform-tenant", ownerType: "PLATFORM", platformOwnerKey: "nurava-hubstores" }))
+	const restoreProducts = mockPrismaMethod(prisma.product, "findMany", async (query: { where: Record<string, unknown>; take?: number }) => { productQuery = query; return [] })
+	try {
+		assert.deepEqual(await getPlatformStoreHomepageProducts(), [])
+		assert.equal(productQuery?.where.tenantId, "platform-tenant")
+		assert.equal(productQuery?.where.storeId, "platform-store")
+		assert.equal(productQuery?.where.isPublished, true)
+		assert.equal(productQuery?.take, undefined)
+		assert.ok(productQuery?.where.category)
+	} finally { restoreStore(); restoreProducts() }
 })
