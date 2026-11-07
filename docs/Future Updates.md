@@ -390,25 +390,30 @@ attribute enquiries/sales, and stop messaging a user who opts out.
 **Definition of done:** balances are tenant-isolated, reversible through ledger
 entries, and cannot be granted or redeemed through forged client requests.
 
-### 5.4 Optional first-party checkout
+### 5.4 Platform-owned store payment and operating gates
 
-The merchant-direct boundary should remain the default until legal, support,
-tax, fraud, settlement, and refund responsibilities are deliberately accepted.
+The first-party store and its separate `PRODUCT_SALE` payment architecture are
+implemented on staging. This does not enable the payment route or settle the
+remaining legal, tax, supplier, support, fraud, settlement, and refund decisions.
 
-If the business chooses to collect shopper payments:
+Before enabling platform-store payments or offering products:
 
-- Create an explicit commerce-mode configuration and migration.
-- Decide whether Nurava is merchant of record, marketplace facilitator, or agent.
-- Add merchant settlement accounts, KYC, payout schedules, fees, refunds, and
-  chargeback handling.
-- Re-enable payment initiation only behind the selected mode.
-- Recalculate totals server-side and reserve inventory transactionally.
-- Prove webhook idempotency, reconciliation, and refund state transitions.
-- Update terms, privacy, invoices, support responsibilities, and UI copy.
-- Run legal and tax review before production.
+- Confirm the supplier and customer-facing seller/operator terms, product
+  availability, delivery commitments, returns, refunds, tax treatment, and
+  customer support process.
+- Configure only a payment destination authorized by the provider for the
+  platform-owned store, separately from SaaS billing and merchant routes.
+- Verify provider callbacks, idempotency, reconciliation, refund records,
+  financial reporting, and failure handling in a provider sandbox.
+- Review and approve the draft agreement and platform shopper terms/privacy;
+  plan any required merchant re-acceptance before changing the app's accepted
+  merchant agreement version.
+- Browser-verify the deployed staging storefront, checkout, fulfillment, refund,
+  and reporting workflows after the repository owner deploys the code.
 
-**Definition of done:** payment, order, refund, settlement, and dispute states are
-fully server-authoritative and accurately represented to shoppers and merchants.
+**Definition of done:** the live route is provider-authorized, orders and
+payments remain purpose-separated, financial states reconcile, operating and
+legal documents are approved, and deployed workflows pass end-to-end review.
 
 ### 5.5 Advanced billing and revenue operations
 
@@ -597,7 +602,7 @@ canonical values incorrectly.
 
 1. Event analytics, advanced search, recommendations, content tools, and AI assistance.
 2. PWA/offline operations and multi-region localization.
-3. First-party shopper checkout only after legal, tax, settlement, fraud, and refund decisions.
+3. Broader first-party commerce and additional channels only after the platform-owned store's legal, tax, supplier, settlement, fraud, and refund gates are resolved.
 
 ## 9. Feature implementation checklist
 

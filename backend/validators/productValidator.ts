@@ -43,6 +43,8 @@ export const productSchema = z.object(productFields).superRefine((value, context
 
 export const productUpdateSchema = z.object({
 	name: productFields.name.optional(),
+	slug: productFields.slug.optional(),
+	sku: productFields.sku.optional(),
 	description: productFields.description.optional(),
 	brand: productFields.brand.optional(),
 	price: productFields.price.optional(),
@@ -54,6 +56,7 @@ export const productUpdateSchema = z.object({
 	isFeatured: productFields.isFeatured.optional(),
 	isNewArrival: productFields.isNewArrival.optional(),
 	isTrending: productFields.isTrending.optional(),
+	isPublished: productFields.isPublished.optional(),
 	categoryId: productFields.categoryId.optional(),
 	attributes: productFields.attributes,
 })

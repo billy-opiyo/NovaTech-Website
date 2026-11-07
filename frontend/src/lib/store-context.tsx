@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, createContext, useContext } from "react"
-import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
+import { themeToCssVariables } from "@/config/theme-presets"
+import { resolveStoreTheme } from "./store-theme"
 import { getStoreRouteHref } from "@/lib/store-home"
 import type { StoreContext } from "./store-context.types"
 
@@ -103,10 +104,8 @@ export function StoreContextProvider({ value, children }: { value: StoreContext;
 	}, [endpoint, isPlatformHome, scopeKey, storeSlug])
 
 	useEffect(() => {
-		const cssVariables = themeToCssVariables(
-			getThemePreset(currentValue.themePreset),
-			currentValue.isPlatformHome ? currentValue.platformSettings?.design : currentValue.themeOverrides,
-		)
+		const resolvedTheme = resolveStoreTheme(currentValue)
+		const cssVariables = themeToCssVariables(resolvedTheme.preset, resolvedTheme.overrides)
 		for (const [name, cssValue] of Object.entries(cssVariables)) {
 			document.documentElement.style.setProperty(name, String(cssValue))
 		}

@@ -8,8 +8,9 @@ import StorePreferenceTracker from "@/components/layout/StorePreferenceTracker"
 import SiteChrome from "@/components/layout/SiteChrome"
 import OfflineNotice from "@/components/layout/OfflineNotice"
 import { ToastProvider } from "@/components/ui/Toast"
-import { getThemePreset, themeToCssVariables } from "@/config/theme-presets"
+import { themeToCssVariables } from "@/config/theme-presets"
 import { getStoreContext } from "@/lib/store-context.server"
+import { resolveStoreTheme } from "@/lib/store-theme"
 import { StoreContextProvider } from "@/lib/store-context"
 import AuthSessionProvider from "@/components/providers/AuthSessionProvider"
 import AndroidBackButtonHandler from "@/components/providers/AndroidBackButtonHandler"
@@ -33,12 +34,13 @@ export default async function RootLayout({
 	children: React.ReactNode
 }) {
 	const store = await getStoreContext()
-	const activeTheme = getThemePreset(store.themePreset)
+	const resolvedTheme = resolveStoreTheme(store)
+	const activeTheme = resolvedTheme.preset
 	return (
 		<html
 			lang={store.site.language}
 			suppressHydrationWarning
-			style={themeToCssVariables(activeTheme, store.isPlatformHome ? store.platformSettings?.design : store.themeOverrides) as React.CSSProperties}
+			style={themeToCssVariables(activeTheme, resolvedTheme.overrides) as React.CSSProperties}
 		>
 			<head>
 				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}

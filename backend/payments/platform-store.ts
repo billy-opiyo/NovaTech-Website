@@ -12,7 +12,9 @@ export async function getActivePlatformStorePaymentRoute() {
 	const configuration = await getPlatformStorePaymentConfiguration()
 	if (!configuration?.enabled || !configuration.authorizedAt) return null
 	if (configuration.provider === "STRIPE") return isStripeConfigured() ? { provider: "STRIPE" as const } : null
-	if (configuration.provider !== "MPESA" || !configuration.credentialsCiphertext || !configuration.accountType || !configuration.accountNumber) return null
+	if (configuration.provider !== "MPESA" || !configuration.accountType || !configuration.accountNumber) return null
+	if (configuration.accountType === "PHONE") return { provider: "MPESA" as const, manualTransfer: { phone: configuration.accountNumber, accountName: configuration.accountName || "" } }
+	if (!configuration.credentialsCiphertext) return null
 	try {
 		const credentials = decryptMerchantPaymentDetails(configuration.credentialsCiphertext)
 		const route: DarajaCredentials = {
@@ -39,5 +41,6 @@ export async function getPlatformStorePaymentSummary() {
 		enabled: Boolean(activeRoute),
 		authorizedAt: configuration?.authorizedAt || null,
 		credentialsConfigured: Boolean(configuration?.credentialsCiphertext),
+		manualPhone: configuration?.provider === "MPESA" && configuration.accountType === "PHONE" ? configuration.accountNumber : null,
 	}
 }

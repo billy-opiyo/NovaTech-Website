@@ -66,6 +66,7 @@ export default function StoreDirectoryBrowser({ stores }: { stores: DirectorySto
 									<div className="min-w-0">
 										<h2 className="truncate text-xl font-bold group-hover:text-primary">{store.name}</h2>
 										<p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{store.tagline}</p>
+										{store.isPlatformStore && <span className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">Nurava store · featured first</span>}
 										{store.industry && <span className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{store.industry.name}</span>}
 									</div>
 								</div>

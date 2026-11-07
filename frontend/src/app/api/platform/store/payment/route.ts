@@ -8,7 +8,7 @@ import { getPlatformStorePaymentSummary } from "backend/payments/platform-store"
 
 const configSchema = z.object({
 	provider: z.enum(["MPESA", "STRIPE"]),
-	accountType: z.enum(["PAYBILL", "TILL"]).optional(),
+	accountType: z.enum(["PAYBILL", "TILL", "PHONE"]).optional(),
 	accountNumber: z.string().trim().max(30).optional(),
 	accountName: z.string().trim().max(120).optional(),
 	consumerKey: z.string().trim().max(500).optional(),
@@ -41,18 +41,19 @@ export async function PATCH(request: Request) {
 	if (data.enabled && (!canAuthorize || data.authorizedAccountConfirmed !== true)) return NextResponse.json({ message: "A Platform Owner must confirm that the selected account is approved for platform store product sales before enabling payments." }, { status: 403 })
 	if (data.provider === "STRIPE" && (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET)) return NextResponse.json({ message: "Stripe server and webhook credentials must be configured before activation." }, { status: 409 })
 	if (data.provider === "MPESA") {
-		if (!data.accountType || !data.accountNumber || !/^\d{5,10}$/.test(data.accountNumber.replace(/\D/g, ""))) return NextResponse.json({ message: "Enter the approved PayBill or Till type and shortcode." }, { status: 400 })
-		if (!data.consumerKey || !data.consumerSecret || !data.passkey) return NextResponse.json({ message: "Provide all M-Pesa credentials to configure this designated collection route." }, { status: 400 })
+		if (!data.accountType || !data.accountNumber) return NextResponse.json({ message: "Enter the designated PayBill, Till, or registered phone destination." }, { status: 400 })
+		if (data.accountType === "PHONE" ? !/^\+?\d{10,15}$/.test(data.accountNumber.replace(/[\s()-]/g, "")) : !/^\d{5,10}$/.test(data.accountNumber.replace(/\D/g, ""))) return NextResponse.json({ message: data.accountType === "PHONE" ? "Enter a valid registered phone number." : "Enter the approved PayBill or Till shortcode." }, { status: 400 })
+		if (data.accountType !== "PHONE" && (!data.consumerKey || !data.consumerSecret || !data.passkey)) return NextResponse.json({ message: "Provide all M-Pesa credentials to configure this designated collection route." }, { status: 400 })
 	}
 	const existing = await prisma.platformStorePaymentConfiguration.findUnique({ where: { id: "platform-store" } })
 	let credentialsCiphertext = existing?.credentialsCiphertext || null
-	if (data.provider === "MPESA") {
+	if (data.provider === "MPESA" && data.accountType !== "PHONE") {
 		credentialsCiphertext = encryptMerchantPaymentDetails({ consumerKey: data.consumerKey!, consumerSecret: data.consumerSecret!, passkey: data.passkey! })
-	}
+	} else if (data.provider === "MPESA" && data.accountType === "PHONE") credentialsCiphertext = encryptMerchantPaymentDetails({ paymentMode: "MANUAL_PHONE_TRANSFER" })
 	const config = await prisma.platformStorePaymentConfiguration.upsert({
 		where: { id: "platform-store" },
-		update: { provider: data.provider, accountType: data.provider === "MPESA" ? data.accountType : null, accountNumber: data.provider === "MPESA" ? data.accountNumber!.replace(/\D/g, "") : null, accountName: data.provider === "MPESA" ? data.accountName || null : null, credentialsCiphertext, enabled: data.enabled, authorizedAt: data.enabled ? new Date() : null, authorizedById: data.enabled ? result.session.user.id : null },
-		create: { id: "platform-store", provider: data.provider, accountType: data.provider === "MPESA" ? data.accountType : null, accountNumber: data.provider === "MPESA" ? data.accountNumber!.replace(/\D/g, "") : null, accountName: data.provider === "MPESA" ? data.accountName || null : null, credentialsCiphertext, enabled: data.enabled, authorizedAt: data.enabled ? new Date() : null, authorizedById: data.enabled ? result.session.user.id : null },
+		update: { provider: data.provider, accountType: data.provider === "MPESA" ? data.accountType : null, accountNumber: data.provider === "MPESA" ? (data.accountType === "PHONE" ? data.accountNumber : data.accountNumber!.replace(/\D/g, "")) : null, accountName: data.provider === "MPESA" ? data.accountName || null : null, credentialsCiphertext, enabled: data.enabled, authorizedAt: data.enabled ? new Date() : null, authorizedById: data.enabled ? result.session.user.id : null },
+		create: { id: "platform-store", provider: data.provider, accountType: data.provider === "MPESA" ? data.accountType : null, accountNumber: data.provider === "MPESA" ? (data.accountType === "PHONE" ? data.accountNumber : data.accountNumber!.replace(/\D/g, "")) : null, accountName: data.provider === "MPESA" ? data.accountName || null : null, credentialsCiphertext, enabled: data.enabled, authorizedAt: data.enabled ? new Date() : null, authorizedById: data.enabled ? result.session.user.id : null },
 	})
 	return NextResponse.json({ provider: config.provider, accountType: config.accountType, accountNumber: config.accountNumber, accountName: config.accountName, enabled: config.enabled, authorizedAt: config.authorizedAt, credentialsConfigured: Boolean(config.credentialsCiphertext) })
 }

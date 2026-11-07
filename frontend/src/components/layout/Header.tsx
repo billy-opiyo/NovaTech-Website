@@ -19,7 +19,6 @@ const platformNavigation = [
 	// cannot turn these links into the merchant homepage.
 	{ name: "Home", href: "/?platformHome=1" },
 	{ name: "Stores", href: "/stores?all=1" },
-	{ name: "Shop", href: "/store/nurava-marketplace" },
 	{ name: "Plans", href: "/?platformHome=1#plans" },
 	{ name: "Start Selling", href: "/onboarding" },
 ]
@@ -39,7 +38,7 @@ export default function Header() {
 	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = getStoreHomeHref(store)
-	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
+	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || (!/^\/stores(?:\/|\?|$)/.test(link.href) && !/^\/?(?:\?platformHome=1)?(?:#|$)/.test(link.href) && !/^\/onboarding(?:\/|\?|$)/.test(link.href) && !/^\/platform/.test(link.href))).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
 	const logoSource = store.brand.logo?.trim() || (store.isPlatformHome ? "/images/Nurava_HubStores_app_icon_logo.png" : "")
 	const isRemoteLogo = logoSource.startsWith("https://")

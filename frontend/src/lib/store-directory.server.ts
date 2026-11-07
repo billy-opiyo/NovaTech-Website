@@ -13,6 +13,7 @@ export type PublishedStoreDirectoryEntry = {
 	tagline: string
 	industry: { name: string; slug: string } | null
 	featuredProduct: { name: string; slug: string; price: number; image: string | null } | null
+	isPlatformStore: boolean
 }
 
 export type PlatformDiscoveryProduct = {
@@ -36,6 +37,7 @@ export type PlatformDiscoveryStore = {
 	category: "TOP_RATED" | "MOST_REVIEWED" | "NEW_AND_GROWING"
 	industry: { name: string; slug: string } | null
 	isDemo: boolean
+	isPlatformStore: boolean
 }
 
 const jsonRecord = (value: unknown): Record<string, unknown> =>
@@ -47,11 +49,15 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 			where: {
 				slug: { notIn: [...HIDDEN_STAGING_DEMO_STORE_SLUGS] },
 				publicationStatus: "PUBLISHED",
-				tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" },
+				OR: [
+					{ ownerType: "PLATFORM" },
+					{ ownerType: "MERCHANT", tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" } },
+				],
 			},
-			orderBy: { name: "asc" },
+			orderBy: [{ ownerType: "asc" }, { name: "asc" }],
 			select: {
 				id: true,
+				ownerType: true,
 				name: true,
 				slug: true,
 				logoUrl: true,
@@ -87,8 +93,9 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 					price: product.discountedPrice ?? product.price,
 					image: product.images[0] || null,
 				} : null,
+				isPlatformStore: store.ownerType === "PLATFORM",
 			}
-		})
+		}).sort((a, b) => Number(b.isPlatformStore) - Number(a.isPlatformStore) || a.name.localeCompare(b.name))
 	} catch (error) {
 		if (process.env.NODE_ENV === "production") {
 			console.error("Store directory unavailable", error)
@@ -103,6 +110,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 			tagline: clientConfig.homepage.heroDescription,
 			industry: null,
 			featuredProduct: null,
+			isPlatformStore: false,
 		}]
 	}
 }
@@ -113,11 +121,15 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 			where: {
 				slug: { notIn: [...HIDDEN_STAGING_DEMO_STORE_SLUGS] },
 				publicationStatus: "PUBLISHED",
-				tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" },
+				OR: [
+					{ ownerType: "PLATFORM" },
+					{ ownerType: "MERCHANT", tenant: { status: { in: ["ACTIVE", "TRIALING", "GRACE_PERIOD"] }, verificationStatus: "APPROVED" } },
+				],
 			},
-			orderBy: { name: "asc" },
+			orderBy: [{ ownerType: "asc" }, { name: "asc" }],
 			select: {
 				id: true,
+				ownerType: true,
 				name: true,
 				slug: true,
 				logoUrl: true,
@@ -151,7 +163,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 		return stores.map((store) => {
 			const homepage = jsonRecord(store.homepageSettings)
 			const review = reviewByTenant.get(store.tenant.id) || { averageRating: 0, reviewCount: 0 }
-			const category = review.reviewCount === 0
+			const category: PlatformDiscoveryStore["category"] = review.reviewCount === 0
 				? "NEW_AND_GROWING"
 				: review.averageRating >= 4.5 && review.reviewCount >= 3
 					? "TOP_RATED"
@@ -170,9 +182,10 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				products: store.tenant.products.map((product) => ({ name: product.name, slug: product.slug, brand: product.brand, price: product.discountedPrice ?? product.price, image: product.images[0] || null })),
 				category,
 				industry: store.industry,
+				isPlatformStore: store.ownerType === "PLATFORM",
 				isDemo: ["nuravatech", "nurava-furnitures", "nurava-cakes", "nurava-boutiques"].includes(store.slug),
 			}
-		})
+		}).sort((a, b) => Number(b.isPlatformStore) - Number(a.isPlatformStore) || b.averageRating - a.averageRating || b.reviewCount - a.reviewCount)
 	} catch (error) {
 		if (process.env.NODE_ENV === "production") console.error("Platform store discovery unavailable", error)
 		return []

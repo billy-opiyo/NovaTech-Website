@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 		if (context.ownerType === "PLATFORM") {
 			const route = await getActivePlatformStorePaymentRoute()
-			return NextResponse.json({ stkAvailable: route?.provider === "MPESA", manualTransfer: null, paymentPurpose: "PRODUCT_SALE" })
+			return NextResponse.json({ stkAvailable: route?.provider === "MPESA" && "credentials" in route, manualTransfer: route?.provider === "MPESA" && "manualTransfer" in route ? route.manualTransfer : null, paymentPurpose: "PRODUCT_SALE" })
 		}
 		const [stkConfig, manualDestination] = await Promise.all([getMerchantMpesaConfig(context.tenantId), getManualShopperPaymentDestination(context.tenantId)])
 		return NextResponse.json({ stkAvailable: Boolean(stkConfig), manualTransfer: manualDestination })
@@ -63,7 +63,6 @@ export async function POST(req: NextRequest) {
 		if (!order || !canAccessShopperOrder(order, session?.user?.id, validated.phone)) {
 			return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
 		}
-		if (context.ownerType === "PLATFORM" && validated.mode && validated.mode !== "STK") return NextResponse.json({ message: "Manual transfer and receipt review are not configured for the platform store." }, { status: 409 })
 		if (validated.mode === "CHECK_STATUS") {
 			const payment = await prisma.payment.findFirst({ where: { id: validated.paymentId, tenantId: context.tenantId, orderId: order.id, provider: "mpesa-manual", kind: "ORDER" }, select: { status: true, metadata: true } })
 			if (!payment || (payment.metadata as { manualMode?: unknown } | null)?.manualMode !== "PHONE_TRANSFER") return NextResponse.json({ message: "Phone-transfer payment not found." }, { status: 404 })
@@ -76,9 +75,8 @@ export async function POST(req: NextRequest) {
 		const amount = order.total
 		if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ message: "The order has an invalid payable total." }, { status: 409 })
 		if (validated.mode === "PHONE_TRANSFER") {
-			if (context.ownerType === "PLATFORM") return NextResponse.json({ message: "Manual phone transfers are not enabled for the platform store." }, { status: 409 })
 			const payment = await createManualShopperPayment({ tenantId: context.tenantId, storeId: context.storeId, orderId: order.id, phone: validated.phone })
-			return NextResponse.json({ ok: true, provider: "mpesa-manual", ...payment, message: "Send the exact order amount to the merchant phone number, then submit the M-Pesa receipt code. The order remains pending until the store verifies it." }, { status: 201 })
+			return NextResponse.json({ ok: true, provider: "mpesa-manual", ...payment, message: `Send the exact order amount to the ${context.ownerType === "PLATFORM" ? "store" : "merchant"} phone number, then submit the M-Pesa receipt code. The order remains pending until payment review.` }, { status: 201 })
 		}
 		if (validated.mode === "SUBMIT_RECEIPT") {
 			const result = await submitManualShopperReceipt({ tenantId: context.tenantId, orderId: order.id, paymentId: validated.paymentId, receiptCode: validated.receiptCode })
@@ -107,7 +105,7 @@ export async function POST(req: NextRequest) {
 		}
 		const platformRoute = context.ownerType === "PLATFORM" ? await getActivePlatformStorePaymentRoute() : null
 		const merchantConfig = context.ownerType === "PLATFORM" ? null : await getMerchantMpesaConfig(context.tenantId)
-		if (context.ownerType === "PLATFORM" ? platformRoute?.provider !== "MPESA" : !merchantConfig) return NextResponse.json({ code: context.ownerType === "PLATFORM" ? "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED" : "MERCHANT_MPESA_NOT_READY", message: context.ownerType === "PLATFORM" ? "Platform product-sale M-Pesa collection is not configured and authorized." : "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
+		if (context.ownerType === "PLATFORM" ? platformRoute?.provider !== "MPESA" || !("credentials" in platformRoute) : !merchantConfig) return NextResponse.json({ code: context.ownerType === "PLATFORM" ? "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED" : "MERCHANT_MPESA_NOT_READY", message: context.ownerType === "PLATFORM" ? "Platform product-sale M-Pesa collection is not configured and authorized for STK." : "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 
 		const result = await initiateMpesaPayment({
 			amount,

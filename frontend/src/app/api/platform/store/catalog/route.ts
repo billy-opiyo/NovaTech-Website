@@ -33,7 +33,7 @@ export async function GET() {
 		prisma.category.findMany({ where: { tenantId: result.store.tenantId, storeId: result.store.id, active: true, industry: { is: { active: true } } }, select: { id: true, name: true, slug: true, industryId: true, industry: { select: { id: true, name: true, slug: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }] }),
 		prisma.industry.findMany({ where: { active: true }, select: { id: true, name: true, slug: true, categoryTemplates: { where: { active: true }, select: { id: true, name: true, slug: true } } }, orderBy: [{ name: "asc" }] }),
 		prisma.supplier.findMany({ where: { storeId: result.store.id, active: true }, select: { id: true, name: true, contactName: true, email: true, phone: true, notes: true }, orderBy: { name: "asc" } }),
-		prisma.product.findMany({ where: { tenantId: result.store.tenantId, storeId: result.store.id }, select: { id: true, name: true, slug: true, sku: true, price: true, discountedPrice: true, stock: true, images: true, isFeatured: true, category: { select: { name: true, industry: { select: { name: true, slug: true } } } }, supplierProduct: { select: { supplierId: true, supplierReference: true, supplierCost: true, currency: true, availability: true, estimatedDeliveryMinDays: true, estimatedDeliveryMaxDays: true, deliveryNotes: true } } }, orderBy: { createdAt: "desc" }, take: 250 }),
+		prisma.product.findMany({ where: { tenantId: result.store.tenantId, storeId: result.store.id }, select: { id: true, name: true, slug: true, description: true, brand: true, sku: true, price: true, discountedPrice: true, stock: true, images: true, isPublished: true, isFeatured: true, categoryId: true, category: { select: { id: true, name: true, industry: { select: { name: true, slug: true } } } }, supplierProduct: { select: { supplierId: true, supplierReference: true, supplierCost: true, currency: true, availability: true, estimatedDeliveryMinDays: true, estimatedDeliveryMaxDays: true, deliveryNotes: true } } }, orderBy: { createdAt: "desc" }, take: 250 }),
 	])
 	return NextResponse.json({ store: { id: result.store.id, name: result.store.name, slug: result.store.slug, publicationStatus: result.store.publicationStatus }, categories, industries, suppliers, products })
 }
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 		if (!supplier) return NextResponse.json({ message: "Select an active supplier for this platform store." }, { status: 400 })
 	}
 	try {
-		const product = await createProduct(parsedProduct.data, result.store.tenantId)
+		const product = await createProduct({ ...parsedProduct.data, isPublished: parsedProduct.data.isPublished ?? false }, result.store.tenantId)
 		if (parsedSupplier?.success) await prisma.supplierProduct.create({ data: { storeId: result.store.id, productId: product.id, ...parsedSupplier.data } })
 		return NextResponse.json({ product: { id: product.id, name: product.name, slug: product.slug } }, { status: 201 })
 	} catch (error) { return apiErrorResponse(error, "Product could not be created") }

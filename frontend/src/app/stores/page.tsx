@@ -14,7 +14,7 @@ export default async function StoreDirectoryPage() {
 				</div>
 				<h1 className="text-3xl font-extrabold sm:text-5xl">Browse trusted stores</h1>
 				<p className="mx-auto mt-4 max-w-2xl text-gray-600 dark:text-gray-300">
-					Choose an independent store to browse its catalogue and send a product enquiry directly to the merchant.
+					Browse the Nurava-owned store and independent merchant stores together. The Nurava store appears first; each store has its own catalog and checkout.
 				</p>
 			</section>
 

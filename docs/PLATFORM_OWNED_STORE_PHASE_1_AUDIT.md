@@ -107,3 +107,36 @@ Primary files to revisit in approved implementation: `backend/prisma/schema.pris
 ## Audit limitations
 
 This report traces the local `saas-staging` branch source and repository configuration. It does not prove the deployed Vercel build matches this tree, inspect live records, verify payment-provider account capabilities, or establish which products/supplier agreements are authorized. No tests were run, in line with the audit-only request.
+# Follow-up implementation and staging status (2026-11-07)
+
+This section records work completed after the read-only Phase 1 audit above;
+the findings in the original audit remain historical evidence from its audit
+date.
+
+- Implemented first-class `PLATFORM` store ownership, owner-aware authorization,
+  billing/verification/plan-gate exemptions, platform-store administration,
+  supplier records and private costs, manual fulfillment/refund records,
+  reporting, payment-purpose separation, and idempotent provisioning.
+- Reused shared merchant storefront pages and shopping flows where applicable.
+  The platform-owned store inherits the published platform theme design and
+  preset; navigation is driven by active industries and catalog categories.
+- Applied staging migrations `0041_platform_owned_commerce` and
+  `0042_category_industry_uniqueness`. The staging database contains the
+  published `nurava-marketplace` store and 16 active categories, with zero
+  products provisioned. No demo products were inserted.
+- The `PRODUCT_SALE` payment route is separately configurable and remains
+  disabled until an authorized provider destination is supplied. Merchant
+  shopper payment routing and SaaS billing remain separate.
+- The current merchant agreement acceptance version remains
+  `merchant-agreement-v1`. A versioned v2 PDF draft documents the platform-store
+  distinction and is pending legal review; it is not activated by the
+  application.
+- Source and staging database state do not prove deployment. Commit `6ba344d`
+  is available on `saas-staging`; the repository owner controls the Vercel
+  deployment and should run deployed browser/payment verification after push.
+- Follow-up UI corrections place the platform-owned store first in platform
+  homepage Top Available Stores and `/stores`, remove the standalone Shop action
+  and cross-store navigation from the store itself, and add store-owned hero,
+  footer, catalog image upload/CRUD, and registered-phone receipt review in
+  Platform Admin. Verify these against the deployed browser after repository
+  owner deployment.

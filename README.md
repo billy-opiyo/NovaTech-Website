@@ -1,6 +1,6 @@
-# Nurava Tech — Electronics E-Commerce Platform (Kenya)
+# Nurava HubStores — Multi-Industry Commerce Platform (Kenya)
 
-A hosted multi-store electronics commerce platform for the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate stores, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
+Nurava HubStores is a multi-industry commerce platform for independent merchants and a separately owned Nurava storefront. Shoppers can discover approved merchant stores at `/stores` or shop the published Nurava-owned store at `/store/nurava-marketplace`. Merchant SaaS billing and merchant shopper payments remain separate from the platform store's product-sale payment route.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -44,14 +44,14 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 | Feature              | Description                                                                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Home Pages**       | The platform root is a social-proof store discovery homepage; each merchant host keeps its own hero, shop-by-category grid, featured products, customer testimonials, newsletter, and contact sections. |
+| **Home Pages**       | The platform root is a social-proof store discovery homepage. The platform-owned store and merchant stores reuse the shared storefront pages; merchant stores keep their own hero, categories, products, testimonials, newsletter, and contact sections. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
 | **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, merchant warranty information, reviews section, and direct merchant enquiry handoff. |
-| **Category Pages**   | Dedicated category landing pages (Phones, Laptops, Tablets, Accessories) with subcategories.                                                                                                |
+| **Category Pages**   | Dynamic category landing pages and subcategories configured for each store.                                                                                                                 |
 | **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
 | **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
 | **Search Overlay**   | Responsive global search with `Ctrl+K`, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning.                                                   |
-| **Theme System**     | Client-configured light/dark presets backed by CSS variables, with localStorage persistence and flash-free initialization.                                                                   |
+| **Theme System**     | The platform-owned store inherits the published platform theme; merchant stores retain their own theme settings. Both use light/dark CSS variables, localStorage persistence, and flash-free initialization. |
 | **Responsive UI**    | Responsive header, mobile navigation, footer, homepage sections, product details, and search overlay with accessibility refinements.                                                        |
 | **Public Pages**     | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions.                                                                               |
 | **Store Directory**  | Public `/stores` discovery page linking shoppers to separate independent store hosts; each store keeps its own catalog and merchant contact flow. |
@@ -65,13 +65,16 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
 - **Cart Page** — optional product selection list with quantity controls and save-for-later support.
-- **Checkout and Merchant Handoff** — in `MERCHANT_ROUTED` mode, collects delivery details, creates a tenant-scoped pending order, and sends an M-Pesa STK request using the merchant-declared PayBill/Till route. Daraja determines whether payment succeeds; Nurava charges zero product commission. WhatsApp/email handoff remains available.
+- **Merchant Checkout and Handoff** — in `MERCHANT_ROUTED` mode, collects delivery details and creates a tenant-scoped pending order. A merchant can configure PayBill/Till Daraja credentials for STK Push or a registered M-Pesa phone for manual Send Money. Phone-transfer orders remain pending until the merchant verifies the shopper's receipt. Merchant product commission remains zero. WhatsApp/email handoff remains available.
 - **Merchant Enquiries and Quotes** — `/manage/enquiries` provides status tracking, internal notes, enquiry history, and owner/admin quote creation with email delivery.
 - **Catalog Import/Export** — `/manage/catalog` provides CSV templates, preview validation, SKU-based create/update imports, entitlement checks, partial success reporting, audit records, and current catalog export.
 - **Launch Readiness** — `/manage/readiness` provides server-backed publication checks and blocks publishing while required tenant, verification, legal, contact, settings, or canonical-domain checks are incomplete.
 - **Centralized Store Permissions** — A server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports.
+- **Platform-owned store** — `/store/nurava-marketplace` appears first in the platform homepage's Top Available Stores and the `/stores` directory. It inherits the published platform theme and platform-site footer settings, has its own customizable hero and category-card image uploads, and uses uploaded product images with full catalog CRUD. Platform Admin also manages private supplier details, manual fulfillment/refunds, sales reporting, a registered-phone receipt review queue, and the separately authorized product-sale payment route at `/platform/store`.
+- **Industry CMS navigation** — Active industries and their category templates feed the platform store navigation on desktop and mobile. Merchant onboarding remains limited to Electronics, Cakes, Furniture, and Boutiques.
 - **Operational Observability** — Critical operational responses include request IDs, structured safe failure events, and database-aware `/api/health` output.
-- **Platform boundary** — `MERCHANT_ROUTED` enables tenant-scoped shopper M-Pesa orders routed to the merchant's verified account; `MERCHANT_DIRECT` keeps contact-only checkout. Nurava Tech does not receive product-sale funds or charge a product commission in either mode.
+- **Merchant payment boundary** — `MERCHANT_ROUTED` uses each merchant's own PayBill/Till STK route or registered-phone transfer with merchant receipt review; `MERCHANT_DIRECT` keeps contact-only checkout. Merchant sales do not route to the platform-owned store account and have no product commission.
+- **Platform-store payment boundary** — Platform-store orders use `PRODUCT_SALE` records and a separate M-Pesa or Stripe configuration. Collection stays disabled until a Platform Owner confirms the account is authorized and provider credentials are configured. SaaS billing uses its own payment purposes and records.
 
 ### 👤 Authentication
 
@@ -116,14 +119,14 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Database-backed `Starter`, `Business`, and `Enterprise` plans with configurable prices, intervals, entitlements, and setup fees for merchant platform services.
 - During onboarding, merchants choose a monthly plan. Any configured one-time setup fee is paid first; that payment starts the six-month pilot on the selected plan (duration configurable with `NURAVA_MVP_PILOT_DAYS`). There are no automatic charges. Pilot-expiry reminders are sent at 14/7/1 days, and the selected plan’s first monthly payment is manually initiated from month seven, followed by a 14-day grace period before a delinquent storefront pauses with data preserved.
 - Merchant billing at `/manage/billing`: subscription status, setup-fee state, M-Pesa post-pilot activation and renewal collection, VAT/credit-aware invoices, scheduled plan changes, add-ons, and SaaS payment history. Stripe remains provider-ready but is not shown at launch.
-- Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, and failed SaaS payments.
+- Platform billing at `/platform/billing`: plan management, add-on visibility, subscription counts, paid invoice revenue, legacy commission visibility, customer billing records, failed SaaS payments, and independently enabled PayBill, Till, and/or registered-phone collection options. Merchants choose from the active platform options when paying setup fees or invoices; platform phone transfers require receipt review.
 - Super Admin operations at `/platform/operations`: cross-store metrics, merchant store directory, product/order/support counts, subscription and setup-fee status, recent activity, invoice visibility, storefront preview links, and authorized suspend/reactivate controls.
 - M-Pesa setup/first-subscription and renewal events are invoice-driven because Daraja collection is initiated per payment request. Historical Stripe webhook support remains available behind the future-provider boundary.
 - Light merchant onboarding is the default: identity, business-registration, location, KRA, and M-Pesa ownership documents, phone OTP, and platform review are not required to publish. Set `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` to restore the retained legacy review workflow. Account security, merchant terms, applicable billing, and platform suspension controls remain in force.
 - Merchant onboarding and first publication require an explicit, versioned acknowledgement of the current merchant terms, privacy notice, and merchant responsibilities. Acceptance records are included in merchant exports and preserved separately from workspace-retention deletion.
 - Plan limits are server-enforced for products, staff accounts, and custom domains; additions are blocked when the entitlement is unavailable or full.
 - `npm --workspace backend run worker:lifecycle` runs the credential-free lifecycle worker source: subscription expiry/grace transitions and due retention processing. It is not automatic until a scheduler is configured, and it will not process due private evidence without the configured private bucket.
-- Shopper order/payment records remain separate from merchant SaaS billing. In `MERCHANT_ROUTED` mode, each merchant self-declares a PayBill/Till, account name, and encrypted Daraja credentials. Provider responses determine whether a payment succeeds; callbacks confirm payment and failed payments restore reserved stock. Nurava's product-sale commission is always zero.
+- Shopper order/payment records remain separate from merchant SaaS billing. Merchant orders in `MERCHANT_ROUTED` mode use the merchant's own configured destination; platform-owned store orders use a separate platform product-sale route and `PRODUCT_SALE` purpose. Provider confirmations are verified server-side and retries are idempotent. Supplier costs remain private to Platform Admin.
 
 ### 📦 Backend API (App Router Route Handlers)
 
@@ -151,11 +154,13 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/auth/[...nextauth]` | GET, POST              | NextAuth handlers.                                                                                                                                                  |
 | `/api/billing/plans`      | GET                    | Lists active database-backed SaaS plans and add-ons for onboarding/catalog UI.                                                                                       |
 | `/api/manage/billing`     | GET, POST              | Tenant-scoped billing dashboard data and owner/admin subscription, add-on, setup-fee, renewal, cancellation, portal, and payment actions.                           |
-| `/api/manage/shopper-payments` | GET, PATCH | Owner/admin management of the merchant-declared PayBill/Till route; credentials are encrypted and never returned. |
-| `/api/payments/mpesa/initiate` | POST | Starts a tenant-scoped merchant-routed shopper STK Push for a pending order. |
+| `/api/manage/shopper-payments` | GET, PATCH | Owner/admin management of the tenant's PayBill/Till STK route or registered-phone manual-transfer route; credentials are encrypted and never returned. |
+| `/api/manage/shopper-payments/manual-receipts` | GET, POST | Lists tenant-scoped shopper phone-transfer receipts and lets authorized store staff verify or reject them. |
+| `/api/payments/mpesa/initiate` | GET, POST | Returns available merchant payment modes; starts an STK request or prepares a phone transfer, submits its receipt, or checks its review status for a pending tenant order. |
 | `/api/payments/mpesa/verify` | POST | Reconciles a tenant-scoped shopper M-Pesa request and confirms the pending order after provider verification. |
-| `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, customer billing records, revenue, commissions, invoices, and failed-payment reporting.                       |
+| `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, billing records and reporting, active PayBill/Till/phone collection options, and phone-transfer receipt review. |
 | `/api/platform/operations` | GET, PATCH             | Platform-role-protected cross-store metrics, tenant activity, store previews, billing summaries, and authorized store suspension/reactivation.                    |
+| `/api/platform/store/*` | GET, POST, PATCH | Platform-admin catalog and supplier management, orders, fulfillment, refund records, private sales reporting, and payment-route configuration. |
 
 ### 🔐 Backend Services & Utilities
 
@@ -178,7 +183,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - `initiateMpesaPayment` — STK Push request, stores `Payment` row (PENDING).
   - `verifyMpesaPayment` — STK Push query, maps `ResultCode` → status, confirms order.
   - `simulateMpesaPayment` — Sandbox C2B simulate helper.
-  - Merchant PayBill/Till credentials are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`, tenant-scoped, and never exposed to the browser. Light onboarding treats the route as merchant-declared, not ownership-verified; Daraja responses determine payment acceptance.
+  - Merchant PayBill/Till credentials are encrypted with `MERCHANT_VERIFICATION_ENCRYPTION_KEY`, tenant-scoped, and never exposed to the browser. A registered-phone merchant route uses manual Send Money and merchant receipt verification without Daraja credentials. Light onboarding treats destinations as merchant-declared, not ownership-verified; Daraja responses determine STK payment acceptance.
   - `MERCHANT_DIRECT` remains an explicit contact-only fallback; no shopper payment is initiated in that mode.
 - **Cards** (`backend/payments/cards/`) — Provider helpers and historical webhook support remain available, while new shopper initiation/verification endpoints fail closed; SaaS subscriptions use the M-Pesa launch path and retain future-provider compatibility:
   - `createCardPaymentIntent` — Creates PaymentIntent (KES), returns `clientSecret`, stores `Payment` row.
@@ -198,12 +203,12 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - `POST /api/payments/webhooks/mpesa/stk-callback` — M-Pesa STK callback.
   - `POST /api/payments/webhooks/mpesa/c2b` — M-Pesa C2B callback.
 - **Resend** (`backend/notifications/resend/`) — Real Resend email sending (re-exports from `lib/email.ts`).
-- **SMS** (`backend/notifications/sms/`) — Real Twilio SMS integration with order confirmation, status updates, payment requests, and support messages.
+- **SMS** (`backend/notifications/sms/`) — Provider-based SMS delivery. Africa's Talking is the default; the retained Twilio provider is activated only with `SMS_PROVIDER=twilio`.
 - **WhatsApp** (`backend/notifications/whatsapp/`) — Real WhatsApp Cloud API integration with order confirmation, status updates, payment requests, and support messages. Wired into `order.service.ts` for automated order status notifications.
 
 ### 🗄 Database (Prisma Schema)
 
-Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `MerchantEnquiry`, `MerchantQuote`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
+Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Supplier`, `SupplierProduct`, `SupplierFulfillment`, `Refund`, `PlatformStorePaymentConfiguration`, `Domain`, `Membership`, `Invitation`, `MerchantEnquiry`, `MerchantQuote`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
 
 Roles: `CUSTOMER`, `ADMIN`, `SUPERADMIN`. Order statuses: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`.
 
@@ -301,7 +306,7 @@ NovaTech Website/
 │   │   └── webhooks/            # Stripe + M-Pesa webhook handlers
 │   ├── notifications/
 │   │   ├── resend/              # Real Resend email sending
-│   │   ├── sms/                 # Real Twilio SMS integration
+│   │   ├── sms/                 # Provider-based SMS (Africa's Talking default, Twilio optional)
 │   │   └── whatsapp/            # Real WhatsApp Cloud API integration
 │   ├── security/                # Sanitization utilities
 │   ├── actions/                 # AdminLog audit + background task queue
@@ -360,15 +365,6 @@ NovaTech Website/
 | `NEXT_PUBLIC_R2_PUBLIC_URL`          | Public base URL for R2-hosted files                    |
 | `MERCHANT_VERIFICATION_ENCRYPTION_KEY` | 32-byte hex/base64 key for encrypted merchant verification details |
 | `RESEND_API_KEY`                     | Resend email API key                                   |
-| `RESEND_FROM_EMAIL`                  | Sender address verified with the production domain    |
-| `SMS_PROVIDER`                       | Production SMS provider: `africastalking` or `twilio`  |
-| `AFRICASTALKING_USERNAME`            | Africa's Talking production username                  |
-| `AFRICASTALKING_API_KEY`             | Africa's Talking production API key                   |
-| `AFRICASTALKING_SENDER_ID`           | Optional registered production sender ID              |
-| `SMS_PROVIDER_TIMEOUT_MS`            | SMS provider request timeout in milliseconds          |
-| `TWILIO_ACCOUNT_SID`                 | Twilio account SID when `SMS_PROVIDER=twilio`          |
-| `TWILIO_AUTH_TOKEN`                  | Twilio auth token when `SMS_PROVIDER=twilio`           |
-| `TWILIO_PHONE_NUMBER`                | Twilio sender number when `SMS_PROVIDER=twilio`        |
 | `WHATSAPP_TOKEN`                     | WhatsApp Cloud API token                               |
 | `WHATSAPP_PHONE_NUMBER_ID`           | WhatsApp Cloud API phone number ID                     |
 | `NEXT_PUBLIC_APP_URL`                | Public app URL (e.g. `http://localhost:3000`)          |
@@ -380,19 +376,31 @@ NovaTech Website/
 | `MPESA_CONSUMER_KEY`                 | M-Pesa Daraja consumer key                             |
 | `MPESA_CONSUMER_SECRET`              | M-Pesa Daraja consumer secret                          |
 | `MPESA_PASSKEY`                      | M-Pesa Daraja passkey (STK Push)                       |
-| `MPESA_SHORTCODE`                    | Production-registered M-Pesa business shortcode        |
-| `MPESA_ENV`                          | Production M-Pesa environment (`production`)          |
-| `MPESA_BUSINESS_NAME`                | Platform SaaS billing descriptor; production must be `Nurava Tech` |
+| `MPESA_SHORTCODE`                    | M-Pesa business shortcode (e.g. `174379`)              |
+| `MPESA_ENV`                          | M-Pesa environment: `sandbox` or `production`          |
+| `MPESA_BUSINESS_NAME`                | Registered platform SaaS billing business name; must match the name verified by M-Pesa |
+| `SHOPPER_PAYMENTS_TEST_MODE`         | Explicit staging-only test switch for the Nurava Tech demo store; keep `false` in production |
+| `SHOPPER_PAYMENTS_TEST_TENANT_SLUG`  | Must be `nuravatech` for the staging-only test switch to activate |
+| `NURAVA_DEPLOYMENT_TIER`              | Deployment identity used by the staging Vercel Production environment; set `staging` only on the staging deployment |
 | `STRIPE_SECRET_KEY`                  | Stripe secret key                                      |
 | `STRIPE_WEBHOOK_SECRET`              | Stripe webhook signing secret                          |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (frontend)                      |
 | `SEED_ADMIN_PASSWORD`                | Required only for development database seeding         |
 | `INITIAL_ADMIN_EMAIL`                | Production admin initialization email                  |
 | `INITIAL_ADMIN_PASSWORD`             | Production admin initialization password               |
+| `STAGING_URL`                        | Deployed staging URL for health checks                 |
 | `BACKUP_DATABASE_URL`                 | Source database URL for backup verification             |
 | `RESTORE_DATABASE_URL`                | Disposable restore target for backup verification      |
+| `E2E_PAYMENT_PROVIDER`                | Payment provider used by sandbox browser tests          |
 
 ---
+
+The staging-only shopper payment fixture is fail-closed and is restricted to
+the `nuravatech` store, non-production deployments, and `MPESA_ENV=sandbox`.
+When enabled, shopper payments reuse the existing sandbox Daraja environment
+credentials without creating a merchant payment profile or bypassing sign-in
+and store-admin permissions. It must be disabled before any production
+deployment.
 
 ## 🚀 Getting Started
 
@@ -520,19 +528,21 @@ npm run dev:open
   - Payment method breakdown (M-Pesa, Card, COD)
 - ✔️ **Rate limiting** — PostgreSQL-backed distributed buckets with a 60 req/min per-IP limit on sensitive endpoints
 - ✔️ **Email** — Resend integration with branded order-confirmation template
-- ✔️ **SMS notifications** — Real Twilio SMS integration with:
+- ✔️ **SMS notifications** — Africa's Talking by default, with Twilio available by explicit configuration:
   - Order confirmation SMS
   - Order status update SMS (CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)
   - Payment request SMS
   - Support message SMS
-  - Graceful "not configured" behavior when `TWILIO_*` env vars are absent
-  - Kenyan phone number formatting (+254 prefix)
+  - `SMS_PROVIDER` selects `africastalking` (default) or `twilio`; provider failures never fall back to another provider
+  - Kenyan and international phone number normalization to E.164
+  - Merchant phone OTPs retain expiry, one-use verification, resend cooldown, attempt limits, and rate limiting
+  - See [SMS provider setup](docs/sms-providers.md) for sandbox, production, and Vercel configuration
 - ✔️ **Cloudflare R2 storage** — Upload, delete, signed URL utilities
 - ✔️ **Prisma schema** — Complete relational data model
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
-- ✔️ **Payments** — Merchant-routed shopper M-Pesa STK Push uses each configured merchant's self-declared PayBill/Till; Daraja confirms payment and Nurava product commission remains zero; SaaS billing is separate
-- ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, Stripe Checkout subscriptions, invoice-driven M-Pesa renewals, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility
-- ✔️ **Merchant settlement boundary** — Product-sale funds are routed to the independent merchant's configured M-Pesa account; Nurava Tech is not merchant of record and receives no product-sale commission
+- ✔️ **Payments** — Merchant-routed shopper M-Pesa supports merchant PayBill/Till STK and registered-phone transfers with merchant receipt review; Nurava product commission remains zero and SaaS billing is separate
+- ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, invoice-driven M-Pesa collection, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility; Stripe compatibility remains behind the provider boundary and is not presented as an active launch method
+- ✔️ **Separated shopper settlements** — Independent merchant orders use the merchant's configured route and remain separate from platform-store product sales. Platform-store collection is independently configured and authorized; SaaS billing stays on its own payment-purpose path.
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 - ✔️ **Inventory service** — Complete inventory management backend with:
   - Low stock and out-of-stock product detection
@@ -579,7 +589,7 @@ The backend service layer is fully implemented with proper separation of concern
 
 - **`backend/payments/`** — M-Pesa (Daraja STK Push), Stripe Cards, and Webhook handlers with order confirmation emails
 
-- **`backend/notifications/`** — Real WhatsApp Cloud API, Twilio SMS, and Resend email integrations
+- **`backend/notifications/`** — Real WhatsApp Cloud API, provider-based SMS, and Resend email integrations
 
 **Note:** The Next.js App Router API routes in `frontend/src/app/api/` are the primary API interface. The backend services are shared modules used by these routes.
 
@@ -606,4 +616,4 @@ The implementation is feature-complete at code level, but production launch rema
 
 ---
 
-© Nurava Tech — Built with Next.js, Prisma & Tailwind CSS
+© Nurava HubStores — Built with Next.js, Prisma & Tailwind CSS
