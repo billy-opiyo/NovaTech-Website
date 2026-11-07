@@ -1,6 +1,6 @@
 # Nurava HubStores SaaS architecture decisions
 
-**Status:** Tenant foundation and source-level SaaS billing implementation complete; migrations through 0039 are verified on staging; production database/provider rollout remains gated
+**Status:** Platform-owned store commerce is implemented on `saas-staging`; migrations through 0042 and store provisioning are verified on staging; application deployment and provider/legal rollout remain gated
 **Date:** 2026-10-03 (positioning updated)
 
 This document records implementation defaults for the first controlled beta. It does not constitute legal, tax, payment-provider, or commercial advice.
@@ -8,8 +8,8 @@ This document records implementation defaults for the first controlled beta. It 
 ## Product scope
 
 - Nurava HubStores serves independent Kenyan merchants across diverse industries through configurable storefronts and catalog settings.
-- The platform serves diverse independent merchants through separate configured stores. It is not a multi-vendor marketplace and never mixes products from different stores in one cart.
-- The beta includes a hosted storefront, catalog discovery, staff memberships, theme/content controls, basic analytics, platform subdomains, merchant-routed shopper M-Pesa checkout with zero product commission, merchant-direct enquiry fallback, merchant SaaS billing, and platform support.
+- Independent merchants use separate configured stores. Nurava also operates its own first-party store at `/store/nurava-marketplace`; it is not a multi-vendor marketplace and never mixes products from different stores in one cart.
+- The beta includes hosted merchant and platform-owned storefronts, catalog discovery, staff memberships, theme/content controls, basic analytics, platform subdomains, merchant-routed shopper M-Pesa checkout with zero product commission, merchant-direct enquiry fallback, platform-store commerce, merchant SaaS billing, and platform support.
 - Advanced warehouse management, marketplace carts, custom application work, and enterprise database isolation remain later-stage work.
 
 ## Platform and tenant defaults
@@ -53,13 +53,13 @@ The following source-level behavior is now part of the `saas-staging` baseline:
 
 - `/stores` is the shopper-facing directory. It lists published stores whose tenant is active or trialing and links to each store's host-resolved storefront.
 - Store discovery is a platform-home action only: the platform homepage and directory expose the store-browsing path, while individual storefront headers do not show a `Browse Stores` action once a shopper is inside a merchant store.
-- The platform homepage and directory may show approved review ratings, review volume, product counts, and catalogue image previews to support store choice, but they do not create a shared marketplace cart. Product browsing, checkout, and payment remain inside the selected store; a shopper can either use merchant-routed M-Pesa or contact that merchant directly.
+- The platform homepage and directory may show approved review ratings, review volume, product counts, and catalogue image previews to support store choice, but they do not create a shared multi-store cart. The platform-owned store reuses shared merchant storefront pages and checkout components; its orders and payment route are scoped to the platform store. Independent merchant browsing, orders, and payment remain scoped to the selected merchant store.
 - Merchant store homepage component order and responsive layout remain shared across stores. Branding, hero copy, categories, featured products, testimonials, newsletter copy, contact details, and map links come from the active `StoreContext`; these merchant sections are not rendered on the platform root homepage.
 - Merchant storefront action controls remain host-specific. The platform root focuses on discovery, while merchant footers link back to the canonical Nurava HubStores homepage for choosing another store.
 - A signed-in shopper's `User.preferredStoreId` is updated after a valid host-based store resolution. The legacy preferred-store cookie is a browser fallback for returning visitors. Neither value authorizes access or replaces tenant scoping.
 - `?all=1` provides an explicit browse-all escape hatch when a preferred store would otherwise be selected.
 
-These behaviors are implemented in source. Public DNS/SSL, a live database migration, regenerated Prisma Client, and live multi-store browser verification remain deployment and Phase 5 tasks.
+These behaviors are implemented in source. Public DNS/SSL, deployment of unpushed source, and live multi-store browser verification remain deployment tasks.
 
 ## Commercial and payment gates
 
@@ -67,9 +67,10 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Launch commercial configuration is Kenya/KES, monthly billing, a six-month pilot (180 days by default, configurable via `NURAVA_MVP_PILOT_DAYS`) on the merchant-selected plan, a 14-day payment grace period, no automatic overages, and M-Pesa-only SaaS collection. A one-time setup fee must be paid before the pilot starts; the selected plan's monthly subscription becomes payable from month seven. The agreed SaaS billing policy is 16% VAT-inclusive pricing when enabled, no routine subscription refunds, conditional setup-fee refunds, and automatic outage credits; registration/classification, final legal/privacy wording, and provider identity remain launch gates.
 - Approved MVP billing policy: onboarding creates the selected-plan store workspace and pending billing records. A successful setup-fee M-Pesa callback starts the six-month pilot and sets its dates; zero-fee plans can start immediately. The lifecycle cron sends pilot-expiry reminders at 14, 7, and 1 day before the pilot ends and at the start and final days of the grace period (recorded as tenant notifications for idempotency). After the pilot, a 14-day grace period keeps the storefront available; if no monthly plan payment is received, the public storefront is paused while merchant data and workspace access are preserved. No automatic charges occur.
 - The source implementation now preserves public storefront access during `GRACE_PERIOD`, keeps M-Pesa add-ons pending until a successful invoice callback, enforces product-image storage and plan-aware analytics server-side, gates WhatsApp order updates by active add-on and shopper preference, records explicit tenant-scoped newsletter consent/unsubscribe state, and distinguishes billing pauses from platform suspensions for safe payment recovery. These schema-backed changes are represented by migrations `0015_commercial_alignment` and `0029_billing_suspension_reason` and still require deployment to the target database.
-- SaaS billing (merchant to Nurava HubStores) remains separate from shopper commerce (customer to merchant), with separate ledgers, webhooks, credentials, and audit events.
-- The shopper model remains merchant-direct in ownership: each independent merchant is seller of record and handles payment, delivery, refunds, warranty, taxes, and customer support. In `MERCHANT_ROUTED` mode, M-Pesa STK requests use the merchant's self-declared PayBill/Till and tenant-scoped encrypted credentials. Provider responses determine acceptance; Nurava HubStores does not receive product-sale funds or take commission.
-- SaaS billing stores tenant billing references and uses invoice-driven M-Pesa setup-fee, first-subscription, and renewal collection at launch. Stripe remains provider-ready but is disabled by the launch billing configuration. Shopper card payment remains disabled; shopper M-Pesa initiation and verification are enabled only in `MERCHANT_ROUTED` mode and fail closed otherwise.
+- SaaS billing (merchant to Nurava HubStores), independent merchant commerce (customer to merchant), and platform-store commerce (customer to Nurava's store) remain separate, with distinct payment purposes, ledgers, provider configurations, webhooks, and audit events.
+- Each independent merchant remains seller of its own products and handles its own payment, delivery, refunds, warranty, taxes, and customer support. In `MERCHANT_ROUTED` mode, M-Pesa STK requests use that merchant's self-declared PayBill/Till and tenant-scoped encrypted credentials; Nurava receives no merchant product-sale funds or commission.
+- Nurava is the operator of the platform-owned store. Its separately authorized `PRODUCT_SALE` route is distinct from SaaS billing and merchant destinations. Payment configuration stays disabled until authorized provider account credentials and settings are supplied; no platform-store payment route is implied to be live merely because the store is published.
+- SaaS billing stores tenant billing references and uses invoice-driven M-Pesa setup-fee, first-subscription, and renewal collection at launch. Stripe remains provider-ready but is disabled by the launch billing configuration. Shopper card payment remains disabled; merchant shopper M-Pesa initiation and verification remain enabled only in `MERCHANT_ROUTED` mode.
 
 ### Source-level SaaS billing behavior
 
@@ -80,7 +81,7 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - M-Pesa setup fees are invoiced and paid before the pilot; monthly subscriptions are invoiced from month seven and manually initiated. A successful provider callback updates the invoice/payment state and then synchronizes the related billing record, tenant, and subscription.
 - Under the default light-onboarding policy, merchant verification status is not a publication or public-discovery gate. `MERCHANT_ONBOARDING_MODE=VERIFICATION_REQUIRED` restores the retained review workflow from migration `0011_merchant_verification` and the secure verification migrations. Historical evidence remains subject to existing retention controls.
 - Merchant owners explicitly acknowledge versioned merchant terms, privacy notice, and merchant responsibilities at trial creation and before first selling publication. Acceptance records are exported and preserved with legal/billing records; changing a document version requires renewed acceptance.
-- Historical shopper order payments may have separate commission transactions using an effective plan rate snapshot. Merchant-routed shopper orders create zero-value product-sale commission audit records, and the merchant payment profile is tenant-scoped; credentials are encrypted and never returned to the browser.
+- Historical merchant shopper order payments may have separate commission transactions using an effective plan rate snapshot. Merchant-routed shopper orders create zero-value product-sale commission audit records, and the merchant payment profile is tenant-scoped; credentials are encrypted and never returned to the browser. Platform-store payments use the separate platform-owned configuration and never enter SaaS billing or merchant settlement.
 - Migration `0006_billing_system` and the regenerated Prisma Client must be deployed before the new billing routes can run against a target database. Live provider credentials, webhook registration, and sandbox/provider verification remain rollout gates.
 
 ### Shopper M-Pesa checkout decision (2026-09-06)
@@ -96,6 +97,14 @@ These behaviors are implemented in source. Public DNS/SSL, a live database migra
 - Platform SaaS collection can keep PayBill, Till, and registered-phone options active independently. Merchants choose an available platform option for setup fees and invoices; platform phone receipts require review by a Super Admin or Platform Owner. PayBill/Till use server-side Daraja consumer credentials and a protected destination passkey.
 - Migrations `0037_platform_mpesa_destination`, `0038_merchant_phone_shopper_payments`, and `0039_platform_mpesa_destination_options` are present in source. On 2026-10-13, migration 0039 was applied to the configured staging Neon database and Prisma reported the schema up to date. Production database migration state and live payment-provider flows remain unverified.
 - The merchant shopper-payment form clears the destination number when the account type changes. This keeps PayBill/Till and phone values from being carried across route types.
+
+### Platform-owned store implementation update (2026-11-07)
+
+- The canonical first-party store is `nurava-marketplace` (`platform-nurava-hubstores` / `nurava-hubstores-store`). It is published on the configured staging database, has 16 active industry-template categories, and starts with zero products; the provisioner is idempotent and creates no demonstration products.
+- The store reuses shared merchant storefront routes and features, including homepage sections, product/category browsing, product detail, cart, checkout, customer account/order surfaces, and policy pages. Its top navigation lists active industries and filters the shared catalog by industry. The store inherits the currently published platform theme preset and design overrides, while its own shopper legal defaults identify the platform-store operator.
+- Platform Admin `/platform/store` manages catalog, supplier data and private costs, fulfillment, refunds, payment configuration, and financial reporting. Supplier costs and credentials are server-protected. Store billing/verification/plan gates do not apply to the platform owner; merchant policies remain tenant-scoped and unchanged.
+- `PRODUCT_SALE` payment handling is isolated from SaaS billing and independent merchant payment routes. The route is disabled until a provider-authorized platform-store destination is configured. The staging store is provisioned; the associated application commit is `6ba344d`. Do not treat source/DB state as proof that the Vercel application has deployed it; deployment is controlled by the repository owner.
+- Staging migrations `0041_platform_owned_commerce` and `0042_category_industry_uniqueness` are applied and Prisma reports the schema current. Merchant agreement v1 remains the active application acceptance version. A proposed v2 agreement PDF is a draft pending legal review and an explicit acceptance rollout.
 
 ## Lifecycle and data policy defaults
 

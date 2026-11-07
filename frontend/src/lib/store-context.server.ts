@@ -49,6 +49,14 @@ function merchantLegalDefaults(storeName: string) {
 	}
 }
 
+function platformStoreLegalDefaults(storeName: string) {
+	return {
+		terms: `${storeName} is a Nurava HubStores-owned store. Product listings, customer orders, platform-store payment configuration, supplier coordination, returns, and support for this store are managed by Nurava HubStores. Platform-store payments use a separately designated route only when configured and authorized by the payment provider. This store is separate from independent merchant stores and their payment destinations.`,
+		privacy: `${storeName} uses shopper information to process platform-store orders, arrange supplier fulfillment and delivery, provide support, protect accounts, and communicate about purchases.`,
+		cookies: `This store uses necessary browser storage for authentication, security, shopping sessions, saved preferences, and reliable storefront operation. You can manage optional storage through your browser settings.`,
+	}
+}
+
 async function getPublishedPlatformSettings(): Promise<PlatformSiteSettings> {
 	try {
 		const settings = await prisma.platformSiteSettings.findUnique({ where: { id: "platform" }, select: { publishedSettings: true } })
@@ -116,6 +124,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			},
 		})
 		if (!store) return fallbackStoreContext(platformHome, platformSettings)
+		const resolvedPlatformSettings = store.ownerType === "PLATFORM"
+			? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), await getPublishedPlatformSettings())
+			: undefined
 
 		const theme = record(store.themeSettings)
 		const themeSnapshot = record(theme.themeSnapshot)
@@ -127,7 +138,24 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const socialSettings = record(contact.social)
 		const storedHomepage = record(store.homepageSettings)
 		const industryHomepage = defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset)
-		const homepageDefaults: Record<string, unknown> = store.industry?.slug === "electronics" ? clientConfig.homepage : {
+		const homepageDefaults: Record<string, unknown> = store.ownerType === "PLATFORM" ? {
+			...clientConfig.homepage,
+			heroTitle: "Shop the Nurava Store",
+			heroHighlight: "Curated for everyday needs",
+			heroDescription: "Explore products selected and fulfilled by the Nurava HubStores team.",
+			heroPrimaryLabel: "Shop products",
+			heroPrimaryHref: "/products",
+			heroSecondaryLabel: "View all products",
+			heroSecondaryHref: "/products",
+			categoryTitle: "Shop by category",
+			featuredTitle: "Featured products",
+			aboutTitle: `About ${store.name}`,
+			aboutDescription: `${store.name} is operated by Nurava HubStores. Browse the platform-owned catalog and contact the store team for order support.`,
+			footerDescription: `Shop products from the Nurava HubStores-owned store.`,
+			categories: [],
+			featuredProducts: [],
+			testimonials: [],
+		} : store.industry?.slug === "electronics" ? clientConfig.homepage : {
 			...clientConfig.homepage,
 			...industryHomepage,
 			aboutTitle: `About ${store.name}`,
@@ -139,15 +167,18 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			newsletterDescription: `Sign up for occasional updates about new arrivals, offers, and news from ${store.name}.`,
 		}
 		const homepage: Record<string, unknown> = { ...homepageDefaults, ...(store.industry?.slug === "electronics" ? {} : industryHomepage), ...storedHomepage }
-		delete homepage.heroImage
-		delete homepage.heroImageAlt
+		if (store.ownerType !== "PLATFORM") {
+			delete homepage.heroImage
+			delete homepage.heroImageAlt
+		}
 		const legalSettings = record(homepage.legal)
+		const legalDefaults = store.ownerType === "PLATFORM" ? platformStoreLegalDefaults(store.name) : merchantLegalDefaults(store.name)
 		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
 		const storedCategorySnapshots = store.ownerType === "PLATFORM"
-			? store.categories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
+			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
 			: Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []
@@ -181,7 +212,8 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 					? clientConfig.homepage.categories
 					: industryCategories.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(store.industry?.slug || "", category.name, category.imageUrl) }))
 		const categories = persistedCategories.filter((category) => categoryAvailability[category.slug] !== false).map((category) => {
-			const configuredImage = categoryImages[category.slug]
+			const industrySlug = "industrySlug" in category ? category.industrySlug : store.industry?.slug || "general"
+			const configuredImage = categoryImages[`${industrySlug}:${category.slug}`] || categoryImages[category.slug]
 			return typeof configuredImage === "string" && configuredImage.trim()
 				? { ...category, image: configuredImage }
 				: category
@@ -199,6 +231,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			return typeof link.name === "string" && typeof link.href === "string" ? [{ name: link.name, href: link.href }] : []
 		}) : defaultNavigation
 		const navigation = configuredNavigation.filter((link) => {
+			if (store.ownerType === "PLATFORM" && (/^\/stores(?:\/|\?|$)/.test(link.href) || /^\/onboarding(?:\/|\?|$)/.test(link.href) || /^\/platform/.test(link.href) || link.name.toLowerCase() === "browse stores")) return false
 			const categorySlug = link.href.match(/^\/category\/([^/?#]+)/)?.[1]
 			return !categorySlug || (categories.some((category) => category.slug === categorySlug) && categoryAvailability[categorySlug] !== false)
 		})
@@ -239,7 +272,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			industry: store.industry ? { id: store.industry.id, name: store.industry.name, slug: store.industry.slug } : null,
 			storePathPrefix: isPlatformHost(requestHeaders.get("host")) ? `/store/${encodeURIComponent(store.slug)}` : "",
 			publicationStatus: store.publicationStatus,
-			themeOverrides: themeOverridesFromIndustry(effectiveTheme),
+			themeOverrides: store.ownerType === "PLATFORM" ? undefined : themeOverridesFromIndustry(effectiveTheme),
+			platformTheme: resolvedPlatformSettings?.design,
+			platformSettings: resolvedPlatformSettings,
 			themeLayout: effectiveTheme ? { heroLayout: typeof effectiveTheme.heroLayout === "string" ? effectiveTheme.heroLayout : undefined, bannerStyle: typeof effectiveTheme.bannerStyle === "string" ? effectiveTheme.bannerStyle : undefined, productGridStyle: typeof effectiveTheme.productGridStyle === "string" ? effectiveTheme.productGridStyle : undefined } : undefined,
 			// Tenant branding is sourced only from the resolved merchant record.
 			// Do not inherit the platform name, logo, or favicon when a merchant
@@ -257,7 +292,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			},
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			navigation,
-			themePreset: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
+			themePreset: store.ownerType === "PLATFORM"
+				? resolvedPlatformSettings?.design?.themePreset || clientConfig.themePreset
+				: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
 			contact: { ...merchantContactDefaults, ...contact, whatsappNumber: configuredWhatsappNumber, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
 			social: {
@@ -269,7 +306,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			homepage: { ...homepageDefaults, ...homepage, heroPrimaryHref, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
 			features: { ...clientConfig.features, ...record(theme.features) },
-			legal: { ...merchantLegalDefaults(store.name), terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : merchantLegalDefaults(store.name).terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : merchantLegalDefaults(store.name).privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : merchantLegalDefaults(store.name).cookies },
+			legal: store.ownerType === "PLATFORM" && resolvedPlatformSettings?.legal
+				? { ...legalDefaults, ...resolvedPlatformSettings.legal }
+				: { ...legalDefaults, terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : legalDefaults.terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : legalDefaults.privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : legalDefaults.cookies },
 			platformTeam: [],
 			isPlatformHome: platformHome,
 		} as unknown as StoreContext

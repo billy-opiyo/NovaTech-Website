@@ -8,7 +8,7 @@ import { useStoreContext } from "@/lib/store-context"
 import type { PlatformDiscoveryCardKey } from "@/lib/platform-site-settings"
 import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 
-type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo"> & {
+type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo" | "isPlatformStore"> & {
 	href: string
 	productCount?: number
 	fallbackColor?: string
@@ -28,6 +28,7 @@ function getHeroStores(stores: HeroStore[]): HeroStore[] {
 	const demoOrder = new Map([["nuravatech", 0], ["nurava-furnitures", 1], ["nurava-cakes", 2], ["nurava-boutiques", 3]])
 	return [...stores]
 		.sort((left, right) => {
+			if (left.isPlatformStore !== right.isPlatformStore) return Number(right.isPlatformStore) - Number(left.isPlatformStore)
 			if (left.isDemo && right.isDemo) return (demoOrder.get(left.slug) ?? 99) - (demoOrder.get(right.slug) ?? 99)
 			return Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0)
 		})
@@ -46,7 +47,7 @@ function StoreCard({ store }: { store: HeroStore }) {
 			<div className="min-w-0">
 				<h3 className="break-words text-lg font-bold leading-tight text-theme-text group-hover:text-primary">{store.name}</h3>
 				<p className="mt-2 flex items-center gap-1 text-sm text-theme-muted"><Star size={14} className="fill-current text-yellow-400" /> {store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}{store.industry && ` · ${store.industry.name}`}</p>
-				{store.isDemo && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Platform demo</span>}
+				{store.isPlatformStore && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Nurava store · featured first</span>}{store.isDemo && !store.isPlatformStore && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Platform demo</span>}
 			</div>
 		</a>
 	)

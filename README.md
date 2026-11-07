@@ -1,6 +1,6 @@
 # Nurava HubStores — Multi-Industry Commerce Platform (Kenya)
 
-Nurava HubStores is a multi-industry commerce platform for diverse independent stores in the Kenyan market. Shoppers can discover approved published stores at `/stores`, while merchants create and operate their own storefronts, manage SaaS subscriptions, and pay through invoice-driven M-Pesa flows at launch. Stripe remains provider-ready for a future rollout.
+Nurava HubStores is a multi-industry commerce platform for independent merchants and a separately owned Nurava storefront. Shoppers can discover approved merchant stores at `/stores` or shop the published Nurava-owned store at `/store/nurava-marketplace`. Merchant SaaS billing and merchant shopper payments remain separate from the platform store's product-sale payment route.
 
 The project is a **monorepo** managed with **npm workspaces**, containing a Next.js 15 frontend and a Prisma/PostgreSQL backend.
 
@@ -44,14 +44,14 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 | Feature              | Description                                                                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Home Pages**       | The platform root is a social-proof store discovery homepage; each merchant host keeps its own hero, shop-by-category grid, featured products, customer testimonials, newsletter, and contact sections. |
+| **Home Pages**       | The platform root is a social-proof store discovery homepage. The platform-owned store and merchant stores reuse the shared storefront pages; merchant stores keep their own hero, categories, products, testimonials, newsletter, and contact sections. |
 | **Products Catalog** | Full product listing with brand filters, price range, in-stock/on-sale toggles, category filtering, sorting (newest, price, rating), search, and pagination.                                |
 | **Product Detail**   | Image gallery with zoom, product variants, pricing, stock status, merchant warranty information, reviews section, and direct merchant enquiry handoff. |
 | **Category Pages**   | Dynamic category landing pages and subcategories configured for each store.                                                                                                                 |
 | **Deals Page**       | Promotional deal cards linking into filtered product listings.                                                                                                                              |
 | **Compare Page**     | Side-by-side product comparison with spec tables and highlight win/loss indicators.                                                                                                         |
 | **Search Overlay**   | Responsive global search with `Ctrl+K`, popular searches, live product suggestions, keyboard-friendly navigation, and mobile positioning.                                                   |
-| **Theme System**     | Client-configured light/dark presets backed by CSS variables, with localStorage persistence and flash-free initialization.                                                                   |
+| **Theme System**     | The platform-owned store inherits the published platform theme; merchant stores retain their own theme settings. Both use light/dark CSS variables, localStorage persistence, and flash-free initialization. |
 | **Responsive UI**    | Responsive header, mobile navigation, footer, homepage sections, product details, and search overlay with accessibility refinements.                                                        |
 | **Public Pages**     | About, Blog, Contact, FAQs, Warranty, Return Policy, Privacy Policy, Cookie Policy, and Terms and Conditions.                                                                               |
 | **Store Directory**  | Public `/stores` discovery page linking shoppers to separate independent store hosts; each store keeps its own catalog and merchant contact flow. |
@@ -65,13 +65,16 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
   - **Save for later** / **Move to cart**
   - Subtotal, shipping estimate (free shipping over KES 50,000), and total calculations
 - **Cart Page** — optional product selection list with quantity controls and save-for-later support.
-- **Checkout and Merchant Handoff** — in `MERCHANT_ROUTED` mode, collects delivery details and creates a tenant-scoped pending order. A merchant can configure PayBill/Till Daraja credentials for STK Push or a registered M-Pesa phone for manual Send Money. Phone-transfer orders remain pending until the merchant verifies the shopper's receipt. Nurava charges zero product commission. WhatsApp/email handoff remains available.
+- **Merchant Checkout and Handoff** — in `MERCHANT_ROUTED` mode, collects delivery details and creates a tenant-scoped pending order. A merchant can configure PayBill/Till Daraja credentials for STK Push or a registered M-Pesa phone for manual Send Money. Phone-transfer orders remain pending until the merchant verifies the shopper's receipt. Merchant product commission remains zero. WhatsApp/email handoff remains available.
 - **Merchant Enquiries and Quotes** — `/manage/enquiries` provides status tracking, internal notes, enquiry history, and owner/admin quote creation with email delivery.
 - **Catalog Import/Export** — `/manage/catalog` provides CSV templates, preview validation, SKU-based create/update imports, entitlement checks, partial success reporting, audit records, and current catalog export.
 - **Launch Readiness** — `/manage/readiness` provides server-backed publication checks and blocks publishing while required tenant, verification, legal, contact, settings, or canonical-domain checks are incomplete.
 - **Centralized Store Permissions** — A server-side role matrix protects priority merchant mutations across catalog, orders, support, reviews, analytics, billing, domains, verification, team, enquiries, publishing, and exports.
+- **Platform-owned store** — `/store/nurava-marketplace` appears first in the platform homepage's Top Available Stores and the `/stores` directory. It inherits the published platform theme and platform-site footer settings, has its own customizable hero and category-card image uploads, and uses uploaded product images with full catalog CRUD. Platform Admin also manages private supplier details, manual fulfillment/refunds, sales reporting, a registered-phone receipt review queue, and the separately authorized product-sale payment route at `/platform/store`.
+- **Industry CMS navigation** — Active industries and their category templates feed the platform store navigation on desktop and mobile. Merchant onboarding remains limited to Electronics, Cakes, Furniture, and Boutiques.
 - **Operational Observability** — Critical operational responses include request IDs, structured safe failure events, and database-aware `/api/health` output.
-- **Platform boundary** — `MERCHANT_ROUTED` enables tenant-scoped shopper M-Pesa orders through a merchant-declared PayBill/Till STK route or registered-phone transfer with merchant receipt review; `MERCHANT_DIRECT` keeps contact-only checkout. Nurava HubStores does not receive product-sale funds or charge a product commission in either mode.
+- **Merchant payment boundary** — `MERCHANT_ROUTED` uses each merchant's own PayBill/Till STK route or registered-phone transfer with merchant receipt review; `MERCHANT_DIRECT` keeps contact-only checkout. Merchant sales do not route to the platform-owned store account and have no product commission.
+- **Platform-store payment boundary** — Platform-store orders use `PRODUCT_SALE` records and a separate M-Pesa or Stripe configuration. Collection stays disabled until a Platform Owner confirms the account is authorized and provider credentials are configured. SaaS billing uses its own payment purposes and records.
 
 ### 👤 Authentication
 
@@ -123,7 +126,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 - Merchant onboarding and first publication require an explicit, versioned acknowledgement of the current merchant terms, privacy notice, and merchant responsibilities. Acceptance records are included in merchant exports and preserved separately from workspace-retention deletion.
 - Plan limits are server-enforced for products, staff accounts, and custom domains; additions are blocked when the entitlement is unavailable or full.
 - `npm --workspace backend run worker:lifecycle` runs the credential-free lifecycle worker source: subscription expiry/grace transitions and due retention processing. It is not automatic until a scheduler is configured, and it will not process due private evidence without the configured private bucket.
-- Shopper order/payment records remain separate from merchant SaaS billing. In `MERCHANT_ROUTED` mode, each merchant self-declares a PayBill/Till and encrypted Daraja credentials, or a registered phone for manual Send Money. Daraja callbacks confirm STK payments; merchant review of a submitted receipt confirms phone transfers. Failed STK payments restore reserved stock. Nurava's product-sale commission is always zero.
+- Shopper order/payment records remain separate from merchant SaaS billing. Merchant orders in `MERCHANT_ROUTED` mode use the merchant's own configured destination; platform-owned store orders use a separate platform product-sale route and `PRODUCT_SALE` purpose. Provider confirmations are verified server-side and retries are idempotent. Supplier costs remain private to Platform Admin.
 
 ### 📦 Backend API (App Router Route Handlers)
 
@@ -157,6 +160,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 | `/api/payments/mpesa/verify` | POST | Reconciles a tenant-scoped shopper M-Pesa request and confirms the pending order after provider verification. |
 | `/api/platform/billing`   | GET, POST              | Platform-role-protected plan/add-on administration, billing records and reporting, active PayBill/Till/phone collection options, and phone-transfer receipt review. |
 | `/api/platform/operations` | GET, PATCH             | Platform-role-protected cross-store metrics, tenant activity, store previews, billing summaries, and authorized store suspension/reactivation.                    |
+| `/api/platform/store/*` | GET, POST, PATCH | Platform-admin catalog and supplier management, orders, fulfillment, refund records, private sales reporting, and payment-route configuration. |
 
 ### 🔐 Backend Services & Utilities
 
@@ -204,7 +208,7 @@ Detailed documentation is available in [`docs/README.md`](docs/README.md), with 
 
 ### 🗄 Database (Prisma Schema)
 
-Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Domain`, `Membership`, `Invitation`, `MerchantEnquiry`, `MerchantQuote`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
+Core models: `User`, `Account`, `Session`, `VerificationToken`, `Tenant`, `Store`, `Supplier`, `SupplierProduct`, `SupplierFulfillment`, `Refund`, `PlatformStorePaymentConfiguration`, `Domain`, `Membership`, `Invitation`, `MerchantEnquiry`, `MerchantQuote`, `Plan`, `Subscription`, `BillingCustomer`, `BillingRecord`, `Addon`, `AddonSubscription`, `Invoice`, `Payment`, `Transaction`, `Category`, `Product`, `Variant`, `CartItem`, `WishlistItem`, `RecentlyViewed`, `Order`, `OrderItem`, `Address`, `DeliveryRegion`, `Review`, `Coupon`, `Notification`, `SupportTicket`, `AdminLog`.
 
 Roles: `CUSTOMER`, `ADMIN`, `SUPERADMIN`. Order statuses: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`.
 
@@ -538,7 +542,7 @@ npm run dev:open
 - ✔️ **Seed data** — Admin user, categories, sample products, coupons
 - ✔️ **Payments** — Merchant-routed shopper M-Pesa supports merchant PayBill/Till STK and registered-phone transfers with merchant receipt review; Nurava product commission remains zero and SaaS billing is separate
 - ✔️ **SaaS billing** — Database-backed Starter/Business/Enterprise plans, invoice-driven M-Pesa collection, setup-fee tracking, add-ons, invoices, payment history, failed-payment handling, and legacy commission visibility; Stripe compatibility remains behind the provider boundary and is not presented as an active launch method
-- ✔️ **Merchant settlement boundary** — Product-sale funds are routed to the independent merchant's configured M-Pesa account; Nurava HubStores is not merchant of record and receives no product-sale commission
+- ✔️ **Separated shopper settlements** — Independent merchant orders use the merchant's configured route and remain separate from platform-store product sales. Platform-store collection is independently configured and authorized; SaaS billing stays on its own payment-purpose path.
 - ✔️ **Route protection middleware** — Admin and protected route guards with role-based access control
 - ✔️ **Inventory service** — Complete inventory management backend with:
   - Low stock and out-of-stock product detection

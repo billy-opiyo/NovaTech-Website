@@ -24,23 +24,49 @@ distinct experiences:
 3. **Merchant workspace:** authorized store users manage products, stock,
    orders, support, design, domains, verification, team, analytics, exports,
    and subscription billing.
-4. **Platform control plane:** Nurava operators manage tenants, verification,
-   plans, add-ons, billing visibility, operations, and suspension.
+4. **Platform-owned store:** Nurava operates a separate first-party store at
+   `/store/nurava-marketplace`, using the shared storefront pages and current
+   published platform theme. It is a single-owner store, not a multi-vendor cart.
+5. **Platform control plane:** Nurava operators manage tenants, verification,
+   plans, add-ons, billing visibility, operations, suspension, and platform-store
+   commerce.
 
-The current staging commerce model is <code>MERCHANT_ROUTED</code>. Nurava
-provides discovery, hosting, catalog presentation, and SaaS tools. In this
-mode, a shopper can create a pending order and pay through a merchant-configured
+Independent merchant checkout uses <code>MERCHANT_ROUTED</code>. A shopper can
+create a pending merchant order and pay through that merchant's configured
 PayBill/Till STK Push or by sending money to the merchant's registered M-Pesa
 phone. Daraja determines whether an STK payment completes; a phone-transfer
-order remains pending until the merchant verifies the receipt. Nurava
-does not receive or hold the product-sale money and charges no product-sale
-commission. The independent merchant remains seller of record and is
-responsible for the final price, delivery, taxes, refunds, warranty, and sale
-contract. Setting <code>SHOPPER_COMMERCE_MODEL=MERCHANT_DIRECT</code> restores
-contact-only checkout.
+order remains pending until the merchant verifies the receipt. The merchant
+remains seller of record and is responsible for the final price, delivery,
+taxes, refunds, warranty, and sale contract. Setting
+<code>SHOPPER_COMMERCE_MODEL=MERCHANT_DIRECT</code> restores contact-only
+checkout for independent merchant stores.
+
+The platform-owned store has separate platform order/payment handling and uses
+the same storefront shopping pages where applicable. Its product-sale payment
+route is separate from merchant destinations and SaaS billing, and only works
+after an authorized provider destination is configured. The staging store is
+published with 16 categories and no products; its payment route is not enabled.
 
 SaaS billing is different: merchant owners can pay Nurava plan, setup-fee,
 renewal, and add-on invoices through the configured platform provider.
+
+### Platform-owned store operations
+
+Authorized Platform Admins use `/platform/store` to edit the store's hero,
+category/featured/about copy, uploaded logo, hero, and category-card images,
+store contact details, catalog products and uploaded images,
+supplier records and costs, order fulfillment, refund records, payment settings,
+and sales/cost reporting. The admin page header includes a direct Storefront
+homepage link. The platform-store footer inherits its description,
+contact/social details, feature visibility, and legal copy from published
+Platform Admin site settings. It omits merchant support/onboarding and
+cross-store discovery links while retaining relevant platform/store links.
+Supplier records and costs are private platform data. Products require at least
+one uploaded image and can be edited, published/unpublished, or deleted when
+they have no order history. The platform payment route supports authorized
+PayBill/Till STK or a registered phone with shopper receipt submission and
+Platform Admin review. The route stays disabled until a Platform Owner confirms
+provider authorization. Store publication does not activate payments by itself.
 
 ## 2. Tenants, hosts, and isolation
 
@@ -625,7 +651,8 @@ routes remain disabled for shopper checkout. M-Pesa shopper routes work only
 when <code>SHOPPER_COMMERCE_MODEL=MERCHANT_ROUTED</code> and the merchant has
 an active configured payment profile. PayBill/Till uses the merchant's own
 Daraja credentials; registered-phone transfers require the merchant to review
-the submitted receipt.
+the submitted receipt. Platform-store payment APIs use a separate
+<code>PRODUCT_SALE</code> purpose, platform configuration, and authorization.
 
 ## 10. Integrations
 

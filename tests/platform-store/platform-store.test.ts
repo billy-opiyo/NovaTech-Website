@@ -5,6 +5,7 @@ import { assertTenantProductLimit } from "../../backend/billing/subscription"
 import { isApprovedMerchantIndustry } from "../../backend/lib/merchant-industry-policy"
 import { isPlatformOwnedStore } from "../../backend/lib/platform-store"
 import { summarizePlatformStoreFinancials } from "../../backend/lib/platform-store-report"
+import { resolveStoreTheme } from "../../frontend/src/lib/store-theme"
 import { getFilteredProducts } from "../../backend/services/productService"
 import { mockPrismaMethod } from "../tenant/mock-prisma-method"
 
@@ -13,6 +14,18 @@ test("platform store ownership requires the canonical owner type and key", () =>
 	assert.equal(isPlatformOwnedStore({ ownerType: "MERCHANT", platformOwnerKey: "nurava-hubstores" }), false)
 	assert.equal(isPlatformOwnedStore({ ownerType: "PLATFORM", platformOwnerKey: "other" }), false)
 	assert.equal(isPlatformOwnedStore(null), false)
+})
+
+test("platform-owned storefronts inherit the published platform theme while merchants retain their store theme", () => {
+	const platformDesign = { themePreset: "royal-purple", colors: { primary: "#7c3aed" } }
+	const platformTheme = resolveStoreTheme({ ownerType: "PLATFORM", themePreset: "royal-purple", platformTheme: platformDesign, themeOverrides: { colors: { primary: "#ff0000" } } })
+	assert.equal(platformTheme.preset.id, "royal-purple")
+	assert.equal(platformTheme.overrides, platformDesign)
+
+	const merchantOverrides = { colors: { primary: "#008000" } }
+	const merchantTheme = resolveStoreTheme({ ownerType: "MERCHANT", themePreset: "arctic-cobalt", platformTheme: platformDesign, themeOverrides: merchantOverrides })
+	assert.equal(merchantTheme.preset.id, "arctic-cobalt")
+	assert.equal(merchantTheme.overrides, merchantOverrides)
 })
 
 test("platform stores bypass merchant product entitlements while merchants still use them", async () => {

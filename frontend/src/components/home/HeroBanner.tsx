@@ -17,7 +17,15 @@ export default function HeroBanner() {
 		secondaryLabel: "Learn About the Platform",
 		secondaryHref: "/about",
 	}
-	const copy = store.isPlatformHome ? platformCopy : {
+	const copy = store.isPlatformHome ? platformCopy : store.ownerType === "PLATFORM" ? {
+		title: store.homepage.heroTitle || "Shop the Nurava Store",
+		highlight: store.homepage.heroHighlight || "Curated for everyday needs",
+		description: store.homepage.heroDescription || "Explore products selected and fulfilled by the Nurava HubStores team.",
+		primaryLabel: store.homepage.heroPrimaryLabel || "Shop products",
+		primaryHref: /^\/stores(?:\/|\?|$)/.test(store.homepage.heroPrimaryHref || "") ? "/products" : store.homepage.heroPrimaryHref || "/products",
+		secondaryLabel: store.homepage.heroSecondaryLabel || "View all products",
+		secondaryHref: store.homepage.heroSecondaryHref || "/products",
+	} : {
 		title: store.homepage.heroTitle,
 		highlight: store.homepage.heroHighlight,
 		description: store.homepage.heroDescription,
@@ -28,8 +36,9 @@ export default function HeroBanner() {
 	}
 	return (
 		<section data-hero-layout={store.themeLayout?.heroLayout || "centered"} className="relative overflow-hidden rounded-3xl glass-card navy-glass p-6 text-center sm:p-8 md:p-16">
+			{store.ownerType === "PLATFORM" && store.homepage.heroImage && <><img src={store.homepage.heroImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute inset-0 bg-theme-bg/80 backdrop-blur-[1px]"/></>}
 			<motion.div
-				className="mx-auto max-w-4xl"
+				className="relative z-10 mx-auto max-w-4xl"
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.8 }}

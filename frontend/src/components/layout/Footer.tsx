@@ -13,50 +13,56 @@ import { APP_DOWNLOAD_FILENAME, APP_DOWNLOAD_PATH, handleOpenAppClick, handleOpe
 
 const PLATFORM_HOME_URL = clientConfig.site.url
 
-const socialLinks = (store: ReturnType<typeof useStoreContext>) => [
+const socialLinks = (store: ReturnType<typeof useStoreContext>) => {
+	const platform = store.ownerType === "PLATFORM" ? store.platformSettings : undefined
+	const social = platform?.social || store.social
+	const contact = platform?.contact || store.contact
+	const features = platform?.features || store.features
+	return [
 	{
 		label: "Facebook",
-		href: store.social.facebook,
+		href: social.facebook,
 		icon: FaFacebookF,
 		color: "bg-blue-600 hover:bg-blue-700",
 	},
 	{
 		label: "Instagram",
-		href: store.social.instagram,
+		href: social.instagram,
 		icon: FaInstagram,
 		color: "bg-pink-600 hover:bg-pink-700",
 	},
 	{
 		label: "TikTok",
-		href: store.social.tiktok,
+		href: social.tiktok,
 		icon: FaTiktok,
 		color: "bg-black hover:bg-neutral-800",
 	},
 	{
 		label: "LinkedIn",
-		href: store.social.linkedin,
+		href: social.linkedin,
 		icon: FaLinkedinIn,
 		color: "bg-sky-700 hover:bg-sky-800",
 	},
 	{
 		label: "YouTube",
-		href: store.social.youtube,
+		href: social.youtube,
 		icon: FaYoutube,
 		color: "bg-red-600 hover:bg-red-700",
 	},
 	{
 		label: "X",
-		href: store.social.x,
+		href: social.x,
 		icon: FaTwitter,
 		color: "bg-black hover:bg-neutral-800",
 	},
-	...((store.features.showWhatsAppContact as boolean) === false ? [] : [{
+	...((features.showWhatsAppContact as boolean) === false ? [] : [{
 		label: "WhatsApp",
-		href: getWhatsAppChatHref(store.contact.whatsappNumber, store.contact.whatsappFloatingMessage),
+		href: getWhatsAppChatHref(contact.whatsappNumber || "", contact.whatsappFloatingMessage || ""),
 		icon: FaWhatsapp,
 		color: "bg-emerald-600 hover:bg-emerald-700",
 	}]),
-].filter((link) => Boolean(link.href))
+	].filter((link) => Boolean(link.href))
+}
 
 const shopperServiceLinks = [
 	{ label: "Contact Us", href: "/contact" },
@@ -75,6 +81,14 @@ const quickLinks = [
 	{ label: "About Us", href: "/about" },
 	{ label: "Shop", href: "/products" },
 	{ label: "Track Order", href: "/account/orders" },
+	{ label: "Blog", href: "/blog" },
+]
+
+const platformStoreQuickLinks = [
+	{ label: "Shop products", href: "/products" },
+	{ label: "Track order", href: "/account/orders" },
+	{ label: "About platform", href: "/about" },
+	{ label: "Contact Platform", href: "/contact" },
 	{ label: "Blog", href: "/blog" },
 ]
 
@@ -103,9 +117,14 @@ export default function Footer() {
 	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
 	const footerDescription = store.isPlatformHome
 		? store.site.footerDescription || `${store.brand.tagline}. Discover independent stores and contact merchants directly.`
+		: store.ownerType === "PLATFORM"
+		? store.platformSettings?.site?.footerDescription || store.site.footerDescription || `${store.brand.tagline}. Shop products from the platform-owned store.`
 		: store.homepage.heroDescription?.trim() || `Explore the products and offers available from ${store.brand.name}. Contact the store directly for assistance.`
 	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
+	const footerBrandName = store.ownerType === "PLATFORM"
+		? store.platformSettings?.brand?.name || store.brand.name
+		: store.brand.name
 
 	useEffect(() => {
 		const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
@@ -128,16 +147,16 @@ export default function Footer() {
 		<footer className="glass mt-20 border-t border-white/10">
 			<div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-10 pb-28 text-center sm:grid-cols-2 sm:py-12 sm:pb-28 md:gap-8 md:pb-24 lg:grid-cols-4 lg:pb-12 lg:text-left">
 				<div className="mx-auto max-w-xs lg:mx-0">
-					<h3 className="text-lg font-bold mb-4">{store.brand.name}</h3>
+					<h3 className="text-lg font-bold mb-4">{footerBrandName}</h3>
 					<p className="text-sm text-gray-600 dark:text-gray-400">
 						{footerDescription}
 					</p>
 				</div>
 
 				<div className="mx-auto lg:mx-0">
-					<h4 className="font-semibold mb-3">{store.isPlatformHome ? "Merchant Support" : "Customer Service"}</h4>
+					<h4 className="font-semibold mb-3">{store.isPlatformHome ? "Merchant Support" : store.ownerType === "PLATFORM" ? "Platform Support" : "Customer Service"}</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{(store.isPlatformHome ? merchantServiceLinks : customerServiceLinks).map(({ label, href }) => (
+						{(store.isPlatformHome ? merchantServiceLinks : store.ownerType === "PLATFORM" ? [{ label: "Contact Platform", href: "/contact" }, { label: "Platform FAQs", href: "/faqs" }] : customerServiceLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}
@@ -150,11 +169,11 @@ export default function Footer() {
 				<div className="mx-auto lg:mx-0">
 					<h4 className="font-semibold mb-3">Quick Links</h4>
 					<ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-						{!store.isPlatformHome && <>
+						{!store.isPlatformHome && store.ownerType !== "PLATFORM" && <>
 							<li><a href={platformHomeLink} className="font-semibold text-primary hover:underline">Platform Homepage</a></li>
 							<li><a href={platformBrowseStoresLink} className="hover:text-primary transition-colors">Browse Stores</a></li>
 						</>}
-						{(store.isPlatformHome ? platformQuickLinks : quickLinks).map(({ label, href }) => (
+						{(store.isPlatformHome ? platformQuickLinks : store.ownerType === "PLATFORM" ? platformStoreQuickLinks : quickLinks).map(({ label, href }) => (
 							<li key={href}>
 								<Link href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary transition-colors">
 									{label}
@@ -179,13 +198,13 @@ export default function Footer() {
 				</div>
 
 				<div className="mx-auto lg:mx-0">
-					{(store.features.showSocialLinks as boolean) !== false && <>
+					{(((store.ownerType === "PLATFORM" ? store.platformSettings?.features?.showSocialLinks : store.features.showSocialLinks) as boolean) !== false) && <>
 						<h4 className="font-semibold mb-3">Stay Connected</h4>
 						<div className="flex justify-center gap-3 lg:justify-start">
 							{socialLinks(store).map(({ label, href, icon: Icon, color }) => (
 							<Link
 								key={label}
-								href={href}
+								href={href!}
 								target="_blank"
 								rel="noreferrer"
 								aria-label={label}
@@ -197,10 +216,10 @@ export default function Footer() {
 						</div>
 					</>}
 					<p className="text-xs mt-4 text-gray-500">
-						© {year} {store.brand.name}. All rights reserved.
+						© {year} {footerBrandName}. All rights reserved.
 					</p>
 					<div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-gray-500 lg:justify-start">
-						{legalLinks.map(({ label, href }) => <Link key={href} href={href} className="hover:text-primary">{label}</Link>)}
+						{legalLinks.map(({ label, href }) => <Link key={href} href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary">{label}</Link>)}
 					</div>
 				</div>
 			</div>

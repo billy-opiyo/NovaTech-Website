@@ -9,7 +9,7 @@ Nurava HubStores is a **monorepo** managed with **npm workspaces**, containing:
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
 - **Backend**: Prisma ORM 6.19.3, PostgreSQL (Neon), Node.js
 
-The platform enables customers to discover published stores at `/stores`, browse and compare products, and complete a merchant-routed M-Pesa order or contact the selected merchant directly. Each merchant manages its own catalog and confirms its sale, payment, delivery, refunds, and warranty. Stores keep separate catalogs and storefront context, with categories and product attributes configured for each store.
+The platform enables customers to discover published stores at `/stores`, browse and compare products, and shop either independent merchant stores or Nurava's first-party store at `/store/nurava-marketplace`. Merchant orders use merchant-specific payment routes; the platform store has a separate `PRODUCT_SALE` payment purpose and provider configuration. Each merchant manages its own catalog, sale, payment, delivery, refunds, and warranty. The platform-owned store reuses shared storefront pages and inherits the currently published platform theme. The store is provisioned on staging with 16 active categories and no products; its payment route remains disabled pending provider authorization.
 
 ## Recent Changes
 
@@ -41,6 +41,10 @@ The current implementation also includes the following production hardening work
 - Added platform `/platform/billing` reporting and configuration for plans, add-ons, subscriptions, customers, revenue, commissions, invoices, and failed SaaS payments. Migration `0037_platform_mpesa_destination` added database-backed platform M-Pesa destinations; migration `0039_platform_mpesa_destination_options` allows PayBill, Till, and registered-phone options to be enabled independently and selected by merchants for setup fees and invoices.
 - Added merchant registered-phone shopper payments in migration `0038_merchant_phone_shopper_payments`. This route uses manual Send Money and merchant receipt verification; PayBill/Till shopper payments continue to use the merchant's own encrypted Daraja credentials and STK flow.
 - Added the platform operations control plane at `/platform/operations` with cross-store metrics, tenant/store search, activity and invoice feeds, storefront preview links, billing/setup-fee visibility, and authorized suspension/reactivation controls.
+- Added the platform-owned store at `/store/nurava-marketplace`, with a platform owner identity, shared storefront experience, published platform theme inheritance, active-industry navigation, private supplier and supplier-cost management, manual fulfillment/refund records, financial reporting, and a separate authorized product-sale payment route. Migrations `0041_platform_owned_commerce` and `0042_category_industry_uniqueness` are applied to staging; provisioning created 16 active categories and no demo products. The application deployment remains under repository-owner control.
+- Follow-up improvements list the platform-owned store first in `/stores` and platform-home Top Available Stores, remove Shop and cross-store discovery navigation from that storefront, and add its hero CMS, uploaded-image product CRUD, plus registered-phone payment and receipt review in Platform Admin.
+- Platform Admin can upload custom images for each platform-store category card, with industry CMS images retained as fallbacks. The store admin header links directly to its storefront homepage. The platform-store footer inherits the published Platform Admin site description, contact/social settings, feature visibility, and legal content; it retains relevant store/platform links while excluding merchant support/onboarding and cross-store Browse Stores links.
+- Added a versioned merchant agreement v2 draft in Markdown, HTML, and PDF that clarifies the platform-store boundary. The application continues to use `merchant-agreement-v1`; the draft requires legal review before activation.
 - Added the protected `/api/cron/lifecycle` Vercel Cron route with an hourly schedule, database-backed execution lease, subscription lifecycle sweep, pilot/grace reminders, and retention sweep. Configure `CRON_SECRET` and deploy the required migrations before enabling it in production.
 - Added admin audit logging for order status, product, coupon, and review changes.
 - Added login event recording for successful and failed credential authentication attempts.
@@ -124,7 +128,7 @@ Start the local server with `npm run dev`. The development server uses `http://l
 
 The tables below list every UI page implemented under `frontend/src/app`. `Signed in` pages redirect unauthenticated visitors to sign-in. The canonical merchant admin workspace is `/manage` on the merchant's verified host, while the Nurava HubStores platform control plane is `/platform` on the platform host. Both are server-protected and marked no-index. `/admin` is retained only as a legacy ADMIN/SUPERADMIN console and is not the merchant link to share.
 
-Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while the store's host shows that store's catalog and configured checkout/contact options. In `MERCHANT_ROUTED` mode, the platform records the tenant-scoped pending order and payment attempt; STK payment is confirmed by Daraja, while phone-transfer payment is confirmed by the merchant after receipt review. The merchant remains responsible for sale fulfillment, delivery, refunds, and warranty.
+Store discovery is separate from storefront commerce: `/stores` helps a shopper choose a store, while each store route shows that store's catalog and checkout options. Independent merchant orders in `MERCHANT_ROUTED` mode use the merchant's payment route; STK payment is confirmed by Daraja, while phone-transfer payment is confirmed by the merchant after receipt review. The Nurava-owned store uses a separate `PRODUCT_SALE` route and Platform Admin operations. Merchant responsibility for its own sale fulfillment, delivery, refunds, and warranty remains unchanged.
 
 ### Storefront
 
@@ -132,6 +136,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 |---|---|---|---|
 | Store directory | Public | [Open](http://localhost:3000/stores) | [Open](https://nuravatech.com/stores) |
 | Home | Public | [Open](http://localhost:3000/) | [Open](https://nuravatech.com/) |
+| Platform-owned store | Public; published catalog | `http://localhost:3000/store/nurava-marketplace` | `https://nuravatech.com/store/nurava-marketplace` |
 | Products | Public | [Open](http://localhost:3000/products) | [Open](https://nuravatech.com/products) |
 | Product detail | Public; dynamic | `http://localhost:3000/products/{product-slug}` | `https://nuravatech.com/products/{product-slug}` |
 | Store-configured category | Public; dynamic | `http://localhost:3000/category/{category-slug}` | `https://nuravatech.com/category/{category-slug}` |
@@ -145,6 +150,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Warranty | Public | [Open](http://localhost:3000/warranty) | [Open](https://nuravatech.com/warranty) |
 | Cart | Signed in | [Open](http://localhost:3000/cart) | [Open](https://nuravatech.com/cart) |
 | Merchant handoff | Signed in | [Open](http://localhost:3000/checkout) | [Open](https://nuravatech.com/checkout) |
+| Platform store checkout | Signed in; platform-store cart | `http://localhost:3000/store/nurava-marketplace/checkout` | `https://nuravatech.com/store/nurava-marketplace/checkout` |
 
 ### Authentication
 
@@ -208,6 +214,7 @@ Store discovery is separate from storefront commerce: `/stores` helps a shopper 
 | Merchant billing | Store owner/admin for mutations | `http://{store-slug}.localhost:3000/manage/billing` | `https://{merchant-host}/manage/billing` |
 | Platform overview | Platform role | [Open](http://localhost:3000/platform) | [Open](https://nuravatech.com/platform) |
 | Platform operations | Platform role | [Open](http://localhost:3000/platform/operations) | [Open](https://nuravatech.com/platform/operations) |
+| Platform store administration | Platform Admin; protected APIs | [Open](http://localhost:3000/platform/store) | [Open](https://nuravatech.com/platform/store) |
 | Platform billing | Platform owner/admin | [Open](http://localhost:3000/platform/billing) | [Open](https://nuravatech.com/platform/billing) |
 | Platform access | Super Admin | [Open](http://localhost:3000/platform/access) | [Open](https://nuravatech.com/platform/access) |
 | Merchant enquiries and quotes | Store membership; quote creation owner/admin | `http://{store-slug}.localhost:3000/manage/enquiries` | `https://{merchant-host}/manage/enquiries` |
@@ -242,7 +249,7 @@ API route handlers in `frontend/src/app/api` are intentionally excluded: they ar
 | **Auth** | NextAuth v5 (beta) — Google OAuth + Credentials |
 | **Email** | Resend |
 | **Storage** | Cloudflare R2 (AWS SDK v3) |
-| **Payments** | Merchant-direct shopper handoff or tenant-scoped merchant-routed M-Pesa checkout; invoice-driven M-Pesa SaaS billing, setup fees, add-ons, and receipt-reviewed phone transfers |
+| **Payments** | Merchant-direct handoff or tenant-scoped merchant-routed M-Pesa; separately configured platform-store `PRODUCT_SALE` route; invoice-driven M-Pesa SaaS billing |
 | **Notifications** | Africa's Talking SMS (default), optional Twilio SMS, WhatsApp Cloud API |
 | **Monorepo** | npm workspaces (`frontend` + `backend`) |
 

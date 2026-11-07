@@ -18,13 +18,20 @@ export async function getManualShopperPaymentDestination(tenantId: string) {
 	const tenant = await prisma.tenant.findUnique({
 		where: { id: tenantId },
 		select: {
+			kind: true,
 			verificationStatus: true,
 			verificationProfile: { select: { settlementAccountType: true, sensitiveDetailsCiphertext: true } },
 			store: { select: { slug: true } },
 			shopperPaymentProfile: { select: { accountType: true, shortcode: true, accountName: true, status: true, verifiedAt: true, credentialsCiphertext: true } },
 		},
 	})
-	if (!tenant || getNuravaShopperPaymentTestConfig(tenant.store?.slug)) return null
+	if (!tenant) return null
+	if (tenant.kind === "PLATFORM") {
+		const config = await prisma.platformStorePaymentConfiguration.findUnique({ where: { id: "platform-store" } })
+		if (config?.provider === "MPESA" && config.accountType === "PHONE" && config.enabled && config.authorizedAt && config.accountNumber) return { phone: config.accountNumber, accountName: config.accountName || "" }
+		return null
+	}
+	if (getNuravaShopperPaymentTestConfig(tenant.store?.slug)) return null
 	const profile = tenant.shopperPaymentProfile
 	if (!profile || profile.accountType !== "PHONE" || !["CONFIGURED", "ACTIVE"].includes(profile.status)) return null
 	if (isMerchantVerificationRequired()) {

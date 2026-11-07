@@ -1,10 +1,12 @@
 import type { ClientConfig } from "@/config/client.config"
-import type { PlatformSiteSettings, PlatformTeamMember } from "./platform-site-settings"
+import type { PlatformDesignSettings, PlatformSiteSettings, PlatformTeamMember } from "./platform-site-settings"
 import type { PlatformThemeOverrides } from "@/config/theme-presets"
 
 export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	homepage: Omit<ClientConfig["homepage"], "categories"> & {
 		categories: Array<{ name: string; slug: string; image: string }>
+		footerDescription?: string
+		heroImage?: string
 	}
 	tenantId: string
 	storeId: string
@@ -19,6 +21,8 @@ export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	isPlatformHome: boolean
 	platformTeam: PlatformTeamMember[]
 	platformSettings?: PlatformSiteSettings
+	/** Published platform design inherited by the platform-owned storefront. */
+	platformTheme?: PlatformDesignSettings
 	themeOverrides?: PlatformThemeOverrides
 	themeLayout?: { heroLayout?: string; bannerStyle?: string; productGridStyle?: string }
 	legal: {

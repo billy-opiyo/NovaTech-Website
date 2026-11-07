@@ -8,7 +8,7 @@ import type { TenantContext } from "../lib/tenant"
 
 type ProductStoreContext = Pick<TenantContext, "storeId" | "commerceSettings" | "ownerType">
 
-type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "slug" | "sku" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
+type ProductUpdateInput = Partial<Omit<ProductInput, "categoryId" | "variants" | "discountedPrice" | "warranty" | "specs">> & {
 		discountedPrice?: number | null
 		warranty?: string | null
 		specs?: Record<string, string> | null
@@ -300,7 +300,7 @@ export async function createProduct(data: ProductInput, tenantId: string) {
 }
 
 export async function updateProduct(slug: string, data: ProductUpdateInput, tenantId: string) {
-	const allowed = ["name", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "isTrending", "isPublished", "categoryId"]
+	const allowed = ["name", "slug", "sku", "description", "brand", "price", "discountedPrice", "stock", "warranty", "specs", "images", "isFeatured", "isNewArrival", "isTrending", "isPublished", "categoryId"]
 	const update = Object.fromEntries(Object.entries(data).filter(([key, value]) => allowed.includes(key) && value !== undefined))
 	if (update.price !== undefined) update.price = Number(update.price)
 	if (update.discountedPrice !== undefined && update.discountedPrice !== null) update.discountedPrice = Number(update.discountedPrice)
