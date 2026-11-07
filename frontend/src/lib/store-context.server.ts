@@ -134,6 +134,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			: store.industry?.defaultTheme
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
+		const contactValues = store.ownerType === "PLATFORM"
+			? { ...clientConfig.contact, ...resolvedPlatformSettings?.contact }
+			: contact
 		const socialSettings = record(contact.social)
 		const storedHomepage = record(store.homepageSettings)
 		const industryHomepage = defaultIndustryHomepage(store.industry || { name: "Store", slug: "store" }, store.industry?.homepagePreset)
@@ -239,14 +242,14 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const heroPrimaryHref = hiddenHeroCategory && categoryAvailability[hiddenHeroCategory] === false
 			? categories[0] ? `/category/${categories[0].slug}` : "/products"
 			: configuredHeroHref
-		const phoneDisplay = typeof contact.phoneDisplay === "string" ? contact.phoneDisplay : merchantContactDefaults.phoneDisplay
-		const email = typeof contact.email === "string" ? contact.email : merchantContactDefaults.email
-		const addressLine = typeof contact.addressLine === "string" ? contact.addressLine : merchantContactDefaults.addressLine
-		const cityCountry = typeof contact.cityCountry === "string" ? contact.cityCountry : merchantContactDefaults.cityCountry
+		const phoneDisplay = typeof contactValues.phoneDisplay === "string" ? contactValues.phoneDisplay : merchantContactDefaults.phoneDisplay
+		const email = typeof contactValues.email === "string" ? contactValues.email : merchantContactDefaults.email
+		const addressLine = typeof contactValues.addressLine === "string" ? contactValues.addressLine : merchantContactDefaults.addressLine
+		const cityCountry = typeof contactValues.cityCountry === "string" ? contactValues.cityCountry : merchantContactDefaults.cityCountry
 		const locationQuery = [addressLine, cityCountry].filter(Boolean).join(", ")
-		const customLocation = contact.addressLine !== undefined || contact.cityCountry !== undefined
-		const configuredMapLink = typeof contact.mapLink === "string" ? contact.mapLink : null
-		const configuredMapEmbedUrl = typeof contact.mapEmbedUrl === "string" ? contact.mapEmbedUrl : null
+		const customLocation = contactValues.addressLine !== undefined || contactValues.cityCountry !== undefined
+		const configuredMapLink = typeof contactValues.mapLink === "string" ? contactValues.mapLink : null
+		const configuredMapEmbedUrl = typeof contactValues.mapEmbedUrl === "string" ? contactValues.mapEmbedUrl : null
 		const mapLink = configuredMapLink !== null
 			? configuredMapLink
 			: customLocation && locationQuery
@@ -257,11 +260,15 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			: customLocation && locationQuery
 			? `https://www.google.com/maps?q=${encodeURIComponent(locationQuery)}&output=embed`
 			: merchantContactDefaults.mapEmbedUrl
-		const whatsappFloatingMessage = typeof contact.whatsappFloatingMessage === "string"
-			? contact.whatsappFloatingMessage
+		const whatsappFloatingMessage = typeof contactValues.whatsappFloatingMessage === "string"
+			? contactValues.whatsappFloatingMessage
 			: `Hello ${store.name}, I need help with my order.`
-		const whatsappMessage = `Hello ${store.name}, I need help with my order.`
-		const configuredWhatsappNumber = typeof contact.whatsappNumber === "string" ? contact.whatsappNumber : ""
+		const whatsappMessage = store.ownerType === "PLATFORM" && typeof contactValues.whatsappMessage === "string"
+			? contactValues.whatsappMessage
+			: `Hello ${store.name}, I need help with my order.`
+		const configuredWhatsappNumber = store.ownerType === "PLATFORM"
+			? typeof contactValues.whatsappNumber === "string" ? contactValues.whatsappNumber : ""
+			: resolveStoreWhatsAppNumber(store.slug, typeof contactValues.whatsappNumber === "string" ? contactValues.whatsappNumber : undefined)
 		return {
 			...fallbackStoreContext(false),
 			tenantId: store.tenantId,
@@ -295,7 +302,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				? resolvedPlatformSettings?.design?.themePreset || clientConfig.themePreset
 				: typeof theme.preset === "string" ? theme.preset as StoreContext["themePreset"] : clientConfig.themePreset,
 			seo: { ...clientConfig.seo, ...seo },
-			contact: { ...merchantContactDefaults, ...contact, whatsappNumber: configuredWhatsappNumber, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
+			contact: { ...merchantContactDefaults, ...contactValues, whatsappNumber: configuredWhatsappNumber, whatsappMessage, whatsappFloatingMessage, phoneDisplay, phoneHref: phoneDisplay ? `tel:${phoneDisplay.replace(/[^\d+]/g, "")}` : "", email, emailHref: email ? `mailto:${email}` : "", addressLine, cityCountry, mapLink, mapEmbedUrl },
 			social: {
 				...merchantSocialDefaults,
 				facebook: typeof socialSettings.facebook === "string" ? socialSettings.facebook : merchantSocialDefaults.facebook,
@@ -304,7 +311,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			},
 			homepage: { ...homepageDefaults, ...homepage, heroPrimaryHref, categories },
 			ecommerce: { ...clientConfig.ecommerce, ...commerce },
-			features: { ...clientConfig.features, ...record(theme.features) },
+			features: store.ownerType === "PLATFORM"
+				? { ...clientConfig.features, ...record(theme.features), ...resolvedPlatformSettings?.features }
+				: { ...clientConfig.features, ...record(theme.features) },
 			legal: store.ownerType === "PLATFORM" && resolvedPlatformSettings?.legal
 				? { ...legalDefaults, ...resolvedPlatformSettings.legal }
 				: { ...legalDefaults, terms: typeof legalSettings.terms === "string" && legalSettings.terms.trim() ? legalSettings.terms : legalDefaults.terms, privacy: typeof legalSettings.privacy === "string" && legalSettings.privacy.trim() ? legalSettings.privacy : legalDefaults.privacy, cookies: typeof legalSettings.cookies === "string" && legalSettings.cookies.trim() ? legalSettings.cookies : legalDefaults.cookies },
