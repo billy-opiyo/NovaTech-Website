@@ -35,14 +35,15 @@ function getHeroStores(stores: HeroStore[]): HeroStore[] {
 		.slice(0, 4)
 }
 
-function StoreCard({ store }: { store: HeroStore }) {
+function StoreCard({ store, platformLogo }: { store: HeroStore; platformLogo: string }) {
+	const logo = store.isPlatformStore ? platformLogo : store.logoUrl
 	return (
 		<a
 			href={store.href}
 			className="group flex min-h-28 items-center gap-4 rounded-2xl border border-theme-border bg-theme-surface p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg"
 		>
 			<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 dark:bg-white/10">
-				{store.logoUrl ? <img src={store.logoUrl} alt="" className="h-full w-full object-contain" /> : <Store className="text-primary" size={28} aria-hidden="true" />}
+				{logo ? <img src={logo} alt="" className="h-full w-full object-contain" /> : <Store className="text-primary" size={28} aria-hidden="true" />}
 			</div>
 			<div className="min-w-0">
 				<h3 className="break-words text-lg font-bold leading-tight text-theme-text group-hover:text-primary">{store.name}</h3>
@@ -73,6 +74,7 @@ function TrustStrip() {
 export default function PlatformHero({ stores }: { stores: Array<PlatformDiscoveryStore & { href: string }> }) {
 	const { theme } = useTheme()
 	const storeContext = useStoreContext()
+	const platformLogo = storeContext.platformSettings?.brand?.logo?.trim() || "/images/Nurava_HubStores_app_icon_logo.png"
 	const isLight = theme === "light"
 	const hero = storeContext.isPlatformHome ? storeContext.platformSettings?.hero : undefined
 	const heroTitle = hero?.title?.trim() || `${storeContext.platformBrandName} is the technology platform`
@@ -116,7 +118,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 						</span>
 					</label>
 				</div>
-				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">{heroStores.map((store) => <StoreCard key={store.id} store={store} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
+				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">{heroStores.map((store) => <StoreCard key={store.id} store={store} platformLogo={platformLogo} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
 			</section>
 		</section>
