@@ -7,6 +7,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { SHOPPER_COMMERCE_DISABLED_MESSAGE, isShopperCheckoutEnabled } from "backend/lib/commerce-model"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { getActivePlatformStorePaymentRoute } from "backend/payments/platform-store"
 
 const cardIntentSchema = z.object({
 	amount: z.number().positive(),
@@ -17,7 +18,6 @@ const cardIntentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-	if (!isShopperCheckoutEnabled()) return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
 	const rateLimitResponse = await rateLimiter(req, "card-create-intent")
 	if (rateLimitResponse) return rateLimitResponse
 
@@ -25,9 +25,11 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const validated = cardIntentSchema.parse(body)
 		const context = await resolveTenantFromRequest(req)
+		if (!isShopperCheckoutEnabled() && context.ownerType !== "PLATFORM") return NextResponse.json({ code: "MERCHANT_DIRECT_SALES", message: SHOPPER_COMMERCE_DISABLED_MESSAGE }, { status: 410 })
+		if (context.ownerType === "PLATFORM" && (await getActivePlatformStorePaymentRoute())?.provider !== "STRIPE") return NextResponse.json({ code: "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED", message: "Platform product-sale card collection is not configured and authorized." }, { status: 409 })
 		if (!validated.orderId) return NextResponse.json({ message: "A store order is required for card payment." }, { status: 400 })
 		{
-			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId }, select: { userId: true, guestEmail: true, paymentMethod: true } })
+			const order = await prisma.order.findFirst({ where: { id: validated.orderId, tenantId: context.tenantId, storeId: context.storeId }, select: { userId: true, guestEmail: true, paymentMethod: true } })
 			const session = await getServerSession()
 			if (!order || (order.userId && order.userId !== session?.user?.id) || (!order.userId && order.guestEmail !== validated.customerEmail.trim().toLowerCase())) {
 				return NextResponse.json({ message: "You cannot pay for this order" }, { status: 403 })
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
 			reference: validated.reference,
 			orderId: validated.orderId,
 			tenantId: context.tenantId,
+			storeId: context.storeId,
 		})
 
 		if (!result.ok) {

@@ -46,6 +46,8 @@ export async function assertTenantLimit(tenantId: string, metric: string, reques
 }
 
 export async function assertTenantProductLimit(tenantId: string, requested = 1) {
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { ownerType: true, platformOwnerKey: true } })
+	if (store?.ownerType === "PLATFORM" && store.platformOwnerKey === "nurava-hubstores") return
 	const limitValue = await getTenantEntitlement(tenantId, "productLimit", 50)
 	const limit = typeof limitValue === "number" ? limitValue : 50
 	const usage = await prisma.product.count({ where: { tenantId } })
@@ -72,6 +74,8 @@ export async function assertTenantStaffLimit(tenantId: string, requested = 1) {
 }
 
 export async function assertTenantCustomDomainLimit(tenantId: string, requested = 1) {
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { ownerType: true, platformOwnerKey: true } })
+	if (store?.ownerType === "PLATFORM" && store.platformOwnerKey === "nurava-hubstores") return
 	const enabled = await getTenantEntitlement(tenantId, "customDomain", false)
 	if (enabled !== true) {
 		const error = new Error("Custom domains are not included in this plan. Upgrade to add one.")
@@ -89,6 +93,8 @@ export async function assertTenantCustomDomainLimit(tenantId: string, requested 
 }
 
 export async function assertTenantStorageLimit(tenantId: string, requestedBytes: number) {
+	const store = await prisma.store.findUnique({ where: { tenantId }, select: { ownerType: true, platformOwnerKey: true } })
+	if (store?.ownerType === "PLATFORM" && store.platformOwnerKey === "nurava-hubstores") return
 	const limitValue = await getTenantEntitlement(tenantId, "storageGb", 2)
 	const limitGb = typeof limitValue === "number" ? limitValue : 2
 	const limitBytes = limitGb * 1024 * 1024 * 1024
@@ -103,6 +109,10 @@ export async function assertTenantStorageLimit(tenantId: string, requestedBytes:
 
 export async function reserveTenantStorageAsset(input: { tenantId: string; storeId: string; objectKey: string; bytes: number; kind?: string }) {
 	if (!Number.isInteger(input.bytes) || input.bytes < 1) throw new Error("Storage asset size is invalid")
+	const store = await prisma.store.findFirst({ where: { id: input.storeId, tenantId: input.tenantId }, select: { ownerType: true, platformOwnerKey: true } })
+	if (store?.ownerType === "PLATFORM" && store.platformOwnerKey === "nurava-hubstores") {
+		return prisma.storageAsset.create({ data: { tenantId: input.tenantId, storeId: input.storeId, objectKey: input.objectKey, bytes: input.bytes, kind: input.kind || "STORE_ASSET" } })
+	}
 	const limitValue = await getTenantEntitlement(input.tenantId, "storageGb", 2)
 	const limitGb = typeof limitValue === "number" ? limitValue : 2
 	const limitBytes = limitGb * 1024 * 1024 * 1024

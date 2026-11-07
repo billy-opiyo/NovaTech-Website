@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { isPlatformAdmin } from "backend/lib/platform-access"
 import { industryPatchSchema } from "backend/validators/industryValidator"
+import { syncPlatformStoreIndustryCategories } from "backend/lib/platform-store-catalog"
 
 async function platformAccess() {
 	const session = await auth()
@@ -32,6 +33,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 				...(data.defaultThemeId !== undefined ? { defaultThemeId: data.defaultThemeId } : {}),
 			},
 		})
+		await syncPlatformStoreIndustryCategories(industry.id)
 		return NextResponse.json({ industry })
 	} catch (error: unknown) {
 		if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") return NextResponse.json({ message: "Industry not found" }, { status: 404 })

@@ -39,12 +39,12 @@ export async function getManualShopperPaymentDestination(tenantId: string) {
 	return { phone: profile.shortcode, accountName: profile.accountName || "" }
 }
 
-export async function createManualShopperPayment(input: { tenantId: string; orderId: string; phone: string }) {
+export async function createManualShopperPayment(input: { tenantId: string; storeId?: string; orderId: string; phone: string }) {
 	const destination = await getManualShopperPaymentDestination(input.tenantId)
 	if (!destination) throw paymentError("This store has not configured an active registered M-Pesa phone for shopper payments.", 409, "MERCHANT_MANUAL_MPESA_NOT_READY")
 	return prisma.$transaction(async (transaction) => {
 		await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`manual-shopper-payment:${input.tenantId}:${input.orderId}`}))`
-		const order = await transaction.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId }, select: { id: true, total: true, status: true, paymentMethod: true } })
+		const order = await transaction.order.findFirst({ where: { id: input.orderId, tenantId: input.tenantId, ...(input.storeId ? { storeId: input.storeId } : {}) }, select: { id: true, storeId: true, total: true, status: true, paymentMethod: true } })
 		if (!order || order.paymentMethod !== "MPESA" || order.status !== "PENDING") throw paymentError("This order is not awaiting M-Pesa payment.", 409, "ORDER_NOT_PAYABLE")
 		if (!Number.isFinite(order.total) || order.total <= 0) throw paymentError("The order has an invalid payable total.", 409, "INVALID_ORDER_TOTAL")
 		const existing = await transaction.payment.findFirst({
@@ -59,12 +59,14 @@ export async function createManualShopperPayment(input: { tenantId: string; orde
 		const payment = await transaction.payment.create({
 			data: {
 				tenantId: input.tenantId,
+				storeId: order.storeId || undefined,
 				orderId: order.id,
 				provider: "mpesa-manual",
 				amount: order.total,
 				currency: "KES",
 				status: "PENDING",
 				kind: "ORDER",
+				purpose: "PRODUCT_SALE",
 				phoneNumber: input.phone,
 				metadata: { reference: `ORD-${order.id}`, manualMode: "PHONE_TRANSFER", manualDestination: destination },
 			},
@@ -124,6 +126,7 @@ export async function reviewManualShopperReceipt(input: { tenantId: string; paym
 		const claimed = await tx.payment.updateMany({ where: { id: payment.id, tenantId: input.tenantId, status: "PROCESSING", provider: "mpesa-manual" }, data: { status: "COMPLETED", metadata: reviewMetadata } })
 		if (!claimed.count) throw paymentError("This receipt has already been reviewed.", 409, "MANUAL_RECEIPT_ALREADY_REVIEWED")
 		const changedOrder = await tx.order.updateMany({ where: { id: payment.orderId!, tenantId: input.tenantId, status: "PENDING" }, data: { status: "CONFIRMED" } })
+		if (changedOrder.count === 1) await tx.supplierFulfillment.updateMany({ where: { status: "PENDING", orderItem: { orderId: payment.orderId! } }, data: { status: "READY_TO_FORWARD" } })
 		const order = await tx.order.findFirst({ where: { id: payment.orderId!, tenantId: input.tenantId }, select: { status: true } })
 		if (!order) throw paymentError("The payment order is no longer available.", 404, "ORDER_NOT_FOUND")
 		const refundRequired = changedOrder.count !== 1 && order.status === "CANCELLED"

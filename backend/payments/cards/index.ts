@@ -11,6 +11,7 @@ export type CardPaymentPayload = {
 	customerEmail: string
 	reference: string
 	tenantId?: string
+	storeId?: string
 	orderId?: string
 	metadata?: Record<string, unknown>
 }
@@ -37,6 +38,7 @@ export async function createCardPaymentIntent({
 	customerEmail,
 	reference,
 	tenantId,
+	storeId,
 	orderId,
 	metadata,
 }: CardPaymentPayload): Promise<CardIntentResult> {
@@ -61,7 +63,7 @@ export async function createCardPaymentIntent({
 
 	if (orderId) {
 		if (!tenantId) throw new Error("A store context is required for card checkout")
-		const order = await prisma.order.findFirst({ where: { id: orderId, tenantId }, select: { total: true, status: true, paymentMethod: true } })
+		const order = await prisma.order.findFirst({ where: { id: orderId, tenantId, ...(storeId ? { storeId } : {}) }, select: { total: true, status: true, paymentMethod: true, storeId: true } })
 		if (!order) throw new Error("Order not found")
 		if (order.status !== "PENDING") throw new Error("Order is no longer payable")
 		if (order.paymentMethod !== "CARD") throw new Error("This order was not created for card payment")
@@ -75,7 +77,7 @@ export async function createCardPaymentIntent({
 	}
 
 	const existing = await prisma.payment.findFirst({
-		where: { provider: "stripe", ...(tenantId ? { tenantId } : {}), metadata: { path: ["reference"], equals: reference } },
+		where: { provider: "stripe", ...(tenantId ? { tenantId } : {}), ...(storeId ? { storeId } : {}), ...(orderId ? { orderId, purpose: "PRODUCT_SALE" } : {}), metadata: { path: ["reference"], equals: reference } },
 	})
 	if (existing) {
 		if (!orderId || existing.orderId !== orderId || Math.abs(existing.amount - amount) > 0.01 || existing.currency.toUpperCase() !== currency.toUpperCase()) {
@@ -110,11 +112,13 @@ export async function createCardPaymentIntent({
 	const payment = await prisma.payment.create({
 		data: {
 			tenantId,
+			storeId: storeId || undefined,
 			orderId,
 			provider: "stripe",
 			amount,
 			currency,
 			status: "PENDING",
+			purpose: "PRODUCT_SALE",
 			providerReference: paymentIntent.id,
 			customerEmail,
 			metadata: mergeCardPaymentMetadata(metadata, { reference, clientSecret: paymentIntent.client_secret || undefined, orderId }),
@@ -141,6 +145,7 @@ export async function createCardPaymentIntent({
 export async function verifyCardPayment(
 	reference: string,
 	tenantId?: string,
+	storeId?: string,
 ): Promise<CardVerifyResult> {
 	if (!isStripeConfigured()) {
 		return {
@@ -160,6 +165,9 @@ export async function verifyCardPayment(
 		where: {
 			provider: "stripe",
 			...(tenantId ? { tenantId } : {}),
+			...(storeId ? { storeId } : {}),
+			purpose: "PRODUCT_SALE",
+			orderId: { not: null },
 			OR: [
 				{ providerReference: reference },
 				{ metadata: { path: ["reference"], equals: reference } },

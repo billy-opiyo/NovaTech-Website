@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/Toast"
 import { useStoreContext } from "@/lib/store-context"
+import { APPROVED_MERCHANT_INDUSTRY_SLUGS } from "backend/lib/merchant-industry-policy"
 
 type ExistingStore = { name: string; slug: string; publicationStatus: string }
 type Plan = { id: string; key: string; name: string; price: number | null; currency: string; billingInterval: "MONTH" | "YEAR" | null; setupFeeAmount: number }
@@ -48,7 +49,7 @@ export default function OnboardingPage() {
 		fetch("/api/industries", { cache: "no-store" }).then(async (response) => {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Industries are unavailable")
-			const options = Array.isArray(data.industries) ? data.industries as Industry[] : []
+			const options = Array.isArray(data.industries) ? (data.industries as Industry[]).filter((industry) => APPROVED_MERCHANT_INDUSTRY_SLUGS.includes(industry.slug as typeof APPROVED_MERCHANT_INDUSTRY_SLUGS[number])) : []
 			if (!options.length) throw new Error("No industries are currently available. Please try again shortly.")
 			setIndustries(options)
 			setIndustrySlug((current) => options.some((industry) => industry.slug === current) ? current : options.find((industry) => industry.slug === "electronics")?.slug || options[0].slug)

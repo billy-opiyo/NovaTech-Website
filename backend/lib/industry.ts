@@ -117,8 +117,17 @@ export async function validateAndNormalizeProductAttributes(
 	storeId: string,
 	tenantId: string,
 	input: unknown,
+	categoryId?: string,
 ) {
 	const store = await getStoreIndustry(storeId, tenantId)
-	if (!store?.industry) throw new Error("This store has no active industry configuration")
-	return normalizeIndustryAttributeInputs(store.industry.attributeDefinitions, input)
+	if (!store) throw new Error("This store has no active industry configuration")
+	const category = categoryId ? await prisma.category.findFirst({ where: { id: categoryId, tenantId, storeId }, select: { industryId: true } }) : null
+	const industryId = category?.industryId || store.industry?.id
+	if (!industryId) throw new Error("This store category has no active industry configuration")
+	const industry = store.industry?.id === industryId ? store.industry : await prisma.industry.findUnique({
+		where: { id: industryId },
+		include: { attributeDefinitions: { where: { active: true }, orderBy: { displayOrder: "asc" } } },
+	})
+	if (!industry?.active) throw new Error("This store category has no active industry configuration")
+	return normalizeIndustryAttributeInputs(industry.attributeDefinitions, input)
 }

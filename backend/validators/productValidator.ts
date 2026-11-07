@@ -21,6 +21,7 @@ const productFields = {
 	isFeatured: z.boolean().optional(),
 	isNewArrival: z.boolean().optional(),
 	isTrending: z.boolean().optional(),
+	isPublished: z.boolean().optional(),
 	variants: z
 		.array(
 			z.object({

@@ -1,0 +1,109 @@
+# Platform-Owned Store: Phase 1 Architecture Audit
+
+**Project:** NovaTech Website, `saas-staging`
+**Audit scope:** Read-only inspection of the current working tree and repository configuration. No code, database, or staging data was changed.
+**Purpose:** Assess the existing architecture for a Nurava HubStores-owned dropshipping store, including its multi-industry navigation/CMS requirement.
+
+## Executive findings
+
+1. **There is no first-class platform store owner today.** `Store.tenantId` is required and unique, with a required `Tenant` relation; onboarding creates a merchant tenant, membership, plan, subscription, billing customer, billing record, legal acceptance, and domain together. The platform homepage is a separate discovery context, not a catalog-owning store. Creating this store through merchant onboarding or assigning it a fake merchant account would violate the stated ownership and billing requirements.
+2. **Billing and publication are coupled to merchant tenant state.** Public store resolution checks tenant status and merchant verification. The standard publish path calls merchant launch-readiness checks for tenant status, verification, setup fee, selling terms, and contact/settings. Subscription lifecycle expiration suspends the tenant and its store. A platform owner needs an explicit ownership policy centralized at the server/domain layer, not frontend hiding or an unlimited plan.
+3. **Catalog, order, and payment services assume tenant-scoped merchant data.** Catalog CRUD and checkout select by `tenantId`; orders are stored against a tenant; customer payments are initiated using the merchant's own M-Pesa profile or manual phone destination. These flows cannot safely process platform-owned goods or route payment to the platform account without an explicit store/payment-purpose design.
+4. **Platform Admin does not currently manage a platform-owned catalog or its commerce.** It has tenant operations, plans/billing, and an industry CMS. Product, order, inventory, and shopper-payment administration use the selected store's tenant membership. There is no supplier, supplier cost, fulfillment assignment, returns, or refund workflow. `PaymentStatus.REFUNDED` alone does not implement refunds.
+5. **Industry/category CMS building blocks exist, but the requested navigation does not.** Platform Admin can create industries and edit their category templates. The platform homepage uses static platform navigation, and its mobile menu currently limits links to Home and Plans. The merchant onboarding API accepts any active industry slug; a four-industry limit is not enforced server-side in that route.
+6. **The existing routing can host the store without a second ecommerce app.** Middleware rewrites `/store/{slug}/...` to the existing storefront routes, and Vercel project hosts use this path form. The repository supports configurable staging URL checks through `STAGING_URL`, but no actual staging URL, live deployment status, environment variables, or staging database state was verified during this local audit.
+
+## 1. Current data model
+
+The authoritative schema is `backend/prisma/schema.prisma`.
+
+- **Ownership and lifecycle:** `Tenant` has merchant-oriented status, verification, plan, subscription, and billing relations. `Store.tenantId` is required/unique; a store has one tenant and one optional `Industry`/`StoreType`, plus publication and JSON settings. There is no store owner kind, platform owner identity, or supplier relation.
+- **Industry CMS:** `Industry` has `name`, unique `slug`, `active`, homepage preset, themes, category templates, product attributes, store types, and stores. `IndustryCategoryTemplate` is scoped to an industry and has active/display-order fields. Platform Admin APIs support adding/editing these records.
+- **Products and categories:** `Product` and `Category` carry nullable `tenantId` and `storeId`, with product name/description/brand/SKU/price/discount/stock/images, category, variants, attributes, and standard flags. No supplier, supplier SKU/reference, cost, supplier stock state, delivery estimate, or commercial provenance is modeled. Product category is required. Variants carry price modifiers and stock.
+- **Cart and checkout:** `CartItem` contains user, product, quantity, variant, and customizations; tenant is nullable. `Order` and `OrderItem` hold store sales data via nullable `tenantId`, item prices, total/shipping, address, tracking number, status, and an idempotency key. There is no explicit `storeId` or payment-purpose on `Order`, and no fulfillment task/supplier association.
+- **Payment and SaaS billing:** `Payment` is shared between order payments and SaaS invoices/subscriptions. It has nullable `tenantId` and `orderId`, optional invoice/subscription/billing record, `kind` (`ORDER`, `SETUP_FEE`, `SUBSCRIPTION`, `ADDON`, `RENEWAL`), amount/currency/status/provider/metadata. `Transaction` records order/payment, amount, commission, status, and metadata but is tenant-required and mainly used for order commission recording. `Invoice` is tenant-required and typed by SaaS invoice kind. No dedicated store-sale ledger, supplier expense, refund record, or reconciliation entity exists.
+- **Webhook idempotency:** `WebhookReceipt` provides provider/event receipt state; payment provider references are unique and orders have tenant/idempotency-key uniqueness. These are useful foundations, but do not alone cover supplier forwarding or a platform-store payment purpose.
+- **Inventory/delivery:** Product and variant stock are integer counts. `DeliveryRegion` has tenant, region, cost, and estimated min/max days. Order status progresses from pending through confirmed, processing, shipped, delivery, delivered, or cancelled. The workflow is merchant/store oriented; no supplier-fulfilled status, supplier notification, returns, or refund process is modeled.
+
+## 2. Execution paths traced
+
+### Store creation and publication
+
+`frontend/src/app/api/onboarding/store/route.ts` validates an active industry and monthly plan, creates a `TRIALING` tenant, Store, owner Membership, categories, legal acceptance, Subscription, BillingCustomer, BillingRecord, and platform subdomain Domain in one transaction. Setup fee determines whether the new subscription starts as `TRIALING` or `INCOMPLETE`.
+
+`frontend/src/app/api/manage/store/publish/route.ts` resolves the store from request context, requires `PUBLISH_STORE`, invokes `getLaunchReadiness`, verifies merchant verification and current selling legal acceptance, then publishes the draft and records a settings version. `backend/lib/launch-readiness.ts` checks tenant status, merchant verification, setup fee, legal acceptance, contact details, settings, and domains. It contains a notable existing behavior: an already-published store counts as setup-fee-ready; this is not a general platform exemption and must not become the design basis for the new owner type.
+
+### Public routing and tenant isolation
+
+`frontend/src/middleware.ts` rewrites `/store/{slug}/...` on platform/Vercel hosts into the existing storefront route while setting an internal store-slug header. `backend/lib/tenant.ts` resolves by that slug, a verified custom domain, or platform subdomain, then returns `tenantId` and `storeId`. It checks tenant status, `canMerchantSell(verificationStatus)`, and publication status. `frontend/src/lib/store-context.server.ts` loads settings and industry categories from the resolved store. This is reusable routing, but the current request context has no owner type and cannot distinguish a platform-owned store from a merchant tenant.
+
+### Product administration and checkout
+
+`backend/controllers/productController.ts` uses resolved tenant context plus store membership permissions for create/update/delete. `backend/services/productService.ts` enforces `assertTenantProductLimit`, resolves Store using `tenantId`, verifies the category belongs to that tenant/store, and validates attributes against the Store's single Industry. CSV import also enforces the tenant product limit. Public catalog reads use tenant context.
+
+`backend/controllers/orderController.ts` rejects shopper checkout when the commerce flag is disabled, resolves the store tenant, and requires the merchant's M-Pesa setup for M-Pesa orders. `backend/services/order.service.ts` reads product price and stock server-side, verifies product by tenant, computes shipping, stores an order with tenant, and atomically decrements stock. These checks correctly protect ordinary tenants but require an owner-aware store query for a platform catalog.
+
+### Payments, webhooks, and financial records
+
+For merchant order checkout, `frontend/src/app/api/payments/mpesa/initiate/route.ts` obtains merchant M-Pesa credentials or manual payment destination by tenant. Card payments create Stripe intents for an order scoped by tenant; the server checks the order total and store currency before creating the intent. Payment callbacks/webhooks are handled by `backend/payments/webhooks/index.ts`, which reconciles provider state and invokes order settlement. SaaS payments use separate invoice/subscription/setup-fee paths in `backend/billing/service.ts` and the platform M-Pesa destination configuration. Thus SaaS billing and shopper orders already have a `kind` distinction, but product purchases still settle through merchant-specific arrangements, and the current Platform M-Pesa destination is expressly a SaaS collection setting. Do not reuse it for product sales without a new designated purpose/configuration.
+
+Payment confirmation currently updates order/payment and records commissions/transactions; no customer refund provider operation or supplier expense reconciliation flow was found. Provider settlement capabilities and the staging account's approvals remain unverified.
+
+### Platform Admin and current industry behavior
+
+`frontend/src/app/platform/industries/page.tsx` and `/api/platform/industries` provide platform-admin-only industry creation and management, including category templates, attributes, themes, and store types. The public industries endpoint lists active industries. However, `frontend/src/components/layout/Header.tsx` selects a static `platformNavigation` for the platform homepage; `client.config.ts` navigation is electronics-specific. Mobile platform navigation currently filters to Home/Plans. Existing templates configure categories within each merchant store's one industry; they do not create cross-industry marketplace navigation or public industry-scoped platform catalog filters.
+
+Ordinary merchant UI may present only approved choices, but the authoritative POST schema (`backend/validators/storeValidator.ts`) accepts an arbitrary valid `industrySlug`, and onboarding only checks that this Industry is active. Therefore, the four-industry restriction is not enforced by the server route today and should be made explicit as part of the later implementation.
+
+## 3. Billing and entitlement blockers
+
+- **Tenant lifecycle / storefront access:** `backend/lib/tenant.ts` blocks non-public or suspended tenant status, unapproved merchants when verification is required, and non-published stores. `backend/billing/lifecycle.ts` expires subscriptions, changes tenant status, and suspends the associated Store; platform operations can also suspend/reactivate tenant stores.
+- **Publishing:** `backend/lib/launch-readiness.ts` expects merchant tenant status, verification, setup fee and legal acceptance. `frontend/src/app/api/manage/store/publish/route.ts` also requires store membership with `PUBLISH_STORE`.
+- **Plan limits/features:** `backend/billing/subscription.ts` resolves entitlements through tenant overrides/subscriptions and falls back to ordinary defaults (including a 50-product limit). `backend/services/productService.ts` and catalog import enforce product count. Custom domains, staff invitations, and file storage call tenant entitlement helpers. Store asset uploads therefore also have a tenant/storage relationship.
+- **Onboarding fees and subscription:** the onboarding route creates billing rows/subscriptions unconditionally for merchant stores. Billing service creates setup-fee and subscription invoices/payments; subscription webhooks/lifecycle update tenant status.
+- **Cross-cutting risk:** simply avoiding setup-fee checks or publishing directly still leaves tenant status/verification resolution, product limits, storage entitlements, membership-based management, shopper checkout enablement, merchant payment configuration, and suspension behavior. The owner type needs to be consulted by shared server-side policy functions and authorization, so one platform-owned store is excluded consistently while all merchant policy stays unchanged.
+
+## 4. Administration, fulfillment, and reporting gaps
+
+- Current platform operations list/manage **merchant tenants** and counts, not an independently owned platform store or platform commerce. Platform billing reports SaaS invoices and legacy commission records.
+- Existing catalog/order screens and APIs are tenant membership scoped. Platform Admin role by itself does not grant store-owner CRUD on an arbitrary store; platform store management needs explicit platform-admin authorization and per-store scope.
+- A product lacks supplier/cost/availability/delivery/provenance fields. Existing stock decrement assumes owned or merchant-controlled inventory. Manual supplier fulfillment can reuse the order status lifecycle, but should add explicit supplier/order fulfillment records and idempotent action state before forwarding orders.
+- Existing `REFUNDED` payment status is a data value only; no customer refund processor flow, refund audit record, partial refund representation, return case, supplier issue, cost/expense ledger, or margin reporting was identified.
+- Public product/catalog response projections must be reviewed when adding internal supplier/cost fields. Public routes currently return product data via `backend/services/productService.ts`; future field selection/serialization must keep all commercial internals server-only.
+
+## 5. Migrations, seeding, and staging constraints
+
+- Prisma migrations are sequential under `backend/prisma/migrations`; `0034_multi_industry_commerce` added Industry/Theme/Category templates and backfilled existing records, while later migrations include platform M-Pesa destination and contact inbox. The database has tenant-consistency triggers (`0021_tenant_consistency_triggers`) and numerous tenant-scoped indexes/foreign keys, so changes to ownership or tenant nullability need trigger/index review and backward-compatible additive migrations.
+- `backend/prisma/seed.ts` contains demo-store fixtures and upserts `novatech-store`; the standard seed path also has test/demo setup. Do not use ordinary seed or onboarding as the platform store provisioner: the desired idempotent provisioner must have a unique stable platform identity, only update explicitly owned config, preserve existing records, and never seed unapproved products. Inspect its exact execution mode and staging target before running later.
+- `vercel.json` configures only the lifecycle cron. `scripts/check-staging.mjs` requires `STAGING_URL` and checks `/api/health`. `scripts/check-env.mjs` requires `DATABASE_URL`, auth, and app URL, and warns if storage is incomplete. The active staging Vercel URL and its environment/database values are external configuration and were not queried or verified; do not infer them from `NEXT_PUBLIC_APP_URL` or branch name.
+- No staging database query, migration deployment, environment-variable change, or Vercel deployment was performed for this audit.
+
+## 6. Recommended schema and policy direction
+
+Use a **first-class owner discriminator** as the source of truth (for example `Store.ownerType = MERCHANT | PLATFORM` with an immutable platform-owner key identifying `nurava-hubstores`). Preserve the existing merchant tenant relation and constraints for ordinary stores. The detailed design must resolve how platform-owned commerce rows get a real authorization/data scope without fabricating a merchant; do not make a fake merchant tenant the sole ownership signal. Candidate approaches are a platform ownership/account scope that commerce tables can reference, or carefully generalized nullable merchant ownership paired with mandatory `storeId` and owner-aware access. Choose the smallest model after tracing every tenant-required relation and tenant-consistency trigger.
+
+Regardless of implementation choice:
+
+- Make store identity and ownership stable/unique, and centralize `isPlatformOwnedStore` policy on authoritative server-loaded records.
+- Add explicit `storeId`/purpose association where sales data currently only uses tenant scope, particularly Order/Payment/Transaction and supplier fulfillment/expense/refund records. Keep SaaS invoices and payment purpose separate from product sales.
+- Add supplier, supplier product reference, private cost, availability, delivery arrangement/estimate, and fulfillment state records. Use a manual, admin-confirmed fulfillment queue first; make forwarding/retry idempotent.
+- Keep sensitive fields out of storefront serialization and restrict platform store write APIs to authorized Platform Owner/Admin roles. Ordinary merchant membership and tenant filters must not authorize or mutate platform records.
+- Keep per-store industry configuration where appropriate, while adding a platform-store industry/nav assignment or visibility/order fields. Existing `IndustryCategoryTemplate` remains the category CMS; adding an industry in Platform Admin should not silently broaden merchant onboarding eligibility.
+
+## 7. Proposed implementation plan after approval
+
+1. **Schema and invariants:** finalize platform owner representation after auditing all tenant-required tables, composite uniqueness, migration triggers, user cart, reviews, notification, coupon, storage and analytics dependencies. Add only additive/backward-compatible migration changes; establish ownership uniqueness and server-derived store scope.
+2. **Provisioning and policy:** add an idempotent staging-safe provisioner keyed by a stable platform identity; it detects conflicts and preserves data. Add centralized owner-aware publication, tenant resolution, entitlement, and admin authorization policies. Add tests proving platform exemption and unchanged merchant billing/verification/limits.
+3. **Catalog CMS and navigation:** add a platform-store catalog administration interface using existing product/industry CMS foundations; let Platform Admin mark/order active industries for public platform navigation. Render the same configured entries on desktop and mobile/tablet. Keep merchant registration server-side constrained to the four approved industries (Electronics, Cakes, Furniture, Boutiques) and preserve existing merchant storefronts.
+4. **Manual supplier fulfillment:** add private supplier and cost data, supplier availability/delivery fields, order fulfillment cases, admin queue, manual actions and retry protection. Add order status handling for supplier-confirmed, dispatched, return/refund review and failures without changing ordinary store behavior.
+5. **Sales payments and reconciliation:** add a separately designated platform-store product-sales destination; verify actual provider capability and account approval before enabling. Derive order amount/currency/purpose from the stored order, verify callbacks/webhooks server-side, persist idempotent receipts and sale ledger entries, and maintain distinct SaaS payment reporting. Preserve merchant destinations.
+6. **Platform admin reporting and regression coverage:** add store/catalog/orders/fulfillment/refund/reporting screens and server APIs, segregate product revenue from SaaS revenue, and test the twelve Phase 7 gates including routing, privacy, isolation, retries, billing boundaries, and unchanged merchant checkout.
+7. **Staging verification and deployment:** identify and confirm `saas-staging` Vercel URL, env, database, payment sandbox and migration backup/rollback state; provision only after explicit staging-target confirmation. Run project-standard migration/build/tests and verify public route plus all merchant regressions. Do not deploy destructive changes, change payment routing, or alter unrelated staging settings without explicit approval.
+
+## 8. Affected source areas
+
+Primary files to revisit in approved implementation: `backend/prisma/schema.prisma`; `backend/prisma/migrations/*`; `backend/lib/tenant.ts`; `backend/lib/launch-readiness.ts`; `backend/lib/tenant-access.ts`; `backend/lib/platform-access.ts`; `backend/billing/subscription.ts`; `backend/billing/lifecycle.ts`; `backend/controllers/productController.ts`; `backend/services/productService.ts`; `backend/controllers/orderController.ts`; `backend/services/order.service.ts`; `backend/payments/mpesa/*`; `backend/payments/cards/*`; `backend/payments/webhooks/*`; `backend/billing/service.ts`; `frontend/src/app/api/onboarding/store/route.ts`; `frontend/src/app/api/manage/store/publish/route.ts`; `frontend/src/app/api/platform/industries/*`; `frontend/src/app/platform/industries/page.tsx`; `frontend/src/components/layout/Header.tsx`; `frontend/src/lib/store-context.server.ts`; product/order/payment admin APIs and screens; `backend/prisma/seed.ts` (only for carefully scoped fixtures/provisioning, not by modifying demo seed behavior); and relevant tenant, billing, industry, checkout, payment, and webhook regression tests.
+
+## Audit limitations
+
+This report traces the local `saas-staging` branch source and repository configuration. It does not prove the deployed Vercel build matches this tree, inspect live records, verify payment-provider account capabilities, or establish which products/supplier agreements are authorized. No tests were run, in line with the audit-only request.
