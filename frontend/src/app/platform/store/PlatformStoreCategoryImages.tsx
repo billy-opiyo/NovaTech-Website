@@ -1,5 +1,7 @@
 "use client"
 
+import { Loader2, Upload } from "lucide-react"
+
 type Category = { slug: string; name: string; imageUrl: string | null; industry: { name: string; slug: string } | null }
 
 export default function PlatformStoreCategoryImages({ categories, images, uploadingKey, disabled, upload, remove }: {
@@ -28,8 +30,8 @@ export default function PlatformStoreCategoryImages({ categories, images, upload
 						<p className="truncate text-sm font-semibold">{category.name}</p>
 						<p className="truncate text-xs text-gray-500">{category.industry?.name || "Industry"}</p>
 						<div className="mt-2 flex flex-wrap gap-2">
-							<label className="inline-flex cursor-pointer rounded border px-2 py-1 text-xs">
-								{isUploading ? "Uploading…" : "Upload image"}
+							<label className={`inline-flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-xs ${isUploading ? "cursor-wait opacity-60" : ""}`}>
+								{isUploading ? <><Loader2 size={12} className="animate-spin" aria-hidden="true"/>Uploading…</> : <><Upload size={12} aria-hidden="true"/>Upload image</>}
 								<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={disabled} onChange={(event) => { upload(event.target.files?.[0], key); event.target.value = "" }}/>
 							</label>
 							{images[key] && <button type="button" disabled={disabled} onClick={() => remove(key)} className="rounded border px-2 py-1 text-xs">Use default</button>}

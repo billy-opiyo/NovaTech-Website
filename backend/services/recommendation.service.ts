@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client"
 import prisma from "../lib/db"
+import { getPlatformStore, isPlatformOwnedStore } from "../lib/platform-store"
 import { getHiddenStoreCategorySlugs } from "./productService"
 
 export interface ProductRecommendation {
@@ -460,6 +461,27 @@ export async function getFeaturedProducts(tenantId: string, limit: number = 12):
 		...formatProduct(product),
 		reason: "Featured product",
 	}))
+}
+
+/** Return every published, active-catalog product owned by the platform store. */
+export async function getPlatformStoreHomepageProducts(): Promise<ProductRecommendation[]> {
+	const store = await getPlatformStore()
+	if (!store || !isPlatformOwnedStore(store)) return []
+	const products = await prisma.product.findMany({
+		where: {
+			tenantId: store.tenantId,
+			storeId: store.id,
+			isPublished: true,
+			category: { is: { active: true, industry: { is: { active: true } } } },
+		},
+		include: {
+			category: true,
+			variants: { where: { tenantId: store.tenantId }, select: { stock: true } },
+			reviews: { where: { moderationStatus: "APPROVED" }, select: { rating: true } },
+		},
+		orderBy: { createdAt: "desc" },
+	})
+	return products.map((product) => ({ ...formatProduct(product), reason: "Platform store catalog" }))
 }
 
 /**

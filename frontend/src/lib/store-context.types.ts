@@ -4,7 +4,7 @@ import type { PlatformThemeOverrides } from "@/config/theme-presets"
 
 export type StoreContext = Omit<ClientConfig, "homepage"> & {
 	homepage: Omit<ClientConfig["homepage"], "categories"> & {
-		categories: Array<{ name: string; slug: string; image: string }>
+		categories: Array<{ name: string; slug: string; image: string; industrySlug?: string; industryName?: string }>
 		footerDescription?: string
 		heroImage?: string
 	}
