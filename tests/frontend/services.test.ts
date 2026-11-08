@@ -7,7 +7,7 @@ import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from ".
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
-import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref } from "../../frontend/src/lib/store-home"
+import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
 import { getExternalHttpLinkUrl } from "../../frontend/src/lib/android-app-download"
 
@@ -114,6 +114,14 @@ test("store navigation keeps merchant routes inside the active storefront", () =
 	assert.equal(getStoreRouteHref(merchant, "/category/phones"), "/store/demo/category/phones")
 	assert.equal(getStoreRouteHref(merchant, "/store/demo/products"), "/store/demo/products")
 	assert.equal(getStoreRouteHref(platform, "/stores?all=1"), "/stores?all=1")
+})
+
+test("platform-owned store navigation retains its storefront Home link and excludes platform-only links", () => {
+	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Home", href: "/" }), true)
+	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Electronics", href: "/products?industry=electronics" }), true)
+	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Stores", href: "/stores?all=1" }), false)
+	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Home", href: "/?platformHome=1" }), false)
+	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Start Selling", href: "/onboarding" }), false)
 })
 
 test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {

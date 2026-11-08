@@ -12,7 +12,7 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { signOut, useSession } from "next-auth/react"
 import AccountAvatar from "@/components/account/AccountAvatar"
-import { getStoreHomeHref, getStoreRouteHref } from "@/lib/store-home"
+import { getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "@/lib/store-home"
 
 const platformNavigation = [
 	// Explicitly select the platform context so a remembered merchant store
@@ -38,7 +38,7 @@ export default function Header() {
 	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const homeHref = getStoreHomeHref(store)
-	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || (!/^\/stores(?:\/|\?|$)/.test(link.href) && !/^\/?(?:\?platformHome=1)?(?:#|$)/.test(link.href) && !/^\/onboarding(?:\/|\?|$)/.test(link.href) && !/^\/platform/.test(link.href))).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
+	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || shouldShowPlatformStoreNavigationLink(link)).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome ? navigation.filter((link) => link.name === "Home" || link.name === "Plans") : navigation
 	const platformLogo = store.platformSettings?.brand?.logo?.trim()
 	const logoSource = store.isPlatformHome || store.ownerType === "PLATFORM"

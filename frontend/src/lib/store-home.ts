@@ -17,3 +17,9 @@ export function getStoreRouteHref(store: Pick<StoreContext, "isPlatformHome" | "
 	if (normalizedHref === store.storePathPrefix || normalizedHref.startsWith(`${store.storePathPrefix}/`)) return normalizedHref
 	return `${store.storePathPrefix}${normalizedHref === "/" ? "" : normalizedHref}`
 }
+
+export function shouldShowPlatformStoreNavigationLink(link: { name: string; href: string }) {
+	if (/^\/?$/.test(link.href)) return link.name.trim().toLowerCase() === "home"
+	if (/^\/?\?platformHome=1(?:#|$)/.test(link.href) || /^\/stores(?:\/|\?|$)/.test(link.href) || /^\/?onboarding(?:\/|\?|$)/.test(link.href) || /^\/?platform(?:\/|\?|$)/.test(link.href)) return false
+	return true
+}
