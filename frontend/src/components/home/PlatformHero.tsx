@@ -42,7 +42,7 @@ function StoreCard({ store, platformLogo }: { store: HeroStore; platformLogo: st
 			href={store.href}
 			className="group flex min-h-28 items-center gap-4 rounded-2xl border border-theme-border bg-theme-surface p-4 transition hover:-translate-y-1 hover:border-primary hover:shadow-lg"
 		>
-			<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 dark:bg-white/10">
+			<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
 				{logo ? <img src={logo} alt="" className="brand-logo-image h-full w-full" /> : <Store className="text-primary" size={28} aria-hidden="true" />}
 			</div>
 			<div className="min-w-0">
