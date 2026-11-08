@@ -59,7 +59,7 @@ export default function Header() {
 					{/* Logo */}
 					<Link href={homeHref} className="flex min-w-0 shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-[18%] shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-							{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
+							{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={logoAlt} className="brand-logo-image h-full w-full p-1.5" /> : <Image src={logoSource} alt={logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="brand-logo-image p-1.5" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
 						<span className="flex min-w-0 flex-col">
 							<span

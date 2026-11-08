@@ -189,6 +189,13 @@
 		border-radius: 0.375rem;
 	}
 
+	/* Keep brand marks fully visible; generic card image rounding can clip their edges. */
+	.brand-logo-image {
+		object-fit: contain !important;
+		object-position: center !important;
+		transform: none !important;
+	}
+
 	/* The shared M-PESA wordmark appears in shopper and SaaS payment actions. */
 	.glass-card:has(h1) button.btn-primary:has(+ p.text-center.text-xs)::before,
 	.glass-card input[placeholder="07XXXXXXXX"] + button::before {

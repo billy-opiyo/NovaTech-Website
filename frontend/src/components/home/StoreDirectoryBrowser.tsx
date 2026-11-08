@@ -64,7 +64,7 @@ export default function StoreDirectoryBrowser({ stores }: { stores: DirectorySto
 							<div className="flex items-start justify-between gap-4">
 								<div className="flex min-w-0 items-center gap-4">
 									<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/70 p-2 dark:bg-white/10">
-										{store.isPlatformStore || store.logoUrl ? <img src={store.isPlatformStore ? platformLogo : store.logoUrl || undefined} alt={`${store.name} logo`} className="h-full w-full object-contain" /> : <StoreIcon className="text-primary" size={28} aria-hidden="true" />}
+										{store.isPlatformStore || store.logoUrl ? <img src={store.isPlatformStore ? platformLogo : store.logoUrl || undefined} alt={`${store.name} logo`} className="brand-logo-image h-full w-full" /> : <StoreIcon className="text-primary" size={28} aria-hidden="true" />}
 									</div>
 									<div className="min-w-0">
 										<h2 className="truncate text-xl font-bold group-hover:text-primary">{store.name}</h2>
