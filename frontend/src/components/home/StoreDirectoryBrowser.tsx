@@ -63,7 +63,7 @@ export default function StoreDirectoryBrowser({ stores }: { stores: DirectorySto
 						<a key={store.id} href={store.href} className="glass-card navy-glass group block p-6 transition hover:-translate-y-1 hover:shadow-xl">
 							<div className="flex items-start justify-between gap-4">
 								<div className="flex min-w-0 items-center gap-4">
-									<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/70 p-2 dark:bg-white/10">
+									<div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl">
 										{store.isPlatformStore || store.logoUrl ? <img src={store.isPlatformStore ? platformLogo : store.logoUrl || undefined} alt={`${store.name} logo`} className="brand-logo-image h-full w-full" /> : <StoreIcon className="text-primary" size={28} aria-hidden="true" />}
 									</div>
 									<div className="min-w-0">
