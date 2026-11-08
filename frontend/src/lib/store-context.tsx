@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, createContext, useContext } from "react"
+import { useRouter } from "next/navigation"
 import { themeToCssVariables } from "@/config/theme-presets"
 import { resolveStoreTheme } from "./store-theme"
 import { getStoreRouteHref } from "@/lib/store-home"
@@ -37,6 +38,7 @@ export function notifyStoreSettingsPublished(event: StoreSettingsPublishedEvent)
 }
 
 export function StoreContextProvider({ value, children }: { value: StoreContext; children: React.ReactNode }) {
+	const router = useRouter()
 	const [currentValue, setCurrentValue] = useState(value)
 	const scopeKey = `${value.isPlatformHome ? "platform" : "store"}:${value.storeId}:${value.storeSlug}`
 	const endpoint = getStoreRouteHref(value, "/api/public/site-context")
@@ -61,18 +63,22 @@ export function StoreContextProvider({ value, children }: { value: StoreContext;
 			}
 		}
 
+		const refreshPublishedContext = () => {
+			void refresh()
+			router.refresh()
+		}
 		const isRelevant = (event: StoreSettingsPublishedEvent) => {
-			if (isPlatformHome) return event.scope === "platform"
+			if (event.scope === "platform") return isPlatformHome || value.ownerType === "PLATFORM"
 			return event.scope === "store" && event.storeSlug === storeSlug
 		}
 		const handleMessage = (event: MessageEvent<StoreSettingsPublishedEvent>) => {
-			if (isRelevant(event.data)) void refresh()
+			if (isRelevant(event.data)) refreshPublishedContext()
 		}
 		const handleStorage = (event: StorageEvent) => {
 			if (event.key !== STORE_SETTINGS_STORAGE_KEY || !event.newValue) return
 			try {
 				const message = JSON.parse(event.newValue) as StoreSettingsPublishedEvent
-				if (isRelevant(message)) void refresh()
+				if (isRelevant(message)) refreshPublishedContext()
 			} catch {
 				// Ignore malformed compatibility messages.
 			}
@@ -101,7 +107,7 @@ export function StoreContextProvider({ value, children }: { value: StoreContext;
 			document.removeEventListener("visibilitychange", handleVisibility)
 			window.clearInterval(interval)
 		}
-	}, [endpoint, isPlatformHome, scopeKey, storeSlug])
+	}, [endpoint, isPlatformHome, router, scopeKey, storeSlug, value.ownerType])
 
 	useEffect(() => {
 		const resolvedTheme = resolveStoreTheme(currentValue)

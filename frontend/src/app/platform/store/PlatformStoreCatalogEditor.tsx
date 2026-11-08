@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
+import { notifyStoreSettingsPublished } from "@/lib/store-context"
 
 type Category = { id: string; name: string; industry?: { name: string } | null }
 type Supplier = { id: string; name: string }
 type Product = { id: string; name: string; slug: string; description: string; brand: string; sku: string; price: number; stock: number; images: string[]; isPublished: boolean; categoryId: string; category: { id: string; name: string }; supplierProduct?: { supplierId: string; supplierReference: string; supplierCost: number; availability: string; estimatedDeliveryMinDays?: number | null; estimatedDeliveryMaxDays?: number | null; deliveryNotes?: string | null } | null }
 const input = "w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:bg-dark-surface"
 
-export default function PlatformStoreCatalogEditor({ categories, suppliers, products, busy, requestReload, notify }: { categories: Category[]; suppliers: Supplier[]; products: Product[]; busy: boolean; requestReload: () => Promise<void>; notify: (message: string) => void }) {
+export default function PlatformStoreCatalogEditor({ categories, suppliers, products, busy, storeSlug, requestReload, notify }: { categories: Category[]; suppliers: Supplier[]; products: Product[]; busy: boolean; storeSlug: string; requestReload: () => Promise<void>; notify: (message: string) => void }) {
 	const [editing, setEditing] = useState<Product | null>(null)
 	const [images, setImages] = useState<string[]>([])
 	const [uploading, setUploading] = useState(false)
@@ -40,6 +41,7 @@ export default function PlatformStoreCatalogEditor({ categories, suppliers, prod
 			const response = await fetch(editing ? `/api/platform/store/catalog/products/${editing.id}` : "/api/platform/store/catalog", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editing ? { product, supplierProduct } : { action: "create_product", product, supplierProduct }) })
 			const body = await response.json()
 			if (!response.ok) throw new Error(body.message || "Product could not be saved")
+			notifyStoreSettingsPublished({ scope: "store", storeSlug })
 			notify(editing ? "Product updated" : "Product added")
 			setEditing(null); event.currentTarget.reset(); await requestReload()
 		} catch (error) { notify(error instanceof Error ? error.message : "Product could not be saved") }
@@ -48,7 +50,7 @@ export default function PlatformStoreCatalogEditor({ categories, suppliers, prod
 	async function remove(product: Product) {
 		if (!window.confirm(`Delete ${product.name}? Products with order history cannot be removed.`)) return
 		setSaving(true)
-		try { const response = await fetch(`/api/platform/store/catalog/products/${product.id}`, { method: "DELETE" }); const body = await response.json(); if (!response.ok) throw new Error(body.message || "Product could not be deleted"); notify(`${product.name} deleted`); await requestReload() }
+		try { const response = await fetch(`/api/platform/store/catalog/products/${product.id}`, { method: "DELETE" }); const body = await response.json(); if (!response.ok) throw new Error(body.message || "Product could not be deleted"); notifyStoreSettingsPublished({ scope: "store", storeSlug }); notify(`${product.name} deleted`); await requestReload() }
 		catch (error) { notify(error instanceof Error ? error.message : "Product could not be deleted") }
 		finally { setSaving(false) }
 	}
@@ -58,7 +60,7 @@ export default function PlatformStoreCatalogEditor({ categories, suppliers, prod
 		<div className="divide-y">{products.map((product) => <article key={product.id} className="flex flex-wrap items-center gap-4 py-4">
 			{product.images[0] && <img src={product.images[0]} alt={`${product.name} product`} className="h-16 w-16 rounded-lg object-cover" />}
 			<div className="min-w-0 flex-1"><p className="font-semibold">{product.name}</p><p className="text-sm text-gray-500">{product.category.name} · {product.sku} · KES {product.price.toLocaleString()} · stock {product.stock} · {product.isPublished ? "Published" : "Draft"}</p><p className="text-xs text-gray-500">{product.supplierProduct ? `${product.supplierProduct.availability} · private supplier cost KES ${product.supplierProduct.supplierCost.toLocaleString()}` : "No supplier linked"}</p></div>
-			<div className="flex flex-wrap gap-2"><button type="button" disabled={busy || saving} onClick={() => setEditing(product)} className="rounded border px-3 py-1.5 text-xs">Edit</button><button type="button" disabled={busy || saving} onClick={async () => { const response = await fetch(`/api/platform/store/catalog/products/${product.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product: { isPublished: !product.isPublished } }) }); const body = await response.json(); if (!response.ok) notify(body.message || "Publication update failed"); else { notify(product.isPublished ? "Product unpublished" : "Product published"); await requestReload() } }} className="rounded border px-3 py-1.5 text-xs">{product.isPublished ? "Unpublish" : "Publish"}</button><button type="button" disabled={busy || saving} onClick={() => void remove(product)} className="rounded border border-red-500/50 px-3 py-1.5 text-xs text-red-600">Delete</button></div>
+			<div className="flex flex-wrap gap-2"><button type="button" disabled={busy || saving} onClick={() => setEditing(product)} className="rounded border px-3 py-1.5 text-xs">Edit</button><button type="button" disabled={busy || saving} onClick={async () => { const response = await fetch(`/api/platform/store/catalog/products/${product.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product: { isPublished: !product.isPublished } }) }); const body = await response.json(); if (!response.ok) notify(body.message || "Publication update failed"); else { notifyStoreSettingsPublished({ scope: "store", storeSlug }); notify(product.isPublished ? "Product unpublished" : "Product published"); await requestReload() } }} className="rounded border px-3 py-1.5 text-xs">{product.isPublished ? "Unpublish" : "Publish"}</button><button type="button" disabled={busy || saving} onClick={() => void remove(product)} className="rounded border border-red-500/50 px-3 py-1.5 text-xs text-red-600">Delete</button></div>
 		</article>)}</div>
 		<form key={selected?.id || "new-product"} onSubmit={(event) => void save(event)} className="space-y-3 rounded-xl border p-4">
 			<h4 className="font-semibold">{selected ? `Edit ${selected.name}` : "Add product"}</h4>

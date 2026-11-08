@@ -6,7 +6,7 @@ import { getPlatformDomain } from "backend/lib/platform-domain"
 import { clientConfig } from "@/config/client.config"
 import { platformSiteSettingsPatchSchema } from "backend/validators/platformSiteSettingsValidator"
 import type { StoreContext } from "./store-context.types"
-import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
+import { DEFAULT_PLATFORM_TAGLINE, getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
 import { isVercelProjectHostname } from "./platform-store-route"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
 import { themeOverridesFromIndustry } from "./industry-theme"
@@ -322,10 +322,14 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				shortName: store.name,
 				logo: store.logoUrl?.trim() || "",
 				logoAlt: `${store.name} logo`,
-				favicon: store.faviconUrl?.trim() || "",
-				tagline: store.industry?.slug && store.industry.slug !== "electronics"
-					? `Your trusted ${store.industry.name.toLowerCase()} store`
-					: `Welcome to ${store.name}`,
+				favicon: store.ownerType === "PLATFORM"
+					? resolvedPlatformSettings?.brand?.favicon?.trim() || clientConfig.brand.favicon
+					: store.faviconUrl?.trim() || "",
+				tagline: store.ownerType === "PLATFORM"
+					? resolvedPlatformSettings?.brand?.tagline?.trim() || DEFAULT_PLATFORM_TAGLINE
+					: store.industry?.slug && store.industry.slug !== "electronics"
+						? `Your trusted ${store.industry.name.toLowerCase()} store`
+						: `Welcome to ${store.name}`,
 			},
 			site: { ...clientConfig.site, locale: store.defaultLocale.replace("-", "_"), currency: store.currency, country: store.country },
 			navigation,

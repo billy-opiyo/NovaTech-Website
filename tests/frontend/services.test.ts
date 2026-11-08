@@ -131,6 +131,30 @@ test("category card images preserve uploaded Electronics images instead of using
 	assert.notEqual(getCategoryCardImage(undefined, "Phones", "electronics"), uploadedImage)
 })
 
+test("platform tagline defaults consistently and preserves custom admin overrides", () => {
+	const settings = readFileSync("frontend/src/lib/platform-site-settings.ts", "utf8")
+	assert.match(settings, /DEFAULT_PLATFORM_TAGLINE = "Where Merchants and Shoppers Connect"/)
+	assert.match(settings, /tagline: DEFAULT_PLATFORM_TAGLINE/)
+	assert.match(settings, /!savedTagline \|\| savedTagline === clientConfig\.brand\.tagline \? DEFAULT_PLATFORM_TAGLINE : savedTagline/)
+	assert.match(settings, /tagline,/)
+})
+
+test("platform header renders the configurable tagline and storefront saves refresh rendered routes", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const provider = readFileSync("frontend/src/lib/store-context.tsx", "utf8")
+	const content = readFileSync("frontend/src/app/platform/store/PlatformStoreContentPanel.tsx", "utf8")
+	const catalog = readFileSync("frontend/src/app/platform/store/PlatformStoreCatalogEditor.tsx", "utf8")
+	const context = readFileSync("frontend/src/lib/store-context.server.ts", "utf8")
+	assert.match(header, /store\.brand\.tagline/)
+	assert.match(header, /store\.isPlatformHome \|\| store\.ownerType === "PLATFORM"/)
+	assert.match(context, /tagline: store\.ownerType === "PLATFORM"[\s\S]*?resolvedPlatformSettings\?\.brand\?\.tagline/)
+	assert.match(context, /favicon: store\.ownerType === "PLATFORM"[\s\S]*?resolvedPlatformSettings\?\.brand\?\.favicon/)
+	assert.match(provider, /router\.refresh\(\)/)
+	assert.match(provider, /event\.scope === "platform"\) return isPlatformHome \|\| value\.ownerType === "PLATFORM"/)
+	assert.match(content, /notifyStoreSettingsPublished\(\{ scope: "store", storeSlug \}\)/)
+	assert.match(catalog, /notifyStoreSettingsPublished\(\{ scope: "store", storeSlug \}\)/)
+})
+
 test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {
 	assert.equal(resolveDirectoryStoreLogo(null), null)
 	assert.equal(resolveDirectoryStoreLogo("https://cdn.example.com/store-logo.webp"), "https://cdn.example.com/store-logo.webp")
