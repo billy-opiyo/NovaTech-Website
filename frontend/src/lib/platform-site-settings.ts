@@ -28,6 +28,7 @@ export type PlatformResponsiveAssets = {
 export const PLATFORM_DISCOVERY_CARD_KEYS = ["businesses", "customers", "compare", "choose", "buyFromStore"] as const
 export type PlatformDiscoveryCardKey = typeof PLATFORM_DISCOVERY_CARD_KEYS[number]
 export type PlatformDiscoveryCardCopy = { title?: string; text?: string }
+export const DEFAULT_PLATFORM_TAGLINE = "Where Merchants and Shoppers Connect"
 
 export type PlatformDesignSettings = {
 	themePreset?: string
@@ -130,7 +131,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 	return {
 		brand: {
 			name: clientConfig.brand.name,
-			tagline: clientConfig.brand.tagline,
+			tagline: DEFAULT_PLATFORM_TAGLINE,
 			logo: clientConfig.brand.logo,
 			logoAlt: clientConfig.brand.logoAlt,
 			favicon: clientConfig.brand.favicon,
@@ -219,6 +220,8 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 	delete safePatch.hero
 	const defaults = getPlatformSiteSettingsDefaults().hero!
 	const nonBlank = (value: string | undefined, fallback: string) => value?.trim() || fallback
+	const savedTagline = patch.brand?.tagline?.trim() || base.brand?.tagline?.trim()
+	const tagline = !savedTagline || savedTagline === clientConfig.brand.tagline ? DEFAULT_PLATFORM_TAGLINE : savedTagline
 	const hero = {
 		title: nonBlank(patch.hero?.title, nonBlank(base.hero?.title, defaults.title!)),
 		highlight: nonBlank(patch.hero?.highlight, nonBlank(base.hero?.highlight, defaults.highlight!)),
@@ -244,7 +247,11 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 	const merged: PlatformSiteSettings = {
 		...safeBase,
 		...safePatch,
-		brand: { ...base.brand, ...patch.brand },
+		brand: {
+			...base.brand,
+			...patch.brand,
+			tagline,
+		},
 		site: { ...base.site, ...patch.site },
 		contact,
 		social: { ...base.social, ...patch.social },

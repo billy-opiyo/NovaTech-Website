@@ -57,15 +57,18 @@ export default function Header() {
 			<div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
 				<div className="flex items-center justify-between gap-1 py-3 sm:gap-2 sm:py-4">
 					{/* Logo */}
-					<Link href={homeHref} className="flex shrink-0 items-center gap-2">
+					<Link href={homeHref} className="flex min-w-0 shrink-0 items-center gap-2">
 						<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-[18%] shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
 							{logoSource ? (isRemoteLogo ? <img src={logoSource} alt={logoAlt} className="h-full w-full object-contain" /> : <Image src={logoSource} alt={logoAlt} fill sizes="(max-width: 640px) 40px, 44px" className="object-contain" />) : <StoreIcon className="absolute inset-0 m-auto text-primary" size={25} strokeWidth={1.9} aria-label="Store logo" />}
 						</div>
-						<span
-							className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
-							style={store.isPlatformHome ? { fontFamily: '"Times New Roman", Times, serif' } : undefined}
-						>
-							{store.brand.name}
+						<span className="flex min-w-0 flex-col">
+							<span
+								className={`whitespace-nowrap text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent sm:text-xl lg:text-2xl ${store.isPlatformHome ? "uppercase" : ""}`}
+								style={store.isPlatformHome ? { fontFamily: '"Times New Roman", Times, serif' } : undefined}
+							>
+								{store.brand.name}
+							</span>
+							{(store.isPlatformHome || store.ownerType === "PLATFORM") && <span className="truncate text-[9px] font-medium leading-tight text-gray-600 dark:text-gray-300 sm:text-[10px] lg:text-xs">{store.brand.tagline}</span>}
 						</span>
 					</Link>
 					<nav aria-label={store.isPlatformHome ? "Platform navigation" : `${store.brand.name} navigation`} className="hidden min-w-0 flex-1 overflow-x-auto overscroll-x-contain px-1 py-1 lg:block">
