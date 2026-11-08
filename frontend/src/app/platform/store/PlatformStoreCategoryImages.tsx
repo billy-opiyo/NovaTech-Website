@@ -15,7 +15,7 @@ export default function PlatformStoreCategoryImages({ categories, images, upload
 	return <section className="space-y-3 rounded-xl border p-4">
 		<div>
 			<h4 className="font-semibold">Category card images</h4>
-			<p className="mt-1 text-xs text-gray-500">Upload a custom image for each category card. Leave it empty to use its industry CMS image.</p>
+			<p className="mt-1 text-xs text-gray-500">Upload a custom image for each category card. Select “Save store content” below to apply uploads or removals to the storefront. Leave it empty to use its industry CMS image.</p>
 		</div>
 		<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 			{categories.map((category) => {

@@ -10,6 +10,7 @@ import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber }
 import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
 import { getExternalHttpLinkUrl } from "../../frontend/src/lib/android-app-download"
+import { getCategoryCardImage } from "../../frontend/src/constants/productImages"
 
 const originalFetch = globalThis.fetch
 let requests: { url: string; init?: RequestInit }[] = []
@@ -122,6 +123,12 @@ test("platform-owned store navigation retains its storefront Home link and exclu
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Stores", href: "/stores?all=1" }), false)
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Home", href: "/?platformHome=1" }), false)
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Start Selling", href: "/onboarding" }), false)
+})
+
+test("category card images preserve uploaded Electronics images instead of using name-based defaults", () => {
+	const uploadedImage = "https://cdn.example.com/platform-store/categories/phones.webp"
+	assert.equal(getCategoryCardImage(uploadedImage, "Phones", "electronics"), uploadedImage)
+	assert.notEqual(getCategoryCardImage(undefined, "Phones", "electronics"), uploadedImage)
 })
 
 test("platform store cards prefer each store logo and use the Nurava storefront logo as its fallback", () => {

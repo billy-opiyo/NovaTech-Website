@@ -106,7 +106,9 @@ export function getProductImage(source: string | undefined, name?: string, indus
 }
 
 export function getCategoryCardImage(source: string | undefined, name?: string, industrySlug?: string | null) {
-	const imageSource = getProductImage(source, name, industrySlug)
+	// Category CMS and platform-store uploads are explicit image choices. Do not
+	// replace them with product-name fallbacks (notably Phones/Laptops/etc.).
+	const imageSource = source?.trim() || getProductImage(undefined, name, industrySlug)
 	try {
 		const url = new URL(imageSource, typeof window === "undefined" ? "https://nurava.local" : window.location.origin)
 		if (url.hostname === "images.unsplash.com") {
