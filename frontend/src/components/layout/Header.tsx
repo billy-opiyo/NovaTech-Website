@@ -47,6 +47,27 @@ export default function Header() {
 	const store = useStoreContext()
 	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+	const mobileMenuRef = useRef<HTMLDivElement>(null)
+	const mobileMenuToggleRef = useRef<HTMLButtonElement>(null)
+	useEffect(() => {
+		if (!mobileMenuOpen) return
+
+		const dismissOnOutsidePointer = (event: PointerEvent) => {
+			const target = event.target as Node
+			if (mobileMenuRef.current?.contains(target) || mobileMenuToggleRef.current?.contains(target)) return
+			setMobileMenuOpen(false)
+		}
+		const dismissOnEscape = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setMobileMenuOpen(false)
+		}
+
+		document.addEventListener("pointerdown", dismissOnOutsidePointer)
+		document.addEventListener("keydown", dismissOnEscape)
+		return () => {
+			document.removeEventListener("pointerdown", dismissOnOutsidePointer)
+			document.removeEventListener("keydown", dismissOnEscape)
+		}
+	}, [mobileMenuOpen])
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || shouldShowPlatformStoreNavigationLink(link)).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome
@@ -127,6 +148,7 @@ export default function Header() {
 
 						{/* Mobile menu toggle */}
 						<button
+							ref={mobileMenuToggleRef}
 							className="rounded-full p-2 transition hover:bg-gray-200 dark:hover:bg-gray-700 lg:hidden"
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 							aria-expanded={mobileMenuOpen}
@@ -147,6 +169,7 @@ export default function Header() {
 						animate={{ opacity: 1, height: "auto" }}
 						exit={{ opacity: 0, height: 0 }}
 						id="site-mobile-menu"
+						ref={mobileMenuRef}
 						className="glass overflow-hidden border-t border-white/10 lg:hidden"
 					>
 						<div className="flex flex-col gap-3 px-4 py-4">
