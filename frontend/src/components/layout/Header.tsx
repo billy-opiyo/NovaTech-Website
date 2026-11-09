@@ -12,8 +12,7 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { signOut, useSession } from "next-auth/react"
 import AccountAvatar from "@/components/account/AccountAvatar"
-import { getPlatformHomepageHref, getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "@/lib/store-home"
-import { clientConfig } from "@/config/client.config"
+import { getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "@/lib/store-home"
 
 const platformNavigation = [
 	// Explicitly select the platform context so a remembered merchant store
@@ -48,15 +47,11 @@ export default function Header() {
 	const store = useStoreContext()
 	const { data: session, status: sessionStatus } = useSession()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-	const [platformHomepageHref, setPlatformHomepageHref] = useState(() => getPlatformHomepageHref("", "https:", clientConfig.site.url))
-	useEffect(() => {
-		setPlatformHomepageHref(getPlatformHomepageHref(window.location.host, window.location.protocol, clientConfig.site.url))
-	}, [])
 	const homeHref = getStoreHomeHref(store)
 	const navigation = store.isPlatformHome ? platformNavigation : store.navigation.filter((link) => store.ownerType !== "PLATFORM" || shouldShowPlatformStoreNavigationLink(link)).map((link) => ({ ...link, href: getStoreRouteHref(store, link.href) }))
 	const mobileMenuNavigation = store.isPlatformHome
 		? platformMobileNavigation
-		: [{ name: "Platform Homepage", href: platformHomepageHref }, ...navigation.filter((link) => link.name.toLowerCase() !== "platform homepage")]
+		: navigation
 	const platformLogo = store.platformSettings?.brand?.logo?.trim()
 	const logoSource = store.isPlatformHome || store.ownerType === "PLATFORM"
 		? platformLogo || "/images/Nurava_HubStores_app_icon_logo.png"
