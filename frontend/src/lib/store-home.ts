@@ -1,4 +1,16 @@
 import type { StoreContext } from "./store-context.types"
+import { isVercelProjectHostname } from "./platform-store-route"
+
+export function getPlatformHomepageHref(host: string, protocol: string, platformUrl: string) {
+	const normalizedHost = host.trim().toLowerCase()
+	const hostname = normalizedHost.split(":")[0]
+	const port = normalizedHost.includes(":") ? `:${normalizedHost.split(":").pop()}` : ""
+	if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")) {
+		return `${protocol}//localhost${port}/?platformHome=1`
+	}
+	if (isVercelProjectHostname(hostname)) return `${protocol}//${hostname}/?platformHome=1`
+	return `${platformUrl.replace(/\/+$/, "")}/?platformHome=1`
+}
 
 export function getStoreHomeHref(store: Pick<StoreContext, "isPlatformHome" | "storePathPrefix" | "storeSlug">) {
 	if (store.isPlatformHome) return "/?platformHome=1"
