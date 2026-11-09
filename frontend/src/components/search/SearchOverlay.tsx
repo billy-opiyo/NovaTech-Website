@@ -72,6 +72,8 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 	const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
 	const [selectedIndex, setSelectedIndex] = useState(-1)
 	const inputRef = useRef<HTMLInputElement>(null)
+	const overlayPanelRef = useRef<HTMLDivElement>(null)
+	const triggerRef = useRef<HTMLButtonElement>(null)
 	const isOpen = open ?? internalOpen
 	const setOpen = useCallback((nextOpen: boolean) => {
 		if (open === undefined) setInternalOpen(nextOpen)
@@ -98,6 +100,16 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 			inputRef.current.focus()
 		}
 	}, [isOpen])
+
+	useEffect(() => {
+		if (!isOpen) return
+		const closeOnOutsidePointer = (event: PointerEvent) => {
+			const target = event.target as Node
+			if (!overlayPanelRef.current?.contains(target) && !triggerRef.current?.contains(target)) setOpen(false)
+		}
+		document.addEventListener("pointerdown", closeOnOutsidePointer)
+		return () => document.removeEventListener("pointerdown", closeOnOutsidePointer)
+	}, [isOpen, setOpen])
 
 	useEffect(() => {
 		const normalizedQuery = query.trim().toLowerCase()
@@ -209,9 +221,10 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 		<>
 			{showTrigger && (
 				<button
-					onClick={() => setOpen(true)}
+					ref={triggerRef}
 					className={compactTrigger ? "inline-flex h-9 w-9 min-w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition hover:bg-primary/10 hover:text-primary dark:text-gray-200" : "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-white/10 text-gray-500 transition hover:text-gray-700 md:h-auto md:w-36 md:justify-start md:gap-2 md:px-3 md:py-2 lg:w-64 lg:px-4 dark:hover:text-gray-300"}
-					aria-label="Open search"
+					onClick={() => setOpen(!isOpen)}
+					aria-label={isOpen ? "Close search" : "Open search"}
 				>
 					<Search size={compactTrigger ? 20 : 16} aria-hidden="true" />
 					{!compactTrigger && <>
@@ -232,6 +245,7 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 							onClick={() => setOpen(false)}
 						/>
 						<motion.div
+							ref={overlayPanelRef}
 							initial={{ opacity: 0, y: -20, scale: 0.95 }}
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -20, scale: 0.95 }}

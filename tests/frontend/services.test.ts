@@ -7,7 +7,7 @@ import { getMyOrders, createOrder, updateOrderStatus, getOrderTracking } from ".
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart } from "../../frontend/src/services/cart"
 import { getTickets, getTicketStats, getTicketById, updateTicket, replyToTicket, submitContact } from "../../frontend/src/services/support"
 import { getMerchantWhatsAppHref, getWhatsAppChatHref, normalizeWhatsAppNumber } from "../../frontend/src/lib/merchant-contact"
-import { getMerchantStoreHomeHref, getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "../../frontend/src/lib/store-home"
+import { getMerchantStoreHomeHref, getPlatformHomepageHref, getStoreHomeHref, getStoreRouteHref, shouldShowPlatformStoreNavigationLink } from "../../frontend/src/lib/store-home"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "../../frontend/src/lib/platform-store-route"
 import { getExternalHttpLinkUrl } from "../../frontend/src/lib/android-app-download"
 import { getCategoryCardImage } from "../../frontend/src/constants/productImages"
@@ -123,6 +123,24 @@ test("platform-owned store navigation retains its storefront Home link and exclu
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Stores", href: "/stores?all=1" }), false)
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Home", href: "/?platformHome=1" }), false)
 	assert.equal(shouldShowPlatformStoreNavigationLink({ name: "Start Selling", href: "/onboarding" }), false)
+})
+
+test("platform homepage hamburger uses Pricings and includes platform support links", () => {
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	assert.match(header, /name: "Pricings", href: "\/\?platformHome=1#plans"/)
+	assert.match(header, /platformMobileNavigation = \[[\s\S]*?name: "Blog"[\s\S]*?name: "About Platform"[\s\S]*?name: "Merchant Support"[\s\S]*?name: "Merchant FAQs"[\s\S]*?name: "Contact Platform"/)
+	assert.match(header, /\? platformMobileNavigation/)
+})
+
+test("store hamburger can link to the right platform homepage host and search closes outside its panel", () => {
+	assert.equal(getPlatformHomepageHref("nuravatech-saas-staging.vercel.app", "https:", "https://nuravatech.com"), "https://nuravatech-saas-staging.vercel.app/?platformHome=1")
+	assert.equal(getPlatformHomepageHref("merchant.example.org", "https:", "https://nuravatech.com/"), "https://nuravatech.com/?platformHome=1")
+	assert.equal(getPlatformHomepageHref("merchant.localhost:3000", "http:", "https://nuravatech.com"), "http://localhost:3000/?platformHome=1")
+	const header = readFileSync("frontend/src/components/layout/Header.tsx", "utf8")
+	const search = readFileSync("frontend/src/components/search/SearchOverlay.tsx", "utf8")
+	assert.match(header, /name: "Platform Homepage", href: platformHomepageHref/)
+	assert.match(search, /addEventListener\("pointerdown", closeOnOutsidePointer\)/)
+	assert.match(search, /ref=\{overlayPanelRef\}/)
 })
 
 test("category card images preserve uploaded Electronics images instead of using name-based defaults", () => {
