@@ -7,6 +7,7 @@ import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type Pl
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
 import { FONT_SIZE_LABELS, FONT_SIZE_OPTIONS } from "@/lib/font-size-preference"
+import ConfirmDialog from "@/components/ui/ConfirmDialog"
 
 const initialSettings = getPlatformSiteSettingsDefaults()
 const NOVA_ORANGE_SPLASH_COLOR = "#c2410c"
@@ -36,6 +37,7 @@ export default function PlatformSiteSettingsPanel() {
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
 	const [publishedAt, setPublishedAt] = useState<string | null>(null)
+	const [memberToRemove, setMemberToRemove] = useState<PlatformTeamMember | null>(null)
 
 	useEffect(() => {
 		let active = true
@@ -264,7 +266,7 @@ export default function PlatformSiteSettingsPanel() {
 	}
 
 	return (
-		<div className="space-y-6 pb-12">
+		<div className="space-y-6 pb-12"><ConfirmDialog open={Boolean(memberToRemove)} title="Remove team member?" description={memberToRemove ? `${memberToRemove.name} will be removed from the platform team draft. Save and publish the settings to make this change live.` : ""} confirmLabel="Remove member" onCancel={() => setMemberToRemove(null)} onConfirm={() => { if (memberToRemove) removeTeamMember(memberToRemove.id); setMemberToRemove(null) }} />
 			<div>
 				<h2 className="text-3xl font-bold">Platform site settings</h2>
 				<p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-300">Manage {draft.brand?.name || "platform"} branding, contact details, social links, visibility, and SEO. These settings affect the platform pages only; each merchant storefront keeps its own settings.</p>
@@ -410,7 +412,7 @@ export default function PlatformSiteSettingsPanel() {
 									<div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-primary/30 bg-primary/10 text-xl font-bold text-primary">{member.image ? <img src={member.image} alt={`${member.name} profile preview`} className="h-full w-full object-cover" /> : member.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "NT"}</div>
 									<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploading ? "cursor-wait opacity-60" : ""}`}>{uploading ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Upload size={15} aria-hidden="true" />}{uploading ? "Uploading…" : "Upload profile image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingTeamImage !== null || busy !== "idle"} onChange={(event) => { void uploadTeamProfileImage(member.id, event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>
 								</div>
-								<button type="button" onClick={() => removeTeamMember(member.id)} disabled={busy !== "idle" || uploadingTeamImage !== null} className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50">Remove</button>
+								<button type="button" onClick={() => setMemberToRemove(member)} disabled={busy !== "idle" || uploadingTeamImage !== null} className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50">Remove</button>
 							</div>
 							<div className="mt-4 grid gap-4 md:grid-cols-2">
 								<label className="block text-sm font-medium">Name<input className={inputClass} value={member.name} onChange={(event) => updateTeamMember(member.id, { name: event.target.value })} /></label>

@@ -17,6 +17,7 @@ import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
 import type { CakeCustomizations } from "backend/lib/cake-customizations"
 import { getProductSupportDescription } from "@/lib/industry-copy"
+import ConfirmDialog from "@/components/ui/ConfirmDialog"
 
 type Variant = { name: string; value: string; priceModifier?: number | null; stock: number }
 type Review = {
@@ -70,6 +71,7 @@ export default function ProductDetailPage() {
 	const [cakeDietaryNotes, setCakeDietaryNotes] = useState("")
 	const [isInWishlist, setIsInWishlist] = useState(false)
 	const [wishlistBusy, setWishlistBusy] = useState(false)
+	const [confirmWishlistRemoval, setConfirmWishlistRemoval] = useState(false)
 
 	useEffect(() => {
 		if (!slug) return
@@ -151,7 +153,8 @@ export default function ProductDetailPage() {
 		addToast(`${loadedProduct.name} added to cart.`, "success")
 	}
 
-	async function toggleWishlist() {
+	async function toggleWishlist(confirmedRemoval = false) {
+		if (isInWishlist && !confirmedRemoval) { setConfirmWishlistRemoval(true); return }
 		if (!session?.user) {
 			router.push(getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(pathname || getStoreRouteHref(store, `/products/${loadedProduct.slug}`))}`))
 			return
@@ -172,6 +175,7 @@ export default function ProductDetailPage() {
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-10 py-6">
+			<ConfirmDialog open={confirmWishlistRemoval} title="Remove from wishlist?" description={`${loadedProduct.name} will be removed from your wishlist.`} confirmLabel="Remove item" busy={wishlistBusy} onCancel={() => { if (!wishlistBusy) setConfirmWishlistRemoval(false) }} onConfirm={() => { setConfirmWishlistRemoval(false); void toggleWishlist(true) }} />
 			<nav className="flex items-center gap-2 text-sm text-gray-500">
 				<Link href={getStoreRouteHref(store, "/products")}>Products</Link><ChevronRight size={14} />
 				<Link href={getStoreRouteHref(store, `/category/${product.category.slug}`)}>{product.category.name}</Link><ChevronRight size={14} />
