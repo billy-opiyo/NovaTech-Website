@@ -24,6 +24,7 @@ import clsx from "clsx"
 import { useToast } from "@/components/ui/Toast"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getProductSupportDescription } from "@/lib/industry-copy"
+import ConfirmDialog from "@/components/ui/ConfirmDialog"
 
 export default function CartPage() {
 	const {
@@ -45,6 +46,8 @@ export default function CartPage() {
 	const [couponApplied, setCouponApplied] = useState(false)
 	const [couponDiscount, setCouponDiscount] = useState(0)
 	const [couponError, setCouponError] = useState("")
+	const [itemToRemove, setItemToRemove] = useState<(typeof items)[number] | null>(null)
+	const [clearRequested, setClearRequested] = useState(false)
 
 	const handleApplyCoupon = async () => {
 		if (!couponCode.trim() || couponApplied) return
@@ -98,8 +101,17 @@ export default function CartPage() {
 		)
 	}
 
+	const confirmCartRemoval = () => {
+		if (itemToRemove) removeItem(itemToRemove.id)
+		if (clearRequested) clearCart()
+		setItemToRemove(null)
+		setClearRequested(false)
+	}
+
 	return (
 		<div>
+			<ConfirmDialog open={Boolean(itemToRemove)} title="Remove item from cart?" description={itemToRemove ? `${itemToRemove.name} will be removed from your cart.` : ""} confirmLabel="Remove item" onCancel={() => setItemToRemove(null)} onConfirm={confirmCartRemoval} />
+			<ConfirmDialog open={clearRequested} title="Clear your cart?" description="All items currently in your cart will be removed." confirmLabel="Clear cart" onCancel={() => setClearRequested(false)} onConfirm={confirmCartRemoval} />
 			<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 sm:mb-8">
 				<Link
 					href={getStoreRouteHref(store, "/products")}
@@ -225,7 +237,7 @@ export default function CartPage() {
 													<Heart size={16} /> Save
 												</button>
 												<button
-													onClick={() => removeItem(item.id)}
+														onClick={() => setItemToRemove(item)}
 													className="text-sm text-red-500 hover:text-red-600 transition flex items-center gap-1"
 												>
 													<Trash2 size={16} /> Remove
@@ -289,7 +301,7 @@ export default function CartPage() {
 					{/* Clear Cart */}
 					<div className="flex justify-between items-center">
 						<button
-							onClick={clearCart}
+												onClick={() => setClearRequested(true)}
 							className="text-sm text-red-500 hover:text-red-600 transition flex items-center gap-1"
 						>
 							<Trash2 size={16} /> Clear Cart

@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cartContext"
 import { useStoreContext } from "@/lib/store-context"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { useToast } from "@/components/ui/Toast"
+import ConfirmDialog from "@/components/ui/ConfirmDialog"
 
 type ProductActionsProps = {
 	productId: string
@@ -33,6 +34,7 @@ export default function ProductActions({ productId, name, brand, image, price, s
 	const pathname = usePathname()
 	const [wishlisted, setWishlisted] = useState(false)
 	const [wishlistBusy, setWishlistBusy] = useState(false)
+	const [confirmWishlistRemoval, setConfirmWishlistRemoval] = useState(false)
 
 	function addToCart() {
 		if (stock < 1) {
@@ -43,7 +45,8 @@ export default function ProductActions({ productId, name, brand, image, price, s
 		addToast(`${name} added to cart.`, "success")
 	}
 
-	async function toggleWishlist() {
+	async function toggleWishlist(confirmedRemoval = false) {
+		if (wishlisted && !confirmedRemoval) { setConfirmWishlistRemoval(true); return }
 		if (!session?.user) {
 			const callbackUrl = pathname || getStoreRouteHref(store, `/products/${slug}`)
 			router.push(getStoreRouteHref(store, `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`))
@@ -77,6 +80,7 @@ export default function ProductActions({ productId, name, brand, image, price, s
 
 	return (
 		<div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-1.5">
+			<ConfirmDialog open={confirmWishlistRemoval} title="Remove from wishlist?" description={`${name} will be removed from your wishlist.`} confirmLabel="Remove item" busy={wishlistBusy} onCancel={() => { if (!wishlistBusy) setConfirmWishlistRemoval(false) }} onConfirm={() => { setConfirmWishlistRemoval(false); void toggleWishlist(true) }} />
 			{hasVariants ? <Link href={getStoreRouteHref(store, `/products/${slug}`)} className="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg bg-primary px-2 py-2 text-xs font-semibold text-white transition hover:brightness-110" title="Choose product options">
 				<ShoppingCart size={15} aria-hidden="true" /><span className="truncate">Choose options</span>
 			</Link> : <button type="button" onClick={addToCart} disabled={stock < 1} className="inline-flex min-w-0 items-center justify-center gap-1 rounded-lg bg-primary px-2 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" title={stock < 1 ? "Out of stock" : "Add to cart"}>
