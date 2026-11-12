@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { defaultCategoryImage, defaultIndustryHomepage } from "../../backend/lib/industry-content"
 import { cakeCustomizationsSchema, normalizeIndustryCustomizations } from "../../backend/lib/cake-customizations"
+import { DEMO_STORE_WHATSAPP_NUMBER, resolveStoreWhatsAppNumber } from "../../frontend/src/lib/demo-store-config"
 import { getProductEnquiryTopics, getProductSearchPlaceholder, getProductSupportDescription } from "../../frontend/src/lib/industry-copy"
 import { getProductSpecsWithAttributes } from "../../frontend/src/lib/product-specs"
 import { getIndustryComparisonFields, getStoreCompareStorageKey } from "../../frontend/src/lib/industry-compare"
@@ -28,6 +29,14 @@ test("category defaults select artwork by industry and category instead of blank
 	assert.equal(defaultCategoryImage("cakes", "Wedding Cakes"), weddingImage)
 	assert.equal(defaultCategoryImage("cakes", "Wedding Cakes", "https://images.unsplash.com/photo-1519655272701-6c23d7e9ad40?auto=format&fit=crop&w=1000&q=80"), weddingImage)
 	assert.equal(defaultCategoryImage("furniture", "Beds", "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"), "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85")
+})
+
+test("the industry demo stores use the explicitly approved shared WhatsApp fallback", () => {
+	assert.equal(resolveStoreWhatsAppNumber("nurava-cakes", ""), DEMO_STORE_WHATSAPP_NUMBER)
+	assert.equal(resolveStoreWhatsAppNumber("nurava-furnitures", undefined), DEMO_STORE_WHATSAPP_NUMBER)
+	assert.equal(resolveStoreWhatsAppNumber("nurava-boutiques", undefined), DEMO_STORE_WHATSAPP_NUMBER)
+	assert.equal(resolveStoreWhatsAppNumber("merchant-store", ""), "")
+	assert.equal(resolveStoreWhatsAppNumber("nurava-cakes", "254711111111"), "254711111111")
 })
 
 test("industry support and enquiry copy avoids irrelevant electronics wording", () => {

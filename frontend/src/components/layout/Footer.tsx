@@ -68,7 +68,6 @@ const shopperServiceLinks = [
 	{ label: "Contact Us", href: "/contact" },
 	{ label: "FAQs", href: "/faqs" },
 	{ label: "Return Policy", href: "/return-policy" },
-	{ label: "Warranty", href: "/warranty" },
 ]
 
 const merchantServiceLinks = [
@@ -115,12 +114,12 @@ export default function Footer() {
 		label: store.industry?.slug === "electronics" ? "Warranty" : store.industry?.slug === "cakes" ? "Cake Orders & Quality" : store.industry?.slug === "furniture" ? "Furniture Care & Support" : "Product Support",
 		href: "/warranty",
 	}]
+	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
 	const footerDescription = store.isPlatformHome
 		? store.site.footerDescription || `${store.brand.tagline}. Discover independent stores and contact merchants directly.`
 		: store.ownerType === "PLATFORM"
 		? store.platformSettings?.site?.footerDescription || store.site.footerDescription || `${store.brand.tagline}. Shop products from the platform-owned store.`
 		: store.homepage.heroDescription?.trim() || `Explore the products and offers available from ${store.brand.name}. Contact the store directly for assistance.`
-	const [platformHomeHref, setPlatformHomeHref] = useState<string>(PLATFORM_HOME_URL)
 	const platformHomeLink = `${platformHomeHref.replace(/\/$/, "")}/?platformHome=1`
 	const platformBrowseStoresLink = `${platformHomeHref.replace(/\/$/, "")}/stores?all=1`
 	const footerBrandName = store.ownerType === "PLATFORM"

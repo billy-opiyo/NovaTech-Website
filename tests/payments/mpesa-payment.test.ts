@@ -1,6 +1,24 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { initiateMpesaPayment, verifyMpesaPayment, simulateMpesaPayment, generateTimestamp } from "../../backend/payments/mpesa"
+import { initiateMpesaPayment, verifyMpesaPayment, simulateMpesaPayment, generateTimestamp, getShopperOrderPaymentReference, shopperPaymentMatchesOrder, mergeMpesaPaymentMetadata } from "../../backend/payments/mpesa"
+import { canAccessShopperOrder } from "../../backend/payments/shopper-order-access"
+
+test("shopper M-Pesa references preserve full order identity and existing payments stay order-bound", () => {
+	assert.equal(getShopperOrderPaymentReference("order-a-01234567"), "ORD-order-a-01234567")
+	assert.notEqual(getShopperOrderPaymentReference("order-a-01234567"), getShopperOrderPaymentReference("order-b-01234567"))
+	assert.equal(shopperPaymentMatchesOrder({ orderId: "order-a", amount: 500 }, "order-a", 500), true)
+	assert.equal(shopperPaymentMatchesOrder({ orderId: "order-a", amount: 500 }, "order-b", 500), false)
+	assert.equal(shopperPaymentMatchesOrder({ orderId: "order-a", amount: 500 }, "order-a", 600), false)
+	assert.deepEqual(mergeMpesaPaymentMetadata({ reference: "forged-reference", merchantRequestId: "forged-request", note: "retained" }, "ORD-order-a", "request-1"), { note: "retained", reference: "ORD-order-a", merchantRequestId: "request-1" })
+})
+
+test("shopper payment verification checks the same registered or guest owner as initiation", () => {
+	assert.equal(canAccessShopperOrder({ userId: "user-1", shippingAddress: { phone: "+254712345678" } }, "user-1", "0700000000"), true)
+	assert.equal(canAccessShopperOrder({ userId: "user-1", shippingAddress: null }, "user-2", "0712345678"), false)
+	assert.equal(canAccessShopperOrder({ userId: null, shippingAddress: { phone: "+254712345678" } }, undefined, "0712345678"), true)
+	assert.equal(canAccessShopperOrder({ userId: null, shippingAddress: { phone: "+254712345678" } }, undefined, "0799999999"), false)
+	assert.equal(canAccessShopperOrder({ userId: null, shippingAddress: null }, undefined, "0712345678"), false)
+})
 
 test("M-Pesa payment operations return actionable not-configured results", async () => {
 	const keys = ["MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_PASSKEY", "MPESA_SHORTCODE"]

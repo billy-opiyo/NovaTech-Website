@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import {
 	normalizePhone,
 	generatePassword,
+	stkPush,
 } from "../../backend/lib/daraja"
 
 test("normalizePhone converts 07XXXXXXXX to 2547XXXXXXXX", () => {
@@ -35,4 +36,27 @@ test("generatePassword produces valid base64 output", () => {
 	const b = generatePassword("174379", "testpasskey")
 	assert.ok(Buffer.from(a.password, "base64").length > 0)
 	assert.ok(Buffer.from(b.password, "base64").length > 0)
+})
+
+test("STK push routes a configured Till destination as buy-goods and uses that short code", async () => {
+	const originalFetch = globalThis.fetch
+	const requests: Array<{ url: string; body?: Record<string, unknown> }> = []
+	globalThis.fetch = async (input, init) => {
+		const url = String(input)
+		if (url.includes("/oauth/")) {
+			requests.push({ url })
+			return new Response(JSON.stringify({ access_token: "test-token", expires_in: 3600 }), { status: 200 })
+		}
+		requests.push({ url, body: JSON.parse(String(init?.body)) as Record<string, unknown> })
+		return new Response(JSON.stringify({ MerchantRequestID: "merchant-1", CheckoutRequestID: "checkout-1", ResponseCode: "0" }), { status: 200 })
+	}
+	try {
+		await stkPush({ amount: 10, phone: "0712345678", accountReference: "INV-123", callbackUrl: "https://example.test/callback", credentials: { consumerKey: "key", consumerSecret: "secret", passkey: "passkey", shortcode: "123456", accountType: "TILL" } })
+		const body = requests[1]?.body
+		assert.equal(body?.BusinessShortCode, "123456")
+		assert.equal(body?.PartyB, "123456")
+		assert.equal(body?.TransactionType, "CustomerBuyGoodsOnline")
+	} finally {
+		globalThis.fetch = originalFetch
+	}
 })

@@ -1,6 +1,19 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { createCardPaymentIntent, verifyCardPayment } from "../../backend/payments/cards"
+import { createCardPaymentIntent, mergeCardPaymentMetadata, shouldCancelOrderAfterCardVerification, verifyCardPayment } from "../../backend/payments/cards"
+
+test("trusted Stripe payment metadata overrides internal metadata collisions", () => {
+	assert.deepEqual(mergeCardPaymentMetadata({ reference: "forged", orderId: "other-order", clientSecret: "forged-secret", note: "safe" }, {
+		reference: "trusted-reference",
+		orderId: "actual-order",
+		clientSecret: "trusted-secret",
+	}), {
+		reference: "trusted-reference",
+		orderId: "actual-order",
+		clientSecret: "trusted-secret",
+		note: "safe",
+	})
+})
 
 test("createCardPaymentIntent returns not-configured result when Stripe is unset", async () => {
 	// Ensure STRIPE_SECRET_KEY is not set for this test
@@ -37,4 +50,12 @@ test("verifyCardPayment returns not-configured result when Stripe is unset", asy
 	} finally {
 		if (original) process.env.STRIPE_SECRET_KEY = original
 	}
+})
+
+test("pending Stripe verification never cancels an order", () => {
+	assert.equal(shouldCancelOrderAfterCardVerification("PENDING"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("PROCESSING"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("COMPLETED"), false)
+	assert.equal(shouldCancelOrderAfterCardVerification("FAILED"), true)
+	assert.equal(shouldCancelOrderAfterCardVerification("CANCELLED"), true)
 })

@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import prisma from "../../backend/lib/db"
 import { normalizeHostname, resolveTenantFromRequest, tenantScope, TenantResolutionError } from "../../backend/lib/tenant"
 import { getActiveMembership, requireMembership } from "../../backend/lib/tenant-access"
+import { mockPrismaMethod } from "./mock-prisma-method"
 
 test("tenant host normalization removes development ports", () => {
 	assert.equal(normalizeHostname(" NOVATECH.NOVATECHSTORE.CO.KE:3000 "), "novatech.novatechstore.co.ke")
@@ -15,137 +16,158 @@ test("tenantScope rejects an empty tenant boundary", () => {
 })
 
 test("request tenant resolution refuses unknown hosts", async () => {
-	const domainFindUnique = prisma.domain.findUnique
-	const storeFindUnique = prisma.store.findUnique
-	;(prisma.domain.findUnique as any) = async () => null
-	;(prisma.store.findUnique as any) = async () => null
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async () => null)
 	try {
 		await assert.rejects(
 			() => resolveTenantFromRequest({ headers: new Headers({ host: "other.example" }) }),
-			(error: any) => error?.name === "TenantResolutionError" && error.reason === "UNKNOWN_HOST",
+			(error: unknown) => error instanceof Error && error.name === TenantResolutionError.name && "reason" in error && error.reason === "UNKNOWN_HOST",
 		)
 	} finally {
-		;(prisma.domain.findUnique as any) = domainFindUnique
-		;(prisma.store.findUnique as any) = storeFindUnique
+		restoreDomain()
+		restoreStore()
 	}
 })
 
 test("canonical platform hosts bypass merchant domain mappings", async () => {
-	const domainFindUnique = prisma.domain.findUnique
-	const storeFindUnique = prisma.store.findUnique
 	let domainLookups = 0
-	;(prisma.domain.findUnique as any) = async () => {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => {
 		domainLookups += 1
 		return {
 			hostname: "nuravatech.com",
 			verificationStatus: "VERIFIED",
 			tenantId: "merchant-tenant",
 			storeId: "merchant-store",
-			store: { slug: "merchant", publicationStatus: "PUBLISHED", tenant: { status: "ACTIVE", verificationStatus: "APPROVED" } },
+			store: { slug: "merchant", ownerType: "MERCHANT", platformOwnerKey: null, publicationStatus: "PUBLISHED", tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" } },
 		}
-	}
-	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "nuravatech" ? {
+	})
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "nuravatech" ? {
 		id: "platform-store",
 		tenantId: "platform-tenant",
 		slug: "nuravatech",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-			tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
-	} : null
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
+	} : null)
 	try {
-		for (const hostname of ["nuravatech.com:3000", "www.nuravatech.com:3000"]) {
+		for (const hostname of ["nuravahubstores.com:3000", "www.nuravahubstores.com:3000"]) {
 			const context = await resolveTenantFromRequest({ headers: new Headers({ host: hostname }) })
 			assert.equal(context.storeSlug, "nuravatech")
 			assert.equal(context.tenantId, "platform-tenant")
 		}
 		assert.equal(domainLookups, 0)
 	} finally {
-		;(prisma.domain.findUnique as any) = domainFindUnique
-		;(prisma.store.findUnique as any) = storeFindUnique
+		restoreDomain()
+		restoreStore()
 	}
 })
 
 test("Vercel platform hosts resolve an explicitly scoped store slug", async () => {
-	const domainFindUnique = prisma.domain.findUnique
-	const storeFindUnique = prisma.store.findUnique
 	let domainLookups = 0
-	;(prisma.domain.findUnique as any) = async () => {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => {
 		domainLookups += 1
 		return null
-	}
-	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "demo" ? {
+	})
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "demo" ? {
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
-	} : null
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
+	} : null)
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-store-slug": "demo" }) })
 		assert.equal(context.storeSlug, "demo")
 		assert.equal(context.tenantId, "tenant-demo")
 		assert.equal(domainLookups, 0)
 	} finally {
-		;(prisma.domain.findUnique as any) = domainFindUnique
-		;(prisma.store.findUnique as any) = storeFindUnique
+		restoreDomain()
+		restoreStore()
 	}
 })
 
 test("Vercel platform store paths remain scoped when the middleware slug header is missing", async () => {
-	const domainFindUnique = prisma.domain.findUnique
-	const storeFindUnique = prisma.store.findUnique
-	;(prisma.domain.findUnique as any) = async () => null
-	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "demo" ? {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "demo" ? {
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-		tenant: { status: "ACTIVE", verificationStatus: "APPROVED" },
-	} : null
+			tenant: { kind: "MERCHANT", status: "ACTIVE", verificationStatus: "APPROVED" },
+	} : null)
 	try {
 		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravatech-saas-staging.vercel.app", "x-nurava-request-path": "/store/demo" }) })
 		assert.equal(context.storeSlug, "demo")
 		assert.equal(context.tenantId, "tenant-demo")
 	} finally {
-		;(prisma.domain.findUnique as any) = domainFindUnique
-		;(prisma.store.findUnique as any) = storeFindUnique
+		restoreDomain()
+		restoreStore()
 	}
 })
 
 test("local store subdomains resolve by store slug", async () => {
-	const domainFindUnique = prisma.domain.findUnique
-	const storeFindUnique = prisma.store.findUnique
-	;(prisma.domain.findUnique as any) = async () => null
-	;(prisma.store.findUnique as any) = async ({ where }: any) => where.slug === "demo" ? {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const commerceSettings = { categoryAvailability: { phones: false } }
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "demo" ? {
 		id: "store-demo",
 		tenantId: "tenant-demo",
 		slug: "demo",
+		ownerType: "MERCHANT",
+		platformOwnerKey: null,
 		publicationStatus: "PUBLISHED",
-			tenant: { status: "TRIALING", verificationStatus: "APPROVED" },
-	} : null
+		commerceSettings,
+			tenant: { kind: "MERCHANT", status: "TRIALING", verificationStatus: "APPROVED" },
+	} : null)
 	try {
-		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) })
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "demo.localhost:3000" }) }, { includeCommerceSettings: true })
 		assert.deepEqual(context, {
 			tenantId: "tenant-demo",
 			storeId: "store-demo",
 			storeSlug: "demo",
 			hostname: "demo.localhost",
 			publicationStatus: "PUBLISHED",
+			ownerType: "MERCHANT",
+			commerceSettings,
 		})
 	} finally {
-		;(prisma.domain.findUnique as any) = domainFindUnique
-		;(prisma.store.findUnique as any) = storeFindUnique
+		restoreDomain()
+		restoreStore()
 	}
 })
 
+test("platform-owned storefront resolves without merchant verification or subscription state", async () => {
+	const restoreDomain = mockPrismaMethod(prisma.domain, "findUnique", async () => null)
+	const restoreStore = mockPrismaMethod(prisma.store, "findUnique", async ({ where }: { where: { slug?: string } }) => where.slug === "nurava-marketplace" ? {
+		id: "nurava-hubstores-store",
+		tenantId: "platform-nurava-hubstores",
+		slug: "nurava-marketplace",
+		ownerType: "PLATFORM",
+		platformOwnerKey: "nurava-hubstores",
+		publicationStatus: "PUBLISHED",
+		tenant: { kind: "PLATFORM", status: "ACTIVE", verificationStatus: "NOT_STARTED" },
+	} : null)
+	try {
+		const context = await resolveTenantFromRequest({ headers: new Headers({ host: "nuravahubstores.com", "x-nurava-request-path": "/store/nurava-marketplace" }) })
+		assert.equal(context.tenantId, "platform-nurava-hubstores")
+		assert.equal(context.storeId, "nurava-hubstores-store")
+		assert.equal(context.ownerType, "PLATFORM")
+	} finally { restoreDomain(); restoreStore() }
+})
+
 test("membership authorization cannot be widened by another tenant id", async () => {
-	const findFirst = prisma.membership.findFirst
-	;(prisma.membership.findFirst as any) = async ({ where }: any) =>
+	const restoreMembership = mockPrismaMethod(prisma.membership, "findFirst", async ({ where }: { where: { tenantId?: string } }) =>
 		where.tenantId === "tenant-a" ? { tenantId: "tenant-a", userId: "user-a", active: true, role: "STORE_EDITOR" } : null
+	)
 	try {
 		assert.ok(await getActiveMembership("user-a", "tenant-a"))
 		assert.equal(await getActiveMembership("user-a", "tenant-b"), null)
 		await assert.rejects(() => requireMembership("user-a", "tenant-b"), /do not have access/)
 	} finally {
-		;(prisma.membership.findFirst as any) = findFirst
+		restoreMembership()
 	}
 })
