@@ -14,7 +14,6 @@ import android.content.IntentFilter;
 import android.content.Intent;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import java.util.Locale;
@@ -267,14 +266,6 @@ public class MainActivity extends BridgeActivity {
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.launch_icon);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        logo.setBackground(new android.graphics.drawable.GradientDrawable());
-        logo.setClipToOutline(true);
-        logo.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, android.graphics.Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 0.18f);
-            }
-        });
         int logoWidth = dp(96);
         int logoHeight = dp(96);
         FrameLayout.LayoutParams logoLayout = new FrameLayout.LayoutParams(logoWidth, logoHeight, Gravity.CENTER);

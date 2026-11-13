@@ -16,7 +16,9 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	const store = useStoreContext()
 	const splashSettings = platformHome ? store.platformSettings?.splash : undefined
 	const splashName = store.platformSettings?.brand?.name || clientConfig.brand.name
-	const fallbackSplashLogo = "/images/Nurava_HubStores_splash_logo.webp"
+	const fallbackSplashLogo = store.ownerType === "PLATFORM"
+		? "/images/nuravahubsoreslogo.png"
+		: store.brand.logo?.trim() || ""
 	const splashLogo = splashSettings?.logo || fallbackSplashLogo
 	const showProgress = splashSettings?.showProgress !== false
 	const wordmarkAnimationDuration = Math.max(LETTER_ANIMATION_DURATION, (Array.from(splashName).length - 1) * LETTER_STAGGER_DELAY + LETTER_ANIMATION_DURATION)
@@ -175,19 +177,21 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 							</span>
 						))}
 					</h1>
-					<img
-						className="splash-logo-icon"
-						src={splashLogo}
-						alt=""
-						aria-hidden="true"
-						onError={(event) => {
-							const image = event.currentTarget
-							if (image.dataset.fallbackApplied !== "true") {
-								image.dataset.fallbackApplied = "true"
-								image.src = fallbackSplashLogo
-							}
-						}}
-					/>
+					{splashLogo && (
+						<img
+							className="splash-logo-icon"
+							src={splashLogo}
+							alt=""
+							aria-hidden="true"
+							onError={(event) => {
+								const image = event.currentTarget
+								if (fallbackSplashLogo && image.dataset.fallbackApplied !== "true") {
+									image.dataset.fallbackApplied = "true"
+									image.src = fallbackSplashLogo
+								}
+							}}
+						/>
+					)}
 					{showProgress && <div className="splash-loading mt-10 w-full">
 						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
 							<span>{splashSettings?.loadingText || "Preparing your store"}</span>

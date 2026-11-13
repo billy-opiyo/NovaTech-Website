@@ -74,7 +74,7 @@ function TrustStrip() {
 export default function PlatformHero({ stores }: { stores: Array<PlatformDiscoveryStore & { href: string }> }) {
 	const { theme } = useTheme()
 	const storeContext = useStoreContext()
-	const platformLogo = storeContext.platformSettings?.brand?.logo?.trim() || "/images/Nurava_HubStores_app_icon_logo.png"
+	const platformLogo = storeContext.platformSettings?.brand?.logo?.trim() || "/images/nuravahubsoreslogo.png"
 	const isLight = theme === "light"
 	const hero = storeContext.isPlatformHome ? storeContext.platformSettings?.hero : undefined
 	const heroTitle = hero?.title?.trim() || `${storeContext.platformBrandName} is the technology platform`
