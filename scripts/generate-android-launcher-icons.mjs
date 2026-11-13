@@ -39,30 +39,23 @@ async function getArtworkBounds(sourcePath) {
 	return { left, top, right: right + 1, bottom: bottom + 1, width: right - left + 1, height: bottom - top + 1 }
 }
 
-function centeredFitScale(metadata, bounds, outputSize, safeSize, padding) {
-	const centerX = outputSize / 2
-	const centerY = outputSize / 2
-	const boundsCenterX = (bounds.left + bounds.right) / 2
-	const boundsCenterY = (bounds.top + bounds.bottom) / 2
-	const safeHalf = safeSize / 2 - padding
-	const maxScales = [
-		(safeSize - padding * 2) / Math.max(bounds.width, bounds.height),
-		safeHalf / boundsCenterX,
-		safeHalf / (metadata.width - boundsCenterX),
-		safeHalf / boundsCenterY,
-		safeHalf / (metadata.height - boundsCenterY),
-	]
-	return Math.min(...maxScales)
+function centeredFitScale(bounds, safeSize, padding) {
+	// Fit visible pixels, not the uneven transparent source canvas, to Android's
+	// mask-safe area. The whole source bitmap is still retained in the output layer.
+	return (safeSize - padding * 2) / Math.max(bounds.width, bounds.height)
 }
 
 async function makeCenteredLayer(sourcePath, metadata, bounds, canvasSize, safeSize, padding) {
-	const scale = centeredFitScale(metadata, bounds, canvasSize, safeSize, padding)
+	const scale = centeredFitScale(bounds, safeSize, padding)
 	const width = Math.round(metadata.width * scale)
 	const height = Math.round(metadata.height * scale)
 	const artworkCenterX = ((bounds.left + bounds.right) / 2) * scale
 	const artworkCenterY = ((bounds.top + bounds.bottom) / 2) * scale
 	const left = Math.round(canvasSize / 2 - artworkCenterX)
 	const top = Math.round(canvasSize / 2 - artworkCenterY)
+	if (left < 0 || top < 0 || left + width > canvasSize || top + height > canvasSize) {
+		throw new Error("The complete launcher logo source does not fit on the output canvas.")
+	}
 	const image = await sharp(sourcePath).resize(width, height, { fit: "fill", kernel: "lanczos3" }).png().toBuffer()
 	const output = await sharp({ create: { width: canvasSize, height: canvasSize, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
 		.composite([{ input: image, left, top }])
