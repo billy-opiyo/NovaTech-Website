@@ -11,7 +11,7 @@ const UNCLASSIFIED_INDUSTRY = "__unclassified__"
 
 export default function StoreDirectoryBrowser({ stores }: { stores: DirectoryStore[] }) {
 	const { platformSettings } = useStoreContext()
-	const platformLogo = platformSettings?.brand?.logo?.trim() || "/images/Nurava_HubStores_app_icon_logo.png"
+	const platformLogo = platformSettings?.brand?.logo?.trim() || "/images/nuravahubsoreslogo.png"
 	const [industrySlug, setIndustrySlug] = useState("all")
 	const industries = useMemo(() => {
 		const available = new Map<string, string>()

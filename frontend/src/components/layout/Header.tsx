@@ -75,7 +75,7 @@ export default function Header() {
 		: navigation
 	const platformLogo = store.platformSettings?.brand?.logo?.trim()
 	const logoSource = store.isPlatformHome || store.ownerType === "PLATFORM"
-		? platformLogo || "/images/Nurava_HubStores_app_icon_logo.png"
+		? platformLogo || "/images/nuravahubsoreslogo.png"
 		: store.brand.logo?.trim() || ""
 	const logoAlt = store.ownerType === "PLATFORM"
 		? store.platformSettings?.brand?.logoAlt || store.platformSettings?.brand?.name || store.platformBrandName || store.brand.logoAlt

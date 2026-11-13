@@ -37,7 +37,7 @@ export default function StoreDiscoveryGroup({ title, description, stores, indust
 	industries: Array<{ slug: string; name: string }>
 }) {
 	const { platformSettings } = useStoreContext()
-	const platformLogo = platformSettings?.brand?.logo?.trim() || "/images/Nurava_HubStores_app_icon_logo.png"
+	const platformLogo = platformSettings?.brand?.logo?.trim() || "/images/nuravahubsoreslogo.png"
 	const [industrySlug, setIndustrySlug] = useState("all")
 	const filteredStores = industrySlug === "all" ? stores : stores.filter((entry) => entry.industry?.slug === industrySlug)
 	if (!stores.length) return null
