@@ -10,6 +10,7 @@ import { DEFAULT_PLATFORM_TAGLINE, getPlatformSiteSettingsDefaults, mergePlatfor
 import { isVercelProjectHostname } from "./platform-store-route"
 import { defaultCategoryImage, defaultIndustryHomepage, platformStoreCategoryImage } from "backend/lib/industry-content"
 import { themeOverridesFromIndustry } from "./industry-theme"
+import { merchantStoreLegalDefaults } from "./merchant-store-policy-content"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
@@ -38,14 +39,6 @@ const merchantSocialDefaults = {
 	linkedin: "",
 	youtube: "",
 	x: "",
-}
-
-function merchantLegalDefaults(storeName: string) {
-	return {
-		terms: `This store is operated by ${storeName}. Product availability, prices, delivery, payment arrangements, returns, refunds, warranties, taxes, and customer support are handled by the merchant. Please contact the store directly before or after a purchase if you need help.`,
-		privacy: `${storeName} uses information you provide to respond to enquiries, arrange purchases and delivery, provide support, protect accounts, and communicate about store services. Contact the merchant directly to ask about access, correction, or deletion of your shopper information.`,
-		cookies: `${storeName} uses necessary browser storage for authentication, security, shopping sessions, saved preferences, and reliable storefront operation. You can manage optional storage through your browser settings.`,
-	}
 }
 
 function platformStoreLegalDefaults(storeName: string) {
@@ -174,7 +167,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			delete homepage.heroImageAlt
 		}
 		const legalSettings = record(homepage.legal)
-		const legalDefaults = store.ownerType === "PLATFORM" ? platformStoreLegalDefaults(store.name) : merchantLegalDefaults(store.name)
+		const legalDefaults = store.ownerType === "PLATFORM" ? platformStoreLegalDefaults(store.name) : merchantStoreLegalDefaults(store.name)
 		const categoryImages = record(homepage.categoryImages)
 		const commerce = record(store.commerceSettings)
 		const categoryAvailability = record(commerce.categoryAvailability)
@@ -297,9 +290,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const whatsappMessage = store.ownerType === "PLATFORM" && typeof contactValues.whatsappMessage === "string"
 			? contactValues.whatsappMessage
 			: `Hello ${store.name}, I need help with my order.`
-		const configuredWhatsappNumber = store.ownerType === "PLATFORM"
-			? typeof contactValues.whatsappNumber === "string" ? contactValues.whatsappNumber : ""
-			: resolveStoreWhatsAppNumber(store.slug, typeof contactValues.whatsappNumber === "string" ? contactValues.whatsappNumber : undefined)
+		const configuredWhatsappNumber = typeof contactValues.whatsappNumber === "string" ? contactValues.whatsappNumber : ""
 		return {
 			...fallbackStoreContext(false),
 			tenantId: store.tenantId,

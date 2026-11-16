@@ -6,6 +6,9 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { storeSettingsPatchSchema } from "backend/validators/storeSettingsValidator"
 import { THEME_PRESETS } from "@/config/theme-presets"
+import { mergeMerchantStoreLegalDefaults } from "@/lib/merchant-store-policy-content"
+
+const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
 async function storeAccess() {
 	const session = await auth()
@@ -19,9 +22,21 @@ export async function GET() {
 	try {
 		const access = await storeAccess()
 		if ("response" in access) return access.response
-		const store = await prisma.store.findFirst({ where: { id: access.context.storeId, tenantId: access.context.tenantId }, select: { id: true, tenantId: true, name: true, logoUrl: true, slug: true, publicationStatus: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, draftSettings: true } })
+		const store = await prisma.store.findFirst({ where: { id: access.context.storeId, tenantId: access.context.tenantId }, select: { id: true, tenantId: true, ownerType: true, name: true, logoUrl: true, slug: true, publicationStatus: true, themeSettings: true, seoSettings: true, contactSettings: true, homepageSettings: true, commerceSettings: true, draftSettings: true } })
 		if (!store) return NextResponse.json({ message: "Store not found" }, { status: 404 })
 		const versions = await prisma.storeSettingsVersion.findMany({ where: { tenantId: access.context.tenantId, storeId: access.context.storeId }, select: { version: true, publishedAt: true, publishedBy: true, createdAt: true }, orderBy: { version: "desc" }, take: 20 })
+		if (store.ownerType === "MERCHANT") {
+			const homepageSettings = record(store.homepageSettings)
+			const draftSettings = record(store.draftSettings)
+			const draftHomepage = record(draftSettings.homepage)
+			const savedDraftLegal = record(draftHomepage.legal)
+			const savedHomepageLegal = record(homepageSettings.legal)
+			return NextResponse.json({ store: {
+				...store,
+				homepageSettings: { ...homepageSettings, legal: mergeMerchantStoreLegalDefaults(store.name, savedHomepageLegal) },
+				draftSettings: { ...draftSettings, homepage: { ...draftHomepage, legal: mergeMerchantStoreLegalDefaults(store.name, savedDraftLegal, savedHomepageLegal) } },
+			}, versions })
+		}
 		return NextResponse.json({ store, versions })
 	} catch (error) {
 		console.error("Store settings read failed", error)

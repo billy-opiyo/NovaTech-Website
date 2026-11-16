@@ -220,7 +220,7 @@ export default function Footer() {
 						© {year} {footerBrandName}. All rights reserved.
 					</p>
 					<div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-gray-500 lg:justify-start">
-						{legalLinks.map(({ label, href }) => <Link key={href} href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary">{label}</Link>)}
+						{legalLinks.map(({ label, href }) => <Link key={href} href={store.isPlatformHome ? href : getStoreRouteHref(store, href)} className="hover:text-primary">{href === "/terms" && !store.isPlatformHome ? "Store Terms" : label}</Link>)}
 					</div>
 				</div>
 			</div>
