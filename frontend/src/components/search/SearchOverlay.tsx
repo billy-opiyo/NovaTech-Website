@@ -122,8 +122,8 @@ export default function SearchOverlay({ open, onOpenChange, showTrigger = true, 
 		const pageSuggestions: SearchSuggestion[] = publicPages
 			.map((page) => ({
 				...page,
-				text: page.text.replace(/Nurava Tech|Nurava HubStores/g, brandName),
-				description: page.description.replace(/Nurava Tech|Nurava HubStores/g, brandName),
+				text: page.href === "/terms" && !store.isPlatformHome ? "Store Terms" : page.text.replace(/Nurava Tech|Nurava HubStores/g, brandName),
+				description: page.href === "/terms" && !store.isPlatformHome ? `Terms for purchases from ${brandName}` : page.description.replace(/Nurava Tech|Nurava HubStores/g, brandName),
 			}))
 			.filter((page) => `${page.text} ${page.description} ${page.keywords}`.toLowerCase().includes(normalizedQuery))
 			.slice(0, 4)

@@ -1,11 +1,13 @@
 import InfoPage from "@/components/content/InfoPage"
 import { getStoreContext } from "@/lib/store-context.server"
 import { DEFAULT_PLATFORM_COOKIES, platformPolicySections } from "@/lib/platform-policy-content"
+import { PLATFORM_STORE_COOKIE_SUPPLEMENT } from "@/lib/platform-store-policy-content"
 
 export default async function CookiePolicyPage() {
 	const store = await getStoreContext()
 	if (store.isPlatformHome) return <InfoPage title="Platform Cookie Policy" description={`A clear explanation of the browser storage used by ${store.platformBrandName}.`} sections={platformPolicySections(store.platformSettings?.legal?.cookies || DEFAULT_PLATFORM_COOKIES, "Platform cookie policy")} />
-	if (!store.isPlatformHome && store.legal?.cookies) return <InfoPage title={`${store.brand.name} Cookie Policy`} description={`A clear explanation of the browser storage used by ${store.brand.name}.`} sections={[{ title: "Current store cookie policy", content: store.legal.cookies }]} />
+	if (store.ownerType === "PLATFORM") return <InfoPage title={`${store.brand.name} Store Cookie Policy`} description={`Browser storage used for shopping at ${store.brand.name}.`} sections={[...platformPolicySections(store.platformSettings?.legal?.cookies || store.legal?.cookies || DEFAULT_PLATFORM_COOKIES, "Platform cookie policy"), ...platformPolicySections(PLATFORM_STORE_COOKIE_SUPPLEMENT, "Platform-store shopping storage")]} />
+	if (!store.isPlatformHome && store.legal?.cookies) return <InfoPage title={`${store.brand.name} Cookie Policy`} description={`A clear explanation of the browser storage used by ${store.brand.name}.`} sections={platformPolicySections(store.legal.cookies, "Store cookie policy")} />
 	return <InfoPage title="Cookie Policy" description={`A clear explanation of the small files and browser storage used by ${store.isPlatformHome ? store.platformBrandName : store.brand.name}.`} sections={[
 		{ title: "What cookies do", content: "Cookies and similar browser storage help us keep the store reliable, remember your theme preference, keep shopping sessions working, and understand which pages need improvement." },
 		{ title: "Essential storage", content: "Some storage is required for core features such as authentication, your shopping cart, security controls, and saved display preferences. These features may not work correctly if essential storage is blocked." },
