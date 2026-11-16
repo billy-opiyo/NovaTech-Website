@@ -716,6 +716,12 @@ model PlatformStorePaymentConfiguration {
   updatedAt             DateTime                     @updatedAt
 }
 
+model PlatformBillingPolicy {
+  id        String   @id @default("platform-billing-policy")
+  pilotDays Int
+  updatedAt DateTime @updatedAt
+}
+
 model MerchantEnquiry {
   id                 String                       @id @default(cuid())
   tenantId           String

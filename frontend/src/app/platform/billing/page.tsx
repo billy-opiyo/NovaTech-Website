@@ -20,7 +20,7 @@ type Plan = {
 type Addon = { id: string; key: string; name: string; description?: string | null; price: number; currency: string; billingInterval: string; active: boolean }
 type PaymentDestination = { accountType: "PAYBILL" | "TILL" | "PHONE" | null; accountNumber: string; version: number | null; configured: boolean; env: "production" | "sandbox"; passkeyConfigured: boolean; source: "DATABASE" | "ENVIRONMENT" }
 type ManualPayment = { id: string; tenantId: string | null; amount: number; currency: string; kind: string; providerReference: string | null; phoneNumber: string | null; metadata: unknown; createdAt: string; tenant?: { legalName: string | null } | null; invoice?: { kind: string; status: string } | null }
-type BillingData = { plans: Plan[]; addons: Addon[]; paymentDestination: PaymentDestination; paymentDestinations: PaymentDestination[]; manualPayments: ManualPayment[]; canManageCollection: boolean; stats: { subscriptionCount: number; activeSubscriptionCount: number; paidRevenue: number; generatedCommission: number }; failedPayments: { id: string; tenantId: string; provider: string; amount: number; currency: string; failureReason?: string | null }[] }
+type BillingData = { plans: Plan[]; addons: Addon[]; pilotDays: number; pilotDaysDefault: number; paymentDestination: PaymentDestination; paymentDestinations: PaymentDestination[]; manualPayments: ManualPayment[]; canManageCollection: boolean; stats: { subscriptionCount: number; activeSubscriptionCount: number; paidRevenue: number; generatedCommission: number }; failedPayments: { id: string; tenantId: string; provider: string; amount: number; currency: string; failureReason?: string | null }[] }
 
 function money(value: number, currency = "KES") { return `${currency} ${Number(value || 0).toLocaleString()}` }
 function humanize(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }
@@ -34,6 +34,8 @@ export default function PlatformBillingPage() {
 	const [setupFeeAmount, setSetupFeeAmount] = useState("0")
 	const [billingInterval, setBillingInterval] = useState<"MONTH" | "YEAR">("MONTH")
 	const [active, setActive] = useState(true)
+	const [pilotDaysInput, setPilotDaysInput] = useState("180")
+	const [pilotBusy, setPilotBusy] = useState(false)
 	const [editingPlanId, setEditingPlanId] = useState<string | null>(null)
 	const [destinationType, setDestinationType] = useState<"PAYBILL" | "TILL" | "PHONE">("PAYBILL")
 	const [destinationNumber, setDestinationNumber] = useState("")
@@ -49,6 +51,7 @@ export default function PlatformBillingPage() {
 		const result = await response.json()
 		if (!response.ok) throw new Error(result.message || "Platform billing unavailable")
 		setData(result)
+		setPilotDaysInput(String(result.pilotDays ?? result.pilotDaysDefault ?? 180))
 		if (result.paymentDestination) {
 			setDestinationType(result.paymentDestination.accountType || "PAYBILL")
 			setDestinationNumber(result.paymentDestinations?.find((item: PaymentDestination) => item.accountType === result.paymentDestination.accountType)?.accountNumber || "")
@@ -97,6 +100,20 @@ export default function PlatformBillingPage() {
 		addToast("Plan saved successfully.", "success")
 		clearForm()
 		await load()
+	}
+
+	async function savePilotDuration(event: FormEvent) {
+		event.preventDefault()
+		setPilotBusy(true)
+		try {
+			const response = await fetch("/api/platform/billing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "pilot_policy", pilotDays: Number(pilotDaysInput) }) })
+			const result = await response.json()
+			if (!response.ok) throw new Error(result.message || "Unable to save pilot duration")
+			addToast("Pilot duration saved.", "success")
+			await load()
+		} catch (error: unknown) {
+			addToast(error instanceof Error ? error.message : "Unable to save pilot duration", "error")
+		} finally { setPilotBusy(false) }
 	}
 
 	async function savePaymentDestination(event: FormEvent) {
@@ -155,6 +172,7 @@ export default function PlatformBillingPage() {
 		<div><h2 className="text-3xl font-bold">Plans and billing</h2><p className="mt-2 text-gray-600 dark:text-gray-300">Configure merchant SaaS subscriptions and one-time onboarding fees.</p><p className="mt-2 text-sm text-gray-500">Shopper purchases are completed directly with independent stores. Commission totals below are historical records only; new shopper payments are disabled.</p></div>
 		{message && <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="glass-card p-5"><p className="text-sm text-gray-500">Subscriptions</p><p className="mt-2 text-2xl font-bold">{data.stats.subscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Active / trialing</p><p className="mt-2 text-2xl font-bold">{data.stats.activeSubscriptionCount}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Paid invoice revenue</p><p className="mt-2 text-2xl font-bold">{money(data.stats.paidRevenue)}</p></div><div className="glass-card p-5"><p className="text-sm text-gray-500">Legacy commission records</p><p className="mt-2 text-2xl font-bold">{money(data.stats.generatedCommission)}</p></div></div>
+		<section className="glass-card space-y-3 p-5"><div><h3 className="text-xl font-semibold">Free pilot duration</h3><p className="mt-1 text-sm text-gray-500">The setup-fee pilot for newly activated stores lasts this many days. Existing pilots keep their current end date. The server environment value is used until you save a Platform Admin override (current environment default: {data.pilotDaysDefault} days).</p></div><form onSubmit={(event) => void savePilotDuration(event)} className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm font-semibold">Duration in days<input type="number" min="1" max="3650" required value={pilotDaysInput} onChange={(event) => setPilotDaysInput(event.target.value)} className="w-40 rounded border p-2 font-normal dark:bg-dark-surface" /></label><button disabled={pilotBusy || !pilotDaysInput} className="btn-primary" type="submit">{pilotBusy ? "Saving…" : "Save pilot duration"}</button><span className="text-sm text-gray-500">Current: {data.pilotDays} days</span></form></section>
 		<section className="glass-card space-y-4 p-5" aria-labelledby="platform-mpesa-destination-title">
 			<div><h3 id="platform-mpesa-destination-title" className="text-xl font-semibold">Platform M-Pesa collection options</h3><p className="mt-1 text-sm text-gray-500">Enable PayBill, Till, and/or phone transfer for merchant setup fees, subscriptions, and add-on invoices. This does not change shopper payments configured by each store.</p></div>
 			<div className="space-y-2">{data.paymentDestinations.length ? data.paymentDestinations.map((destination) => <div key={`${destination.accountType}:${destination.version ?? "environment"}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span><b>{humanize(destination.accountType || "")}</b> {destination.accountNumber} · {destination.env} · {destination.source === "ENVIRONMENT" ? "server environment" : destination.configured ? "ready" : "credentials incomplete"}{destination.accountType === "PHONE" ? " · receipt review required" : ""}</span>{data.canManageCollection && <button type="button" disabled={destinationBusy} onClick={() => destination.accountType && setPendingDestructive({ title: "Disable payment option?", description: `${humanize(destination.accountType)} collections to ${destination.accountNumber} will be disabled.`, confirmLabel: "Disable option", run: () => disablePaymentDestination(destination.accountType!) })} className="rounded border px-3 py-1 text-xs font-semibold">Disable</button>}</div>) : <p className="text-sm text-amber-700">No platform M-Pesa payment options are enabled.</p>}</div>

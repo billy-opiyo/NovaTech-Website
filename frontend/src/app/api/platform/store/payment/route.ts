@@ -7,7 +7,7 @@ import { encryptMerchantPaymentDetails } from "backend/lib/merchant-verification
 import { getPlatformStorePaymentSummary } from "backend/payments/platform-store"
 
 const configSchema = z.object({
-	provider: z.enum(["MPESA", "STRIPE"]),
+	provider: z.literal("MPESA"),
 	accountType: z.enum(["PAYBILL", "TILL", "PHONE"]).optional(),
 	accountNumber: z.string().trim().max(30).optional(),
 	accountName: z.string().trim().max(120).optional(),
@@ -39,7 +39,6 @@ export async function PATCH(request: Request) {
 	const data = parsed.data
 	const canAuthorize = result.session.user.role === "SUPERADMIN" || result.session.user.platformRole === "PLATFORM_OWNER"
 	if (data.enabled && (!canAuthorize || data.authorizedAccountConfirmed !== true)) return NextResponse.json({ message: "A Platform Owner must confirm that the selected account is approved for platform store product sales before enabling payments." }, { status: 403 })
-	if (data.provider === "STRIPE" && (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET)) return NextResponse.json({ message: "Stripe server and webhook credentials must be configured before activation." }, { status: 409 })
 	if (data.provider === "MPESA") {
 		if (!data.accountType || !data.accountNumber) return NextResponse.json({ message: "Enter the designated PayBill, Till, or registered phone destination." }, { status: 400 })
 		if (data.accountType === "PHONE" ? !/^\+?\d{10,15}$/.test(data.accountNumber.replace(/[\s()-]/g, "")) : !/^\d{5,10}$/.test(data.accountNumber.replace(/\D/g, ""))) return NextResponse.json({ message: data.accountType === "PHONE" ? "Enter a valid registered phone number." : "Enter the approved PayBill or Till shortcode." }, { status: 400 })

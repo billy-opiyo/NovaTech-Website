@@ -2,16 +2,17 @@ import prisma from "../lib/db"
 import { decryptMerchantPaymentDetails } from "../lib/merchant-verification-secrets"
 import { isMpesaConfigured } from "../lib/daraja"
 import type { DarajaCredentials } from "../lib/daraja"
-import { isStripeConfigured } from "../lib/stripeClient"
 
 export async function getPlatformStorePaymentConfiguration() {
 	return prisma.platformStorePaymentConfiguration.findUnique({ where: { id: "platform-store" } })
 }
 
-export async function getActivePlatformStorePaymentRoute() {
+export type PlatformStorePaymentRoute = { provider: "MPESA"; manualTransfer?: { phone: string; accountName: string }; credentials?: DarajaCredentials } | { provider: "STRIPE" } | null
+
+export async function getActivePlatformStorePaymentRoute(): Promise<PlatformStorePaymentRoute> {
 	const configuration = await getPlatformStorePaymentConfiguration()
 	if (!configuration?.enabled || !configuration.authorizedAt) return null
-	if (configuration.provider === "STRIPE") return isStripeConfigured() ? { provider: "STRIPE" as const } : null
+	if (configuration.provider === "STRIPE") return null
 	if (configuration.provider !== "MPESA" || !configuration.accountType || !configuration.accountNumber) return null
 	if (configuration.accountType === "PHONE") return { provider: "MPESA" as const, manualTransfer: { phone: configuration.accountNumber, accountName: configuration.accountName || "" } }
 	if (!configuration.credentialsCiphertext) return null
@@ -34,7 +35,7 @@ export async function getPlatformStorePaymentSummary() {
 	const configuration = await getPlatformStorePaymentConfiguration()
 	const activeRoute = await getActivePlatformStorePaymentRoute()
 	return {
-		provider: configuration?.provider || null,
+		provider: "MPESA" as const,
 		accountType: configuration?.accountType || null,
 		accountNumber: configuration?.accountNumber || null,
 		accountName: configuration?.accountName || null,
