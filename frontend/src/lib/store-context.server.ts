@@ -8,7 +8,7 @@ import { platformSiteSettingsPatchSchema } from "backend/validators/platformSite
 import type { StoreContext } from "./store-context.types"
 import { DEFAULT_PLATFORM_TAGLINE, getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "./platform-site-settings"
 import { isVercelProjectHostname } from "./platform-store-route"
-import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
+import { defaultCategoryImage, defaultIndustryHomepage, platformStoreCategoryImage } from "backend/lib/industry-content"
 import { themeOverridesFromIndustry } from "./industry-theme"
 import { resolveStoreWhatsAppNumber } from "./demo-store-config"
 
@@ -198,7 +198,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const industryRank = new Map(platformStoreIndustries.map((industry, index) => [industry.slug, index]))
 		const categoryRank = new Map(platformStoreIndustries.flatMap((industry) => industry.categoryTemplates.map((category, index) => [`${industry.slug}:${category.slug}`, index] as const)))
 		const storedCategorySnapshots: Array<{ name: string; slug: string; image: string; industrySlug?: string; industryName?: string }> = store.ownerType === "PLATFORM"
-			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", industryName: category.industry?.name || "Other", image: defaultCategoryImage(category.industry?.slug || "", category.name, category.imageUrl) }))
+			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", industryName: category.industry?.name || "Other", image: platformStoreCategoryImage(category.industry?.slug || "", category.slug, category.name, category.imageUrl) }))
 			: Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
 			const category = record(value)
 			if (typeof category.name !== "string" || typeof category.slug !== "string") return []

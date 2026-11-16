@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { isPlatformAdmin } from "backend/lib/platform-access"
 import { getPlatformStore, isPlatformOwnedStore } from "backend/lib/platform-store"
+import { platformStoreCategoryImage } from "backend/lib/industry-content"
 
 const contentSchema = z.object({
 	name: z.string().trim().min(2).max(120), logoUrl: z.string().trim().max(2048).optional().or(z.literal("")), heroImage: z.string().trim().max(2048).optional().or(z.literal("")),
@@ -31,7 +32,10 @@ export async function GET() {
 		prisma.store.findUnique({ where: { id: result.store.id }, select: { name: true, slug: true, logoUrl: true, homepageSettings: true, contactSettings: true } }),
 		prisma.category.findMany({ where: { tenantId: result.store.tenantId, storeId: result.store.id, active: true, industry: { is: { active: true } } }, select: { slug: true, name: true, imageUrl: true, industry: { select: { name: true, slug: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }] }),
 	])
-	return NextResponse.json({ store, categories })
+	return NextResponse.json({ store, categories: categories.map((category) => ({
+		...category,
+		imageUrl: platformStoreCategoryImage(category.industry?.slug || "", category.slug, category.name, category.imageUrl),
+	})) })
 }
 
 export async function PATCH(request: Request) {

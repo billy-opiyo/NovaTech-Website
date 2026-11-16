@@ -11,6 +11,33 @@ export const INDUSTRY_UNSPLASH_IMAGES = {
 
 type IndustryIdentity = { name: string; slug: string }
 
+const PLATFORM_CATEGORY_CARD_IMAGES: Record<string, Record<string, { src: string; defaultUnsplashPath?: string }>> = {
+	electronics: {
+		phones: { src: "/images/category-cards/phone.png", defaultUnsplashPath: "/photo-1498049794561-7780e7231661" },
+		laptops: { src: "/images/category-cards/laptop.png", defaultUnsplashPath: "/photo-1498049794561-7780e7231661" },
+		tablets: { src: "/images/category-cards/tablet.png", defaultUnsplashPath: "/photo-1498049794561-7780e7231661" },
+		accessories: { src: "/images/category-cards/accessories.png", defaultUnsplashPath: "/photo-1498049794561-7780e7231661" },
+	},
+	cakes: {
+		"birthday-cakes": { src: "/images/category-cards/birthday_cakes.png", defaultUnsplashPath: "/photo-1578985545062-69928b1d9587" },
+		"wedding-cakes": { src: "/images/category-cards/wedding_cakes.png", defaultUnsplashPath: "/photo-1519655272701-6c23d7e9ad40" },
+		cupcakes: { src: "/images/category-cards/cup_cakes.png", defaultUnsplashPath: "/photo-1486427944299-d1955d23e34d" },
+	},
+	furniture: {
+		beds: { src: "/images/category-cards/beds.png", defaultUnsplashPath: "/photo-1505693416388-ac5ce068fe85" },
+		sofas: { src: "/images/category-cards/sofas.png", defaultUnsplashPath: "/photo-1709746837880-f96b4f588ce5" },
+		"dining-tables": { src: "/images/category-cards/dining.png", defaultUnsplashPath: "/photo-1600210492486-724fe5c67fb0" },
+	},
+	boutiques: {
+		"mens-clothing": { src: "/images/category-cards/men_clothing.png", defaultUnsplashPath: "/photo-1521572163474-6864f9cf17ab" },
+		"womens-clothing": { src: "/images/category-cards/women_clothing.png", defaultUnsplashPath: "/photo-1483985988355-763728e1935b" },
+		"childrens-clothing": { src: "/images/category-cards/children_clothing.png", defaultUnsplashPath: "/photo-1519238263530-99bdd11df2ea" },
+		"mens-shoes": { src: "/images/category-cards/men_shoes.png", defaultUnsplashPath: "/photo-1542291026-7eec264c27ff" },
+		"womens-shoes": { src: "/images/category-cards/women_shoes.png", defaultUnsplashPath: "/photo-1543163521-1bf539c55dd2" },
+		"childrens-shoes": { src: "/images/category-cards/children_shoes.png", defaultUnsplashPath: "/photo-1514989940723-e8e51635b782" },
+	},
+}
+
 const objectValue = (value: unknown): Record<string, unknown> =>
 	value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
 
@@ -95,4 +122,18 @@ export function defaultCategoryImage(industrySlug: string, categoryName: string,
 	}
 	if (industry.includes("electronic") || /phone|laptop|tablet|camera|computer|gaming/.test(category)) return INDUSTRY_UNSPLASH_IMAGES.electronicsCategory
 	return INDUSTRY_UNSPLASH_IMAGES.retailCategory
+}
+
+/** Resolve built-in platform-store card art while leaving administrator uploads intact. */
+export function platformStoreCategoryImage(industrySlug: string, categorySlug: string, categoryName: string, imageUrl?: string | null): string {
+	const image = PLATFORM_CATEGORY_CARD_IMAGES[industrySlug.toLowerCase()]?.[categorySlug.toLowerCase()]
+	if (!image) return defaultCategoryImage(industrySlug, categoryName, imageUrl)
+	if (!imageUrl || imageUrl === image.src) return image.src
+	try {
+		const parsed = new URL(imageUrl)
+		if (parsed.hostname === "images.unsplash.com" && parsed.pathname === image.defaultUnsplashPath) return image.src
+	} catch {
+		// Preserve the existing safe fallback for malformed values.
+	}
+	return defaultCategoryImage(industrySlug, categoryName, imageUrl)
 }
