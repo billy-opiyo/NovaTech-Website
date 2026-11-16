@@ -47,19 +47,19 @@ function PlanCard({ plan, featured, brandName }: { plan: PublicPlan; featured: b
 	)
 }
 
-export default function PlatformPlans({ plans, unavailable, source }: { plans: PublicPlan[]; unavailable: boolean; source: PublicPlanCatalogSource }) {
+export default function PlatformPlans({ plans, unavailable, source, pilotDays }: { plans: PublicPlan[]; unavailable: boolean; source: PublicPlanCatalogSource; pilotDays: number }) {
 	const store = useStoreContext()
 	return (
 		<section id="plans" aria-labelledby="platform-plans-title" className="scroll-mt-24 rounded-3xl border border-primary/15 bg-gradient-to-b from-primary/[0.08] to-transparent p-5 sm:p-8">
 			<div className="mx-auto max-w-3xl text-center">
 				<p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Plans for store partners</p>
 				<h2 id="platform-plans-title" className="mt-2 text-3xl font-extrabold sm:text-4xl">Simple billing, clear capacity</h2>
-				<p className="mt-3 font-semibold text-primary">Choose your plan and pay its one-time setup fee to start a six-month pilot.</p>
-				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. From month seven, you can manually renew it monthly through M-Pesa. {store.platformBrandName} does not automatically charge your account.</p>
+				<p className="mt-3 font-semibold text-primary">Choose your plan and pay its one-time setup fee to start a {pilotDays}-day free pilot.</p>
+				<p className="mt-2 text-gray-600 dark:text-gray-300">Your selected plan applies during the pilot. After {pilotDays} days, you can manually renew it monthly through M-Pesa. {store.platformBrandName} does not automatically charge your account.</p>
 				<p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{source === "database" ? "Prices shown from the active billing catalog." : `Prices shown from the approved ${store.platformBrandName} launch catalog; live billing is confirmed during setup.`}</p>
 			</div>
 			{unavailable ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">Plan pricing is temporarily unavailable while the billing catalog is being connected. Please try again shortly.</div> : plans.length === 0 ? <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-amber-300 bg-amber-50 p-5 text-center text-sm text-amber-900">No public plans are currently configured.</div> : <div className="mt-8 grid gap-5 lg:grid-cols-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} featured={plan.key === "BUSINESS"} brandName={store.platformBrandName} />)}</div>}
-			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">The one-time setup fee is paid before the pilot starts. Your selected plan&apos;s monthly subscription becomes payable from month seven and is renewed manually. Optional add-ons are billed according to the active catalog.</p>
+			<p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">The one-time setup fee is paid before the {pilotDays}-day pilot starts. Your selected plan&apos;s monthly subscription becomes payable after the pilot and is renewed manually. Optional add-ons are billed according to the active catalog.</p>
 		</section>
 	)
 }

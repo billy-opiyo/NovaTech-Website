@@ -11,18 +11,18 @@ const reminderLookaheadDays = 15
 
 const stageCopy: Record<PilotReminderStage, { subject: string; heading: string; body: string }> = {
 	PILOT_ENDS_IN_14_DAYS: {
-		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends in 14 days`,
-		heading: "Your six-month pilot ends in 14 days",
-		body: "The six-month pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
+		subject: `Your ${PLATFORM_BRAND_NAME} pilot ends in 14 days`,
+		heading: "Your pilot ends in 14 days",
+		body: "The free pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
 	},
 	PILOT_ENDS_IN_7_DAYS: {
-		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends in 7 days`,
-		heading: "Your six-month pilot ends in 7 days",
-		body: "The six-month pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
+		subject: `Your ${PLATFORM_BRAND_NAME} pilot ends in 7 days`,
+		heading: "Your pilot ends in 7 days",
+		body: "The free pilot for {store} ends on {date}. Your selected plan's monthly subscription becomes payable then. You can request payment manually from your billing page; nothing is charged automatically.",
 	},
 	PILOT_ENDS_IN_1_DAY: {
-		subject: `Your ${PLATFORM_BRAND_NAME} six-month pilot ends tomorrow`,
-		heading: "Your six-month pilot ends tomorrow",
+		subject: `Your ${PLATFORM_BRAND_NAME} pilot ends tomorrow`,
+		heading: "Your pilot ends tomorrow",
 		body: "The pilot for {store} ends on {date}. A 14-day grace period then keeps your store available while you manually pay the selected plan's monthly subscription from your billing page. Nothing is charged automatically.",
 	},
 	GRACE_PERIOD_STARTED: {

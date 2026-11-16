@@ -1,10 +1,11 @@
 const dayMilliseconds = 24 * 60 * 60 * 1000
+import prisma from "../lib/db"
 
 /**
  * MVP billing policy (approved on saas-staging):
  * - A new store must pay its selected plan's one-time setup fee before its
- *   six-month pilot begins. The selected plan stays in force for the pilot;
- *   its monthly subscription becomes payable from month seven.
+ *   configured free pilot begins. The selected plan stays in force for the pilot;
+ *   its monthly subscription becomes payable after the pilot.
  * - Pilot and subscription payments are initiated manually by the merchant.
  * - After the pilot ends, a 14-day grace period begins with reminders.
  * - If no plan is paid for during the grace period, the public storefront is
@@ -15,7 +16,17 @@ const dayMilliseconds = 24 * 60 * 60 * 1000
 export const MVP_PILOT_PLAN_KEY = "STARTER"
 
 const configuredPilotDays = Number.parseInt(process.env.NURAVA_MVP_PILOT_DAYS || "", 10)
-export const MVP_PILOT_DAYS = Number.isFinite(configuredPilotDays) && configuredPilotDays >= 1 ? configuredPilotDays : 180
+export const MVP_PILOT_DAYS = Number.isFinite(configuredPilotDays) && configuredPilotDays >= 1 && configuredPilotDays <= 3650 ? configuredPilotDays : 180
+
+export async function getMvpPilotDays() {
+	try {
+		const configured = await prisma.platformBillingPolicy.findUnique({ where: { id: "platform-billing-policy" }, select: { pilotDays: true } })
+		if (configured && Number.isInteger(configured.pilotDays) && configured.pilotDays >= 1 && configured.pilotDays <= 3650) return configured.pilotDays
+	} catch {
+		// Keep the environment-backed default available during initial migration or database outages.
+	}
+	return MVP_PILOT_DAYS
+}
 
 export type PilotReminderStage =
 	| "PILOT_ENDS_IN_14_DAYS"
@@ -24,8 +35,8 @@ export type PilotReminderStage =
 	| "GRACE_PERIOD_STARTED"
 	| "GRACE_PERIOD_ENDING"
 
-export function pilotTrialEndsAt(startsAt: Date) {
-	return new Date(startsAt.getTime() + MVP_PILOT_DAYS * dayMilliseconds)
+export function pilotTrialEndsAt(startsAt: Date, pilotDays = MVP_PILOT_DAYS) {
+	return new Date(startsAt.getTime() + pilotDays * dayMilliseconds)
 }
 
 export function pilotReminderStage(trialEndsAt: Date, now: Date): PilotReminderStage | null {

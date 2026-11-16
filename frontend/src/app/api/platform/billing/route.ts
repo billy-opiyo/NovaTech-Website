@@ -8,13 +8,15 @@ import { createActionRecord } from "backend/actions"
 import { encryptMerchantPaymentDetails } from "backend/lib/merchant-verification-secrets"
 import { getPlatformMpesaDestinationSummaries, getPlatformMpesaDestinationSummary, validatePlatformMpesaDestination, type PlatformMpesaAccountType } from "backend/lib/platform-mpesa-destination"
 import { reviewManualBillingPayment } from "backend/billing/service"
+import { getMvpPilotDays, MVP_PILOT_DAYS } from "backend/billing/mvp-policy"
 
 const planSchema = z.object({ action: z.literal("plan"), key: z.string().regex(/^[A-Z0-9_-]+$/), name: z.string().min(2).max(80), price: z.number().int().nonnegative().nullable(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).nullable(), setupFeeAmount: z.number().int().nonnegative().default(0), transactionFeePercent: z.number().min(0).max(100).default(0), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true), entitlementsJson: z.record(z.unknown()).optional() })
 const addonSchema = z.object({ action: z.literal("addon"), key: z.string().regex(/^[a-z0-9_-]+$/), name: z.string().min(2).max(80), description: z.string().max(500).nullable().optional(), price: z.number().int().positive(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).default("MONTH"), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true) })
 const destinationSchema = z.object({ action: z.literal("mpesa_destination"), accountType: z.enum(["PAYBILL", "TILL", "PHONE"]), accountNumber: z.string().min(5).max(15), passkey: z.string().min(1).max(256).optional() })
 const disableDestinationSchema = z.object({ action: z.literal("disable_mpesa_destination"), accountType: z.enum(["PAYBILL", "TILL", "PHONE"]) })
 const reviewManualSchema = z.object({ action: z.literal("review_manual_payment"), paymentId: z.string().min(1), approve: z.boolean(), note: z.string().max(500).optional() })
-const actionSchema = z.union([planSchema, addonSchema, destinationSchema, disableDestinationSchema, reviewManualSchema])
+const pilotPolicySchema = z.object({ action: z.literal("pilot_policy"), pilotDays: z.number().int().min(1).max(3650) })
+const actionSchema = z.union([planSchema, addonSchema, destinationSchema, disableDestinationSchema, reviewManualSchema, pilotPolicySchema])
 
 async function requirePlatformApi() {
 	const session = await auth()
@@ -28,7 +30,7 @@ export async function GET() {
 	const access = await requirePlatformApi()
 	if (access.response) return access.response
 	try {
-		const [plans, addons, subscriptionCount, activeSubscriptionCount, invoices, failedPayments, customers, manualPayments, paymentDestination, paymentDestinations] = await Promise.all([
+		const [plans, addons, subscriptionCount, activeSubscriptionCount, invoices, failedPayments, customers, manualPayments, paymentDestination, paymentDestinations, pilotDays] = await Promise.all([
 			prisma.plan.findMany({ orderBy: [{ active: "desc" }, { price: "asc" }] }),
 			prisma.addon.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
 			prisma.subscription.count(),
@@ -39,11 +41,12 @@ export async function GET() {
 			prisma.payment.findMany({ where: { provider: "mpesa-manual", status: "PROCESSING" }, orderBy: { createdAt: "asc" }, take: 100, select: { id: true, tenantId: true, amount: true, currency: true, kind: true, providerReference: true, phoneNumber: true, metadata: true, createdAt: true, tenant: { select: { legalName: true } }, invoice: { select: { kind: true, status: true } } } }),
 			getPlatformMpesaDestinationSummary(),
 			getPlatformMpesaDestinationSummaries(),
+			getMvpPilotDays(),
 		])
 		const revenue = await prisma.invoice.aggregate({ where: { status: "PAID" }, _sum: { total: true } })
 		const commission = await prisma.transaction.aggregate({ where: { status: "COMPLETED" }, _sum: { commissionAmount: true } })
 		const canManageCollection = access.session.user.role === "SUPERADMIN" || access.session.user.platformRole === "PLATFORM_OWNER"
-		return NextResponse.json({ plans, addons, stats: { subscriptionCount, activeSubscriptionCount, paidRevenue: revenue._sum.total || 0, generatedCommission: commission._sum.commissionAmount || 0 }, invoices, failedPayments, customers, manualPayments, paymentDestination, paymentDestinations, canManageCollection })
+		return NextResponse.json({ plans, addons, pilotDays, pilotDaysDefault: MVP_PILOT_DAYS, stats: { subscriptionCount, activeSubscriptionCount, paidRevenue: revenue._sum.total || 0, generatedCommission: commission._sum.commissionAmount || 0 }, invoices, failedPayments, customers, manualPayments, paymentDestination, paymentDestinations, canManageCollection })
 	} catch (error) {
 		console.error("Platform billing unavailable", error)
 		return NextResponse.json({ message: "Platform billing unavailable" }, { status: 503 })
@@ -103,6 +106,11 @@ export async function POST(request: NextRequest) {
 			const result = await reviewManualBillingPayment({ paymentId: parsed.data.paymentId, reviewerId: access.session.user.id, approve: parsed.data.approve, note: parsed.data.note })
 			await createActionRecord(parsed.data.approve ? "VERIFIED_PLATFORM_MANUAL_MPESA_PAYMENT" : "REJECTED_PLATFORM_MANUAL_MPESA_PAYMENT", { adminId: access.session.user.id, paymentId: parsed.data.paymentId }).catch(() => undefined)
 			return NextResponse.json(result)
+		}
+		if (parsed.data.action === "pilot_policy") {
+			const policy = await prisma.platformBillingPolicy.upsert({ where: { id: "platform-billing-policy" }, update: { pilotDays: parsed.data.pilotDays }, create: { id: "platform-billing-policy", pilotDays: parsed.data.pilotDays } })
+			await createActionRecord("UPDATED_PLATFORM_PILOT_DURATION", { adminId: access.session.user.id, pilotDays: policy.pilotDays }).catch(() => undefined)
+			return NextResponse.json({ pilotDays: policy.pilotDays })
 		}
 		if (parsed.data.action === "plan") {
 			const entitlementsJson = parsed.data.entitlementsJson === undefined ? undefined : parsed.data.entitlementsJson as Prisma.InputJsonValue

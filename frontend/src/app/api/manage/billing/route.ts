@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireMembership, requireStorePermission } from "backend/lib/tenant-access"
 import { getPlatformMpesaDestinationSummaries, getPlatformMpesaDestinationSummary } from "backend/lib/platform-mpesa-destination"
+import { getMvpPilotDays } from "backend/billing/mvp-policy"
 import {
 	BillingError,
 	cancelSubscription,
@@ -43,13 +44,13 @@ async function getAccess() {
 export async function GET() {
 	try {
 		const { context } = await getAccess()
-		const [snapshot, plans, addons] = await Promise.all([getBillingSnapshot(context.tenantId), listActivePlans(), listActiveAddons()])
+		const [snapshot, plans, addons, pilotDays] = await Promise.all([getBillingSnapshot(context.tenantId), listActivePlans(), listActiveAddons(), getMvpPilotDays()])
 		const [paymentMethod, paymentMethods] = await Promise.all([getPlatformMpesaDestinationSummary(), getPlatformMpesaDestinationSummaries()])
 		const legacyPaymentMethod = {
 			provider: "mpesa" as const,
 			...paymentMethod,
 		}
-		return NextResponse.json({ ...snapshot, paymentMethod: legacyPaymentMethod, paymentMethods, plans, addons })
+		return NextResponse.json({ ...snapshot, paymentMethod: legacyPaymentMethod, paymentMethods, plans, addons, pilotDays })
 	} catch (error: unknown) {
 		console.error("Billing status unavailable", error)
 		const status = error instanceof BillingError ? error.status : 503

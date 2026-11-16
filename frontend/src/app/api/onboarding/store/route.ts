@@ -5,7 +5,7 @@ import { normalizeStoreSlug, storeOnboardingSchema } from "backend/validators/st
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { DEFAULT_STORE_CATEGORIES } from "backend/lib/default-categories"
-import { pilotTrialEndsAt } from "backend/billing/mvp-policy"
+import { getMvpPilotDays, pilotTrialEndsAt } from "backend/billing/mvp-policy"
 import { defaultCategoryImage, defaultIndustryHomepage } from "backend/lib/industry-content"
 import { isApprovedMerchantIndustry } from "backend/lib/merchant-industry-policy"
 
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 			if (!plan || plan.price == null || plan.billingInterval !== "MONTH") throw Object.assign(new Error("Choose an active monthly plan."), { code: "PLAN_NOT_FOUND" })
 			const setupFeePaid = plan.setupFeeAmount <= 0
 			const trialStartsAt = setupFeePaid ? new Date() : null
-			const trialEndsAt = trialStartsAt ? pilotTrialEndsAt(trialStartsAt) : null
+			const trialEndsAt = trialStartsAt ? pilotTrialEndsAt(trialStartsAt, await getMvpPilotDays()) : null
 			const tenant = await transaction.tenant.create({ data: { legalName: data.name, status: "TRIALING", planId: plan.id, trialStartsAt: trialStartsAt || undefined, trialEndsAt: trialEndsAt || undefined } })
 			const categoryCards = industry.categoryTemplates.map((category) => ({ name: category.name, slug: category.slug, image: defaultCategoryImage(industry.slug, category.name, category.imageUrl) }))
 			const homepage = {

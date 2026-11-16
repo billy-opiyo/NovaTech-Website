@@ -18,6 +18,7 @@ export default function OnboardingPage() {
 	const [slug, setSlug] = useState("")
 	const [stores, setStores] = useState<ExistingStore[]>([])
 	const [plans, setPlans] = useState<Plan[]>([])
+	const [pilotDays, setPilotDays] = useState(180)
 	const [industries, setIndustries] = useState<Industry[]>([])
 	const [industrySlug, setIndustrySlug] = useState("")
 	const [industriesLoading, setIndustriesLoading] = useState(true)
@@ -45,6 +46,7 @@ export default function OnboardingPage() {
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Plan options are unavailable")
 			setPlans(Array.isArray(data.plans) ? data.plans : [])
+			setPilotDays(Number.isInteger(data.pilotDays) && data.pilotDays > 0 ? data.pilotDays : 180)
 		}).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Plan options are unavailable")).finally(() => setPlansLoading(false))
 		fetch("/api/industries", { cache: "no-store" }).then(async (response) => {
 			const data = await response.json().catch(() => ({}))
@@ -76,7 +78,7 @@ export default function OnboardingPage() {
 		}
 		if (!response.ok) { setError(data.message || "Unable to create store"); addToast(data.message || "Unable to create store", "error") }
 		else {
-			addToast(data.setupFeeRequired ? "Store created. Pay the one-time setup fee to start your six-month pilot." : "Store created and its pilot has started.", "success")
+			addToast(data.setupFeeRequired ? `Store created. Pay the one-time setup fee to start your ${pilotDays}-day pilot.` : "Store created and its pilot has started.", "success")
 			const storeQuery = `store=${encodeURIComponent(data.slug)}`
 			router.push(data.setupFeeRequired ? `/manage/billing?${storeQuery}&setup=required` : `/manage?${storeQuery}`)
 		}
@@ -84,8 +86,8 @@ export default function OnboardingPage() {
 	}
 
 	return <main className="mx-auto min-h-screen max-w-2xl space-y-8 px-4 py-16">
-		<div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">{store.platformBrandName}</p><h1 className="mt-2 text-3xl font-bold">Create your store</h1><p className="mt-2 text-gray-500">Choose a monthly plan, create your workspace, then pay its one-time setup fee. Your six-month pilot begins after payment is confirmed.</p></div>
-		<div className="rounded-xl border border-primary/40 bg-primary/5 p-5"><p className="font-semibold">One-time setup fee, then six months to grow</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">The setup fee is paid once when you create your store. It starts a six-month pilot on the plan you choose. From month seven, you can manually renew that plan by M-Pesa; {store.platformBrandName} does not automatically charge your account.</p></div>
+		<div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">{store.platformBrandName}</p><h1 className="mt-2 text-3xl font-bold">Create your store</h1><p className="mt-2 text-gray-500">Choose a monthly plan, create your workspace, then pay its one-time setup fee. Your {pilotDays}-day free pilot begins after payment is confirmed.</p></div>
+		<div className="rounded-xl border border-primary/40 bg-primary/5 p-5"><p className="font-semibold">One-time setup fee, then {pilotDays} days to grow</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">The setup fee is paid once when you create your store. It starts a {pilotDays}-day pilot on the plan you choose. After the pilot, you can manually renew that plan monthly by M-Pesa; {store.platformBrandName} does not automatically charge your account.</p></div>
 		{stores.length > 0 && <div className="glass-card p-5"><p className="font-semibold">Your stores</p>{stores.map((store) => <button key={store.slug} onClick={() => router.push(`/manage?store=${store.slug}`)} className="mt-3 block text-left text-primary hover:underline">{store.name} <span className="text-sm text-gray-500">({store.publicationStatus})</span></button>)}</div>}
 		<form onSubmit={submit} className="glass-card space-y-5 p-6">
 			<fieldset disabled={industriesLoading || Boolean(industriesError) || !industries.length}>
@@ -98,7 +100,7 @@ export default function OnboardingPage() {
 			<fieldset disabled={plansLoading || !availablePlans.length}>
 				<legend className="font-semibold">Choose your monthly plan</legend>
 				<p className="mt-1 text-sm text-gray-500">This is the plan and product capacity your store uses during the pilot and after it.</p>
-				{plansLoading ? <p className="mt-3 text-sm text-gray-500">Loading plans…</p> : <div className="mt-3 grid gap-3 sm:grid-cols-2">{availablePlans.map((plan) => <label key={plan.key} className={`cursor-pointer rounded-xl border p-4 transition ${selectedPlan?.key === plan.key ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"}`}><span className="flex items-start gap-3"><input type="radio" name="plan" value={plan.key} checked={selectedPlan?.key === plan.key} onChange={() => setPlanKey(plan.key)} className="mt-1 accent-primary"/><span><span className="block font-semibold">{plan.name}</span><span className="mt-1 block text-sm">{plan.currency} {plan.price?.toLocaleString()} / month from month seven</span><span className="mt-1 block text-xs text-gray-500">One-time setup: {plan.currency} {plan.setupFeeAmount.toLocaleString()}</span></span></span></label>)}</div>}
+				{plansLoading ? <p className="mt-3 text-sm text-gray-500">Loading plans…</p> : <div className="mt-3 grid gap-3 sm:grid-cols-2">{availablePlans.map((plan) => <label key={plan.key} className={`cursor-pointer rounded-xl border p-4 transition ${selectedPlan?.key === plan.key ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"}`}><span className="flex items-start gap-3"><input type="radio" name="plan" value={plan.key} checked={selectedPlan?.key === plan.key} onChange={() => setPlanKey(plan.key)} className="mt-1 accent-primary"/><span><span className="block font-semibold">{plan.name}</span><span className="mt-1 block text-sm">{plan.currency} {plan.price?.toLocaleString()} / month after the pilot</span><span className="mt-1 block text-xs text-gray-500">One-time setup: {plan.currency} {plan.setupFeeAmount.toLocaleString()}</span></span></span></label>)}</div>}
 			</fieldset>
 			<label className="block"><span className="text-sm font-medium">Store name</span><input required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="Acme Store" /></label>
 			<label className="block"><span className="text-sm font-medium">Platform slug <span className="text-gray-500">(optional)</span></span><input pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" placeholder="acme-store" /></label>
