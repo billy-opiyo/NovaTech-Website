@@ -1,5 +1,6 @@
 import { clientConfig } from "@/config/client.config"
 import type { FontSizeOption } from "@/lib/font-size-preference"
+import { DEFAULT_PLATFORM_COOKIES, DEFAULT_PLATFORM_PRIVACY, DEFAULT_PLATFORM_TERMS, LEGACY_PLATFORM_POLICY_DEFAULTS } from "@/lib/platform-policy-content"
 
 export type PlatformTeamMember = {
 	id: string
@@ -186,9 +187,9 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 		},
 		design: { themePreset: "nova-blue-orange", typography: { fontSize: "normal" } },
 		legal: {
-			terms: "Nurava HubStores provides the platform that helps independent merchants publish storefronts and connect with shoppers. Each merchant remains responsible for its products, prices, availability, delivery, payment terms, refunds, warranties, taxes, and customer support.",
-			privacy: "Nurava HubStores processes platform account and operational information to provide hosting, authentication, support, and merchant tools. Merchants are responsible for the shopper information they collect and how they use it in their own store.",
-			cookies: "Nurava HubStores uses necessary cookies and local storage for authentication, security, preferences, cart continuity, and platform performance. Optional analytics or marketing technologies should only be enabled where properly disclosed and permitted.",
+			terms: DEFAULT_PLATFORM_TERMS,
+			privacy: DEFAULT_PLATFORM_PRIVACY,
+			cookies: DEFAULT_PLATFORM_COOKIES,
 		},
 		team: [
 			{
@@ -276,7 +277,16 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 			typography: { ...base.design?.typography, ...patch.design?.typography },
 			glass: { ...base.design?.glass, ...patch.design?.glass },
 		},
-		legal: { ...base.legal, ...patch.legal },
+		legal: (() => {
+			const defaults = getPlatformSiteSettingsDefaults().legal!
+			const keys = ["terms", "privacy", "cookies"] as const
+			return Object.fromEntries(keys.map((key) => {
+				const saved = patch.legal?.[key] ?? base.legal?.[key]
+				const value = typeof saved === "string" ? saved.trim() : ""
+				const fallback = defaults[key] || ""
+				return [key, !value || value === LEGACY_PLATFORM_POLICY_DEFAULTS[key] ? fallback : saved]
+			})) as NonNullable<PlatformSiteSettings["legal"]>
+		})(),
 	}
 	// Normalize platform-owned copy from prior names to the currently configured
 	// name. Merchant storefront settings and demo-store records are separate.

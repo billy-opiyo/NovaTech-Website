@@ -442,10 +442,10 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
-				<div><h3 className="text-lg font-semibold">Platform legal pages</h3><p className="mt-1 text-sm text-gray-500">Edit the platform Terms, Privacy Policy, and Cookie Policy without changing merchant storefront legal content.</p></div>
-				<label className="block"><span className="text-sm font-medium">Terms and Conditions</span><textarea rows={7} className={inputClass} value={draft.legal?.terms || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, terms: event.target.value } }))} /></label>
-				<label className="block"><span className="text-sm font-medium">Privacy Policy</span><textarea rows={7} className={inputClass} value={draft.legal?.privacy || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, privacy: event.target.value } }))} /></label>
-				<label className="block"><span className="text-sm font-medium">Cookie Policy</span><textarea rows={7} className={inputClass} value={draft.legal?.cookies || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, cookies: event.target.value } }))} /></label>
+				<div><h3 className="text-lg font-semibold">Platform legal pages</h3><p className="mt-1 text-sm text-gray-500">These editable defaults apply to Nurava HubStores platform pages only. Each merchant’s storefront Terms, Privacy Policy, and Cookie Policy stay under that merchant’s control.</p></div>
+				<label className="block"><span className="text-sm font-medium">Terms and Conditions</span><textarea rows={20} className={inputClass} value={draft.legal?.terms || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, terms: event.target.value } }))} /></label>
+				<label className="block"><span className="text-sm font-medium">Privacy Policy</span><textarea rows={18} className={inputClass} value={draft.legal?.privacy || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, privacy: event.target.value } }))} /></label>
+				<label className="block"><span className="text-sm font-medium">Cookie Policy</span><textarea rows={16} className={inputClass} value={draft.legal?.cookies || ""} onChange={(event) => setDraft((current) => ({ ...current, legal: { ...current.legal, cookies: event.target.value } }))} /></label>
 			</section>
 
 			{error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
