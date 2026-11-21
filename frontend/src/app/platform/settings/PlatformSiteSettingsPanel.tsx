@@ -155,7 +155,7 @@ export default function PlatformSiteSettingsPanel() {
 		setDraft((current) => ({ ...current, design: { themePreset: value } }))
 	}
 
-	async function uploadVisualAsset(section: "splash", slot: string, file: File | undefined) {
+	async function uploadVisualAsset(section: "splash" | "hero", slot: string, file: File | undefined) {
 		if (!file) return
 		const uploadId = `${section}.${slot}`
 		setUploadingVisual(uploadId)
@@ -170,12 +170,9 @@ export default function PlatformSiteSettingsPanel() {
 			const response = await fetch("/api/platform/settings/visual", { method: "POST", body })
 			const data = await response.json().catch(() => ({}))
 			if (!response.ok) throw new Error(data.message || "Unable to upload platform visual")
-			setDraft((current) => ({
-				...current,
-				[section]: slot === "logo"
-					? { ...current[section], logo: data.url }
-					: { ...current[section], images: { ...current[section]?.images, [slot]: data.url } },
-			}))
+			setDraft((current) => section === "hero"
+				? { ...current, hero: { ...current.hero, image: data.url } }
+				: { ...current, splash: slot === "logo" ? { ...current.splash, logo: data.url } : { ...current.splash, images: { ...current.splash?.images, [slot]: data.url } } })
 			setMessage("Platform image uploaded. Save the draft, then publish it to make it live.")
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : "Unable to upload platform visual")
@@ -285,7 +282,15 @@ export default function PlatformSiteSettingsPanel() {
 			</section>
 
 			<section className="glass-card space-y-5 p-6">
-				<div><h3 className="text-lg font-semibold">Platform homepage hero</h3><p className="mt-1 text-sm text-gray-500">Edit the heading and supporting text shown in the responsive glass hero card. Text is used in light and dark modes; hero artwork is no longer displayed.</p></div>
+				<div><h3 className="text-lg font-semibold">Platform homepage hero</h3><p className="mt-1 text-sm text-gray-500">Choose a hero image and whether the heading and supporting text appear over it. The image is gently dimmed while text is shown and displayed at full brightness when text is hidden.</p></div>
+				<label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={draft.hero?.showTexts !== false} onChange={(event) => updateSection("hero", "showTexts", event.target.checked)} /><span>Show Hero Texts</span></label>
+				<div className="rounded-lg border border-gray-200 p-4 dark:border-white/10">
+					<div className="flex flex-wrap items-center gap-3">
+						{draft.hero?.image && <img src={draft.hero.image} alt="Platform homepage hero preview" className="h-24 w-full rounded-lg border object-cover sm:w-48" />}
+						<label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${uploadingVisual === "hero.image" ? "cursor-wait opacity-60" : ""}`}>{uploadingVisual === "hero.image" ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingVisual === "hero.image" ? "Uploading…" : "Upload hero image"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingVisual !== null} onChange={(event) => { void uploadVisualAsset("hero", "image", event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>
+					</div>
+					<p className="mt-2 text-xs text-gray-500">JPG, PNG, WEBP, or GIF up to 1 MB. Save and publish to apply the image.</p>
+				</div>
 				<div className="grid gap-4">
 					<label className="block"><span className="text-sm font-medium">Main heading</span><input maxLength={180} className={inputClass} value={draft.hero?.title || ""} onChange={(event) => updateSection("hero", "title", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: {draft.brand?.name || "Your platform"} is the technology platform</span></label>
 					<label className="block"><span className="text-sm font-medium">Highlighted heading</span><input maxLength={120} className={inputClass} value={draft.hero?.highlight || ""} onChange={(event) => updateSection("hero", "highlight", event.target.value)} /><span className="mt-1 block text-xs text-gray-500">For example: connecting you with trusted stores</span></label>

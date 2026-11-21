@@ -31,9 +31,9 @@ export async function GET() {
 	try {
 		const [admins, invitations] = await Promise.all([
 			prisma.user.findMany({
-				where: { platformRole: { not: null } },
-				select: { id: true, name: true, email: true, role: true, platformRole: true, createdAt: true },
-				orderBy: [{ platformRole: "asc" }, { createdAt: "asc" }],
+				where: { platformRole: { not: null }, role: { not: "SUPERADMIN" } },
+				select: { id: true, name: true, email: true, role: true, platformRole: true, platformAccessEnabled: true, createdAt: true },
+				orderBy: [{ platformAccessEnabled: "desc" }, { platformRole: "asc" }, { createdAt: "asc" }],
 			}),
 			prisma.platformInvitation.findMany({
 				where: { acceptedAt: null, expiresAt: { gt: new Date() } },

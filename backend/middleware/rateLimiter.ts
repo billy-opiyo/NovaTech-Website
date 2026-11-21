@@ -3,6 +3,11 @@ import prisma from "../lib/db"
 
 const WINDOW_MS = 60 * 1000
 const MAX_REQUESTS = 60
+const SPAM_PROTECTED_LIMITS: Record<string, { minute: number; day: number }> = {
+	contact: { minute: 1, day: 3 },
+	review: { minute: 1, day: 3 },
+	"review-account": { minute: 1, day: 3 },
+}
 const testBuckets = new Map<string, { count: number; windowStart: number }>()
 
 /**
@@ -13,22 +18,30 @@ async function distributedRateLimiter(req: NextRequest, scope: string, identity?
 	const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
 	const ip = forwarded || req.headers.get("x-real-ip") || "anonymous"
 	const now = Date.now()
-	const windowStart = new Date(Math.floor(now / WINDOW_MS) * WINDOW_MS)
-	const expiresAt = new Date(windowStart.getTime() + WINDOW_MS)
 	const key = `${scope}:${identity ? encodeURIComponent(identity) : ip}`
+	const protectedLimits = SPAM_PROTECTED_LIMITS[scope]
+	const windows = protectedLimits
+		? [{ name: "minute", duration: WINDOW_MS, limit: protectedLimits.minute }, { name: "day", duration: 24 * 60 * WINDOW_MS, limit: protectedLimits.day }]
+		: [{ name: "minute", duration: WINDOW_MS, limit: MAX_REQUESTS }]
 
 	try {
-		const bucket = await prisma.rateLimitBucket.upsert({
-			where: { key_windowStart: { key, windowStart } },
-			create: { key, windowStart, expiresAt, count: 1 },
-			update: { count: { increment: 1 } },
-		})
+		for (const window of windows) {
+			const windowStart = new Date(Math.floor(now / window.duration) * window.duration)
+			const expiresAt = new Date(windowStart.getTime() + window.duration)
+			const bucketKey = `${key}:${window.name}`
+			const bucket = await prisma.rateLimitBucket.upsert({
+				where: { key_windowStart: { key: bucketKey, windowStart } },
+				create: { key: bucketKey, windowStart, expiresAt, count: 1 },
+				update: { count: { increment: 1 } },
+			})
 
-		if (bucket.count > MAX_REQUESTS) {
-			return NextResponse.json(
-				{ message: "Too many requests. Please try again later." },
-				{ status: 429, headers: { "Retry-After": "60" } },
-			)
+			if (bucket.count > window.limit) {
+				const retryAfter = Math.max(1, Math.ceil((windowStart.getTime() + window.duration - now) / 1000))
+				return NextResponse.json(
+					{ message: "Too many requests. Please try again later." },
+					{ status: 429, headers: { "Retry-After": String(retryAfter) } },
+				)
+			}
 		}
 
 		if (Math.random() < 0.01) {
@@ -50,6 +63,7 @@ async function distributedRateLimiter(req: NextRequest, scope: string, identity?
 export function rateLimiter(req: NextRequest): NextResponse | null
 export function rateLimiter(req: NextRequest, scope: string): Promise<NextResponse | null>
 export function rateLimiter(req: NextRequest, scope: string, identity: string): Promise<NextResponse | null>
+export function rateLimiter(req: NextRequest, scope: string, identity?: string): Promise<NextResponse | null>
 export function rateLimiter(req: NextRequest, scope?: string, identity?: string): NextResponse | null | Promise<NextResponse | null> {
 	if (scope) return distributedRateLimiter(req, scope, identity)
 	if (process.env.NODE_ENV === "production") return NextResponse.json({ message: "Request protection requires a scoped limiter" }, { status: 503 })

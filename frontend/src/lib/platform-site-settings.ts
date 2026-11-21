@@ -115,6 +115,8 @@ export type PlatformSiteSettings = {
 		title?: string
 		highlight?: string
 		description?: string
+		image?: string
+		showTexts?: boolean
 		/** Legacy values are accepted when reading saved settings but are never merged or rendered. */
 		images?: PlatformResponsiveAssets
 	}
@@ -177,6 +179,7 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			title: "Nurava HubStores is the technology platform",
 			highlight: "connecting you with trusted stores",
 			description: "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya.",
+		showTexts: true,
 		},
 		discoveryCards: {
 			businesses: { title: "For Businesses", text: "Create, Manage and Grow your Online Store" },
@@ -227,6 +230,8 @@ export function mergePlatformSiteSettings(base: PlatformSiteSettings, patch: Pla
 		title: nonBlank(patch.hero?.title, nonBlank(base.hero?.title, defaults.title!)),
 		highlight: nonBlank(patch.hero?.highlight, nonBlank(base.hero?.highlight, defaults.highlight!)),
 		description: nonBlank(patch.hero?.description, nonBlank(base.hero?.description, defaults.description!)),
+		image: patch.hero?.image ?? base.hero?.image,
+		showTexts: patch.hero?.showTexts ?? base.hero?.showTexts ?? true,
 	}
 	const defaultDiscoveryCards = getPlatformSiteSettingsDefaults().discoveryCards!
 	const discoveryCards = Object.fromEntries(PLATFORM_DISCOVERY_CARD_KEYS.map((key) => {

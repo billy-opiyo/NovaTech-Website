@@ -121,17 +121,17 @@ export const authOptions = {
 			user.platformRole = databaseUser.platformRole || undefined
 			return true
 		},
-		async jwt({ token, user, trigger }: { token: JWT; user?: User; trigger?: "signIn" | "signUp" | "update" }) {
+		async jwt({ token, user }: { token: JWT; user?: User; trigger?: "signIn" | "signUp" | "update" }) {
 			if (user) {
 				token.role = user.role
 				token.platformRole = user.platformRole
 				token.id = user.id
 			}
-			if (trigger === "update" && token.id) {
-				const latestUser = await prisma.user.findUnique({ where: { id: token.id }, select: { role: true, platformRole: true } })
+			if (token.id) {
+				const latestUser = await prisma.user.findUnique({ where: { id: token.id }, select: { role: true, platformRole: true, platformAccessEnabled: true } })
 				if (latestUser) {
 					token.role = latestUser.role
-					token.platformRole = latestUser.platformRole || undefined
+					token.platformRole = latestUser.platformAccessEnabled ? latestUser.platformRole || undefined : undefined
 				}
 			}
 			return token

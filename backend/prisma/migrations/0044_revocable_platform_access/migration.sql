@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "platformAccessEnabled" BOOLEAN NOT NULL DEFAULT true;

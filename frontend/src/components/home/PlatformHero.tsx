@@ -80,6 +80,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 	const heroTitle = hero?.title?.trim() || `${storeContext.platformBrandName} is the technology platform`
 	const heroHighlight = hero?.highlight?.trim() || "connecting you with trusted stores"
 	const heroDescription = hero?.description?.trim() || "Discover stores, explore what they offer, and connect directly with independent merchants across Kenya."
+	const showHeroTexts = hero?.showTexts !== false
 	const [industrySlug, setIndustrySlug] = useState("all")
 	const availableStores: HeroStore[] = stores
 	const industries = Array.from(new Map(availableStores.flatMap((store) => store.industry ? [[store.industry.slug, store.industry.name] as const] : [])).entries()).sort((left, right) => left[1].localeCompare(right[1]))
@@ -87,12 +88,18 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 	const heroStores = getHeroStores(filteredStores)
 
 	return (
-		<section aria-labelledby="platform-hero-title" className="space-y-8">
-			<div className="glass-card navy-glass rounded-3xl px-5 py-10 text-center shadow-xl sm:px-10 sm:py-14 lg:px-16 lg:py-16">
-				<h1 id="platform-hero-title" className="mx-auto max-w-5xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-6xl">
-					{heroTitle} <span className="text-primary">{heroHighlight}</span>
-				</h1>
-				<p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-gray-600 dark:text-gray-300 sm:text-lg lg:text-xl">{heroDescription}</p>
+		<section aria-labelledby={showHeroTexts ? "platform-hero-title" : undefined} aria-label={showHeroTexts ? undefined : "Platform homepage hero"} className="space-y-8">
+			<div className={`glass-card navy-glass relative isolate flex min-h-64 flex-col items-center justify-center overflow-hidden rounded-3xl px-5 py-10 text-center shadow-xl sm:min-h-80 sm:px-10 sm:py-14 lg:px-16 lg:py-16 ${!showHeroTexts ? "min-h-[22rem] sm:min-h-[28rem]" : ""}`}>
+				{hero?.image && <>
+					<img src={hero.image} alt="" aria-hidden="true" className={`absolute inset-0 z-0 h-full w-full object-cover ${showHeroTexts ? "opacity-90" : "opacity-100"}`} />
+					{showHeroTexts && <div aria-hidden="true" className="absolute inset-0 z-10 bg-theme-bg/50" />}
+				</>}
+				{showHeroTexts && <>
+					<h1 id="platform-hero-title" className="relative z-20 mx-auto max-w-5xl text-3xl font-extrabold leading-tight tracking-tight text-theme-text sm:text-4xl lg:text-6xl">
+						{heroTitle} <span className="text-primary">{heroHighlight}</span>
+					</h1>
+					<p className="relative z-20 mx-auto mt-5 max-w-3xl text-base leading-relaxed text-theme-text sm:text-lg lg:text-xl">{heroDescription}</p>
+				</>}
 			</div>
 			<TrustStrip />
 			<section className="rounded-3xl border border-theme-border bg-theme-surface p-5 shadow-xl sm:p-8">

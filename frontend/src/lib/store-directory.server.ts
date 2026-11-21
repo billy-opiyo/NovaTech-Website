@@ -1,4 +1,5 @@
 import { headers } from "next/headers"
+import { unstable_cache } from "next/cache"
 import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
 import { getPlatformDomain } from "backend/lib/platform-domain"
@@ -82,7 +83,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				featuredProduct: product ? {
 					name: product.name,
 					slug: product.slug,
-					price: product.discountedPrice ?? product.price,
+					price: Number(product.discountedPrice ?? product.price),
 					image: product.images[0] || null,
 				} : null,
 				isPlatformStore: store.ownerType === "PLATFORM",
@@ -164,7 +165,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 				averageRating: Math.round(review.averageRating * 10) / 10,
 				reviewCount: review.reviewCount,
 				productCount: store.tenant._count.products,
-				products: store.tenant.products.map((product) => ({ name: product.name, slug: product.slug, brand: product.brand, price: product.discountedPrice ?? product.price, image: product.images[0] || null })),
+				products: store.tenant.products.map((product) => ({ name: product.name, slug: product.slug, brand: product.brand, price: Number(product.discountedPrice ?? product.price), image: product.images[0] || null })),
 				category,
 				industry: store.industry,
 				isPlatformStore: store.ownerType === "PLATFORM",
@@ -176,6 +177,12 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 		return []
 	}
 }
+
+// These public discovery records are shared by all visitors. Keep their cache
+// short so catalogue and moderation changes become visible promptly, and never
+// cache tenant-specific or authenticated page data here.
+export const getCachedPublishedStores = unstable_cache(getPublishedStores, ["public-store-directory-v1"], { revalidate: 60 })
+export const getCachedPlatformDiscoveryStores = unstable_cache(getPlatformDiscoveryStores, ["platform-discovery-stores-v1"], { revalidate: 60 })
 
 export async function getStorePublicUrl(slug: string): Promise<string> {
 	const requestHeaders = await headers()

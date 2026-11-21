@@ -17,6 +17,7 @@ model User {
   image             String?
   role              Role          @default(CUSTOMER)
   platformRole      PlatformRole?
+  platformAccessEnabled Boolean   @default(true)
   marketingEmails   Boolean       @default(false)
   orderUpdates      Boolean       @default(true)
   preferredTheme    String        @default("dark")

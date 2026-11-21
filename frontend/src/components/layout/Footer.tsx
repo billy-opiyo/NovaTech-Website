@@ -181,6 +181,7 @@ export default function Footer() {
 								</Link>
 							</li>
 						))}
+						<li><Link href={store.isPlatformHome ? "/download-apk" : getStoreRouteHref(store, "/download-apk")} className="hover:text-primary transition-colors">How to download APK App</Link></li>
 						<li>
 							{isAndroidApp ? (
 								<a href="#" onClick={handleOpenWebsiteClick} className="font-semibold text-primary hover:underline">Open Website</a>

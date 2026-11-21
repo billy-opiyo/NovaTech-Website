@@ -20,19 +20,26 @@ async function access(request: NextRequest) {
 	const session = await auth()
 	if (!session?.user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 })
 	const context = await resolveTenantFromRequest(request, { allowUnpublished: true })
-	await requireStorePermission(session.user.id, context.tenantId, "MANAGE_TEAM")
-	return { session, context }
+	const membership = await requireStorePermission(session.user.id, context.tenantId, "MANAGE_TEAM")
+	return { session, context, membership }
 }
 
 export async function GET(request: NextRequest) {
 	try {
-		const { context } = await access(request)
-		const invitations = await prisma.invitation.findMany({
-			where: { tenantId: context.tenantId, acceptedAt: null },
-			select: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
-			orderBy: { createdAt: "desc" },
-		})
-		return NextResponse.json({ invitations })
+		const { context, membership } = await access(request)
+		const [invitations, members] = await Promise.all([
+			prisma.invitation.findMany({
+				where: { tenantId: context.tenantId, acceptedAt: null },
+				select: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
+				orderBy: { createdAt: "desc" },
+			}),
+			prisma.membership.findMany({
+				where: { tenantId: context.tenantId, acceptedAt: { not: null } },
+				select: { id: true, role: true, active: true, user: { select: { id: true, name: true, email: true } } },
+				orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+			}),
+		])
+		return NextResponse.json({ invitations, members, canManageAccess: membership.role === MembershipRole.STORE_OWNER })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Invitations unavailable")
 	}

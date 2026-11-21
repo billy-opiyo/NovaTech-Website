@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "@/lib/auth"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { getCachedDeals, getCachedFeaturedProducts, getCachedNewArrivals, getCachedSimilarProducts, getCachedTrendingProducts } from "@/lib/public-recommendations.server"
 import {
 	getRecommendedForUser,
-	getTrendingProducts,
-	getSimilarProducts,
-	getFeaturedProducts,
-	getNewArrivals,
-	getDeals,
 } from "backend/services/recommendation.service"
 import { apiErrorResponse } from "backend/lib/api-handler"
 
@@ -40,7 +36,7 @@ export async function GET(req: NextRequest) {
 			}
 
 			case "trending": {
-				const trending = await getTrendingProducts(context.tenantId, validatedLimit)
+				const trending = await getCachedTrendingProducts(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: trending, type: "trending" })
 			}
 
@@ -52,22 +48,22 @@ export async function GET(req: NextRequest) {
 					)
 				}
 
-				const similar = await getSimilarProducts(productId, context.tenantId, validatedLimit)
+				const similar = await getCachedSimilarProducts(productId, context.tenantId, validatedLimit)
 				return NextResponse.json({ products: similar, type: "similar" })
 			}
 
 			case "featured": {
-				const featured = await getFeaturedProducts(context.tenantId, validatedLimit)
+				const featured = await getCachedFeaturedProducts(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: featured, type: "featured" })
 			}
 
 			case "new-arrivals": {
-				const newArrivals = await getNewArrivals(context.tenantId, validatedLimit)
+				const newArrivals = await getCachedNewArrivals(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: newArrivals, type: "new-arrivals" })
 			}
 
 			case "deals": {
-				const deals = await getDeals(context.tenantId, validatedLimit)
+				const deals = await getCachedDeals(context.tenantId, validatedLimit)
 				return NextResponse.json({ products: deals, type: "deals" })
 			}
 

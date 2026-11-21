@@ -17,6 +17,7 @@ import AndroidBackButtonHandler from "@/components/providers/AndroidBackButtonHa
 import AndroidAppUpdatePrompt from "@/components/providers/AndroidAppUpdatePrompt"
 import AndroidPullToRefresh from "@/components/providers/AndroidPullToRefresh"
 import AndroidSystemBars from "@/components/providers/AndroidSystemBars"
+import AndroidOfflineCache from "@/components/providers/AndroidOfflineCache"
 
 export async function generateMetadata(): Promise<Metadata> {
 	const store = await getStoreContext()
@@ -76,6 +77,7 @@ export default async function RootLayout({
 				<StoreContextProvider value={store}>
 				<AuthSessionProvider>
 					<AndroidBackButtonHandler />
+					<AndroidOfflineCache />
 					<AndroidPullToRefresh />
 				<ThemeProvider>
 					<AndroidSystemBars />

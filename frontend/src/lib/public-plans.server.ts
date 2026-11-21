@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache"
 import { listActivePlans } from "backend/billing/service"
 
 export type PublicPlan = {
@@ -76,3 +77,5 @@ export async function getPublicPlans(): Promise<{ plans: PublicPlan[]; unavailab
 		return { plans: approvedPlanCatalog, unavailable: false, source: "approved-config" }
 	}
 }
+
+export const getCachedPublicPlans = unstable_cache(getPublicPlans, ["public-active-plans-v1"], { revalidate: 60 })

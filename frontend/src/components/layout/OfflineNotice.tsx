@@ -1,8 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
+import { useStoreContext } from "@/lib/store-context"
 
 export default function OfflineNotice() {
+	const pathname = usePathname()
+	const store = useStoreContext()
 	const [isOffline, setIsOffline] = useState(false)
 	const [retrying, setRetrying] = useState(false)
 
@@ -11,14 +15,29 @@ export default function OfflineNotice() {
 		updateConnectionStatus()
 		window.addEventListener("offline", updateConnectionStatus)
 		window.addEventListener("online", updateConnectionStatus)
+		const handleOfflineNavigation = (event: MouseEvent) => {
+			const target = event.target
+			if (!(target instanceof Element)) return
+			const anchor = target.closest("a[href]") as HTMLAnchorElement | null
+			if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return
+			try {
+				const destination = new URL(anchor.href, window.location.href)
+				if (destination.origin === window.location.origin && destination.pathname !== window.location.pathname) setIsOffline(!navigator.onLine)
+			} catch { /* Ignore malformed links. */ }
+		}
+		document.addEventListener("click", handleOfflineNavigation, true)
 
 		return () => {
 			window.removeEventListener("offline", updateConnectionStatus)
 			window.removeEventListener("online", updateConnectionStatus)
+			document.removeEventListener("click", handleOfflineNavigation, true)
 		}
 	}, [])
 
-	if (!isOffline) return null
+	// An offline platform app launch can render the cached homepage and its splash.
+	// Keep the dialog for all other pages and show it as soon as the user attempts
+	// to navigate away while the device is still offline.
+	if (!isOffline || (store.isPlatformHome && pathname === "/")) return null
 
 	return (
 		<div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" role="status" aria-live="assertive">
