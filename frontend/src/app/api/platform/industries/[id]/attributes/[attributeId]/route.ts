@@ -2,13 +2,13 @@ import { NextResponse } from "next/server"
 import { Prisma, ProductAttributeType } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { isPlatformAdmin } from "backend/lib/platform-access"
+import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { attributeDefinitionPatchSchema } from "backend/validators/industryValidator"
 
 async function platformAccess() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	if (!isPlatformAdmin(session)) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
+	if (!(isPlatformAdmin(session) || await hasPlatformOperation(session, "PLATFORM_CONTENT"))) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	return { session }
 }
 

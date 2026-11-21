@@ -2,7 +2,7 @@ import { SupportTicketSource, TicketStatus } from "@prisma/client"
 import { z } from "zod"
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { hasPlatformSupportAccess } from "../lib/platform-access"
+import { hasPlatformOperation } from "../lib/platform-access"
 import { apiErrorResponse } from "../lib/api-handler"
 import prisma from "../lib/db"
 import { parsePagination } from "../lib/pagination"
@@ -20,7 +20,7 @@ async function requirePlatformSupportApi() {
 	if (!session?.user?.id) {
 		return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
 	}
-	if (!hasPlatformSupportAccess(session)) {
+	if (!(await hasPlatformOperation(session, "PLATFORM_MESSAGES"))) {
 		return { response: NextResponse.json({ message: "Platform support access required" }, { status: 403 }) }
 	}
 	return { session }

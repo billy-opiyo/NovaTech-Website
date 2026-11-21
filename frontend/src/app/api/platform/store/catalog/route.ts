@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { isPlatformAdmin } from "backend/lib/platform-access"
+import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { getPlatformStore, isPlatformOwnedStore } from "backend/lib/platform-store"
 import { productSchema } from "backend/validators/productValidator"
 import { createProduct } from "backend/services/productService"
@@ -20,7 +20,7 @@ const supplierSchema = z.object({
 async function access() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	if (!isPlatformAdmin(session)) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
+	if (!(isPlatformAdmin(session) || await hasPlatformOperation(session, "PLATFORM_STORE"))) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	const store = await getPlatformStore()
 	if (!isPlatformOwnedStore(store) || store?.tenant.kind !== "PLATFORM") return { response: NextResponse.json({ message: "The platform-owned store has not been provisioned." }, { status: 404 }) }
 	return { session, store }

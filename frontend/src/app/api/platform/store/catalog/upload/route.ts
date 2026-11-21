@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { randomUUID } from "node:crypto"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { isPlatformAdmin } from "backend/lib/platform-access"
+import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { getPlatformStore, isPlatformOwnedStore } from "backend/lib/platform-store"
 import { deleteFile, generateTenantFileKey, uploadFile } from "backend/lib/storage"
 import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES, type ValidatedFileKind } from "backend/lib/file-validation"
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 	try {
 		const session = await auth()
 		if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
-		if (!isPlatformAdmin(session)) return NextResponse.json({ message: "Platform administrator access required" }, { status: 403 })
+		if (!(isPlatformAdmin(session) || await hasPlatformOperation(session, "PLATFORM_STORE"))) return NextResponse.json({ message: "Platform administrator access required" }, { status: 403 })
 		const store = await getPlatformStore()
 		if (!store || !isPlatformOwnedStore(store)) return NextResponse.json({ message: "The platform-owned store has not been provisioned." }, { status: 404 })
 		const file = (await request.formData()).get("file")

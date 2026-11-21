@@ -2,11 +2,12 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { blogPostCreateSchema } from "backend/validators/blogValidator"
+import { hasPlatformOperation } from "backend/lib/platform-access"
 
 async function platformAdmin() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	if (session.user.role !== "SUPERADMIN" && !["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")) {
+	if (!(await hasPlatformOperation(session, "PLATFORM_CONTENT"))) {
 		return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	}
 	return { session }

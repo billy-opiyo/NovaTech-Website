@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { MembershipRole } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import {
 	getInventoryOverview,
@@ -15,7 +14,7 @@ import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getInventory(req: NextRequest) {
 	try {
-		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+		const { context } = await requireStoreAccess(req, "MANAGE_CATALOG")
 
 		const searchParams = req.nextUrl.searchParams
 		const action = searchParams.get("action")
@@ -78,7 +77,7 @@ export async function getInventory(req: NextRequest) {
 
 export async function updateStock(req: NextRequest) {
 	try {
-		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+		const { context } = await requireStoreAccess(req, "MANAGE_CATALOG")
 
 		const body = await req.json()
 		const { productId, variantId, newStock } = body

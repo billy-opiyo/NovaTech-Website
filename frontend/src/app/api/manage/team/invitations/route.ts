@@ -10,6 +10,7 @@ import { assertTenantStaffLimit } from "backend/billing/subscription"
 import { sendEmail } from "backend/lib/email"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { getPublicAppUrl } from "backend/lib/platform-domain"
+import { STORE_PERMISSIONS, hasStorePermission } from "backend/lib/permissions"
 
 function escapeHtml(value: string) {
 	const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }
@@ -35,11 +36,11 @@ export async function GET(request: NextRequest) {
 			}),
 			prisma.membership.findMany({
 				where: { tenantId: context.tenantId, acceptedAt: { not: null } },
-				select: { id: true, role: true, active: true, user: { select: { id: true, name: true, email: true } } },
+				select: { id: true, role: true, active: true, extraPermissions: true, user: { select: { id: true, name: true, email: true } } },
 				orderBy: [{ role: "asc" }, { createdAt: "asc" }],
 			}),
 		])
-		return NextResponse.json({ invitations, members, canManageAccess: membership.role === MembershipRole.STORE_OWNER })
+		return NextResponse.json({ invitations, members: members.map((member) => ({ ...member, extraPermissions: Array.isArray(member.extraPermissions) ? member.extraPermissions : [], rolePermissions: STORE_PERMISSIONS.filter((permission) => hasStorePermission(member.role, permission)) })), canManageAccess: membership.role === MembershipRole.STORE_OWNER })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Invitations unavailable")
 	}

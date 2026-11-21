@@ -18,6 +18,7 @@ model User {
   role              Role          @default(CUSTOMER)
   platformRole      PlatformRole?
   platformAccessEnabled Boolean   @default(true)
+  platformOperationGrants Json?
   marketingEmails   Boolean       @default(false)
   orderUpdates      Boolean       @default(true)
   preferredTheme    String        @default("dark")
@@ -631,6 +632,7 @@ model Membership {
   userId      String
   role        MembershipRole
   active      Boolean        @default(true)
+  extraPermissions Json?
   invitedAt   DateTime?
   acceptedAt  DateTime?
   invitedById String?

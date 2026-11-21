@@ -1,9 +1,16 @@
 import Link from "next/link"
 import { requirePlatformSession } from "@/lib/tenant-auth"
-import { hasPlatformSupportAccess } from "backend/lib/platform-access"
+import { hasPlatformOperation } from "backend/lib/platform-access"
 
 export default async function PlatformPage() {
 	const session = await requirePlatformSession()
+	const [canManageStore, canManageBilling, canManageSupport, canManageContent, canManageOperations] = await Promise.all([
+		hasPlatformOperation(session, "PLATFORM_STORE"),
+		hasPlatformOperation(session, "PLATFORM_BILLING"),
+		hasPlatformOperation(session, "PLATFORM_MESSAGES"),
+		hasPlatformOperation(session, "PLATFORM_CONTENT"),
+		hasPlatformOperation(session, "PLATFORM_OPERATIONS"),
+	])
 	return (
 		<div className="space-y-6">
 			<div>
@@ -11,16 +18,16 @@ export default async function PlatformPage() {
 				<p className="mt-2 text-gray-600 dark:text-gray-300">Platform-only operational surfaces are separated from merchant workspaces.</p>
 			</div>
 			<div className="grid gap-4 lg:grid-cols-2">
-				{["SUPERADMIN", "PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || session.user.role || "") && <Link href="/platform/store" className="glass-card block p-6"><h3 className="font-semibold">Platform-owned store</h3><p className="mt-2 text-sm text-gray-500">Manage the Nurava marketplace catalog, suppliers, fulfillment, product payments, refunds, and reporting.</p></Link>}
-				<Link href="/platform/operations" className="glass-card block p-6">
+				{canManageStore && <Link href="/platform/store" className="glass-card block p-6"><h3 className="font-semibold">Platform-owned store</h3><p className="mt-2 text-sm text-gray-500">Manage the Nurava marketplace catalog, suppliers, fulfillment, product payments, refunds, and reporting.</p></Link>}
+				{canManageOperations && <Link href="/platform/operations" className="glass-card block p-6">
 					<h3 className="font-semibold">Platform operations</h3>
 					<p className="mt-2 text-sm text-gray-500">Cross-store metrics, tenant activity, previews, billing status, and suspension controls.</p>
-				</Link>
-				<Link href="/platform/billing" className="glass-card block p-6">
+				</Link>}
+				{canManageBilling && <Link href="/platform/billing" className="glass-card block p-6">
 					<h3 className="font-semibold">Plans and billing</h3>
 					<p className="mt-2 text-sm text-gray-500">Plan, entitlement, and subscription monitoring.</p>
-				</Link>
-				{hasPlatformSupportAccess(session) && <Link href="/platform/messages" className="glass-card block p-6">
+				</Link>}
+				{canManageSupport && <Link href="/platform/messages" className="glass-card block p-6">
 					<h3 className="font-semibold">Platform messages</h3>
 					<p className="mt-2 text-sm text-gray-500">Read and reply to messages submitted through the platform contact form.</p>
 				</Link>}
@@ -32,7 +39,7 @@ export default async function PlatformPage() {
 					<h3 className="font-semibold">Platform site settings</h3>
 					<p className="mt-2 text-sm text-gray-500">Update platform branding, contact details, social links, visibility, and SEO.</p>
 				</Link>}
-				{["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "") && <Link href="/platform/industries" className="glass-card block p-6">
+				{canManageContent && <Link href="/platform/industries" className="glass-card block p-6">
 					<h3 className="font-semibold">Industries and themes</h3>
 					<p className="mt-2 text-sm text-gray-500">Configure store industries, category presets, product attributes, and storefront themes.</p>
 				</Link>}

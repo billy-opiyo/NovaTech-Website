@@ -1,7 +1,7 @@
 import { requirePlatformSession } from "@/lib/tenant-auth"
 import FloatingActions from "@/components/layout/FloatingActions"
 import PlatformNavigation from "./PlatformNavigation"
-import { hasPlatformSupportAccess } from "backend/lib/platform-access"
+import { hasPlatformOperation } from "backend/lib/platform-access"
 import { getStoreContext } from "@/lib/store-context.server"
 
 export const metadata = {
@@ -11,6 +11,13 @@ export const metadata = {
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
 	const session = await requirePlatformSession()
 	const store = await getStoreContext()
+	const [canManageContent, canManageSupport, canManageStore, canManageBilling, canManageOperations] = await Promise.all([
+		hasPlatformOperation(session, "PLATFORM_CONTENT"),
+		hasPlatformOperation(session, "PLATFORM_MESSAGES"),
+		hasPlatformOperation(session, "PLATFORM_STORE"),
+		hasPlatformOperation(session, "PLATFORM_BILLING"),
+		hasPlatformOperation(session, "PLATFORM_OPERATIONS"),
+	])
 	return (
 		<div className="min-h-screen bg-gray-50 p-3 text-gray-900 sm:p-4 lg:p-6 dark:bg-dark-bg dark:text-white">
 			<header className="sticky top-0 z-40 -mx-3 mb-6 border-b border-gray-200/80 bg-gray-50/95 px-3 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-dark-bg/95 sm:-mx-4 sm:px-4 lg:-mx-6 lg:mb-8 lg:px-6">
@@ -19,7 +26,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{store.platformBrandName} platform</p>
 						<h1 className="text-2xl font-bold">Control plane</h1>
 					</div>
-					<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} canManageContent={session.user.role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")} canManageSupport={hasPlatformSupportAccess(session)} />
+					<PlatformNavigation isSuperAdmin={session.user.role === "SUPERADMIN"} canManageContent={canManageContent} canManageSupport={canManageSupport} canManageStore={canManageStore} canManageBilling={canManageBilling} canManageOperations={canManageOperations} />
 				</div>
 			</header>
 			<main className="mx-auto max-w-6xl">{children}</main>

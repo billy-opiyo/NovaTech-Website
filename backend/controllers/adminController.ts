@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
-import { MembershipRole, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { parsePagination } from "../lib/pagination"
 import { apiErrorResponse } from "../lib/api-handler"
 
 export async function getAdminLogs(req: NextRequest) {
 	try {
-		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+		const { context } = await requireStoreAccess(req, "VIEW_AUDIT_LOGS")
 
 		const searchParams = req.nextUrl.searchParams
 		const { page, limit } = parsePagination(searchParams)
@@ -59,7 +59,7 @@ export async function getAdminLogs(req: NextRequest) {
 
 export async function getAdminLogStats(req: NextRequest) {
 	try {
-		const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+		const { context } = await requireStoreAccess(req, "VIEW_AUDIT_LOGS")
 
 		const [totalLogs, todayLogs, recentActions] = await Promise.all([
 			prisma.adminLog.count({ where: { tenantId: context.tenantId } }),
@@ -92,7 +92,7 @@ export async function getAdminLogStats(req: NextRequest) {
 
 export async function recordAdminAction(req: NextRequest) {
 	try {
-		const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+		const { context, session } = await requireStoreAccess(req, "VIEW_AUDIT_LOGS")
 
 		const body = await req.json()
 		const { action, metadata } = body

@@ -30,6 +30,7 @@ export const storePermissionRoles = {
 } as const
 
 export type StorePermission = keyof typeof storePermissionRoles
+export const STORE_PERMISSIONS = Object.keys(storePermissionRoles) as StorePermission[]
 
 export function rolesForPermission(permission: StorePermission): MembershipRole[] {
 	return [...storePermissionRoles[permission]]
@@ -37,4 +38,9 @@ export function rolesForPermission(permission: StorePermission): MembershipRole[
 
 export function hasStorePermission(role: MembershipRole, permission: StorePermission) {
 	return (storePermissionRoles[permission] as readonly MembershipRole[]).includes(role)
+}
+
+export function hasEffectiveStorePermission(role: MembershipRole, extraPermissions: unknown, permission: StorePermission) {
+	if (hasStorePermission(role, permission)) return true
+	return Array.isArray(extraPermissions) && extraPermissions.includes(permission)
 }
