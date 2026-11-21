@@ -7,7 +7,7 @@ import { useStoreContext } from "@/lib/store-context"
 
 const roles = ["PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"] as const
 type PlatformRole = (typeof roles)[number]
-type Admin = { id: string; name: string | null; email: string; role: string; platformRole: string | null; createdAt: string }
+type Admin = { id: string; name: string | null; email: string; role: string; platformRole: string | null; platformAccessEnabled: boolean; createdAt: string }
 type Invitation = { id: string; email: string; role: string; expiresAt: string; createdAt: string; invitedBy: { name: string | null; email: string } }
 type AccessData = { admins: Admin[]; invitations: Invitation[] }
 
@@ -25,6 +25,7 @@ export default function PlatformAccessPanel() {
 	const [error, setError] = useState("")
 	const [busy, setBusy] = useState(false)
 	const [copied, setCopied] = useState(false)
+	const [updatingAdmin, setUpdatingAdmin] = useState("")
 	const { addToast } = useToast()
 
 	async function load() {
@@ -61,6 +62,18 @@ export default function PlatformAccessPanel() {
 		setCopied(true)
 	}
 
+	async function toggleAdminAccess(admin: Admin) {
+		setUpdatingAdmin(admin.id)
+		try {
+			const response = await fetch("/api/platform/access/members", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: admin.id, enabled: !admin.platformAccessEnabled }) })
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(result.message || "Unable to update platform access")
+			addToast(`${admin.email} access ${admin.platformAccessEnabled ? "disabled" : "enabled"}.`, "success")
+			await load()
+		} catch (reason) { addToast(reason instanceof Error ? reason.message : "Unable to update platform access", "error") }
+		finally { setUpdatingAdmin("") }
+	}
+
 	if (!data) return <div className="glass-card p-6"><p>{message}</p><p className="mt-2 text-sm text-amber-700">Platform access management is restricted to super administrators.</p></div>
 
 	return <div className="space-y-6">
@@ -74,7 +87,8 @@ export default function PlatformAccessPanel() {
 			{inviteLink && <div className="flex flex-col gap-2 sm:flex-row"><input readOnly value={inviteLink} onFocus={(event) => event.currentTarget.select()} className="min-w-0 flex-1 rounded-lg border p-3 text-sm dark:bg-dark-surface" aria-label="Platform invitation link" /><button type="button" onClick={() => void copyInviteLink()} className="inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold"><Copy size={16} />{copied ? "Copied" : "Copy link"}</button></div>}
 			<button disabled={busy} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50" type="submit">{busy && <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />} {busy ? "Creating invitation…" : "Create invitation"}</button>
 		</form>
-		<section className="glass-card p-6"><div className="flex items-center gap-3"><ShieldCheck className="text-primary" size={22} /><h3 className="text-xl font-semibold">Current platform access</h3></div>{data.admins.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.admins.map((admin) => <div key={admin.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{admin.name || "Unnamed user"}</p><p className="text-sm text-gray-500">{admin.email}</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{admin.role === "SUPERADMIN" ? "Super Admin" : humanizeRole(admin.platformRole || "")}</span></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No platform operators are assigned.</p>}</section>
 		<section className="glass-card p-6"><h3 className="text-xl font-semibold">Pending invitations</h3>{data.invitations.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.invitations.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{item.email}</p><p className="text-sm text-gray-500">{humanizeRole(item.role)} · invited by {item.invitedBy.name || item.invitedBy.email}</p></div><p className="text-sm text-gray-500">Expires {new Date(item.expiresAt).toLocaleDateString()}</p></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No pending platform invitations.</p>}</section>
+		<section className="glass-card p-6"><h3 className="text-xl font-semibold">Pending invitations</h3>{data.invitations.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.invitations.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{item.email}</p><p className="text-sm text-gray-500">{humanizeRole(item.role)} · invited by {item.invitedBy.name || item.invitedBy.email}</p></div><p className="text-sm text-gray-500">Expires {new Date(item.expiresAt).toLocaleDateString()}</p></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No pending platform invitations.</p>}</section>
+		<section className="glass-card p-6"><div className="flex items-center gap-3"><ShieldCheck className="text-primary" size={22} /><h3 className="text-xl font-semibold">Current platform access</h3></div><p className="mt-1 text-sm text-gray-500">Only a Super Admin can enable or disable platform operator access.</p>{data.admins.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.admins.map((admin) => <div key={admin.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{admin.name || "Unnamed user"}</p><p className="text-sm text-gray-500">{admin.email} · {humanizeRole(admin.platformRole || "")}</p></div><label className="inline-flex items-center gap-2 text-sm"><span>{admin.platformAccessEnabled ? "Enabled" : "Disabled"}</span><input type="checkbox" role="switch" aria-label={`${admin.platformAccessEnabled ? "Disable" : "Enable"} platform access for ${admin.email}`} checked={admin.platformAccessEnabled} disabled={updatingAdmin === admin.id} onChange={() => void toggleAdminAccess(admin)} className="h-5 w-5 accent-primary" />{updatingAdmin === admin.id && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}</label></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No platform operators are assigned.</p>}</section>
 	</div>
 }

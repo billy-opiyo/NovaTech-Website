@@ -124,6 +124,8 @@ export const platformSiteSettingsPatchSchema = z.object({
 		title: optionalText(180),
 		highlight: optionalText(120),
 		description: optionalText(320),
+		image: optionalHttpsOrPath.optional(),
+		showTexts: z.boolean().optional(),
 		// Legacy saved artwork remains parseable for compatibility; merge strips it.
 		images: responsiveAssetsSchema.optional(),
 	}).strict().optional(),

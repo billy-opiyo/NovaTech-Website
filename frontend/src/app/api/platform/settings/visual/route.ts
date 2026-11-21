@@ -10,8 +10,10 @@ const imageKinds: Record<string, "JPEG" | "PNG" | "WEBP" | "GIF"> = {
 	"image/webp": "WEBP",
 	"image/gif": "GIF",
 }
-const allowedSections = new Set(["splash"])
-const allowedSlots = new Set(["logo", "darkDesktop", "darkTablet", "darkMobile", "lightDesktop", "lightTablet", "lightMobile"])
+const allowedSlots: Record<string, ReadonlySet<string>> = {
+	splash: new Set(["logo", "darkDesktop", "darkTablet", "darkMobile", "lightDesktop", "lightTablet", "lightMobile"]),
+	hero: new Set(["image"]),
+}
 
 export async function POST(request: NextRequest) {
 	const session = await auth()
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
 		const file = formData.get("file")
 		const section = String(formData.get("section") || "")
 		const slot = String(formData.get("slot") || "")
-		if (!allowedSections.has(section) || !allowedSlots.has(slot)) return NextResponse.json({ message: "That platform image slot is not supported." }, { status: 400 })
+		if (!allowedSlots[section]?.has(slot)) return NextResponse.json({ message: "That platform image slot is not supported." }, { status: 400 })
 		if (!(file instanceof File)) return NextResponse.json({ message: "Please choose an image." }, { status: 400 })
 		const kind = imageKinds[file.type]
 		if (!kind) return NextResponse.json({ message: "Use a JPG, PNG, WEBP, or GIF image." }, { status: 400 })

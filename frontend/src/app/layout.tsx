@@ -19,6 +19,7 @@ import AndroidAppUpdatePrompt from "@/components/providers/AndroidAppUpdatePromp
 import AndroidPullToRefresh from "@/components/providers/AndroidPullToRefresh"
 import AndroidSystemBars from "@/components/providers/AndroidSystemBars"
 import { getPlatformDomain } from "backend/lib/platform-domain"
+import AndroidOfflineCache from "@/components/providers/AndroidOfflineCache"
 
 export async function generateMetadata(): Promise<Metadata> {
 	const [store, requestHeaders] = await Promise.all([getStoreContext(), headers()])
@@ -93,6 +94,7 @@ export default async function RootLayout({
 				<StoreContextProvider value={store}>
 				<AuthSessionProvider>
 					<AndroidBackButtonHandler />
+					<AndroidOfflineCache />
 					<AndroidPullToRefresh />
 				<ThemeProvider>
 					<AndroidSystemBars />

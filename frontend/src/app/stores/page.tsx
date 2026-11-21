@@ -1,9 +1,9 @@
 import { Store as StoreIcon } from "lucide-react"
-import { getPublishedStores, getStorePublicUrl } from "@/lib/store-directory.server"
+import { getCachedPublishedStores, getStorePublicUrl } from "@/lib/store-directory.server"
 import StoreDirectoryBrowser from "@/components/home/StoreDirectoryBrowser"
 
 export default async function StoreDirectoryPage() {
-	const stores = await getPublishedStores()
+	const stores = await getCachedPublishedStores()
 	const storeLinks = await Promise.all(stores.map(async (store) => ({ ...store, href: await getStorePublicUrl(store.slug) })))
 
 	return (
