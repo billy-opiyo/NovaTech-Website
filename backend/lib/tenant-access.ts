@@ -1,6 +1,6 @@
 import { MembershipRole } from "@prisma/client"
 import prisma from "./db"
-import { hasStorePermission, rolesForPermission, type StorePermission } from "./permissions"
+import { hasEffectiveStorePermission, rolesForPermission, type StorePermission } from "./permissions"
 
 export async function getActiveMembership(userId: string, tenantId: string) {
 	if (!userId || !tenantId) return null
@@ -19,7 +19,7 @@ export async function requireMembership(userId: string, tenantId: string, roles?
 
 export async function requireStorePermission(userId: string, tenantId: string, permission: StorePermission) {
 	const membership = await getActiveMembership(userId, tenantId)
-	if (!membership || !hasStorePermission(membership.role, permission)) {
+	if (!membership || !hasEffectiveStorePermission(membership.role, membership.extraPermissions, permission)) {
 		const error = new Error(`The ${permission.toLowerCase().replace(/_/g, " ")} permission is required`)
 		Object.assign(error, { status: 403, code: "STORE_PERMISSION_DENIED", permission })
 		throw error

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "../lib/db"
 import { createActionRecord } from "../actions"
-import { MembershipRole, OrderStatus, Prisma, ReviewModerationStatus } from "@prisma/client"
+import { OrderStatus, Prisma, ReviewModerationStatus } from "@prisma/client"
 import { requireStoreAccess } from "../lib/store-access"
 import { couponCreateSchema, couponUpdateSchema } from "../validators/couponValidator"
 import { apiErrorResponse } from "../lib/api-handler"
@@ -13,7 +13,7 @@ function errorCode(error: unknown): string | undefined {
 }
 
 export async function getCustomers(req: NextRequest) {
-	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+	const { context } = await requireStoreAccess(req, "VIEW_CUSTOMERS")
 	const search = req.nextUrl.searchParams.get("search")?.trim()
 	const { page, limit, skip } = parsePagination(req.nextUrl.searchParams, 100)
 	const settledOrderWhere = { tenantId: context.tenantId, payments: { some: { status: "COMPLETED" as const } } }
@@ -36,14 +36,14 @@ export async function getCustomers(req: NextRequest) {
 }
 
 export async function getCoupons(req: NextRequest) {
-	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const { context } = await requireStoreAccess(req, "MANAGE_COUPONS")
 	const search = req.nextUrl.searchParams.get("search")?.trim()
 	const coupons = await prisma.coupon.findMany({ where: { tenantId: context.tenantId, ...(search ? { code: { contains: search, mode: "insensitive" } } : {}) }, orderBy: { expiresAt: "desc" } })
 	return NextResponse.json({ coupons })
 }
 
 export async function createCoupon(req: NextRequest) {
-	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const { context, session } = await requireStoreAccess(req, "MANAGE_COUPONS")
 	try {
 		const parsed = couponCreateSchema.safeParse(await req.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Invalid coupon data", issues: parsed.error.flatten() }, { status: 400 })
@@ -55,7 +55,7 @@ export async function createCoupon(req: NextRequest) {
 }
 
 export async function updateCoupon(req: NextRequest) {
-	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const { context, session } = await requireStoreAccess(req, "MANAGE_COUPONS")
 	try {
 		const parsed = couponUpdateSchema.safeParse(await req.json().catch(() => null))
 		if (!parsed.success) return NextResponse.json({ message: "Invalid coupon update", issues: parsed.error.flatten() }, { status: 400 })
@@ -69,7 +69,7 @@ export async function updateCoupon(req: NextRequest) {
 }
 
 export async function deleteCoupon(req: NextRequest) {
-	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+	const { context, session } = await requireStoreAccess(req, "DELETE_COUPONS")
 	const id = req.nextUrl.searchParams.get("id")
 	if (!id) return NextResponse.json({ message: "Coupon id is required" }, { status: 400 })
 	const existing = await prisma.coupon.findFirst({ where: { id, tenantId: context.tenantId }, select: { id: true } })
@@ -80,7 +80,7 @@ export async function deleteCoupon(req: NextRequest) {
 }
 
 export async function getAdminReviews(req: NextRequest) {
-	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+	const { context } = await requireStoreAccess(req, "MODERATE_REVIEWS")
 	const rawStatus = req.nextUrl.searchParams.get("status")
 	const status = rawStatus && Object.values(ReviewModerationStatus).includes(rawStatus as ReviewModerationStatus) ? rawStatus as ReviewModerationStatus : undefined
 	const scoped: Prisma.ReviewWhereInput = { tenantId: context.tenantId, ...(status ? { moderationStatus: status } : {}) }
@@ -90,7 +90,7 @@ export async function getAdminReviews(req: NextRequest) {
 }
 
 export async function moderateReview(req: NextRequest) {
-	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const { context, session } = await requireStoreAccess(req, "MODERATE_REVIEWS")
 	const body = await req.json().catch(() => null)
 	if (body?.action === "edit") {
 		const parsed = adminReviewUpdateSchema.safeParse(body)
@@ -110,7 +110,7 @@ export async function moderateReview(req: NextRequest) {
 }
 
 export async function deleteAdminReview(req: NextRequest) {
-	const { context, session } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER])
+	const { context, session } = await requireStoreAccess(req, "MODERATE_REVIEWS")
 	const parsed = adminReviewDeleteSchema.safeParse(await req.json().catch(() => null))
 	if (!parsed.success) return NextResponse.json({ message: "Invalid review delete request" }, { status: 400 })
 	const existing = await prisma.review.findFirst({ where: { id: parsed.data.id, tenantId: context.tenantId }, select: { id: true } })
@@ -121,7 +121,7 @@ export async function deleteAdminReview(req: NextRequest) {
 }
 
 export async function getDeliveries(req: NextRequest) {
-	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN, MembershipRole.STORE_MANAGER, MembershipRole.STORE_SUPPORT])
+	const { context } = await requireStoreAccess(req, "VIEW_ORDERS")
 	const rawStatus = req.nextUrl.searchParams.get("status")
 	const status = rawStatus && Object.values(OrderStatus).includes(rawStatus as OrderStatus) ? rawStatus as OrderStatus : undefined
 	const orders = await prisma.order.findMany({ where: { tenantId: context.tenantId, ...(status && rawStatus !== "ALL" ? { status } : {}) }, include: { user: { select: { name: true, email: true } }, items: { select: { quantity: true } } }, orderBy: { createdAt: "desc" }, take: 100 })
@@ -133,7 +133,7 @@ export async function getDeliveries(req: NextRequest) {
 }
 
 export async function getSecurity(req: NextRequest) {
-	const { context } = await requireStoreAccess(req, [MembershipRole.STORE_OWNER, MembershipRole.STORE_ADMIN])
+	const { context } = await requireStoreAccess(req, "VIEW_AUDIT_LOGS")
 	const memberships = await prisma.membership.findMany({ where: { tenantId: context.tenantId, active: true }, select: { user: { select: { id: true, name: true, email: true, role: true, createdAt: true } } }, orderBy: { createdAt: "asc" } })
 	const memberIds = memberships.map(({ user }) => user.id)
 	const [events, admins] = await Promise.all([

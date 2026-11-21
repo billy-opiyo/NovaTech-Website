@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { isPlatformAdmin } from "backend/lib/platform-access"
+import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { encryptMerchantPaymentDetails } from "backend/lib/merchant-verification-secrets"
 import { getPlatformStorePaymentSummary } from "backend/payments/platform-store"
 
@@ -21,7 +21,7 @@ const configSchema = z.object({
 async function access() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	if (!isPlatformAdmin(session)) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
+	if (!(isPlatformAdmin(session) || await hasPlatformOperation(session, "PLATFORM_STORE"))) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	return { session }
 }
 

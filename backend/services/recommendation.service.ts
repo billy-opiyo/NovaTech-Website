@@ -472,6 +472,7 @@ export async function getPlatformStoreHomepageProducts(): Promise<ProductRecomme
 			tenantId: store.tenantId,
 			storeId: store.id,
 			isPublished: true,
+			isFeatured: true,
 			category: { is: { active: true, industry: { is: { active: true } } } },
 		},
 		include: {

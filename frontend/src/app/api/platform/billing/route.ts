@@ -9,6 +9,7 @@ import { encryptMerchantPaymentDetails } from "backend/lib/merchant-verification
 import { getPlatformMpesaDestinationSummaries, getPlatformMpesaDestinationSummary, validatePlatformMpesaDestination, type PlatformMpesaAccountType } from "backend/lib/platform-mpesa-destination"
 import { reviewManualBillingPayment } from "backend/billing/service"
 import { getMvpPilotDays, MVP_PILOT_DAYS } from "backend/billing/mvp-policy"
+import { hasPlatformOperation } from "backend/lib/platform-access"
 
 const planSchema = z.object({ action: z.literal("plan"), key: z.string().regex(/^[A-Z0-9_-]+$/), name: z.string().min(2).max(80), price: z.number().int().nonnegative().nullable(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).nullable(), setupFeeAmount: z.number().int().nonnegative().default(0), transactionFeePercent: z.number().min(0).max(100).default(0), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true), entitlementsJson: z.record(z.unknown()).optional() })
 const addonSchema = z.object({ action: z.literal("addon"), key: z.string().regex(/^[a-z0-9_-]+$/), name: z.string().min(2).max(80), description: z.string().max(500).nullable().optional(), price: z.number().int().positive(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).default("MONTH"), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true) })
@@ -21,7 +22,7 @@ const actionSchema = z.union([planSchema, addonSchema, destinationSchema, disabl
 async function requirePlatformApi() {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	const allowed = session.user.role === "SUPERADMIN" || ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(session.user.platformRole || "")
+	const allowed = await hasPlatformOperation(session, "PLATFORM_BILLING")
 	if (!allowed) return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	return { session }
 }

@@ -16,15 +16,17 @@ const links = [
 	{ label: "Messages", href: "/platform/messages" },
 ] as const
 
-export default function PlatformNavigation({ isSuperAdmin, canManageContent, canManageSupport }: { isSuperAdmin: boolean; canManageContent: boolean; canManageSupport: boolean }) {
+export default function PlatformNavigation({ isSuperAdmin, canManageContent, canManageSupport, canManageStore, canManageBilling, canManageOperations }: { isSuperAdmin: boolean; canManageContent: boolean; canManageSupport: boolean; canManageStore: boolean; canManageBilling: boolean; canManageOperations: boolean }) {
 	const pathname = usePathname()
-	const visibleLinks = isSuperAdmin
-		? links
-		: [
-			...links.slice(0, 3),
-			...(canManageSupport ? [links[8]] : []),
-			...(canManageContent ? [links[7], links[6], links[5]] : []),
-		]
+	const visibleLinks = [
+		links[0],
+		...(canManageOperations || isSuperAdmin ? [links[1]] : []),
+		...(canManageBilling || isSuperAdmin ? [links[2]] : []),
+		...(isSuperAdmin ? [links[3], links[4]] : []),
+		...(canManageContent || isSuperAdmin ? [links[5], links[7]] : []),
+		...(canManageStore || isSuperAdmin ? [links[6]] : []),
+		...(canManageSupport || isSuperAdmin ? [links[8]] : []),
+	]
 
 	return (
 		<nav aria-label="Platform navigation" className="w-full min-w-0 overflow-x-auto pb-1 lg:w-auto">

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
-import { isPlatformAdmin } from "backend/lib/platform-access"
+import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { getPlatformStore, isPlatformOwnedStore } from "backend/lib/platform-store"
 
 const schema = z.object({ orderId: z.string().min(1), paymentId: z.string().min(1).optional(), amount: z.number().finite().positive(), currency: z.string().trim().length(3).default("KES"), reason: z.string().trim().min(3).max(1000), idempotencyKey: z.string().trim().min(8).max(120) }).strict()
@@ -10,7 +10,7 @@ const schema = z.object({ orderId: z.string().min(1), paymentId: z.string().min(
 export async function POST(request: Request) {
 	const session = await auth()
 	if (!session?.user?.id) return NextResponse.json({ message: "Authentication required" }, { status: 401 })
-	if (!isPlatformAdmin(session)) return NextResponse.json({ message: "Platform administrator access required" }, { status: 403 })
+	if (!(isPlatformAdmin(session) || await hasPlatformOperation(session, "PLATFORM_STORE"))) return NextResponse.json({ message: "Platform administrator access required" }, { status: 403 })
 	const store = await getPlatformStore()
 	if (!isPlatformOwnedStore(store) || store?.tenant.kind !== "PLATFORM") return NextResponse.json({ message: "The platform-owned store has not been provisioned." }, { status: 404 })
 	const parsed = schema.safeParse(await request.json().catch(() => null))

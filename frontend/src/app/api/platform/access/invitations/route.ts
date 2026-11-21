@@ -32,7 +32,7 @@ export async function GET() {
 		const [admins, invitations] = await Promise.all([
 			prisma.user.findMany({
 				where: { platformRole: { not: null }, role: { not: "SUPERADMIN" } },
-				select: { id: true, name: true, email: true, role: true, platformRole: true, platformAccessEnabled: true, createdAt: true },
+				select: { id: true, name: true, email: true, role: true, platformRole: true, platformAccessEnabled: true, platformOperationGrants: true, createdAt: true },
 				orderBy: [{ platformAccessEnabled: "desc" }, { platformRole: "asc" }, { createdAt: "asc" }],
 			}),
 			prisma.platformInvitation.findMany({
@@ -41,7 +41,7 @@ export async function GET() {
 				orderBy: { createdAt: "desc" },
 			}),
 		])
-		return NextResponse.json({ admins, invitations })
+		return NextResponse.json({ admins: admins.map((admin) => ({ ...admin, platformOperationGrants: Array.isArray(admin.platformOperationGrants) ? admin.platformOperationGrants : [] })), invitations })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Platform access unavailable")
 	}

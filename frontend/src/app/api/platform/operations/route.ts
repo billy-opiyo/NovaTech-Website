@@ -7,19 +7,17 @@ import { getPlatformDomain } from "backend/lib/platform-domain"
 import { verificationEvidenceDueAt } from "backend/retention/tenant-retention"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { getMerchantOnboardingMode, isMerchantVerificationRequired } from "backend/lib/merchant-verification"
-
-const readRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"])
-const manageRoles = new Set(["PLATFORM_OWNER", "PLATFORM_ADMIN"])
+import { hasPlatformOperation } from "backend/lib/platform-access"
 
 async function requirePlatformApi(mutation = false) {
 	const session = await auth()
 	if (!session?.user?.id) return { response: NextResponse.json({ message: "Authentication required" }, { status: 401 }) }
-	const isSuperAdmin = session.user.role === "SUPERADMIN"
-	const platformRole = session.user.platformRole || ""
-	if (!isSuperAdmin && !readRoles.has(platformRole)) {
+	const canRead = await hasPlatformOperation(session, "PLATFORM_OPERATIONS")
+	const canManage = await hasPlatformOperation(session, "PLATFORM_OPERATIONS_MANAGE")
+	if (!canRead) {
 		return { response: NextResponse.json({ message: "Platform administrator access required" }, { status: 403 }) }
 	}
-	if (mutation && !isSuperAdmin && !manageRoles.has(platformRole)) {
+	if (mutation && !canManage) {
 		return { response: NextResponse.json({ message: "Platform management access required" }, { status: 403 }) }
 	}
 	return { session }

@@ -6,8 +6,9 @@ import { useToast } from "@/components/ui/Toast"
 import { useStoreContext } from "@/lib/store-context"
 
 const roles = ["PLATFORM_ADMIN", "PLATFORM_SUPPORT", "PLATFORM_ANALYST"] as const
+const operations = ["PLATFORM_OPERATIONS", "PLATFORM_OPERATIONS_MANAGE", "PLATFORM_BILLING", "PLATFORM_CONTENT", "PLATFORM_STORE", "PLATFORM_MESSAGES"] as const
 type PlatformRole = (typeof roles)[number]
-type Admin = { id: string; name: string | null; email: string; role: string; platformRole: string | null; platformAccessEnabled: boolean; createdAt: string }
+type Admin = { id: string; name: string | null; email: string; role: string; platformRole: string | null; platformAccessEnabled: boolean; platformOperationGrants: string[]; createdAt: string }
 type Invitation = { id: string; email: string; role: string; expiresAt: string; createdAt: string; invitedBy: { name: string | null; email: string } }
 type AccessData = { admins: Admin[]; invitations: Invitation[] }
 
@@ -26,6 +27,7 @@ export default function PlatformAccessPanel() {
 	const [busy, setBusy] = useState(false)
 	const [copied, setCopied] = useState(false)
 	const [updatingAdmin, setUpdatingAdmin] = useState("")
+	const [savingOperations, setSavingOperations] = useState("")
 	const { addToast } = useToast()
 
 	async function load() {
@@ -74,6 +76,22 @@ export default function PlatformAccessPanel() {
 		finally { setUpdatingAdmin("") }
 	}
 
+	function toggleOperation(admin: Admin, operation: string) {
+		setData((current) => current ? { ...current, admins: current.admins.map((item) => item.id === admin.id ? { ...item, platformOperationGrants: item.platformOperationGrants.includes(operation) ? item.platformOperationGrants.filter((entry) => entry !== operation) : [...item.platformOperationGrants, operation] } : item) } : current)
+	}
+
+	async function saveOperations(admin: Admin) {
+		setSavingOperations(admin.id)
+		try {
+			const response = await fetch("/api/platform/access/members", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: admin.id, operationGrants: admin.platformOperationGrants }) })
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) throw new Error(result.message || "Unable to save operation access")
+			addToast(`Operation access saved for ${admin.email}.`, "success")
+			await load()
+		} catch (reason) { addToast(reason instanceof Error ? reason.message : "Unable to save operation access", "error") }
+		finally { setSavingOperations("") }
+	}
+
 	if (!data) return <div className="glass-card p-6"><p>{message}</p><p className="mt-2 text-sm text-amber-700">Platform access management is restricted to super administrators.</p></div>
 
 	return <div className="space-y-6">
@@ -88,6 +106,6 @@ export default function PlatformAccessPanel() {
 			<button disabled={busy} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50" type="submit">{busy && <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />} {busy ? "Creating invitation…" : "Create invitation"}</button>
 		</form>
 		<section className="glass-card p-6"><h3 className="text-xl font-semibold">Pending invitations</h3>{data.invitations.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.invitations.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{item.email}</p><p className="text-sm text-gray-500">{humanizeRole(item.role)} · invited by {item.invitedBy.name || item.invitedBy.email}</p></div><p className="text-sm text-gray-500">Expires {new Date(item.expiresAt).toLocaleDateString()}</p></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No pending platform invitations.</p>}</section>
-		<section className="glass-card p-6"><div className="flex items-center gap-3"><ShieldCheck className="text-primary" size={22} /><h3 className="text-xl font-semibold">Current platform access</h3></div><p className="mt-1 text-sm text-gray-500">Only a Super Admin can enable or disable platform operator access.</p>{data.admins.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.admins.map((admin) => <div key={admin.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="font-medium">{admin.name || "Unnamed user"}</p><p className="text-sm text-gray-500">{admin.email} · {humanizeRole(admin.platformRole || "")}</p></div><label className="inline-flex items-center gap-2 text-sm"><span>{admin.platformAccessEnabled ? "Enabled" : "Disabled"}</span><input type="checkbox" role="switch" aria-label={`${admin.platformAccessEnabled ? "Disable" : "Enable"} platform access for ${admin.email}`} checked={admin.platformAccessEnabled} disabled={updatingAdmin === admin.id} onChange={() => void toggleAdminAccess(admin)} className="h-5 w-5 accent-primary" />{updatingAdmin === admin.id && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}</label></div>)}</div> : <p className="mt-3 text-sm text-gray-500">No platform operators are assigned.</p>}</section>
+		<section className="glass-card p-6"><div className="flex items-center gap-3"><ShieldCheck className="text-primary" size={22} /><h3 className="text-xl font-semibold">Current platform access</h3></div><p className="mt-1 text-sm text-gray-500">Only a Super Admin can enable or disable access and grant additional operations. Role permissions are included by default.</p>{data.admins.length ? <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-700">{data.admins.map((admin) => { const role = admin.platformRole || ""; const base = ["PLATFORM_OWNER", "PLATFORM_ADMIN"].includes(role) ? [...operations] : role === "PLATFORM_SUPPORT" ? ["PLATFORM_OPERATIONS", "PLATFORM_MESSAGES"] : role === "PLATFORM_ANALYST" ? ["PLATFORM_OPERATIONS"] : []; return <div key={admin.id} className="py-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{admin.name || "Unnamed user"}</p><p className="text-sm text-gray-500">{admin.email} · {humanizeRole(role)}</p></div><label className="inline-flex items-center gap-2 text-sm"><span>{admin.platformAccessEnabled ? "Enabled" : "Disabled"}</span><input type="checkbox" role="switch" aria-label={`${admin.platformAccessEnabled ? "Disable" : "Enable"} platform access for ${admin.email}`} checked={admin.platformAccessEnabled} disabled={updatingAdmin === admin.id} onChange={() => void toggleAdminAccess(admin)} className="h-5 w-5 accent-primary" />{updatingAdmin === admin.id && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}</label></div><details open className="mt-3"><summary className="cursor-pointer text-sm font-medium">Grant additional operations</summary><div className="mt-3 grid gap-2 sm:grid-cols-2">{base.map((operation) => <label key={operation} className="flex items-center gap-2 text-sm text-gray-500"><input type="checkbox" checked disabled className="h-4 w-4"/><span>{operation.replace("PLATFORM_", "").replaceAll("_", " ")} · included by role</span></label>)}{operations.filter((operation) => !base.includes(operation)).map((operation) => <label key={operation} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={admin.platformOperationGrants.includes(operation)} disabled={savingOperations === admin.id} onChange={() => toggleOperation(admin, operation)} className="h-4 w-4 accent-primary"/><span>{operation.replace("PLATFORM_", "").replaceAll("_", " ")}</span></label>)}</div><button type="button" disabled={savingOperations === admin.id} onClick={() => void saveOperations(admin)} className="btn-primary mt-3 rounded-lg px-3 py-2 text-xs">{savingOperations === admin.id ? "Saving…" : "Save operation access"}</button></details></div> })}</div> : <p className="mt-3 text-sm text-gray-500">No platform operators are assigned.</p>}</section>
 	</div>
 }
