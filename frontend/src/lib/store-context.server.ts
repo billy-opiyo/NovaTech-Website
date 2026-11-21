@@ -120,6 +120,12 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const resolvedPlatformSettings = store.ownerType === "PLATFORM"
 			? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), await getPublishedPlatformSettings())
 			: undefined
+		const needsPlatformFaviconFallback = store.ownerType !== "PLATFORM"
+			&& !store.faviconUrl?.trim()
+			&& !store.logoUrl?.trim()
+		const merchantFallbackFavicon = needsPlatformFaviconFallback
+			? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), await getPublishedPlatformSettings()).brand?.favicon?.trim()
+			: undefined
 
 		const theme = record(store.themeSettings)
 		const themeSnapshot = record(theme.themeSnapshot)
@@ -307,9 +313,9 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			platformTheme: resolvedPlatformSettings?.design,
 			platformSettings: resolvedPlatformSettings,
 			themeLayout: effectiveTheme ? { heroLayout: typeof effectiveTheme.heroLayout === "string" ? effectiveTheme.heroLayout : undefined, bannerStyle: typeof effectiveTheme.bannerStyle === "string" ? effectiveTheme.bannerStyle : undefined, productGridStyle: typeof effectiveTheme.productGridStyle === "string" ? effectiveTheme.productGridStyle : undefined } : undefined,
-			// Tenant branding is sourced only from the resolved merchant record.
-			// Do not inherit the platform name, logo, or favicon when a merchant
-			// has not configured those fields.
+			// Keep merchant name and logo tenant-specific. A merchant may use its
+			// configured favicon, then its logo, and finally the published platform
+			// favicon as the browser-icon fallback.
 			brand: {
 				...clientConfig.brand,
 				name: store.name,
@@ -318,7 +324,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				logoAlt: `${store.name} logo`,
 				favicon: store.ownerType === "PLATFORM"
 					? resolvedPlatformSettings?.brand?.favicon?.trim() || clientConfig.brand.favicon
-					: store.faviconUrl?.trim() || "",
+					: store.faviconUrl?.trim() || store.logoUrl?.trim() || merchantFallbackFavicon || clientConfig.brand.favicon,
 				tagline: store.ownerType === "PLATFORM"
 					? resolvedPlatformSettings?.brand?.tagline?.trim() || DEFAULT_PLATFORM_TAGLINE
 					: store.industry?.slug && store.industry.slug !== "electronics"
