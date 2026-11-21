@@ -4,8 +4,9 @@ import type { Prisma } from "@prisma/client"
 import { getPlatformDomain } from "./platform-domain"
 import { canMerchantSell } from "./merchant-verification"
 import { isPlatformOwnedStore } from "./platform-store"
+import { HIDDEN_STAGING_DEMO_STORE_SLUGS } from "./store-visibility"
 
-export const HIDDEN_STAGING_DEMO_STORE_SLUGS = ["nuravatech", "nurava-furnitures", "nurava-cakes", "nurava-boutiques"] as const
+export { HIDDEN_STAGING_DEMO_STORE_SLUGS } from "./store-visibility"
 
 function isHiddenStagingDemoStore(slug: string): boolean {
 	return (HIDDEN_STAGING_DEMO_STORE_SLUGS as readonly string[]).includes(slug)

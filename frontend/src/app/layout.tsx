@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { CartProvider } from "@/lib/cartContext"
@@ -17,14 +18,30 @@ import AndroidBackButtonHandler from "@/components/providers/AndroidBackButtonHa
 import AndroidAppUpdatePrompt from "@/components/providers/AndroidAppUpdatePrompt"
 import AndroidPullToRefresh from "@/components/providers/AndroidPullToRefresh"
 import AndroidSystemBars from "@/components/providers/AndroidSystemBars"
+import { getPlatformDomain } from "backend/lib/platform-domain"
 
 export async function generateMetadata(): Promise<Metadata> {
-	const store = await getStoreContext()
+	const [store, requestHeaders] = await Promise.all([getStoreContext(), headers()])
+	const requestPath = requestHeaders.get("x-nurava-request-path")?.split("?", 1)[0] || "/"
+	const storePrefix = `/store/${encodeURIComponent(store.storeSlug)}`
+	const requestedPath = requestPath === storePrefix ? "/" : requestPath.startsWith(`${storePrefix}/`) ? requestPath.slice(storePrefix.length) : requestPath
+	const pathname = requestedPath.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/"
+	const domain = getPlatformDomain()
+	const origin = store.isPlatformHome || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(store.storeSlug)
+		? `https://${domain}`
+		: `https://${store.storeSlug}.${domain}`
+	const canonicalUrl = new URL(pathname, origin).toString()
+	const privatePath = /^\/(admin|manage|platform|account|auth|onboarding)(?:\/|$)/.test(pathname)
+		|| pathname === "/cart"
+		|| pathname === "/checkout"
+		|| pathname === "/newsletter/unsubscribe"
 	return {
 		title: { default: store.seo.title || store.brand.name, template: `%s | ${store.brand.name}` },
 		description: store.seo.description,
 		keywords: store.seo.keywords,
-		openGraph: { type: "website", locale: store.site.locale, url: store.site.url, siteName: store.brand.name, title: store.seo.title || store.brand.name, description: store.seo.description, ...(store.seo.ogImage ? { images: [store.seo.ogImage] } : {}) },
+		alternates: { canonical: canonicalUrl },
+		...(privatePath ? { robots: { index: false, follow: false } } : {}),
+		openGraph: { type: "website", locale: store.site.locale, url: canonicalUrl, siteName: store.brand.name, title: store.seo.title || store.brand.name, description: store.seo.description, ...(store.seo.ogImage ? { images: [store.seo.ogImage] } : {}) },
 	}
 }
 

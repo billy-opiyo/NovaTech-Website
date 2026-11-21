@@ -1,7 +1,7 @@
 # Nurava HubStores SaaS User Manual
 
 **Product:** Nurava HubStores multi-industry commerce platform for diverse independent stores
-**Primary domain:** https://nuravatech.com  
+**Primary domain:** https://nuravahubstores.com  
 **Market defaults:** Kenya, English, en-KE, KES, Africa/Nairobi  
 **Repository audit:** 3 October 2026
 
