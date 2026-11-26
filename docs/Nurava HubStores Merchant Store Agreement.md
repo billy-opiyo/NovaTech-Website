@@ -1,4 +1,5 @@
 # NURAVA HUBSTORES
+![Nurava HubStores logo](../frontend/public/images/nuravahubsoreslogo.png)
 ## MERCHANT STORE HOSTING AND SAAS SERVICES AGREEMENT
 
 **Agreement version:** merchant-agreement-v1

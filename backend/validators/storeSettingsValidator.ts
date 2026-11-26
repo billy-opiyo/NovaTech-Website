@@ -20,11 +20,17 @@ const optionalHttpsOrPath = z.string().trim().max(500).refine((value) => {
 }, "Use a valid HTTPS URL or app-relative path")
 
 const categoryImagesSchema = z.record(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), optionalHttpsOrPath)
+const themeColorsSchema = z.object({
+	primary: z.string().regex(/^#[0-9a-fA-F]{6}$/), primaryDark: z.string().regex(/^#[0-9a-fA-F]{6}$/), accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+	light: z.object({ background: z.string().regex(/^#[0-9a-fA-F]{6}$/), surface: z.string().regex(/^#[0-9a-fA-F]{6}$/), text: z.string().regex(/^#[0-9a-fA-F]{6}$/), muted: z.string().regex(/^#[0-9a-fA-F]{6}$/), border: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
+	dark: z.object({ background: z.string().regex(/^#[0-9a-fA-F]{6}$/), surface: z.string().regex(/^#[0-9a-fA-F]{6}$/), text: z.string().regex(/^#[0-9a-fA-F]{6}$/), muted: z.string().regex(/^#[0-9a-fA-F]{6}$/), border: z.string().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
+}).strict()
 
 export const storeSettingsPatchSchema = z.object({
 	name: z.string().trim().min(2).max(120).optional(),
 	logoUrl: optionalHttpsOrPath.optional(),
 	themePreset: z.string().trim().min(2).max(80).optional(),
+	themeColors: themeColorsSchema.optional(),
 	seo: z.object({ title: z.string().trim().max(120).optional(), description: z.string().trim().max(320).optional(), keywords: z.string().trim().max(500).optional() }).strict().optional(),
 	contact: z.object({ phoneDisplay: z.string().trim().max(40).optional(), email: z.string().email().optional(), whatsappNumber: z.string().regex(/^\d{10,15}$/).optional(), whatsappFloatingMessage: z.string().trim().max(240).optional(), addressLine: z.string().trim().max(160).optional(), cityCountry: z.string().trim().max(120).optional(), mapLink: optionalHttpsUrl.optional(), mapEmbedUrl: optionalHttpsUrl.optional(), businessHours: z.string().trim().max(120).optional(), responseTime: z.string().trim().max(120).optional(), social: z.object({ facebook: optionalHttpsUrl.optional(), instagram: optionalHttpsUrl.optional(), tiktok: optionalHttpsUrl.optional() }).strict().optional() }).strict().optional(),
 	homepage: z.object({ heroTitle: z.string().trim().max(120).optional(), heroHighlight: z.string().trim().max(120).optional(), heroDescription: z.string().trim().max(320).optional(), heroImage: optionalHttpsOrPath.optional(), heroImageAlt: z.string().trim().max(200).optional(), heroPrimaryLabel: z.string().trim().max(80).optional(), heroSecondaryLabel: z.string().trim().max(80).optional(), featuredTitle: z.string().trim().max(120).optional(), bannerTitle: z.string().trim().max(120).optional(), bannerContent: z.string().trim().max(1000).optional(), aboutTitle: z.string().trim().max(120).optional(), aboutDescription: z.string().trim().max(4000).optional(), categoryImages: categoryImagesSchema.optional(), legal: z.object({ terms: z.string().trim().max(12000).optional(), privacy: z.string().trim().max(12000).optional(), cookies: z.string().trim().max(12000).optional() }).strict().optional() }).strict().optional(),
