@@ -38,6 +38,7 @@ function renderMarkdown(markdown) {
   const output = []
   let paragraph = []
   let majorHeadingSeen = false
+  const hasMerchantCover = lines.some((line) => /^#\s+NURAVA HUBSTORES\s*$/i.test(line.trim()))
 
   const flushParagraph = () => {
     if (!paragraph.length) return
@@ -48,6 +49,9 @@ function renderMarkdown(markdown) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]
     const trimmed = line.trim()
+
+    // The branded masthead is rendered by the template so the image is embedded in PDFs.
+    if (/^!\[[^\]]*\]\([^)]*\)$/.test(trimmed)) continue
 
     if (!trimmed) {
       flushParagraph()
@@ -83,7 +87,7 @@ function renderMarkdown(markdown) {
         if (!majorHeadingSeen) classes.push("first-major")
         majorHeadingSeen = true
       }
-      if (level === 2 && /^1\./.test(text)) classes.push("agreement-start")
+      if (hasMerchantCover && level === 2 && /^1\./.test(text)) classes.push("agreement-start")
       output.push(`<h${level}${classes.length ? ` class="${classes.join(" ")}"` : ""}>${inline(text)}</h${level}>`)
       continue
     }
@@ -122,43 +126,52 @@ function renderMarkdown(markdown) {
 
 const markdown = fs.readFileSync(input, "utf8")
 const body = renderMarkdown(markdown)
+const headings = [...markdown.matchAll(/^#{1,2}\s+(.+)$/gm)].map((match) => match[1].trim())
+const documentTitle = headings[0]?.toUpperCase() === "NURAVA HUBSTORES" && headings[1] ? `Nurava HubStores ${headings[1].toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())}` : headings[0] || "Nurava HubStores Agreement"
+const logoPath = path.resolve(process.cwd(), "frontend/public/images/nuravahubsoreslogo.png")
+const logoData = fs.readFileSync(logoPath).toString("base64")
 const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Nurava HubStores Merchant Store Hosting and SaaS Services Agreement</title>
+<title>${escapeHtml(documentTitle)}</title>
 <style>
-  @page { size: A4; margin: 17mm 16mm 18mm; }
+  @page { size: A4; margin: 15mm 16mm 17mm; }
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
-  body { margin: 0; color: #1c2430; background: #fff; font-family: Georgia, "Times New Roman", serif; font-size: 10.2pt; line-height: 1.42; }
+  body { margin: 0; color: #1c2430; background: #fff; font-family: Georgia, "Times New Roman", serif; font-size: 10.1pt; line-height: 1.44; }
+  .brand-masthead { display: flex; align-items: center; gap: 14pt; padding: 0 0 11pt; border-bottom: 2px solid #d6a23b; margin-bottom: 17pt; }
+  .brand-masthead img { width: 64pt; height: 64pt; object-fit: contain; border-radius: 11pt; }
+  .brand-lockup { border-left: 1px solid #dce3ec; padding-left: 13pt; }
+  .brand-name { color: #142b4a; font: 700 12pt Arial, sans-serif; letter-spacing: .12em; }
+  .brand-caption { margin-top: 3pt; color: #617087; font: 8pt Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
   h1, h2, h3 { color: #142b4a; page-break-after: avoid; }
-  h1 { font: 700 19pt Arial, sans-serif; letter-spacing: .05em; margin: 18pt 0 10pt; border-bottom: 2px solid #d3a84c; padding-bottom: 6pt; }
-  h1:first-of-type { font-size: 26pt; text-align: center; letter-spacing: .13em; border-bottom: 0; margin-top: 65pt; }
-  h2 { font: 700 14pt Arial, sans-serif; margin: 18pt 0 7pt; border-bottom: 1px solid #d8e0e8; padding-bottom: 3pt; }
-  h3 { font: 700 11.5pt Arial, sans-serif; margin: 13pt 0 5pt; }
+  h1 { font: 700 19pt Arial, sans-serif; letter-spacing: .035em; margin: 14pt 0 9pt; border-bottom: 2px solid #d6a23b; padding-bottom: 6pt; }
+  h1:first-of-type { font-size: 23pt; text-align: center; letter-spacing: .06em; border-bottom: 0; margin: 22pt 0 8pt; }
+  h2 { font: 700 13pt Arial, sans-serif; margin: 17pt 0 7pt; border-bottom: 1px solid #d8e0e8; padding-bottom: 4pt; }
+  h3 { font: 700 11pt Arial, sans-serif; margin: 12pt 0 5pt; }
   p { margin: 0 0 7pt; orphans: 3; widows: 3; }
   ul { margin: 3pt 0 9pt 18pt; padding: 0; }
   li { margin: 0 0 3pt; }
-  blockquote { margin: 12pt 0; padding: 10pt 12pt; border-left: 4px solid #d3a84c; background: #f7f9fb; color: #354154; font-size: 9.5pt; }
+  blockquote { margin: 12pt 0; padding: 10pt 12pt; border-left: 4px solid #d6a23b; background: #f3f6fa; color: #354154; font-size: 9.5pt; }
   hr { border: 0; border-top: 1px solid #d8e0e8; margin: 12pt 0; }
-  table { width: 100%; border-collapse: collapse; margin: 9pt 0 12pt; font-size: 8.5pt; page-break-inside: auto; }
+  table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 9pt 0 12pt; font-size: 7.2pt; page-break-inside: auto; overflow-wrap: anywhere; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
-  th { background: #142b4a; color: white; text-align: left; font: 700 8.2pt Arial, sans-serif; }
-  th, td { border: 1px solid #c8d2dc; padding: 5pt 5.5pt; vertical-align: top; }
+  th { background: #142b4a; color: white; text-align: left; font: 700 8pt Arial, sans-serif; }
+  th, td { border: 1px solid #c8d2dc; padding: 4pt 3pt; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
   tr:nth-child(even) td { background: #f7f9fb; }
   code { font-family: Consolas, monospace; font-size: 8.5pt; }
   a { color: #142b4a; }
   .major-heading:not(.first-major) { break-before: page; }
   .agreement-start { break-before: page; }
-  .first-major + h2 { text-align: center; border: 0; font-size: 17pt; margin-top: 0; }
+  .first-major + h2 { text-align: center; border: 0; font-size: 16pt; margin-top: 0; }
   .first-major + h2 + p { text-align: center; }
   .first-major ~ p:nth-of-type(1) { text-align: center; }
   @media screen { body { max-width: 900px; margin: 24px auto; padding: 0 28px; } }
 </style>
 </head>
-<body>${body}</body>
+<body><header class="brand-masthead"><img src="data:image/png;base64,${logoData}" alt="Nurava HubStores logo"><div class="brand-lockup"><div class="brand-name">NURAVA HUBSTORES</div><div class="brand-caption">Marketplace · Merchant services · Supplier partnerships</div></div></header>${body}</body>
 </html>`
 
 fs.mkdirSync(path.dirname(output), { recursive: true })

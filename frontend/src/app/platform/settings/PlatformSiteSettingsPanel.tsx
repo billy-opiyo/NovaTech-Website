@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save, Send, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
+import { createAccessibleCustomColors } from "@/lib/custom-theme"
 import { getPlatformSiteSettingsDefaults, type PlatformDiscoveryCardKey, type PlatformSiteSettings, type PlatformTeamMember } from "@/lib/platform-site-settings"
 import { optimizeImageForUpload } from "@/lib/image-upload"
 import { notifyStoreSettingsPublished } from "@/lib/store-context"
@@ -152,7 +153,7 @@ export default function PlatformSiteSettingsPanel() {
 	}
 
 	function selectThemePreset(value: string) {
-		setDraft((current) => ({ ...current, design: { themePreset: value } }))
+		setDraft((current) => ({ ...current, design: { themePreset: value, ...(value === "custom-theme" ? { colors: createAccessibleCustomColors("#2563eb", "#0f766e") } : {}) } }))
 	}
 
 	async function uploadVisualAsset(section: "splash" | "hero", slot: string, file: File | undefined) {
@@ -377,7 +378,8 @@ export default function PlatformSiteSettingsPanel() {
 
 			<section className="glass-card space-y-5 p-6">
 				<div><h3 className="text-lg font-semibold">Platform design</h3><p className="mt-1 text-sm text-gray-500">Customize platform-only theme colors, typography, and glass effects in both color modes. Merchant storefront settings and themes are isolated and remain unchanged.</p></div>
-				<label className="block max-w-xl text-sm font-medium">Theme preset<select className={inputClass} value={draft.design?.themePreset || "nova-blue-orange"} onChange={(event) => selectThemePreset(event.target.value)}>{Object.values(THEME_PRESETS).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select><span className="mt-1 block text-xs text-gray-500">Selecting a preset resets custom overrides to that preset. You can then refine the settings below.</span></label>
+				<label className="block max-w-xl text-sm font-medium">Theme preset<select className={inputClass} value={draft.design?.themePreset || "nova-blue-orange"} onChange={(event) => selectThemePreset(event.target.value)}>{Object.values(THEME_PRESETS).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select><span className="mt-1 block text-xs text-gray-500">Choose a ready-made palette or Custom Theme to automatically balance colors for light and dark mode.</span></label>
+				{draft.design?.themePreset === "custom-theme" && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4"><h4 className="font-semibold">Custom palette assistant</h4><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Choose your brand and secondary colors. The assistant builds coordinated light and dark surfaces, readable text, borders, and glass effects; it darkens action colors automatically when needed for contrast.</p><div className="mt-4 grid gap-4 sm:grid-cols-2">{([ ["primary", "Brand color"], ["accent", "Secondary / accent color"] ] as const).map(([key, label]) => <label className="block text-sm font-medium" key={key}>{label}<input type="color" className="mt-2 h-12 w-full cursor-pointer rounded-lg border bg-white p-1" value={draft.design?.colors?.[key] || (key === "primary" ? "#2563eb" : "#0f766e")} onChange={(event) => { const current = draft.design?.colors || createAccessibleCustomColors("#2563eb", "#0f766e"); const next = createAccessibleCustomColors(key === "primary" ? event.target.value : current.primary || "#2563eb", key === "accent" ? event.target.value : current.accent || "#0f766e"); setDraft((value) => ({ ...value, design: { ...value.design, themePreset: "custom-theme", colors: next } })) }} /><span className="mt-1 block text-xs text-gray-500">{draft.design?.colors?.[key]}</span></label>)}</div></div>}
 				<div className="grid gap-5 xl:grid-cols-3">
 					<div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-white/10">
 						<div><h4 className="font-semibold">Brand colors</h4><p className="text-xs text-gray-500">Primary actions and highlights.</p></div>

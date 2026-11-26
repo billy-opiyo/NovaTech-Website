@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Loader2, Upload } from "lucide-react"
 import { THEME_PRESETS } from "@/config/theme-presets"
+import { createAccessibleCustomColors } from "@/lib/custom-theme"
 import ConfirmDialog from "@/components/ui/ConfirmDialog"
 import { useToast } from "@/components/ui/Toast"
 import { optimizeImageForUpload } from "@/lib/image-upload"
@@ -14,6 +15,7 @@ type Draft = {
 	name?: string
 	logoUrl?: string
 	themePreset?: string
+	themeColors?: ReturnType<typeof createAccessibleCustomColors>
 	seo?: { description?: string }
 	homepage?: { heroTitle?: string; heroHighlight?: string; heroDescription?: string; heroPrimaryLabel?: string; heroSecondaryLabel?: string; featuredTitle?: string; bannerTitle?: string; bannerContent?: string; aboutTitle?: string; aboutDescription?: string; categoryImages?: Record<string, string>; legal?: { terms?: string; privacy?: string; cookies?: string } }
 	contact?: { phoneDisplay?: string; email?: string; whatsappNumber?: string; whatsappFloatingMessage?: string; addressLine?: string; cityCountry?: string; mapLink?: string; mapEmbedUrl?: string; businessHours?: string; responseTime?: string; social?: { facebook?: string; instagram?: string; tiktok?: string } }
@@ -52,7 +54,7 @@ export default function StoreDesignPage() {
 		() => Object.values(THEME_PRESETS).find((item) => item.id === draft.themePreset) || Object.values(THEME_PRESETS)[0],
 		[draft.themePreset],
 	)
-	const industryPalette = draft.themePreset === store.themePreset ? store.themeOverrides?.colors : undefined
+	const industryPalette = draft.themePreset === "custom-theme" ? draft.themeColors : draft.themePreset === store.themePreset ? store.themeOverrides?.colors : undefined
 	const previewPrimary = industryPalette?.primary || preset.primary
 	const previewAccent = industryPalette?.accent || preset.accent
 	const previewBackground = industryPalette?.light?.background || preset.light.background
@@ -77,6 +79,7 @@ export default function StoreDesignPage() {
 						name: store.name,
 						logoUrl: store.logoUrl || "",
 						themePreset: store.themeSettings?.preset,
+						themeColors: store.themeSettings?.colors || store.themeOverrides?.colors,
 						...savedDraft,
 						seo: { ...store.seoSettings, ...savedDraft.seo },
 						 homepage: {
@@ -257,7 +260,8 @@ export default function StoreDesignPage() {
 					<div className="block"><span className="text-sm font-medium">Store logo</span><div className="mt-2 flex flex-wrap items-center gap-3"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 ${uploadingLogo ? "cursor-wait opacity-60" : ""}`}>{uploadingLogo ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{uploadingLogo ? "Uploading…" : "Upload logo"}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploadingLogo} onChange={(event) => { void uploadLogo(event.target.files?.[0]); event.target.value = "" }} className="sr-only" /></label>{draft.logoUrl && <img src={draft.logoUrl} alt="Current store logo" className="brand-logo-image h-12 w-12 rounded-lg border" />}</div><span className="mt-1 block text-xs text-gray-500">Upload a JPG, PNG, WEBP, or GIF up to 1MB. Save the draft, then publish it to make the logo live on this storefront.</span></div>
 					<div>
 						<p className="text-sm font-medium">Theme preset</p>
-						<div className="mt-2 grid gap-2 sm:grid-cols-2">{Object.values(THEME_PRESETS).map((item) => <button type="button" key={item.id} onClick={() => updateDraft({ themePreset: item.id })} className={`rounded-lg border p-3 text-left ${draft.themePreset === item.id ? "border-primary ring-2 ring-primary/20" : ""}`}><span className="font-medium">{item.name}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></button>)}</div>
+						<div className="mt-2 grid gap-2 sm:grid-cols-2">{Object.values(THEME_PRESETS).map((item) => <button type="button" key={item.id} onClick={() => updateDraft({ themePreset: item.id, themeColors: item.id === "custom-theme" ? createAccessibleCustomColors("#2563eb", "#0f766e") : undefined })} className={`rounded-lg border p-3 text-left ${draft.themePreset === item.id ? "border-primary ring-2 ring-primary/20" : ""}`}><span className="font-medium">{item.name}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></button>)}</div>
+						{draft.themePreset === "custom-theme" && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4"><h3 className="font-semibold">Custom palette assistant</h3><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Choose your brand and secondary colors. Coordinated light and dark text, surfaces, borders, and glass effects are generated; action colors are darkened automatically when needed for contrast.</p><div className="mt-4 grid gap-4 sm:grid-cols-2">{([ ["primary", "Brand color"], ["accent", "Secondary / accent color"] ] as const).map(([key, label]) => <label className="block text-sm font-medium" key={key}>{label}<input type="color" className="mt-2 h-12 w-full cursor-pointer rounded-lg border bg-white p-1" value={draft.themeColors?.[key] || (key === "primary" ? "#2563eb" : "#0f766e")} onChange={(event) => { const colors = draft.themeColors || createAccessibleCustomColors("#2563eb", "#0f766e"); updateDraft({ themeColors: createAccessibleCustomColors(key === "primary" ? event.target.value : colors.primary || "#2563eb", key === "accent" ? event.target.value : colors.accent || "#0f766e") }) }} /><span className="mt-1 block text-xs text-gray-500">{draft.themeColors?.[key]}</span></label>)}</div></div>}
 					</div>
 					<label className="block"><span className="text-sm font-medium">Hero title</span><input value={draft.homepage?.heroTitle || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroTitle: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>
 					<label className="block"><span className="text-sm font-medium">Hero highlight</span><input value={draft.homepage?.heroHighlight || ""} onChange={(event) => updateDraft({ homepage: { ...draft.homepage, heroHighlight: event.target.value } })} className="mt-2 w-full rounded-lg border p-3 dark:bg-dark-surface" /></label>

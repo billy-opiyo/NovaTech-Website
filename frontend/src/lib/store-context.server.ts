@@ -306,7 +306,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 			industry: store.industry ? { id: store.industry.id, name: store.industry.name, slug: store.industry.slug } : null,
 			storePathPrefix: isPlatformHost(requestHeaders.get("host")) ? `/store/${encodeURIComponent(store.slug)}` : "",
 			publicationStatus: store.publicationStatus,
-			themeOverrides: store.ownerType === "PLATFORM" ? undefined : themeOverridesFromIndustry(effectiveTheme),
+			themeOverrides: store.ownerType === "PLATFORM" ? undefined : theme.colors && typeof theme.colors === "object" ? { colors: theme.colors } as ReturnType<typeof themeOverridesFromIndustry> : themeOverridesFromIndustry(effectiveTheme),
 			platformTheme: resolvedPlatformSettings?.design,
 			platformSettings: resolvedPlatformSettings,
 			themeLayout: effectiveTheme ? { heroLayout: typeof effectiveTheme.heroLayout === "string" ? effectiveTheme.heroLayout : undefined, bannerStyle: typeof effectiveTheme.bannerStyle === "string" ? effectiveTheme.bannerStyle : undefined, productGridStyle: typeof effectiveTheme.productGridStyle === "string" ? effectiveTheme.productGridStyle : undefined } : undefined,

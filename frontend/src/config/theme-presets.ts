@@ -132,6 +132,26 @@ const ADDITIONAL_THEME_PRESETS = {
 	"denim-ivory": createAdditionalThemePreset({ id: "denim-ivory", name: "Denim & Ivory", description: "Everyday denim blue with energetic orange details.", primary: "#1d4ed8", primaryDark: "#1e40af", accent: "#ea580c", tone: "sand", fontBody: "Lato, Inter, sans-serif", fontHeading: "Montserrat, Lato, sans-serif", cardRadius: "0.8rem" }),
 	"market-olive": createAdditionalThemePreset({ id: "market-olive", name: "Market Olive", description: "Earthy olive and harvest amber for curated local collections.", primary: "#3f6212", primaryDark: "#365314", accent: "#b45309", tone: "sage", fontBody: "Source Sans 3, Inter, sans-serif", fontHeading: "Merriweather, Georgia, serif", cardRadius: "0.9rem" }),
 	"monsoon-teal": createAdditionalThemePreset({ id: "monsoon-teal", name: "Monsoon Teal", description: "Deep monsoon teal and berry accents for expressive fashion stores.", primary: "#0f766e", primaryDark: "#115e59", accent: "#be123c", tone: "cool", fontBody: "DM Sans, Inter, sans-serif", fontHeading: "Outfit, DM Sans, sans-serif", cardRadius: "1rem" }),
+	"sapphire-silk": createAdditionalThemePreset({ id: "sapphire-silk", name: "Sapphire Silk", description: "Deep sapphire with soft silver accents for considered premium retail.", primary: "#1e40af", primaryDark: "#1e3a8a", accent: "#a16207", tone: "cool", fontBody: "Inter, sans-serif", fontHeading: "DM Sans, sans-serif", cardRadius: "1rem" }),
+	"lagoon-coral": createAdditionalThemePreset({ id: "lagoon-coral", name: "Lagoon Coral", description: "A bright lagoon blue balanced by lively coral details.", primary: "#0e7490", primaryDark: "#155e75", accent: "#e11d48", tone: "cool", fontBody: "Nunito Sans, sans-serif", fontHeading: "Outfit, sans-serif", cardRadius: "1.2rem" }),
+	"moss-stone": createAdditionalThemePreset({ id: "moss-stone", name: "Moss & Stone", description: "Quiet moss green and mineral neutrals for natural brands.", primary: "#3f6212", primaryDark: "#365314", accent: "#78716c", tone: "sage", fontBody: "Lato, sans-serif", fontHeading: "Manrope, sans-serif", cardRadius: "0.8rem" }),
+	"plum-champagne": createAdditionalThemePreset({ id: "plum-champagne", name: "Plum Champagne", description: "Rich plum with warm champagne notes for elegant boutiques.", primary: "#6b21a8", primaryDark: "#581c87", accent: "#b45309", tone: "rose", fontBody: "DM Sans, sans-serif", fontHeading: "Playfair Display, Georgia, serif", cardRadius: "1.25rem" }),
+	"cobalt-citrus": createAdditionalThemePreset({ id: "cobalt-citrus", name: "Cobalt Citrus", description: "Clear cobalt and citrus accents for confident everyday commerce.", primary: "#1d4ed8", primaryDark: "#1e40af", accent: "#ca8a04", tone: "cool", fontBody: "Inter, sans-serif", fontHeading: "Montserrat, sans-serif", cardRadius: "0.75rem" }),
+	"terrace-olive": createAdditionalThemePreset({ id: "terrace-olive", name: "Terrace Olive", description: "Olive green, creamy stone, and restrained terracotta.", primary: "#4d7c0f", primaryDark: "#3f6212", accent: "#c2410c", tone: "sand", fontBody: "Source Sans 3, sans-serif", fontHeading: "Lora, Georgia, serif", cardRadius: "0.9rem" }),
+	"glacier-lilac": createAdditionalThemePreset({ id: "glacier-lilac", name: "Glacier Lilac", description: "Cool pale surfaces with a crisp violet focal color.", primary: "#6d28d9", primaryDark: "#5b21b6", accent: "#0284c7", tone: "cool", fontBody: "Inter, sans-serif", fontHeading: "Sora, sans-serif", cardRadius: "1.15rem" }),
+	"papaya-palm": createAdditionalThemePreset({ id: "papaya-palm", name: "Papaya & Palm", description: "Tropical papaya orange paired with grounded palm green.", primary: "#c2410c", primaryDark: "#9a3412", accent: "#15803d", tone: "warm", fontBody: "Nunito Sans, sans-serif", fontHeading: "Outfit, sans-serif", cardRadius: "1.2rem" }),
+	"ink-copper": createAdditionalThemePreset({ id: "ink-copper", name: "Ink & Copper", description: "Inky charcoal with a warm copper signal for premium goods.", primary: "#334155", primaryDark: "#1e293b", accent: "#b45309", tone: "warm", fontBody: "Work Sans, sans-serif", fontHeading: "Cormorant Garamond, Georgia, serif", cardRadius: "0.6rem" }),
+	"lavender-fig": createAdditionalThemePreset({ id: "lavender-fig", name: "Lavender Fig", description: "Gentle lavender surfaces with a dark fig signature color.", primary: "#7e22ce", primaryDark: "#6b21a8", accent: "#9d174d", tone: "rose", fontBody: "DM Sans, sans-serif", fontHeading: "DM Serif Display, Georgia, serif", cardRadius: "1.3rem" }),
+	"blueprint-mint": createAdditionalThemePreset({ id: "blueprint-mint", name: "Blueprint Mint", description: "Technical blueprint blue with a fresh mint highlight.", primary: "#1e40af", primaryDark: "#1e3a8a", accent: "#059669", tone: "cool", fontBody: "Roboto, sans-serif", fontHeading: "Space Grotesk, sans-serif", cardRadius: "0.65rem" }),
+	"honey-oat": createAdditionalThemePreset({ id: "honey-oat", name: "Honey & Oat", description: "Honey amber and soft oat neutrals for welcoming local shops.", primary: "#a16207", primaryDark: "#854d0e", accent: "#0f766e", tone: "sand", fontBody: "Lato, sans-serif", fontHeading: "Merriweather Sans, sans-serif", cardRadius: "1rem" }),
+	"cranberry-frost": createAdditionalThemePreset({ id: "cranberry-frost", name: "Cranberry Frost", description: "Cranberry red over crisp, cool surfaces for a lively finish.", primary: "#be123c", primaryDark: "#9f1239", accent: "#0369a1", tone: "rose", fontBody: "Inter, sans-serif", fontHeading: "Manrope, sans-serif", cardRadius: "0.9rem" }),
+	"rainforest-lime": createAdditionalThemePreset({ id: "rainforest-lime", name: "Rainforest Lime", description: "Deep rainforest green energized by a clear lime accent.", primary: "#166534", primaryDark: "#14532d", accent: "#65a30d", tone: "sage", fontBody: "Source Sans 3, sans-serif", fontHeading: "Plus Jakarta Sans, sans-serif", cardRadius: "0.85rem" }),
+	"rosewood-pearl": createAdditionalThemePreset({ id: "rosewood-pearl", name: "Rosewood Pearl", description: "A tailored rosewood palette with soft pearl backgrounds.", primary: "#9f1239", primaryDark: "#881337", accent: "#7c3aed", tone: "rose", fontBody: "Manrope, sans-serif", fontHeading: "Playfair Display, Georgia, serif", cardRadius: "1rem" }),
+	"marine-brass": createAdditionalThemePreset({ id: "marine-brass", name: "Marine Brass", description: "Marine navy and brass for established, dependable brands.", primary: "#1e3a8a", primaryDark: "#172554", accent: "#a16207", tone: "cool", fontBody: "Work Sans, sans-serif", fontHeading: "Libre Baskerville, Georgia, serif", cardRadius: "0.7rem" }),
+	"peach-eucalyptus": createAdditionalThemePreset({ id: "peach-eucalyptus", name: "Peach & Eucalyptus", description: "Soft peach and eucalyptus green for warm, mindful retail.", primary: "#9a3412", primaryDark: "#7c2d12", accent: "#4d7c0f", tone: "warm", fontBody: "Nunito Sans, sans-serif", fontHeading: "Lora, Georgia, serif", cardRadius: "1.3rem" }),
+	"electric-orchid": createAdditionalThemePreset({ id: "electric-orchid", name: "Electric Orchid", description: "Vibrant orchid violet with a bright aqua accent.", primary: "#7e22ce", primaryDark: "#6b21a8", accent: "#0891b2", tone: "cool", fontBody: "Inter, sans-serif", fontHeading: "Outfit, sans-serif", cardRadius: "1.1rem" }),
+	"smoke-saffron": createAdditionalThemePreset({ id: "smoke-saffron", name: "Smoke & Saffron", description: "Smoky slate lifted with a vivid saffron highlight.", primary: "#475569", primaryDark: "#334155", accent: "#b45309", tone: "warm", fontBody: "Roboto, sans-serif", fontHeading: "Raleway, sans-serif", cardRadius: "0.65rem" }),
+	"alpine-berry": createAdditionalThemePreset({ id: "alpine-berry", name: "Alpine Berry", description: "Alpine blue-green with expressive berry details.", primary: "#0f766e", primaryDark: "#115e59", accent: "#be185d", tone: "cool", fontBody: "DM Sans, sans-serif", fontHeading: "Sora, sans-serif", cardRadius: "0.95rem" }),
 } satisfies Record<string, ThemePreset>
 
 export const THEME_PRESETS = {
@@ -293,6 +313,7 @@ export const THEME_PRESETS = {
 		cardRadius: "0.9rem",
 	},
 	...ADDITIONAL_THEME_PRESETS,
+	"custom-theme": createAdditionalThemePreset({ id: "custom-theme", name: "Custom Theme", description: "Choose your brand colors and let the palette assistant balance contrast, surfaces, and glass effects.", primary: "#2563eb", primaryDark: "#1d4ed8", accent: "#0f766e", tone: "cool", fontBody: "Inter, ui-sans-serif, system-ui, sans-serif", fontHeading: "Inter, ui-sans-serif, system-ui, sans-serif", cardRadius: "1rem" }),
 } satisfies Record<string, ThemePreset>
 
 export type ThemePresetId = keyof typeof THEME_PRESETS
@@ -340,11 +361,13 @@ export const themeToCssVariables = (theme: ThemePreset, overrides?: PlatformThem
 	const color = (mode: "light" | "dark", key: keyof ThemeColorMode) => overrides?.colors?.[mode]?.[key] || theme[mode][key]
 	const glassBackground = (mode: "light" | "dark") => {
 		const opacity = mode === "light" ? overrides?.glass?.lightOpacity : overrides?.glass?.darkOpacity
-		return opacity === undefined ? theme[mode].glassBackground : rgbaFromHex(color(mode, "surface"), opacity)
+		if (opacity === undefined && theme.id !== "custom-theme") return theme[mode].glassBackground
+		return rgbaFromHex(color(mode, "surface"), opacity ?? (mode === "light" ? 76 : 72))
 	}
 	const glassBorder = (mode: "light" | "dark") => {
 		const opacity = mode === "light" ? overrides?.glass?.lightBorderOpacity : overrides?.glass?.darkBorderOpacity
-		return opacity === undefined ? theme[mode].glassBorder : rgbaFromHex(primary, opacity)
+		if (opacity === undefined && theme.id !== "custom-theme") return theme[mode].glassBorder
+		return rgbaFromHex(primary, opacity ?? (mode === "light" ? 18 : 16))
 	}
 	const shadow = overrides?.glass?.shadow ? shadowStyles[overrides.glass.shadow] : null
 	const scrollbarColors = (mode: "light" | "dark") => overrides?.colors?.primary

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 		if (!store.draftSettings || typeof store.draftSettings !== "object" || Array.isArray(store.draftSettings)) return NextResponse.json({ message: "Save a draft before publishing" }, { status: 400 })
 		const draft = store.draftSettings as Prisma.JsonObject
 		const currentTheme = store.themeSettings && typeof store.themeSettings === "object" && !Array.isArray(store.themeSettings) ? store.themeSettings as Prisma.JsonObject : {}
-		const nextTheme = typeof draft.themePreset === "string" ? { ...(currentTheme.preset === draft.themePreset ? currentTheme : {}), preset: draft.themePreset } : undefined
+		const nextTheme = typeof draft.themePreset === "string" ? { ...(currentTheme.preset === draft.themePreset ? currentTheme : {}), preset: draft.themePreset, ...(draft.themePreset === "custom-theme" && draft.themeColors && typeof draft.themeColors === "object" ? { colors: draft.themeColors } : {}) } : undefined
 		const latest = await prisma.storeSettingsVersion.findFirst({ where: { storeId: store.id, tenantId: store.tenantId }, orderBy: { version: "desc" }, select: { version: true } })
 		const nextVersion = (latest?.version || 0) + 1
 		const updated = await prisma.$transaction(async (transaction) => {
