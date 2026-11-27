@@ -14,7 +14,7 @@
 
 ## Domain and environment finding
 
-The requested canonical domain is `nuravahubstores.com`, and the source-level platform resolver defaults to it. The checked-in production environment file also names it, but sets `NEXT_PUBLIC_APP_URL` to HTTP. Other repository material still names `nuravatech.com` as the production domain, including `frontend/src/config/client.config.ts`, the DNS runbook, and architecture/user documentation. DNS, registrar ownership, and the Vercel production domain mapping are not verifiable from this repository. The new SEO output uses HTTPS and `getPlatformDomain()`; production deployment must set `PLATFORM_DOMAIN=nuravahubstores.com`. This is target configuration, not evidence that the domain has been purchased, connected, or is serving production.
+The requested canonical domain is `nuravahubstores.com`, and the source-level platform resolver defaults to it. The root `.env.production` now sets `PLATFORM_DOMAIN=nuravahubstores.com` and `NEXT_PUBLIC_APP_URL=https://nuravahubstores.com`. Other repository material still names `nuravatech.com` as the production domain, including `frontend/src/config/client.config.ts`, the DNS runbook, and architecture/user documentation. Those mismatches remain to reconcile. Live HTTP verification below confirms the apex and platform-owned store subdomain serve the app, although DNS records and Vercel project settings are not inspectable from this repository.
 
 ## Implementation
 
@@ -24,9 +24,9 @@ The requested canonical domain is `nuravahubstores.com`, and the source-level pl
 - `frontend/src/app/robots.ts` allows page and asset crawling and references the production sitemap. Private/account/auth/checkout/onboarding pages use `noindex,nofollow` metadata so crawlers can fetch them and read the directive; robots.txt is not used as an access-control or indexing mechanism. API routes are not blanket-blocked.
 - The root layout now emits canonical URLs on the configured apex or canonical store subdomain and removes query strings. It also applies `noindex,nofollow` to private/account/auth/checkout/onboarding paths. Sitemap and canonical output intentionally follow platform subdomains even when a verified custom domain resolves to the same tenant.
 
-## Deployment checks still required
+## Production follow-up
 
-This source change does not register the domain, change DNS/Vercel settings, deploy, or verify live HTTP responses. Before launch, reconcile the repository's `nuravatech.com` configuration and documentation with the user's requested `nuravahubstores.com`, confirm the domain and wildcard subdomains are attached to the production Vercel project, set the production app URL to HTTPS, and verify that tenant subdomains resolve to the same application. After deployment, check:
+The source change did not register the domain, change DNS/Vercel settings, or deploy. The live endpoints and tenant URLs were verified on 2026-11-27. Reconcile the repository's remaining `nuravatech.com` configuration and documentation with the production `nuravahubstores.com` domain, and remove `/deals` from the sitemap or give it a canonical public route before the next deployment. After deployment, recheck:
 
 - `https://nuravahubstores.com/sitemap.xml`
 - `https://nuravahubstores.com/robots.txt`
@@ -42,3 +42,11 @@ In Google Search Console, verify a Domain property for `nuravahubstores.com` (in
 - `npm run build` with `PLATFORM_DOMAIN=nuravahubstores.com` supplied to the command: passed. Next emitted the sitemap index route and catch-all child sitemap route. Static prerender logged the unavailable Neon database; this did not fail the build.
 - Local HTTP checks against the production build returned 200 for `/sitemap.xml`, `/sitemap/0.xml`, and `/robots.txt`. Both sitemap documents parsed as XML, the fixed child contained 13 HTTPS URLs on the target domain with no private/API/staging URLs, and the index pointed to one child when database counts were unavailable. `robots.txt` referenced the target sitemap. A query-string page emitted the clean canonical and matching Open Graph URL; `/auth/signin` emitted `noindex,nofollow`.
 - The repository-wide `npm test` run before the final SEO-specific tests reported 166 passing and 6 failing tests. The failures were existing UI/source assertions, a missing `frontend/src/lib/demo-store-config` module imported by a test, and a tenant host test that attempted database-backed resolution. They were outside the sitemap implementation.
+
+## Live production verification (2026-11-27)
+
+- A read-only Prisma connection using the root `.env.production` succeeded. The database contains 2 stores, 0 products, 0 blog posts, and 16 categories. The sitemap publishes one eligible store (the three store URLs in its own child sitemap); the other database store is not included by the public-store rules.
+- `https://nuravahubstores.com/sitemap.xml`, all three linked children, and `/robots.txt` returned HTTP 200. All XML parsed successfully. The child files contain 13 fixed platform URLs, 3 `nurava-marketplace` URLs, and 16 `nurava-marketplace` category URLs (32 total). No demo-store, private, API, product, or article URLs were present; the database currently has no products or posts to publish.
+- All 32 sitemap URLs returned HTTP 200. Canonicals matched the requested URLs except `/deals`: it responds with a production 307 redirect to `/stores?all=1`, whose canonical is `/stores`. Remove `/deals` from the fixed sitemap or make that route a canonical public destination before treating every sitemap URL as redirect-free.
+- Production `robots.txt` returned `text/plain`, allows `/`, and names `https://nuravahubstores.com/sitemap.xml`. Private auth pages return `noindex,nofollow`; no sitemap URLs were marked noindex.
+- Repeated production sitemap requests returned `X-Vercel-Cache: HIT` with increasing `Age`, confirming the responses are cached at the edge. No deployment or production changes were made as part of this verification.
