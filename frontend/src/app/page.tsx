@@ -9,11 +9,11 @@ import { getCachedMvpPilotDays } from "@/lib/public-pilot-policy.server"
 export default async function HomePage() {
 	const store = await getStoreContext()
 	if (store.isPlatformHome) {
-		const [stores, publicPlans, pilotDays] = await Promise.all([
-			getCachedPlatformDiscoveryStores(),
-			getCachedPublicPlans(),
-			getCachedMvpPilotDays(),
-		])
+		// Keep cold-cache database reads from competing for all of the small
+		// serverless Prisma pool at once. Warm requests return from Next's cache.
+		const stores = await getCachedPlatformDiscoveryStores()
+		const publicPlans = await getCachedPublicPlans()
+		const pilotDays = await getCachedMvpPilotDays()
 		const entries = await Promise.all(stores.map(async (entry) => ({ ...entry, href: await getStorePublicUrl(entry.slug) })))
 		return <PlatformDiscoveryHome stores={entries} plans={publicPlans.plans} plansUnavailable={publicPlans.unavailable} plansSource={publicPlans.source} pilotDays={pilotDays} />
 	}
