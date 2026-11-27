@@ -4,6 +4,7 @@ import prisma from "backend/lib/db"
 import { clientConfig } from "@/config/client.config"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import { getStorePublicHref, resolveDirectoryStoreLogo } from "./platform-store-route"
+import { PUBLIC_DIRECTORY_TAG, PLATFORM_DISCOVERY_TAG, PUBLIC_INDUSTRY_TAG } from "./public-catalog.server"
 
 export type PublishedStoreDirectoryEntry = {
 	id: string
@@ -181,8 +182,8 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 // These public discovery records are shared by all visitors. Keep their cache
 // short so catalogue and moderation changes become visible promptly, and never
 // cache tenant-specific or authenticated page data here.
-export const getCachedPublishedStores = unstable_cache(getPublishedStores, ["public-store-directory-v1"], { revalidate: 60 })
-export const getCachedPlatformDiscoveryStores = unstable_cache(getPlatformDiscoveryStores, ["platform-discovery-stores-v1"], { revalidate: 60 })
+export const getCachedPublishedStores = unstable_cache(getPublishedStores, ["public-store-directory-v2"], { revalidate: 60, tags: [PUBLIC_DIRECTORY_TAG, PUBLIC_INDUSTRY_TAG] })
+export const getCachedPlatformDiscoveryStores = unstable_cache(getPlatformDiscoveryStores, ["platform-discovery-stores-v2"], { revalidate: 60, tags: [PLATFORM_DISCOVERY_TAG, PUBLIC_INDUSTRY_TAG] })
 
 export async function getStorePublicUrl(slug: string): Promise<string> {
 	const requestHeaders = await headers()

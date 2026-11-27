@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { blogPostUpdateSchema } from "backend/validators/blogValidator"
+import { revalidatePublicBlog } from "@/lib/public-blog.server"
 
 async function storeAccess() {
 	const session = await auth()
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 		const updated = await prisma.blogPost.updateMany({ where: { id, tenantId: access.context.tenantId, scopeKey: access.context.tenantId }, data: { ...data, ...(data.status ? { publishedAt } : {}) } })
 		if (!updated.count) return NextResponse.json({ message: "Blog post not found" }, { status: 404 })
 		const post = await prisma.blogPost.findFirst({ where: { id, tenantId: access.context.tenantId, scopeKey: access.context.tenantId } })
+		revalidatePublicBlog(access.context.tenantId)
 		return NextResponse.json({ post })
 	} catch (error) {
 		const duplicate = error && typeof error === "object" && "code" in error && error.code === "P2002"
@@ -45,6 +47,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 	if (access.response) return access.response
 	try {
 		const result = await prisma.blogPost.deleteMany({ where: { id: (await params).id, tenantId: access.context.tenantId, scopeKey: access.context.tenantId } })
+		if (result.count) revalidatePublicBlog(access.context.tenantId)
 		return result.count ? NextResponse.json({ ok: true }) : NextResponse.json({ message: "Blog post not found" }, { status: 404 })
 	} catch {
 		return NextResponse.json({ message: "Unable to delete the blog post" }, { status: 503 })

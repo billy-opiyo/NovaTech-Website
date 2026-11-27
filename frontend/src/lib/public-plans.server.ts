@@ -1,4 +1,4 @@
-import { unstable_cache } from "next/cache"
+import { revalidateTag, unstable_cache } from "next/cache"
 import { listActivePlans } from "backend/billing/service"
 
 export type PublicPlan = {
@@ -78,4 +78,8 @@ export async function getPublicPlans(): Promise<{ plans: PublicPlan[]; unavailab
 	}
 }
 
-export const getCachedPublicPlans = unstable_cache(getPublicPlans, ["public-active-plans-v1"], { revalidate: 60 })
+export const getCachedPublicPlans = unstable_cache(getPublicPlans, ["public-active-plans-v2"], { revalidate: 60, tags: ["public-active-plans"] })
+
+export function revalidatePublicPlans() {
+	revalidateTag("public-active-plans")
+}

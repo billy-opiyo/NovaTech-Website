@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { blogPostUpdateSchema } from "backend/validators/blogValidator"
 import { hasPlatformOperation } from "backend/lib/platform-access"
+import { revalidatePublicBlog } from "@/lib/public-blog.server"
 
 async function platformAdmin() {
 	const session = await auth()
@@ -25,6 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 		const updated = await prisma.blogPost.updateMany({ where: { id, tenantId: null, scopeKey: "platform" }, data: { ...data, ...(data.status ? { publishedAt } : {}) } })
 		if (!updated.count) return NextResponse.json({ message: "Blog post not found" }, { status: 404 })
 		const post = await prisma.blogPost.findFirst({ where: { id, tenantId: null, scopeKey: "platform" } })
+		revalidatePublicBlog("platform")
 		return NextResponse.json({ post })
 	} catch (error) {
 		const duplicate = error && typeof error === "object" && "code" in error && error.code === "P2002"
@@ -37,6 +39,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 	if (access.response) return access.response
 	try {
 		const result = await prisma.blogPost.deleteMany({ where: { id: (await params).id, tenantId: null, scopeKey: "platform" } })
+		if (result.count) revalidatePublicBlog("platform")
 		return result.count ? NextResponse.json({ ok: true }) : NextResponse.json({ message: "Blog post not found" }, { status: 404 })
 	} catch {
 		return NextResponse.json({ message: "Unable to delete the blog post" }, { status: 503 })

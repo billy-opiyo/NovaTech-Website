@@ -7,6 +7,7 @@ import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from "backend/lib/legal-acceptance"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 function jsonSetting(value: Prisma.JsonValue | undefined): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
 	if (value === undefined) return undefined
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
 			await transaction.storeSettingsVersion.create({ data: { tenantId: context.tenantId, storeId: context.storeId, version: nextVersion, settings: target.settings == null ? Prisma.JsonNull : target.settings as Prisma.InputJsonValue, publishedAt: new Date(), publishedBy: session.user.id } })
 			return store
 		})
+		revalidateTenantPublicCatalog(context, { storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		return NextResponse.json({ store: result, version: nextVersion, rolledBackFrom: version })
 	} catch (error: unknown) {
 		console.error("Store rollback failed", error)

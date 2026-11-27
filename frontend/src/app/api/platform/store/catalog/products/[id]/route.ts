@@ -7,6 +7,7 @@ import { productUpdateSchema } from "backend/validators/productValidator"
 import { updateProduct, deleteProduct } from "backend/services/productService"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { supplierProductSchema } from "../../supplier-schema"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 async function access() {
 	const session = await auth()
@@ -36,6 +37,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 			if (!supplier) return NextResponse.json({ message: "Select an active supplier for this platform store." }, { status: 400 })
 			await prisma.supplierProduct.upsert({ where: { productId: product.id }, update: { storeId: result.store.id, ...parsedSupplier.data }, create: { storeId: result.store.id, productId: product.id, ...parsedSupplier.data } })
 		}
+		revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		return NextResponse.json({ product: { id: product.id, name: product.name, slug: product.slug } })
 	} catch (error) { return apiErrorResponse(error, "Product could not be updated") }
 }
@@ -48,6 +50,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 	if (!existing) return NextResponse.json({ message: "Product not found" }, { status: 404 })
 	try {
 		await deleteProduct(existing.slug, result.store.tenantId)
+		revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		return NextResponse.json({ deleted: true })
 	} catch (error) { return apiErrorResponse(error, "Product could not be deleted") }
 }

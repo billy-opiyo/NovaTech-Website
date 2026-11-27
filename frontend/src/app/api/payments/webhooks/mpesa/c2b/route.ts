@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { handleMpesaC2B } from "backend/payments/webhooks"
 import type { MpesaC2BPayload } from "backend/types/payments"
+import { revalidateOrderPaymentCache } from "@/lib/payment-cache-invalidation.server"
 
 export async function POST(req: NextRequest) {
 	try {
 		const payload = (await req.json()) as MpesaC2BPayload
 		const result = await handleMpesaC2B(payload, { strictReconciliation: true })
 		if (!result.received) return new NextResponse("Invalid callback", { status: 400 })
+		if (result.ok) await revalidateOrderPaymentCache("mpesa", payload.BillRefNumber || payload.InvoiceNumber || payload.ThirdPartyTransID)
 
 		// Daraja C2B validation/confirmation expects a plain text response
 		return new NextResponse("Success", {

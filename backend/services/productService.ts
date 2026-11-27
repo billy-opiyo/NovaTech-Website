@@ -37,7 +37,8 @@ export async function getHiddenStoreCategorySlugs(tenantId: string, storeContext
 	return categories.filter(({ slug, storeId }) => storeId === store.id && availability[slug] === false).map(({ slug }) => slug)
 }
 
-export async function getFilteredProducts(params: URLSearchParams, tenantId: string, storeContext?: ProductStoreContext) {
+export async function getFilteredProducts(params: URLSearchParams, tenantId: string, storeContext?: ProductStoreContext, options: { includeReviewDetails?: boolean } = {}) {
+	const includeReviewDetails = options.includeReviewDetails !== false
 	const where: Prisma.ProductWhereInput = { tenantId, ...(storeContext ? { storeId: storeContext.storeId } : {}), ...(storeContext?.ownerType === "PLATFORM" ? { isPublished: true } : {}) }
 	const hiddenCategories = await getHiddenStoreCategorySlugs(tenantId, storeContext)
 	const andFilters: Prisma.ProductWhereInput[] = []
@@ -138,12 +139,10 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 				category: true,
 				attributeValues: { include: { definition: true } },
 				variants: { where: { tenantId } },
-				reviews: {
+				reviews: includeReviewDetails ? {
 					where: { moderationStatus: "APPROVED" },
-					select: {
-						rating: true,
-					},
-				},
+					select: { rating: true },
+				} : undefined,
 				_count: {
 					select: {
 						reviews: { where: { moderationStatus: "APPROVED" } },
@@ -156,15 +155,19 @@ export async function getFilteredProducts(params: URLSearchParams, tenantId: str
 		}),
 		prisma.product.count({ where }),
 	])
+	const productIds = products.map(({ id }) => id)
+	const ratingGroups = !includeReviewDetails && productIds.length
+		? await prisma.review.groupBy({ by: ["productId"], where: { tenantId, productId: { in: productIds }, moderationStatus: "APPROVED" }, _avg: { rating: true } })
+		: []
+	const averageRatingByProduct = new Map(ratingGroups.flatMap((group) => group.productId ? [[group.productId, group._avg.rating || 0] as const] : []))
 
 	return {
 		products: products.map((product) => ({
 			...product,
-			averageRating:
-				product.reviews.length > 0
-					? product.reviews.reduce((sum, r) => sum + r.rating, 0) /
-						product.reviews.length
-					: 0,
+			...(includeReviewDetails ? { reviews: product.reviews } : {}),
+			averageRating: includeReviewDetails
+				? product.reviews.reduce((sum, review) => sum + review.rating, 0) / (product.reviews.length || 1)
+				: averageRatingByProduct.get(product.id) || 0,
 			reviewCount: product._count.reviews,
 		})),
 		total,

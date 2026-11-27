@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 import { headers } from "next/headers"
 import prisma from "backend/lib/db"
 import { getRequestedStoreSlug, resolveTenantFromRequest, TenantResolutionError } from "backend/lib/tenant"
@@ -12,8 +13,17 @@ import { defaultCategoryImage, defaultIndustryHomepage, platformStoreCategoryIma
 import { themeOverridesFromIndustry } from "./industry-theme"
 import { resolveStoreWhatsAppNumber } from "./demo-store-config"
 import { merchantStoreLegalDefaults } from "./merchant-store-policy-content"
+import { PUBLISHED_PLATFORM_SETTINGS_TAG } from "./public-platform-settings.server"
+import { PUBLIC_INDUSTRY_TAG, publicStoreContextTag } from "./public-catalog.server"
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+
+// Share the validated tenant lookup between the root layout and a public page
+// that needs its own server-rendered catalog data during the same request.
+export const getStoreRequestTenantContext = cache(async () => {
+	const requestHeaders = await headers()
+	return resolveTenantFromRequest({ headers: requestHeaders }, { allowSuspended: true, includeCommerceSettings: true })
+})
 
 // Merchant storefronts must not inherit Nurava platform contact details when
 // a merchant has not configured its own public contact information yet.
@@ -50,9 +60,46 @@ function platformStoreLegalDefaults(storeName: string) {
 	}
 }
 
+
+async function readPublishedPlatformSettings() {
+	return prisma.platformSiteSettings.findUnique({ where: { id: "platform" }, select: { publishedSettings: true } })
+}
+
+const getCachedPublishedPlatformSettings = unstable_cache(readPublishedPlatformSettings, ["published-platform-site-settings-v1"], { revalidate: 60, tags: [PUBLISHED_PLATFORM_SETTINGS_TAG] })
+
+async function getCachedPublicStoreContextRecord(storeId: string, tenantId: string) {
+	return unstable_cache(
+		() => prisma.store.findFirst({
+			where: { id: storeId, tenantId },
+			select: {
+				id: true,
+				tenantId: true,
+				ownerType: true,
+				name: true,
+				slug: true,
+				publicationStatus: true,
+				defaultLocale: true,
+				currency: true,
+				country: true,
+				logoUrl: true,
+				faviconUrl: true,
+				themeSettings: true,
+				seoSettings: true,
+				contactSettings: true,
+				homepageSettings: true,
+				commerceSettings: true,
+				categories: { where: { active: true, industry: { is: { active: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }], select: { name: true, slug: true, imageUrl: true, industry: { select: { name: true, slug: true } } } },
+				industry: { select: { id: true, name: true, slug: true, homepagePreset: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { name: true, slug: true, imageUrl: true } }, defaultTheme: { select: { colors: true, typography: true, heroLayout: true, bannerStyle: true, productGridStyle: true } } } },
+			},
+		}),
+		["public-store-context-v1", storeId, tenantId],
+		{ revalidate: 60, tags: [publicStoreContextTag(storeId), PUBLIC_INDUSTRY_TAG] },
+	)()
+}
+
 async function getPublishedPlatformSettings(): Promise<PlatformSiteSettings> {
 	try {
-		const settings = await prisma.platformSiteSettings.findUnique({ where: { id: "platform" }, select: { publishedSettings: true } })
+		const settings = await getCachedPublishedPlatformSettings()
 		const parsed = platformSiteSettingsPatchSchema.safeParse(settings?.publishedSettings ?? {})
 		return parsed.success ? parsed.data : {}
 	} catch (error) {
@@ -92,40 +139,21 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 	try {
 		// A suspended public store must resolve far enough to render a privacy-safe
 		// contact blocker instead of falling through to the platform 404 page.
-		const requestContext = await resolveTenantFromRequest({ headers: requestHeaders }, { allowSuspended: true })
-		const store = await prisma.store.findUnique({
-			where: { id: requestContext.storeId },
-			select: {
-				id: true,
-				tenantId: true,
-				ownerType: true,
-				name: true,
-				slug: true,
-				publicationStatus: true,
-				defaultLocale: true,
-				currency: true,
-				country: true,
-				logoUrl: true,
-				faviconUrl: true,
-				themeSettings: true,
-				seoSettings: true,
-				contactSettings: true,
-				homepageSettings: true,
-				commerceSettings: true,
-				categories: { where: { active: true, industry: { is: { active: true } } }, orderBy: [{ industry: { name: "asc" } }, { name: "asc" }], select: { name: true, slug: true, imageUrl: true, industry: { select: { name: true, slug: true } } } },
-				industry: { select: { id: true, name: true, slug: true, homepagePreset: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { name: true, slug: true, imageUrl: true } }, defaultTheme: { select: { colors: true, typography: true, heroLayout: true, bannerStyle: true, productGridStyle: true } } } },
-			},
-		})
+		const requestContext = await getStoreRequestTenantContext()
+		const store = await getCachedPublicStoreContextRecord(requestContext.storeId, requestContext.tenantId)
 		if (!store) return fallbackStoreContext(platformHome, platformSettings)
-		const resolvedPlatformSettings = store.ownerType === "PLATFORM"
-			? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), await getPublishedPlatformSettings())
-			: undefined
 		const needsPlatformFaviconFallback = store.ownerType !== "PLATFORM"
 			&& !store.faviconUrl?.trim()
 			&& !store.logoUrl?.trim()
-		const merchantFallbackFavicon = needsPlatformFaviconFallback
-			? mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), await getPublishedPlatformSettings()).brand?.favicon?.trim()
-			: undefined
+		const [resolvedPlatformSettings, merchantPlatformSettings, platformStoreIndustries] = await Promise.all([
+			store.ownerType === "PLATFORM" ? getPublishedPlatformSettings() : Promise.resolve(undefined),
+			needsPlatformFaviconFallback ? getPublishedPlatformSettings() : Promise.resolve(undefined),
+			store.ownerType === "PLATFORM"
+				? prisma.industry.findMany({ where: { active: true }, select: { name: true, slug: true, categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { slug: true } } } })
+				: Promise.resolve([]),
+		])
+		const mergedPlatformSettings = mergePlatformSiteSettings(getPlatformSiteSettingsDefaults(), merchantPlatformSettings || {})
+		const merchantFallbackFavicon = needsPlatformFaviconFallback ? mergedPlatformSettings.brand?.favicon?.trim() : undefined
 
 		const theme = record(store.themeSettings)
 		const themeSnapshot = record(theme.themeSnapshot)
@@ -180,22 +208,13 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const categoryAvailability = record(commerce.categoryAvailability)
 		const industryCategories = store.industry?.categoryTemplates || []
 		const platformIndustryOrder = ["electronics", "boutiques", "cakes", "furniture"]
-		const platformStoreIndustries = store.ownerType === "PLATFORM"
-			? (await prisma.industry.findMany({
-				where: { active: true },
-				select: {
-					name: true,
-					slug: true,
-					categoryTemplates: { where: { active: true }, orderBy: { displayOrder: "asc" }, select: { slug: true } },
-				},
-			})).sort((left, right) => {
+		const sortedPlatformStoreIndustries = platformStoreIndustries.sort((left, right) => {
 				const leftRank = platformIndustryOrder.indexOf(left.slug)
 				const rightRank = platformIndustryOrder.indexOf(right.slug)
 				return (leftRank < 0 ? platformIndustryOrder.length : leftRank) - (rightRank < 0 ? platformIndustryOrder.length : rightRank) || left.name.localeCompare(right.name)
 			})
-			: []
-		const industryRank = new Map(platformStoreIndustries.map((industry, index) => [industry.slug, index]))
-		const categoryRank = new Map(platformStoreIndustries.flatMap((industry) => industry.categoryTemplates.map((category, index) => [`${industry.slug}:${category.slug}`, index] as const)))
+		const industryRank = new Map(sortedPlatformStoreIndustries.map((industry, index) => [industry.slug, index]))
+		const categoryRank = new Map(sortedPlatformStoreIndustries.flatMap((industry) => industry.categoryTemplates.map((category, index) => [`${industry.slug}:${category.slug}`, index] as const)))
 		const storedCategorySnapshots: Array<{ name: string; slug: string; image: string; industrySlug?: string; industryName?: string }> = store.ownerType === "PLATFORM"
 			? store.categories.map((category) => ({ name: category.name, slug: category.slug, industrySlug: category.industry?.slug || "general", industryName: category.industry?.name || "Other", image: platformStoreCategoryImage(category.industry?.slug || "", category.slug, category.name, category.imageUrl) }))
 			: Array.isArray(storedHomepage.categories) ? storedHomepage.categories.flatMap((value) => {
@@ -255,7 +274,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 				: category
 		})
 		const defaultNavigation: Array<{ name: string; href: string }> = store.ownerType === "PLATFORM"
-			? [{ name: "Home", href: "/" }, ...platformStoreIndustries.map((industry) => ({ name: industry.name, href: `/products?industry=${encodeURIComponent(industry.slug)}` })), { name: "All Products", href: "/products" }]
+			? [{ name: "Home", href: "/" }, ...sortedPlatformStoreIndustries.map((industry) => ({ name: industry.name, href: `/products?industry=${encodeURIComponent(industry.slug)}` })), { name: "All Products", href: "/products" }]
 			: store.industry?.slug && store.industry.slug !== "electronics"
 			? [{ name: "Home", href: "/" }, ...categories.map((category) => ({ name: category.name, href: `/category/${category.slug}` })), { name: "All Products", href: "/products" }]
 			: [...clientConfig.navigation]

@@ -3,6 +3,7 @@ import { rateLimiter } from "backend/middleware/rateLimiter"
 import { z } from "zod"
 import { verifyMpesaPayment } from "backend/payments/mpesa"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
+import { revalidateTenantInventory } from "@/lib/public-catalog.server"
 import { getMerchantMpesaConfig } from "backend/payments/merchant-mpesa"
 import prisma from "backend/lib/db"
 import { getServerSession } from "@/lib/auth"
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
 		const merchantConfig = context.ownerType === "PLATFORM" ? (platformRoute?.provider === "MPESA" ? platformRoute.credentials : null) : await getMerchantMpesaConfig(context.tenantId)
 		if (!merchantConfig) return NextResponse.json({ code: context.ownerType === "PLATFORM" ? "PLATFORM_STORE_PAYMENTS_NOT_CONFIGURED" : "MERCHANT_MPESA_NOT_READY", message: context.ownerType === "PLATFORM" ? "Platform product-sale M-Pesa collection is not configured and authorized." : "This store has not completed its configured M-Pesa shopper payment setup, or Daraja credentials are unavailable." }, { status: 409 })
 		const result = await verifyMpesaPayment(referenceValue, context.tenantId, merchantConfig, payment.id)
+		if (result.status === "COMPLETED") revalidateTenantInventory(context)
 		if (payment && result.status !== "PENDING") {
 			// Order payment state is reconciled by verifyMpesaPayment. SaaS billing
 			// reconciliation is intentionally not used for shopper payments.

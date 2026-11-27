@@ -10,6 +10,7 @@ import { getCurrentMerchantLegalAcceptance, recordMerchantLegalAcceptance } from
 import { getLaunchReadiness } from "backend/lib/launch-readiness"
 import { getRequestId, logEvent, withRequestId } from "backend/lib/observability"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 function jsonSetting(value: Prisma.JsonValue | undefined): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
 	if (value === undefined) return undefined
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
 			await transaction.storeSettingsVersion.create({ data: { tenantId: store.tenantId, storeId: store.id, version: nextVersion, settings: draft, publishedAt: new Date(), publishedBy: session.user.id } })
 			return result
 		})
+		revalidateTenantPublicCatalog(context, { storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		logEvent("info", "store_published", { requestId, tenantId: context.tenantId, actorId: session.user.id, route: "/api/manage/store/publish" }, { storeId: context.storeId, version: nextVersion })
 		return withRequestId(NextResponse.json({ store: updated, version: nextVersion, requestId }), requestId)
 	} catch (error) {

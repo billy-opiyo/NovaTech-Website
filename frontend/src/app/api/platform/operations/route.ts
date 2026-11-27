@@ -8,6 +8,7 @@ import { verificationEvidenceDueAt } from "backend/retention/tenant-retention"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { getMerchantOnboardingMode, isMerchantVerificationRequired } from "backend/lib/merchant-verification"
 import { hasPlatformOperation } from "backend/lib/platform-access"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 async function requirePlatformApi(mutation = false) {
 	const session = await auth()
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
 					updatedAt: true,
 					suspendedAt: true,
 					plan: { select: { key: true, name: true, price: true, currency: true, billingInterval: true, setupFeeAmount: true } },
-					store: { select: { id: true, name: true, slug: true, publicationStatus: true, updatedAt: true, domains: { select: { hostname: true, verificationStatus: true, sslStatus: true, isCanonical: true } } } },
+					store: { select: { id: true, name: true, slug: true, ownerType: true, publicationStatus: true, updatedAt: true, domains: { select: { hostname: true, verificationStatus: true, sslStatus: true, isCanonical: true } } } },
 					billingRecord: { select: { setupFeeAmount: true, currency: true, setupFeeStatus: true, setupFeePaidAt: true } },
 					subscriptions: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, provider: true, currentPeriodEnd: true, cancelAtPeriodEnd: true } },
 					_count: { select: { products: true, orders: true, supportTickets: true, memberships: true } },
@@ -150,7 +151,7 @@ export async function PATCH(request: NextRequest) {
 		const parsed = mutationSchema.safeParse(await request.json())
 		if (!parsed.success) return NextResponse.json({ message: "Invalid platform operation", issues: parsed.error.flatten() }, { status: 400 })
 		if (parsed.data.action.includes("verification") && !isMerchantVerificationRequired()) return NextResponse.json({ message: "Merchant document review is disabled under the current light-onboarding policy.", code: "VERIFICATION_REVIEW_DISABLED" }, { status: 409 })
-		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, verificationStatus: true, store: { select: { id: true, publicationStatus: true } } } })
+		const tenant = await prisma.tenant.findUnique({ where: { id: parsed.data.tenantId }, select: { id: true, status: true, verificationStatus: true, store: { select: { id: true, ownerType: true, publicationStatus: true } } } })
 		if (!tenant) return NextResponse.json({ message: "Merchant store not found" }, { status: 404 })
 		if (parsed.data.action === "approve_verification") {
 			const profile = await prisma.merchantVerificationProfile.findUnique({ where: { tenantId: tenant.id }, select: { businessType: true, taxStatus: true, phoneVerifiedAt: true } })
@@ -173,6 +174,12 @@ export async function PATCH(request: NextRequest) {
 			return nextTenant
 		})
 		await prisma.adminLog.create({ data: { tenantId: tenant.id, adminId: access.session!.user.id, action: verificationAction ? `MERCHANT_${parsed.data.action.toUpperCase()}` : suspended ? "PLATFORM_SUSPENDED_STORE" : "PLATFORM_REACTIVATED_STORE", details: { previousStatus: tenant.status, nextStatus: updated.status, previousVerificationStatus: tenant.verificationStatus, nextVerificationStatus: updated.verificationStatus, notes: parsed.data.notes || null } } }).catch((error) => console.error("Platform action audit failed", error))
+		if (!verificationAction && tenant.store) {
+			revalidateTenantPublicCatalog(
+				{ tenantId: tenant.id, storeId: tenant.store.id, ownerType: tenant.store.ownerType },
+				{ storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true },
+			)
+		}
 		return NextResponse.json({ tenant: updated })
 	} catch (error: unknown) {
 		console.error("Platform operation failed", error)

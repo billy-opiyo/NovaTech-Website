@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { handleMpesaStkCallback } from "backend/payments/webhooks"
 import type { MpesaStkCallbackPayload } from "backend/types/payments"
+import { revalidateOrderPaymentCache } from "@/lib/payment-cache-invalidation.server"
 
 export async function POST(req: NextRequest) {
 	try {
 		const payload = (await req.json()) as MpesaStkCallbackPayload
 		const result = await handleMpesaStkCallback(payload, { strictReconciliation: true })
 		if (!result.received) return new NextResponse("Invalid callback", { status: 400 })
+		if (result.ok) await revalidateOrderPaymentCache("mpesa", payload.Body.stkCallback.CheckoutRequestID)
 
 		// Daraja requires a plain text "Success" response for STK callbacks
 		return new NextResponse("Success", {

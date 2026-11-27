@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Star } from "lucide-react"
 import { fallbackToProductPlaceholder, getProductImage } from "@/constants/productImages"
@@ -37,11 +38,13 @@ export default function FeaturedProducts({ products }: { products: ProductRecomm
 						<Link href={getStoreRouteHref(store, `/products/${product.slug}`)} className="group flex h-full flex-col pb-28">
 						<div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl">
 								{/* Keep one responsive artwork viewport so every card aligns while the full image remains visible. */}
-								<img
+								<Image
 									src={getProductImage(product.images[0], product.name, store.industry?.slug)}
 									alt={product.name}
 									onError={fallbackToProductPlaceholder}
-									className="block h-full w-full rounded-xl object-contain transition-transform duration-500 lg:group-hover:scale-105"
+									fill
+									sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw"
+									className="rounded-xl object-contain transition-transform duration-500 lg:group-hover:scale-105"
 								/>
 							</div>
 							<h3 className="font-semibold truncate">{product.name}</h3>

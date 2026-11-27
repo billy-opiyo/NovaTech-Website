@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { useStoreContext } from "@/lib/store-context"
@@ -36,7 +37,7 @@ export default function HeroBanner() {
 	}
 	return (
 		<section data-hero-layout={store.themeLayout?.heroLayout || "centered"} className="relative overflow-hidden rounded-3xl glass-card navy-glass p-6 text-center sm:p-8 md:p-16">
-			{store.ownerType === "PLATFORM" && store.homepage.heroImage && <><img src={store.homepage.heroImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute inset-0 bg-theme-bg/80 backdrop-blur-[1px]"/></>}
+			{store.ownerType === "PLATFORM" && store.homepage.heroImage && <><Image src={store.homepage.heroImage} alt="" aria-hidden="true" fill priority sizes="100vw" className="object-cover"/><div className="absolute inset-0 bg-theme-bg/80 backdrop-blur-[1px]"/></>}
 			<motion.div
 				className="relative z-10 mx-auto max-w-4xl"
 				initial={{ opacity: 0, y: 20 }}

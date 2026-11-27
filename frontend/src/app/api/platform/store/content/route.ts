@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { getPlatformStore, isPlatformOwnedStore } from "backend/lib/platform-store"
 import { platformStoreCategoryImage } from "backend/lib/industry-content"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 const contentSchema = z.object({
 	name: z.string().trim().min(2).max(120), logoUrl: z.string().trim().max(2048).optional().or(z.literal("")), heroImage: z.string().trim().max(2048).optional().or(z.literal("")),
@@ -52,5 +53,6 @@ export async function PATCH(request: Request) {
 		homepageSettings: { ...homepage, ...copy, heroImage: heroImage || null, categoryImages },
 		contactSettings: { ...contact, phoneDisplay, email, addressLine, social: { ...(contact.social && typeof contact.social === "object" && !Array.isArray(contact.social) ? contact.social as Record<string, unknown> : {}), facebook, instagram, tiktok } },
 	}, select: { name: true, logoUrl: true, homepageSettings: true, contactSettings: true } })
+	revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 	return NextResponse.json({ store: updated })
 }

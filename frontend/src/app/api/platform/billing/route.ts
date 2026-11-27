@@ -10,6 +10,8 @@ import { getPlatformMpesaDestinationSummaries, getPlatformMpesaDestinationSummar
 import { reviewManualBillingPayment } from "backend/billing/service"
 import { getMvpPilotDays, MVP_PILOT_DAYS } from "backend/billing/mvp-policy"
 import { hasPlatformOperation } from "backend/lib/platform-access"
+import { revalidatePublicPilotPolicy } from "@/lib/public-pilot-policy.server"
+import { revalidatePublicPlans } from "@/lib/public-plans.server"
 
 const planSchema = z.object({ action: z.literal("plan"), key: z.string().regex(/^[A-Z0-9_-]+$/), name: z.string().min(2).max(80), price: z.number().int().nonnegative().nullable(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).nullable(), setupFeeAmount: z.number().int().nonnegative().default(0), transactionFeePercent: z.number().min(0).max(100).default(0), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true), entitlementsJson: z.record(z.unknown()).optional() })
 const addonSchema = z.object({ action: z.literal("addon"), key: z.string().regex(/^[a-z0-9_-]+$/), name: z.string().min(2).max(80), description: z.string().max(500).nullable().optional(), price: z.number().int().positive(), currency: z.string().length(3).default("KES").refine((value) => value.toUpperCase() === "KES", "Platform billing currently supports KES only"), billingInterval: z.enum(["MONTH", "YEAR"]).default("MONTH"), stripePriceId: z.string().min(3).nullable().optional(), active: z.boolean().default(true) })
@@ -110,15 +112,18 @@ export async function POST(request: NextRequest) {
 		}
 		if (parsed.data.action === "pilot_policy") {
 			const policy = await prisma.platformBillingPolicy.upsert({ where: { id: "platform-billing-policy" }, update: { pilotDays: parsed.data.pilotDays }, create: { id: "platform-billing-policy", pilotDays: parsed.data.pilotDays } })
+			revalidatePublicPilotPolicy()
 			await createActionRecord("UPDATED_PLATFORM_PILOT_DURATION", { adminId: access.session.user.id, pilotDays: policy.pilotDays }).catch(() => undefined)
 			return NextResponse.json({ pilotDays: policy.pilotDays })
 		}
 		if (parsed.data.action === "plan") {
 			const entitlementsJson = parsed.data.entitlementsJson === undefined ? undefined : parsed.data.entitlementsJson as Prisma.InputJsonValue
 			const plan = await prisma.plan.upsert({ where: { key: parsed.data.key }, update: { name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson }, create: { key: parsed.data.key, name: parsed.data.name, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, setupFeeAmount: parsed.data.setupFeeAmount, transactionFeePercent: parsed.data.transactionFeePercent, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active, entitlementsJson } })
+			revalidatePublicPlans()
 			return NextResponse.json({ plan }, { status: 201 })
 		}
 		const addon = await prisma.addon.upsert({ where: { key: parsed.data.key }, update: { name: parsed.data.name, description: parsed.data.description, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active }, create: { key: parsed.data.key, name: parsed.data.name, description: parsed.data.description, price: parsed.data.price, currency: parsed.data.currency.toUpperCase(), billingInterval: parsed.data.billingInterval, stripePriceId: parsed.data.stripePriceId, active: parsed.data.active } })
+		revalidatePublicPlans()
 		return NextResponse.json({ addon }, { status: 201 })
 	} catch (error: unknown) {
 		console.error("Platform billing mutation failed", error)
