@@ -33,7 +33,7 @@ function getHeroStores(stores: HeroStore[]): HeroStore[] {
 			if (left.isDemo && right.isDemo) return (demoOrder.get(left.slug) ?? 99) - (demoOrder.get(right.slug) ?? 99)
 			return Number(right.isDemo) - Number(left.isDemo) || right.averageRating - left.averageRating || right.reviewCount - left.reviewCount || (right.productCount || 0) - (left.productCount || 0)
 		})
-		.slice(0, 4)
+		.slice(0, 5)
 }
 
 function StoreCard({ store, platformLogo }: { store: HeroStore; platformLogo: string }) {
