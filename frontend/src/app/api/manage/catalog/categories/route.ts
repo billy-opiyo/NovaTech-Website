@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 export async function GET(request: NextRequest) {
 	try {
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
 			data: { tenantId: context.tenantId, storeId: context.storeId, industryId: store?.industryId, name: parsed.data.name, slug: slugify(parsed.data.name), description: parsed.data.description || null },
 			select: { id: true, name: true, slug: true, description: true },
 		})
+		revalidateTenantPublicCatalog(context, { storeContext: true })
 		return NextResponse.json({ category }, { status: 201 })
 	} catch (error: unknown) {
 		return apiErrorResponse(error, "Unable to create product category")

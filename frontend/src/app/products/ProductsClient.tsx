@@ -12,7 +12,6 @@ import {
 	Star,
 	Grid3X3,
 	List,
-	ChevronDown,
 	Filter,
 } from "lucide-react"
 import clsx from "clsx"
@@ -74,7 +73,19 @@ const sortOptions = [
 	{ value: "rating", label: "Top Rated" },
 ]
 
-export default function ProductsClient() {
+type InitialProduct = Omit<Product, "availableStock" | "specs"> & { averageRating?: number; specs?: unknown }
+
+function toDisplayProducts(products: InitialProduct[]): Product[] {
+	return products.map((product) => ({
+		...product,
+		availableStock: product.variants?.length ? Math.max(...product.variants.map((variant) => variant.stock)) : product.stock,
+		rating: product.averageRating ?? product.rating,
+		reviewCount: product.reviewCount,
+		specs: {},
+	}))
+}
+
+export default function ProductsClient({ initialProducts, initialTotal, initialTotalPages, initialPage = 1 }: { initialProducts: InitialProduct[]; initialTotal: number; initialTotalPages: number; initialPage?: number }) {
 	const searchParams = useSearchParams()
 	const store = useStoreContext()
 	const productsEndpoint = getStoreRouteHref(store, "/api/products")
@@ -100,10 +111,16 @@ export default function ProductsClient() {
 		onSale: false,
 		trending: searchParams.get("trending") === "true",
 	})
-	const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-	const [catalogBrands, setCatalogBrands] = useState<string[]>([])
+	const [filteredProducts, setFilteredProducts] = useState<Product[]>(() => toDisplayProducts(initialProducts))
+	const [catalogBrands, setCatalogBrands] = useState<string[]>(() => Array.from(new Set(initialProducts.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
+	const [totalProducts, setTotalProducts] = useState(initialTotal)
+	const [totalPages, setTotalPages] = useState(initialTotalPages)
+	const [currentPage, setCurrentPage] = useState(initialPage)
 	const [isLoading, setIsLoading] = useState(false)
 	const requestGuard = useRef(createLatestRequestGuard())
+	const skipInitialFilterFetch = useRef(true)
+	const previousFilterSignature = useRef("")
+
 	const searchParamsKey = searchParams.toString()
 	const brands = store.industry?.slug === "electronics" ? electronicsBrands : catalogBrands
 
@@ -112,9 +129,10 @@ export default function ProductsClient() {
 	useEffect(() => {
 		// On a deep-linked filtered page, keep the complete brand facet available.
 		// The unfiltered page derives brands from its main product response below.
-		if (!searchParams.get("q") && !searchParams.get("category") && !searchParams.get("industry") && searchParams.get("trending") !== "true") return
+		const params = new URLSearchParams(searchParamsKey)
+		if (!params.get("q") && !params.get("category") && !params.get("industry") && params.get("trending") !== "true") return
 		let current = true
-		getProducts({ limit: 100, industry: selectedIndustry || undefined }, productsEndpoint)
+		getProducts({ limit: 100, industry: selectedIndustry || undefined, includeReviews: false }, productsEndpoint)
 			.then(({ products }) => {
 				if (!current) return
 				setCatalogBrands(Array.from(new Set(products.map((product) => product.brand.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)))
@@ -138,12 +156,13 @@ export default function ProductsClient() {
 	}, [])
 
 	useEffect(() => {
-		const nextIndustry = searchParams.get("industry") || ""
-		const nextSearch = searchParams.get("q") || ""
-		const nextSort = searchParams.get("sortBy") || searchParams.get("sort")
+		const params = new URLSearchParams(searchParamsKey)
+		const nextIndustry = params.get("industry") || ""
+		const nextSearch = params.get("q") || ""
+		const nextSort = params.get("sortBy") || params.get("sort")
 		const nextSortBy: FilterState["sortBy"] = nextSort === "rating" ? "rating" : nextSort === "price-asc" || nextSort === "price-desc" ? nextSort : "newest"
-		const nextCategory = searchParams.get("category") || ""
-		const nextTrending = searchParams.get("trending") === "true"
+		const nextCategory = params.get("category") || ""
+		const nextTrending = params.get("trending") === "true"
 		setSelectedIndustry((current) => current === nextIndustry ? current : nextIndustry)
 		setSearchQuery((current) => current === nextSearch ? current : nextSearch)
 		setFilters((current) => current.category === nextCategory && current.sortBy === nextSortBy && current.trending === nextTrending
@@ -152,8 +171,15 @@ export default function ProductsClient() {
 	}, [searchParamsKey])
 
 	const applyFilters = useCallback(() => {
-		const requestId = requestGuard.current.begin()
 		setIsLoading(true)
+		const filterSignature = JSON.stringify({ searchQuery, filters, selectedIndustry })
+		const pageToLoad = previousFilterSignature.current && previousFilterSignature.current !== filterSignature ? 1 : currentPage
+		previousFilterSignature.current = filterSignature
+		if (pageToLoad !== currentPage) {
+			requestGuard.current.invalidate()
+			setCurrentPage(pageToLoad)
+			return
+		}
 		const query = {
 			q: searchQuery || undefined,
 			category: filters.category || undefined,
@@ -165,9 +191,12 @@ export default function ProductsClient() {
 			onSale: filters.onSale ? "true" : undefined,
 			trending: filters.trending ? true : undefined,
 			sortBy: filters.sortBy,
-			limit: 100,
+			limit: 12,
+			page: pageToLoad,
+			includeReviews: false,
 		}
 		const requestsEntireCatalog = !query.q && !query.category && !query.industry && !query.brands && query.minPrice === undefined && query.maxPrice === undefined && !query.inStock && !query.onSale && !query.trending
+		const requestId = requestGuard.current.begin()
 		getProducts(query, productsEndpoint)
 			.then((response) => {
 				if (!requestGuard.current.isCurrent(requestId)) return
@@ -185,14 +214,21 @@ export default function ProductsClient() {
 				})
 				if (filters.sortBy === "rating") products.sort((a, b) => (b.rating || 0) - (a.rating || 0))
 				setFilteredProducts(products)
+				setTotalProducts(response.total)
+				setTotalPages(response.totalPages)
 			})
 			.catch(() => { if (requestGuard.current.isCurrent(requestId)) setFilteredProducts([]) })
 			.finally(() => { if (requestGuard.current.isCurrent(requestId)) setIsLoading(false) })
-	}, [searchQuery, filters, productsEndpoint, selectedIndustry])
+	}, [searchQuery, filters, productsEndpoint, selectedIndustry, currentPage])
 
 	useEffect(() => {
+		if (skipInitialFilterFetch.current) {
+			skipInitialFilterFetch.current = false
+			previousFilterSignature.current = JSON.stringify({ searchQuery, filters, selectedIndustry })
+			return
+		}
 		applyFilters()
-	}, [applyFilters])
+	}, [applyFilters, filters, searchQuery, selectedIndustry])
 
 	const toggleBrand = (brand: string) => {
 		setFilters((prev) => ({
@@ -234,7 +270,7 @@ export default function ProductsClient() {
 			<div className="mb-8">
 				<h1 className="text-3xl md:text-4xl font-bold mb-2">All Products</h1>
 				<p className="text-gray-600 dark:text-gray-400">
-					{filteredProducts.length} products found
+					{totalProducts} products found
 				</p>
 			</div>
 
@@ -426,22 +462,12 @@ export default function ProductsClient() {
 						</div>
 					)}
 
-					{filteredProducts.length > 12 && (
-						<div className="flex justify-start gap-2 mb-8">
-							{[1, 2, 3, "...", 5].map((page, i) => (
-								<button
-									key={i}
-									className={clsx(
-										"w-10 h-10 rounded-lg transition",
-										page === 1
-											? "bg-primary text-white"
-											: "glass-card hover:bg-white/20",
-									)}
-								>
-									{page}
-								</button>
-							))}
-						</div>
+					{totalPages > 1 && (
+						<nav aria-label="Product pages" className="mb-8 flex items-center gap-3">
+							<button type="button" disabled={currentPage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
+							<span className="text-sm text-gray-500">Page {currentPage} of {totalPages}</span>
+							<button type="button" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">Next</button>
+						</nav>
 					)}
 				</div>
 

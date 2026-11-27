@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { blogPostCreateSchema } from "backend/validators/blogValidator"
 import { hasPlatformOperation } from "backend/lib/platform-access"
+import { revalidatePublicBlog } from "@/lib/public-blog.server"
 
 async function platformAdmin() {
 	const session = await auth()
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
 	if (!parsed.success) return NextResponse.json({ message: "Check the blog post fields", issues: parsed.error.flatten() }, { status: 400 })
 	try {
 		const post = await prisma.blogPost.create({ data: { ...parsed.data, tenantId: null, scopeKey: "platform", createdById: access.session.user.id, publishedAt: parsed.data.status === "PUBLISHED" ? new Date() : null } })
+		if (post.status === "PUBLISHED") revalidatePublicBlog("platform")
 		return NextResponse.json({ post }, { status: 201 })
 	} catch (error) {
 		const duplicate = error && typeof error === "object" && "code" in error && error.code === "P2002"

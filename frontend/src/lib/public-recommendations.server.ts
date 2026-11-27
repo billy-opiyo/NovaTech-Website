@@ -7,13 +7,31 @@ import {
 	getSimilarProducts,
 	getTrendingProducts,
 } from "backend/services/recommendation.service"
+import { publicCatalogTag, publicRecommendationTag } from "@/lib/public-catalog.server"
 
 // Public recommendation data is tenant-scoped by the function arguments. Keep
 // freshness short so stock and catalogue edits appear quickly; personalized
 // recommendations deliberately stay outside this cache.
-export const getCachedTrendingProducts = unstable_cache(getTrendingProducts, ["public-trending-products-v1"], { revalidate: 30 })
-export const getCachedSimilarProducts = unstable_cache(getSimilarProducts, ["public-similar-products-v1"], { revalidate: 30 })
-export const getCachedFeaturedProducts = unstable_cache(getFeaturedProducts, ["public-featured-products-v1"], { revalidate: 30 })
-export const getCachedNewArrivals = unstable_cache(getNewArrivals, ["public-new-arrivals-v1"], { revalidate: 30 })
-export const getCachedDeals = unstable_cache(getDeals, ["public-product-deals-v1"], { revalidate: 30 })
-export const getCachedPlatformStoreHomepageProducts = unstable_cache(getPlatformStoreHomepageProducts, ["public-platform-store-home-products-v1"], { revalidate: 30 })
+export function getCachedTrendingProducts(tenantId: string, limit = 12) {
+	return unstable_cache(() => getTrendingProducts(tenantId, limit), ["public-trending-products-v2", tenantId, String(limit)], { revalidate: 20, tags: [publicRecommendationTag(tenantId)] })()
+}
+
+export function getCachedSimilarProducts(productId: string, tenantId: string, limit = 8) {
+	return unstable_cache(() => getSimilarProducts(productId, tenantId, limit), ["public-similar-products-v2", tenantId, productId, String(limit)], { revalidate: 20, tags: [publicRecommendationTag(tenantId)] })()
+}
+
+export function getCachedFeaturedProducts(tenantId: string, limit = 12) {
+	return unstable_cache(() => getFeaturedProducts(tenantId, limit), ["public-featured-products-v2", tenantId, String(limit)], { revalidate: 20, tags: [publicRecommendationTag(tenantId)] })()
+}
+
+export function getCachedNewArrivals(tenantId: string, limit = 12) {
+	return unstable_cache(() => getNewArrivals(tenantId, limit), ["public-new-arrivals-v2", tenantId, String(limit)], { revalidate: 20, tags: [publicRecommendationTag(tenantId)] })()
+}
+
+export function getCachedDeals(tenantId: string, limit = 12) {
+	return unstable_cache(() => getDeals(tenantId, limit), ["public-product-deals-v2", tenantId, String(limit)], { revalidate: 20, tags: [publicRecommendationTag(tenantId)] })()
+}
+
+export function getCachedPlatformStoreHomepageProducts() {
+	return unstable_cache(getPlatformStoreHomepageProducts, ["public-platform-store-home-products-v2"], { revalidate: 20, tags: [publicCatalogTag("platform-store")] })()
+}

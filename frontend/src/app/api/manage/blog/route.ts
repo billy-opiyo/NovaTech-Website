@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { resolveTenantFromRequest } from "backend/lib/tenant"
 import { requireStorePermission } from "backend/lib/tenant-access"
 import { blogPostCreateSchema } from "backend/validators/blogValidator"
+import { revalidatePublicBlog } from "@/lib/public-blog.server"
 
 async function storeAccess() {
 	const session = await auth()
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
 	if (!parsed.success) return NextResponse.json({ message: "Check the blog post fields", issues: parsed.error.flatten() }, { status: 400 })
 	try {
 		const post = await prisma.blogPost.create({ data: { ...parsed.data, tenantId: access.context.tenantId, scopeKey: access.context.tenantId, createdById: access.session.user.id, publishedAt: parsed.data.status === "PUBLISHED" ? new Date() : null } })
+		if (post.status === "PUBLISHED") revalidatePublicBlog(access.context.tenantId)
 		return NextResponse.json({ post }, { status: 201 })
 	} catch (error) {
 		const duplicate = error && typeof error === "object" && "code" in error && error.code === "P2002"

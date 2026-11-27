@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeftRight, ArrowRight, ChevronDown, Search, ShoppingBag, ShoppingCart, Star, Store } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
@@ -91,7 +92,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 		<section aria-labelledby={showHeroTexts ? "platform-hero-title" : undefined} aria-label={showHeroTexts ? undefined : "Platform homepage hero"} className="space-y-8">
 			<div className={`glass-card navy-glass relative isolate flex min-h-64 flex-col items-center justify-center overflow-hidden rounded-3xl px-5 py-10 text-center shadow-xl sm:min-h-80 sm:px-10 sm:py-14 lg:px-16 lg:py-16 ${!showHeroTexts ? "min-h-[22rem] sm:min-h-[28rem]" : ""}`}>
 				{hero?.image && <>
-					<img src={hero.image} alt="" aria-hidden="true" className={`absolute inset-0 z-0 h-full w-full object-cover ${showHeroTexts ? "opacity-90" : "opacity-100"}`} />
+					<Image src={hero.image} alt="" aria-hidden="true" fill priority sizes="100vw" className={`z-0 object-cover ${showHeroTexts ? "opacity-90" : "opacity-100"}`} />
 					{showHeroTexts && <div aria-hidden="true" className="absolute inset-0 z-10 bg-theme-bg/50" />}
 				</>}
 				{showHeroTexts && <>

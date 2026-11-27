@@ -8,6 +8,7 @@ import { productSchema } from "backend/validators/productValidator"
 import { createProduct } from "backend/services/productService"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { supplierProductSchema } from "./supplier-schema"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 const supplierSchema = z.object({
 	name: z.string().trim().min(2).max(120),
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
 	try {
 		const product = await createProduct({ ...parsedProduct.data, isPublished: parsedProduct.data.isPublished ?? false }, result.store.tenantId)
 		if (parsedSupplier?.success) await prisma.supplierProduct.create({ data: { storeId: result.store.id, productId: product.id, ...parsedSupplier.data } })
+		revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		return NextResponse.json({ product: { id: product.id, name: product.name, slug: product.slug } }, { status: 201 })
 	} catch (error) { return apiErrorResponse(error, "Product could not be created") }
 }

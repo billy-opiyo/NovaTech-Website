@@ -97,7 +97,12 @@ export function StoreContextProvider({ value, children }: { value: StoreContext;
 		}
 		window.addEventListener("storage", handleStorage)
 		document.addEventListener("visibilitychange", handleVisibility)
-		const interval = window.setInterval(() => void refresh(), 10000)
+		// Published settings are pushed immediately between open tabs. Keep a
+		// slower visible-tab refresh for updates made from another device without
+		// sending a database-backed request every ten seconds on every storefront.
+		const interval = window.setInterval(() => {
+			if (document.visibilityState === "visible") void refresh()
+		}, 60_000)
 
 		return () => {
 			active = false

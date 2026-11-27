@@ -5,6 +5,7 @@ import prisma from "backend/lib/db"
 import { hasPlatformOperation, isPlatformAdmin } from "backend/lib/platform-access"
 import { industryPatchSchema } from "backend/validators/industryValidator"
 import { syncPlatformStoreIndustryCategories } from "backend/lib/platform-store-catalog"
+import { revalidatePublicIndustryData } from "@/lib/public-catalog.server"
 
 async function platformAccess() {
 	const session = await auth()
@@ -34,6 +35,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 			},
 		})
 		await syncPlatformStoreIndustryCategories(industry.id)
+		revalidatePublicIndustryData()
 		return NextResponse.json({ industry })
 	} catch (error: unknown) {
 		if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") return NextResponse.json({ message: "Industry not found" }, { status: 404 })
@@ -52,5 +54,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 	const valueCount = usage.attributeDefinitions.reduce((total, definition) => total + definition._count.values, 0)
 	if (usage._count.stores > 0 || valueCount > 0) return NextResponse.json({ message: "Industry is in use; disable it instead of deleting it" }, { status: 409 })
 	await prisma.industry.delete({ where: { id } })
+	revalidatePublicIndustryData()
 	return NextResponse.json({ deleted: true })
 }

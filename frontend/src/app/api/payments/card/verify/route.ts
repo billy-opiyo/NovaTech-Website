@@ -8,6 +8,7 @@ import { apiErrorResponse } from "backend/lib/api-handler"
 import { getServerSession } from "@/lib/auth"
 import prisma from "backend/lib/db"
 import { getActivePlatformStorePaymentRoute } from "backend/payments/platform-store"
+import { revalidateTenantInventory } from "@/lib/public-catalog.server"
 
 const cardVerifySchema = z.object({
 	reference: z.string().min(3),
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ message: "Card payment request not found for this shopper in this store." }, { status: 404 })
 		}
 		const result = await verifyCardPayment(validated.reference, context.tenantId, context.storeId)
+		if (result.status === "COMPLETED") revalidateTenantInventory(context)
 
 		return NextResponse.json(result)
 	} catch (error: unknown) {

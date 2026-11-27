@@ -256,23 +256,10 @@ export async function getTrendingProducts(tenantId: string, limit: number = 12):
 			},
 			payments: { some: { status: "COMPLETED" } },
 		},
-		include: {
-		items: {
-			where: { tenantId, ...(hiddenCategories.length ? { product: { category: { slug: { notIn: hiddenCategories } } } } : {}) },
-			include: {
-					product: {
-						include: {
-							category: true,
-							variants: { where: { tenantId }, select: { stock: true } },
-							reviews: {
-								where: { moderationStatus: "APPROVED" },
-								select: {
-									rating: true,
-								},
-							},
-						},
-					},
-				},
+		select: {
+			items: {
+				where: { tenantId, ...(hiddenCategories.length ? { product: { category: { slug: { notIn: hiddenCategories } } } } : {}) },
+				select: { productId: true, quantity: true, price: true },
 			},
 		},
 	})

@@ -6,6 +6,7 @@ import { createActionRecord } from "backend/actions"
 import { apiErrorResponse } from "backend/lib/api-handler"
 import { platformSiteSettingsPatchSchema } from "backend/validators/platformSiteSettingsValidator"
 import { getPlatformSiteSettingsDefaults, mergePlatformSiteSettings, type PlatformSiteSettings } from "@/lib/platform-site-settings"
+import { revalidatePlatformSettingsCache } from "@/lib/public-platform-settings.server"
 
 const PLATFORM_SETTINGS_ID = "platform"
 
@@ -89,6 +90,7 @@ export async function POST() {
 			data: { publishedSettings: asJson(publishedSettings), draftSettings: Prisma.DbNull, version, publishedAt: new Date(), publishedBy: access.session.user.id },
 			select: { version: true, publishedAt: true },
 		})
+		revalidatePlatformSettingsCache()
 		await createActionRecord("PUBLISHED_PLATFORM_SITE_SETTINGS", { adminId: access.session.user.id, version }).catch(() => undefined)
 		return NextResponse.json({ version: updated.version, publishedAt: updated.publishedAt })
 	} catch (error) {

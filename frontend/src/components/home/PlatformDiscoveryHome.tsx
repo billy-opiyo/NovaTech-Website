@@ -6,7 +6,6 @@ import StoreDiscoveryGroup from "@/components/home/StoreDiscoveryGroup"
 import PlatformPlans from "@/components/home/PlatformPlans"
 import MerchantOnboardingGuide from "@/components/home/MerchantOnboardingGuide"
 import type { PublicPlan, PublicPlanCatalogSource } from "@/lib/public-plans.server"
-import { getMvpPilotDays } from "backend/billing/mvp-policy"
 
 type DiscoveryEntry = PlatformDiscoveryStore & { href: string }
 
@@ -16,7 +15,7 @@ const groupCopy = {
 	NEW_AND_GROWING: { title: "New and growing stores", description: "Published stores with products to discover; review history is still developing." },
 } as const
 
-export default async function PlatformDiscoveryHome({ stores, plans, plansUnavailable, plansSource }: { stores: DiscoveryEntry[]; plans: PublicPlan[]; plansUnavailable: boolean; plansSource: PublicPlanCatalogSource }) {
+export default async function PlatformDiscoveryHome({ stores, plans, plansUnavailable, plansSource, pilotDays }: { stores: DiscoveryEntry[]; plans: PublicPlan[]; plansUnavailable: boolean; plansSource: PublicPlanCatalogSource; pilotDays: number }) {
 	const topRated = stores.filter((store) => store.category === "TOP_RATED")
 	const mostReviewed = stores.filter((store) => store.category === "MOST_REVIEWED")
 	const newAndGrowing = stores.filter((store) => store.category === "NEW_AND_GROWING")
@@ -27,7 +26,6 @@ export default async function PlatformDiscoveryHome({ stores, plans, plansUnavai
 	const mostReviewedStores = [...(platformStore && platformStore.reviewCount > 0 ? [platformStore] : []), ...mostReviewedMerchants]
 	const newAndGrowingStores = [...(platformStore ? [platformStore] : []), ...newAndGrowingMerchants]
 	const industries = Array.from(new Map(stores.flatMap((store) => store.industry ? [[store.industry.slug, store.industry.name] as const] : [])).entries()).map(([slug, name]) => ({ slug, name })).sort((left, right) => left.name.localeCompare(right.name))
-	const pilotDays = await getMvpPilotDays()
 	return <div className="space-y-16">
 		<PlatformHero stores={stores} />
 		<PlatformPlans plans={plans} unavailable={plansUnavailable} source={plansSource} pilotDays={pilotDays} />

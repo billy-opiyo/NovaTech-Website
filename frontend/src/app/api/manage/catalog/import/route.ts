@@ -8,6 +8,7 @@ import { parseCsv, type CatalogCsvRow } from "backend/lib/catalog-csv"
 import { getStoreIndustry, normalizeIndustryAttributeInputs, normalizeIndustryAttributeRecord } from "backend/lib/industry"
 import { createActionRecord } from "backend/actions"
 import { apiErrorResponse } from "backend/lib/api-handler"
+import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 const MAX_ROWS = 500
 const REQUIRED = ["name", "description", "brand", "sku", "price", "stock", "category", "images"]
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
 			} catch (error: unknown) { errors.push({ row: row.rowNumber, message: error instanceof Error ? error.message : "Database rejected this row" }) }
 		}
 		await createActionRecord("IMPORTED_CATALOG", { tenantId: context.tenantId, adminId: session.user.id, fileName: file.name, rows: rows.length, created, updated, failed: errors.length }).catch(() => undefined)
+		if (created > 0 || updated > 0) revalidateTenantPublicCatalog(context, { storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
 		return NextResponse.json({ mode, summary: { ...summary, created, updated, failed: errors.length }, errors })
 	} catch (error: unknown) { return apiErrorResponse(error, "Catalog import unavailable") }
 }
