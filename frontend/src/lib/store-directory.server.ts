@@ -13,6 +13,7 @@ export type PublishedStoreDirectoryEntry = {
 	slug: string
 	logoUrl: string | null
 	tagline: string
+	productCount: number
 	industry: { name: string; slug: string } | null
 	featuredProduct: { name: string; slug: string; price: number; image: string | null } | null
 	isPlatformStore: boolean
@@ -40,6 +41,7 @@ export type PlatformDiscoveryStore = {
 	industry: { name: string; slug: string } | null
 	isDemo: boolean
 	isPlatformStore: boolean
+	reviewDataUnavailable?: boolean
 }
 
 const jsonRecord = (value: unknown): Record<string, unknown> =>
@@ -67,6 +69,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				industry: { select: { name: true, slug: true } },
 				tenant: {
 					select: {
+						_count: { select: { products: true } },
 						products: {
 							where: { isFeatured: true },
 							orderBy: { updatedAt: "desc" },
@@ -88,6 +91,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 				slug: store.slug,
 				logoUrl: resolveDirectoryStoreLogo(store.logoUrl),
 				tagline,
+				productCount: store.tenant._count.products,
 				industry: store.industry,
 				featuredProduct: product ? {
 					name: product.name,
@@ -110,6 +114,7 @@ export async function getPublishedStores(): Promise<PublishedStoreDirectoryEntry
 			slug: "nuravatech",
 			logoUrl: clientConfig.brand.logo,
 			tagline: clientConfig.homepage.heroDescription,
+			productCount: 0,
 			industry: null,
 			featuredProduct: null,
 			isPlatformStore: false,
@@ -190,7 +195,7 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 		}).sort((a, b) => Number(b.isPlatformStore) - Number(a.isPlatformStore) || b.averageRating - a.averageRating || b.reviewCount - a.reviewCount)
 	} catch (error) {
 		if (process.env.NODE_ENV === "production") console.error("Platform store discovery unavailable", error)
-		return []
+		throw error
 	}
 }
 
@@ -198,7 +203,38 @@ export async function getPlatformDiscoveryStores(): Promise<PlatformDiscoverySto
 // short so catalogue and moderation changes become visible promptly, and never
 // cache tenant-specific or authenticated page data here.
 export const getCachedPublishedStores = unstable_cache(getPublishedStores, ["public-store-directory-v1"], { revalidate: 60, tags: [PUBLIC_DIRECTORY_TAG, PUBLIC_INDUSTRY_TAG] })
-export const getCachedPlatformDiscoveryStores = unstable_cache(getPlatformDiscoveryStores, ["platform-discovery-stores-v1"], { revalidate: 60, tags: [PLATFORM_DISCOVERY_TAG, PUBLIC_INDUSTRY_TAG] })
+const getCachedPlatformDiscoveryStoresData = unstable_cache(getPlatformDiscoveryStores, ["platform-discovery-stores-v2"], { revalidate: 60, tags: [PLATFORM_DISCOVERY_TAG, PUBLIC_INDUSTRY_TAG] })
+
+export async function getCachedPlatformDiscoveryStores(): Promise<{ stores: PlatformDiscoveryStore[]; unavailable: boolean }> {
+	try {
+		return { stores: await getCachedPlatformDiscoveryStoresData(), unavailable: false }
+	} catch {
+		try {
+			const publishedStores = await getCachedPublishedStores()
+			return {
+				stores: publishedStores.map((store) => ({
+					id: store.id,
+					name: store.name,
+					slug: store.slug,
+					logoUrl: store.logoUrl,
+					tagline: store.tagline,
+					averageRating: 0,
+					reviewCount: 0,
+					productCount: store.productCount,
+					products: store.featuredProduct ? [{ ...store.featuredProduct, brand: "" }] : [],
+					category: "NEW_AND_GROWING",
+					industry: store.industry,
+					isDemo: ["nuravatech", "nurava-furnitures", "nurava-cakes", "nurava-boutiques"].includes(store.slug),
+					isPlatformStore: store.isPlatformStore,
+					reviewDataUnavailable: true,
+				})),
+				unavailable: true,
+			}
+		} catch {
+			return { stores: [], unavailable: true }
+		}
+	}
+}
 
 export async function getStorePublicUrl(slug: string): Promise<string> {
 	const requestHeaders = await headers()

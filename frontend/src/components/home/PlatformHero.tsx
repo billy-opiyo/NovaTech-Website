@@ -12,6 +12,7 @@ import type { PlatformDiscoveryStore } from "@/lib/store-directory.server"
 type HeroStore = Pick<PlatformDiscoveryStore, "id" | "name" | "slug" | "logoUrl" | "averageRating" | "reviewCount" | "industry" | "isDemo" | "isPlatformStore"> & {
 	href: string
 	productCount?: number
+	reviewDataUnavailable?: boolean
 	fallbackColor?: string
 }
 
@@ -48,7 +49,7 @@ function StoreCard({ store, platformLogo }: { store: HeroStore; platformLogo: st
 			</div>
 			<div className="min-w-0">
 				<h3 className="break-words text-lg font-bold leading-tight text-theme-text group-hover:text-primary">{store.name}</h3>
-				<p className="mt-2 flex items-center gap-1 text-sm text-theme-muted"><Star size={14} className="fill-current text-yellow-400" /> {store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}{store.industry && ` · ${store.industry.name}`}</p>
+				<p className="mt-2 flex items-center gap-1 text-sm text-theme-muted"><Star size={14} className="fill-current text-yellow-400" /> {store.reviewDataUnavailable ? "Ratings temporarily unavailable" : store.averageRating > 0 ? store.averageRating.toFixed(1) : "New"}{!store.reviewDataUnavailable && store.reviewCount > 0 ? ` · ${store.reviewCount} reviews` : ""}{store.industry && ` · ${store.industry.name}`}</p>
 				{store.isPlatformStore && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Nurava store · featured first</span>}{store.isDemo && !store.isPlatformStore && <span className="mt-2 inline-flex rounded-full bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Platform demo</span>}
 			</div>
 		</a>
@@ -72,7 +73,7 @@ function TrustStrip() {
 	)
 }
 
-export default function PlatformHero({ stores }: { stores: Array<PlatformDiscoveryStore & { href: string }> }) {
+export default function PlatformHero({ stores, storesUnavailable = false }: { stores: Array<PlatformDiscoveryStore & { href: string }>; storesUnavailable?: boolean }) {
 	const { theme } = useTheme()
 	const storeContext = useStoreContext()
 	const platformLogo = storeContext.platformSettings?.brand?.logo?.trim() || "/images/nuravahubsoreslogo.png"
@@ -126,7 +127,7 @@ export default function PlatformHero({ stores }: { stores: Array<PlatformDiscove
 						</span>
 					</label>
 				</div>
-				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">{heroStores.map((store) => <StoreCard key={store.id} store={store} platformLogo={platformLogo} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">No stores are available in this industry yet.</p>}
+				{heroStores.length ? <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">{heroStores.map((store) => <StoreCard key={store.id} store={store} platformLogo={platformLogo} />)}</div> : <p className="mt-6 rounded-xl border border-theme-border p-6 text-center text-sm text-theme-muted">{storesUnavailable ? "Store listings are temporarily unavailable while the database reconnects." : "No stores are available in this industry yet."}</p>}
 				<div className="mt-7 flex justify-center"><Link href="/stores?all=1" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Explore Stores <ArrowRight size={18} /></Link></div>
 			</section>
 		</section>
