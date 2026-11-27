@@ -7,15 +7,21 @@ const STORE_ID = "nurava-hubstores-store"
 const STORE_SLUG = "nurava-marketplace"
 const STORE_NAME = "Nurava HubStores"
 
-function requireStagingTarget() {
-	if (process.env.PLATFORM_STORE_PROVISION_TARGET !== "saas-staging" || process.env.PLATFORM_STORE_PROVISION_CONFIRM !== "provision-nurava-hubstores") {
-		throw new Error("Provisioning requires PLATFORM_STORE_PROVISION_TARGET=saas-staging and PLATFORM_STORE_PROVISION_CONFIRM=provision-nurava-hubstores")
+function requireProvisionTarget() {
+	const target = process.env.PLATFORM_STORE_PROVISION_TARGET
+	const confirmation = process.env.PLATFORM_STORE_PROVISION_CONFIRM
+	const validTargets: Record<string, string> = {
+		"saas-staging": "provision-nurava-hubstores",
+		production: "provision-nurava-hubstores-production",
+	}
+	if (!target || confirmation !== validTargets[target]) {
+		throw new Error("Provisioning requires a supported PLATFORM_STORE_PROVISION_TARGET and its matching PLATFORM_STORE_PROVISION_CONFIRM value")
 	}
 	if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required")
 }
 
 async function main() {
-	requireStagingTarget()
+	requireProvisionTarget()
 	const result = await prisma.$transaction(async (tx) => {
 		let tenant = await tx.tenant.findUnique({ where: { id: TENANT_ID } })
 		if (tenant && tenant.kind !== "PLATFORM") throw new Error(`Tenant id ${TENANT_ID} already belongs to a merchant`)
