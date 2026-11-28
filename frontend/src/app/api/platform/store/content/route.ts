@@ -9,7 +9,7 @@ import { revalidateTenantPublicCatalog } from "@/lib/public-catalog.server"
 
 const contentSchema = z.object({
 	name: z.string().trim().min(2).max(120), logoUrl: z.string().trim().max(2048).optional().or(z.literal("")), heroImage: z.string().trim().max(2048).optional().or(z.literal("")),
-	heroTitle: z.string().trim().max(160), heroHighlight: z.string().trim().max(120), heroDescription: z.string().trim().max(1000),
+	heroTitle: z.string().trim().max(160), heroHighlight: z.string().trim().max(300), heroDescription: z.string().trim().max(1000),
 	heroPrimaryLabel: z.string().trim().max(60), featuredTitle: z.string().trim().max(120), categoryTitle: z.string().trim().max(120),
 	aboutTitle: z.string().trim().max(120), aboutDescription: z.string().trim().max(2000),
 	phoneDisplay: z.string().trim().max(50), email: z.string().trim().pipe(z.union([z.string().email(), z.literal("")])), addressLine: z.string().trim().max(200),
