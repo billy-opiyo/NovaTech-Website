@@ -20,7 +20,7 @@ final class UpdateApkVerifier {
     static final String PRODUCTION_CHANNEL = "production";
     static final String PACKAGE_ID = "com.nurava.hubstores";
     static final String PRODUCTION_HOST = "nuravahubstores.com";
-    static final String PRODUCTION_APK_PATH = "/downloads/nurava-hubstores-production.apk";
+    static final String PRODUCTION_APK_PATH = "/downloads/nurava-hubstores.apk";
 
     private UpdateApkVerifier() {}
 

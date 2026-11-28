@@ -15,7 +15,7 @@ export const ANDROID_UPDATE_CHANNELS = Object.freeze({
 	production: Object.freeze({
 		origin: "https://nuravahubstores.com",
 		manifestPath: "/downloads/nurava-hubstores-update-production.json",
-		apkPath: "/downloads/nurava-hubstores-production.apk",
+		apkPath: "/downloads/nurava-hubstores.apk",
 	}),
 })
 

@@ -1,10 +1,10 @@
 {
-	"enabled": false,
+	"enabled": true,
 	"channel": "production",
 	"applicationId": "com.nurava.hubstores",
-	"versionCode": 0,
-	"versionName": "0.0.0",
-	"apkUrl": "/downloads/nurava-hubstores-production.apk",
-	"signingCertificateSha256": "",
-	"releaseNotes": "Production app updates are not enabled."
+	"versionCode": 21,
+	"versionName": "1.3.17",
+	"apkUrl": "/downloads/nurava-hubstores.apk",
+	"signingCertificateSha256": "65bd6f4c6604d17ba29542e6baddc1e6f3660632bc816661f6c8b36fb1f5340d",
+	"releaseNotes": "First production release of Nurava HubStores."
 }

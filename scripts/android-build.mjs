@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -117,7 +118,12 @@ function runNode(args, env) {
 
 function runGradle(task, env) {
 	const wrapper = process.platform === "win32" ? ".\\gradlew.bat" : "./gradlew"
-	const result = spawnSync(wrapper, [task], {
+	const gradleArgs = [task]
+	if (task === "copyReleaseApk" || task === "bundleRelease") {
+		// Keep signing credentials out of reusable Gradle daemon processes.
+		gradleArgs.push("--no-daemon")
+	}
+	const result = spawnSync(wrapper, gradleArgs, {
 		cwd: path.join(projectRoot, "android"),
 		stdio: "inherit",
 		env,
@@ -125,6 +131,55 @@ function runGradle(task, env) {
 	})
 	if (result.error) throw result.error
 	if (result.status !== 0) throw new Error(`Gradle ${task} failed with exit code ${result.status ?? "unknown"}.`)
+}
+
+function createTemporarySigningFile(env) {
+	const directory = mkdtempSync(path.join(tmpdir(), "nurava-android-signing-"))
+	const file = path.join(directory, "signing.json")
+	const serialized = JSON.stringify({
+		storePassword: env.NURAVA_ANDROID_STORE_PASSWORD,
+		keyPassword: env.NURAVA_ANDROID_KEY_PASSWORD,
+	})
+	const credentials = JSON.parse(serialized)
+	if (!credentials.storePassword?.trim() || !credentials.keyPassword?.trim()) {
+		throw new Error("Signing password values were empty before transfer to Gradle.")
+	}
+	try {
+		writeFileSync(file, serialized, { encoding: "utf8", mode: 0o600 })
+		const persistedCredentials = JSON.parse(readFileSync(file, "utf8"))
+		if (!persistedCredentials.storePassword?.trim() || !persistedCredentials.keyPassword?.trim()) {
+			throw new Error("Signing password values were empty after temporary file creation.")
+		}
+		process.stdout.write("Temporary signing file prepared; password values are not displayed.\n")
+	} catch (error) {
+		const tempRoot = realpathSync(tmpdir())
+		const target = realpathSync(directory)
+		const relative = path.relative(tempRoot, target)
+		if (relative && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
+			rmSync(target, { recursive: true, force: true })
+		}
+		throw error
+	}
+
+	return {
+		file,
+		cleanup() {
+			const tempRoot = realpathSync(tmpdir())
+			const target = realpathSync(directory)
+			const relative = path.relative(tempRoot, target)
+			if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+				throw new Error("Temporary signing-file cleanup path validation failed.")
+			}
+			rmSync(target, { recursive: true, force: true })
+		},
+	}
+}
+
+function createReleaseBuildEnvironment(env, signingFile) {
+	const releaseEnv = { ...env, NURAVA_ANDROID_SIGNING_FILE: signingFile.file }
+	delete releaseEnv.NURAVA_ANDROID_STORE_PASSWORD
+	delete releaseEnv.NURAVA_ANDROID_KEY_PASSWORD
+	return releaseEnv
 }
 
 function runCapacitorCommand(command, env) {
@@ -169,28 +224,40 @@ function main(args) {
 	if (action === "release-apk" && target === "production") {
 		validateProductionReleaseEnvironment(env, "apk")
 		env.NURAVA_ANDROID_RELEASE_WRAPPER = "1"
-		runCapacitorCommand("sync", env)
-		runGradle("copyReleaseApk", env)
-		const verifier = path.join(projectRoot, "scripts", "verify-android-release.mjs")
-		const artifacts = [
-			path.join(projectRoot, "android", "app", "build", "outputs", "apk", "release", "app-release.apk"),
-			path.join(projectRoot, "android", "app", "build", "outputs", "apk", "release", "nurava-hubstores.apk"),
-		]
-		for (const artifact of artifacts) {
-			runNode([verifier, "apk", artifact], env)
-		}
-		const hashes = artifacts.map((artifact) => createHash("sha256").update(readFileSync(artifact)).digest("hex"))
-		if (hashes[0] !== hashes[1]) {
-			throw new Error("The distributable APK copy does not match the verified release APK.")
+		const signingFile = createTemporarySigningFile(env)
+		const releaseEnv = createReleaseBuildEnvironment(env, signingFile)
+		try {
+			runCapacitorCommand("sync", releaseEnv)
+			runGradle("copyReleaseApk", releaseEnv)
+			const verifier = path.join(projectRoot, "scripts", "verify-android-release.mjs")
+			const artifacts = [
+				path.join(projectRoot, "android", "app", "build", "outputs", "apk", "release", "app-release.apk"),
+				path.join(projectRoot, "android", "app", "build", "outputs", "apk", "release", "nurava-hubstores.apk"),
+			]
+			for (const artifact of artifacts) {
+				runNode([verifier, "apk", artifact], releaseEnv)
+			}
+			const hashes = artifacts.map((artifact) => createHash("sha256").update(readFileSync(artifact)).digest("hex"))
+			if (hashes[0] !== hashes[1]) {
+				throw new Error("The distributable APK copy does not match the verified release APK.")
+			}
+		} finally {
+			signingFile.cleanup()
 		}
 		return
 	}
 	if (action === "release-aab" && target === "production") {
 		validateProductionReleaseEnvironment(env, "aab")
 		env.NURAVA_ANDROID_RELEASE_WRAPPER = "1"
-		runCapacitorCommand("sync", env)
-		runGradle("bundleRelease", env)
-		runNode([path.join(projectRoot, "scripts", "verify-android-release.mjs"), "aab", path.join(projectRoot, "android", "app", "build", "outputs", "bundle", "release", "app-release.aab")], env)
+		const signingFile = createTemporarySigningFile(env)
+		const releaseEnv = createReleaseBuildEnvironment(env, signingFile)
+		try {
+			runCapacitorCommand("sync", releaseEnv)
+			runGradle("bundleRelease", releaseEnv)
+			runNode([path.join(projectRoot, "scripts", "verify-android-release.mjs"), "aab", path.join(projectRoot, "android", "app", "build", "outputs", "bundle", "release", "app-release.aab")], releaseEnv)
+		} finally {
+			signingFile.cleanup()
+		}
 		return
 	}
 	throw new Error(`Action '${action || "(missing)"}' is not allowed for the '${target}' target.`)

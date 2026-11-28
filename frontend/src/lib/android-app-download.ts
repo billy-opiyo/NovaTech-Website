@@ -4,8 +4,8 @@ import { Browser } from "@capacitor/browser"
 import { Capacitor } from "@capacitor/core"
 import type { MouseEvent as ReactMouseEvent } from "react"
 
-export const APP_DOWNLOAD_PATH = "/downloads/nurava-hubstores-production.apk"
-export const APP_DOWNLOAD_FILENAME = "Nurava-HubStores-Android.apk"
+export const APP_DOWNLOAD_PATH = "/downloads/nurava-hubstores.apk"
+export const APP_DOWNLOAD_FILENAME = "nurava-hubstores.apk"
 
 /** Return cross-origin HTTP(S) destinations that should leave the native WebView. */
 export function getExternalHttpLinkUrl(href: string, currentOrigin: string) {
