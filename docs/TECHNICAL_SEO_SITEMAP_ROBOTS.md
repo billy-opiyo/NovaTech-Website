@@ -26,7 +26,7 @@ The requested canonical domain is `nuravahubstores.com`, and the source-level pl
 
 ## Production follow-up
 
-The source change did not register the domain, change DNS/Vercel settings, or deploy. The live endpoints and tenant URLs were verified on 2026-11-27. Reconcile the repository's remaining `nuravatech.com` configuration and documentation with the production `nuravahubstores.com` domain, and remove `/deals` from the sitemap or give it a canonical public route before the next deployment. After deployment, recheck:
+The source change did not register the domain, change DNS/Vercel settings, or deploy. The live endpoints and tenant URLs were verified on 2026-11-27. Reconcile the repository's remaining `nuravatech.com` configuration and documentation with the production `nuravahubstores.com` domain. `/deals` has now been removed from the source sitemap because it redirects to `/stores?all=1`; the production sitemap will keep listing it until this source change is deployed. After deployment, recheck:
 
 - `https://nuravahubstores.com/sitemap.xml`
 - `https://nuravahubstores.com/robots.txt`
@@ -47,6 +47,7 @@ In Google Search Console, verify a Domain property for `nuravahubstores.com` (in
 
 - A read-only Prisma connection using the root `.env.production` succeeded. The database contains 2 stores, 0 products, 0 blog posts, and 16 categories. The sitemap publishes one eligible store (the three store URLs in its own child sitemap); the other database store is not included by the public-store rules.
 - `https://nuravahubstores.com/sitemap.xml`, all three linked children, and `/robots.txt` returned HTTP 200. All XML parsed successfully. The child files contain 13 fixed platform URLs, 3 `nurava-marketplace` URLs, and 16 `nurava-marketplace` category URLs (32 total). No demo-store, private, API, product, or article URLs were present; the database currently has no products or posts to publish.
-- All 32 sitemap URLs returned HTTP 200. Canonicals matched the requested URLs except `/deals`: it responds with a production 307 redirect to `/stores?all=1`, whose canonical is `/stores`. Remove `/deals` from the fixed sitemap or make that route a canonical public destination before treating every sitemap URL as redirect-free.
+- At the time of the live audit, all 32 sitemap URLs returned HTTP 200. Canonicals matched except `/deals`, which returned a production 307 redirect to `/stores?all=1`; the destination canonical is `/stores`. The follow-up source fix below removes that redirecting URL.
 - Production `robots.txt` returned `text/plain`, allows `/`, and names `https://nuravahubstores.com/sitemap.xml`. Private auth pages return `noindex,nofollow`; no sitemap URLs were marked noindex.
 - Repeated production sitemap requests returned `X-Vercel-Cache: HIT` with increasing `Age`, confirming the responses are cached at the edge. No deployment or production changes were made as part of this verification.
+- Follow-up source fix: removed the redirecting `/deals` URL from the fixed sitemap and added a regression assertion. Production remains unchanged until deployment.

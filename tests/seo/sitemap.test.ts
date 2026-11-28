@@ -27,6 +27,7 @@ test("fixed sitemap page remains valid and database independent", async () => {
 	assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?><urlset/)
 	assert.match(xml, /https:\/\/nuravahubstores\.com\//)
 	assert.match(xml, /https:\/\/nuravahubstores\.com\/privacy-policy/)
+	assert.doesNotMatch(xml, /https:\/\/nuravahubstores\.com\/deals(?:<|$)/)
 	assert.doesNotMatch(xml, /\/admin|\/manage|\/platform|\/api|\.vercel\.app/)
 })
 

@@ -132,7 +132,7 @@ function fixedEntries(): SitemapEntry[] {
 	const origin = platformOrigin()
 	return [
 		"/", "/stores", "/about", "/contact", "/faqs", "/terms", "/privacy-policy",
-		"/cookie-policy", "/return-policy", "/warranty", "/blog", "/deals", "/compare",
+		"/cookie-policy", "/return-policy", "/warranty", "/blog", "/compare",
 	].map((path) => ({ url: new URL(path, origin).toString() }))
 }
 
