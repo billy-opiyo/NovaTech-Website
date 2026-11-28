@@ -69,9 +69,8 @@ export default async function RootLayout({
 			{
 				"@type": "Organization",
 				"@id": `${platformOrigin}/#organization`,
-				name: "Nurava Tech",
+				name: "Nurava HubStores",
 				url: platformOrigin,
-				brand: { "@type": "Brand", name: "Nurava HubStores" },
 			},
 			{
 				"@type": "WebSite",

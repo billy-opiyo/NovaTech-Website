@@ -28,14 +28,6 @@ export default async function PlatformDiscoveryHome({ stores, storesUnavailable,
 	const industries = Array.from(new Map(stores.flatMap((store) => store.industry ? [[store.industry.slug, store.industry.name] as const] : [])).entries()).map(([slug, name]) => ({ slug, name })).sort((left, right) => left.name.localeCompare(right.name))
 	return <div className="space-y-16">
 		<PlatformHero stores={stores} storesUnavailable={storesUnavailable} />
-		<section aria-labelledby="platform-overview-title" className="glass-card space-y-4 p-6 sm:p-8">
-			<div><h2 id="platform-overview-title" className="text-2xl font-extrabold text-theme-text">A platform for independent stores and the people who shop with them</h2>
-				<p className="mt-3 max-w-4xl leading-7 text-theme-muted">Nurava HubStores, operated by Nurava Tech, gives merchants tools to create a storefront, present their products, and manage their online business. Shoppers can discover independent stores, compare products and offers, then buy or contact merchants directly through each store’s storefront.</p>
-			</div>
-			<div><h3 className="font-bold text-theme-text">Shop across four industries</h3>
-				<p className="mt-1 leading-7 text-theme-muted">Explore electronics and technology, furniture and home goods, boutique fashion and accessories, plus cakes and treats for celebrations.</p>
-			</div>
-		</section>
 		<PlatformPlans plans={plans} unavailable={plansUnavailable} source={plansSource} pilotDays={pilotDays} />
 		<section className="grid gap-4 lg:grid-cols-3"><div className="glass-card p-5"><Star className="text-yellow-500" /><h2 className="mt-3 font-bold">Social proof first</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">See approved ratings and review volume before choosing where to enquire.</p></div><div className="glass-card p-5"><ShieldCheck className="text-primary" /><h2 className="mt-3 font-bold">Independent merchants</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Each store manages its own product information, availability, payment, delivery, refunds, and warranty.</p></div><div className="glass-card p-5"><BadgeCheck className="text-emerald-600" /><h2 className="mt-3 font-bold">Product previews</h2><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Preview real catalogue images from each store before opening its storefront.</p></div></section>
 		{(platformStore || storesUnavailable) && <StoreDiscoveryGroup title="Nurava Store · Featured first" description="Shop products from the separately provisioned, platform-owned store." stores={platformStore ? [platformStore] : []} industries={industries} unavailable={storesUnavailable} />}
