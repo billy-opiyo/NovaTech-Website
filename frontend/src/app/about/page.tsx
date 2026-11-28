@@ -1,6 +1,17 @@
+import type { Metadata } from "next"
 import InfoPage from "@/components/content/InfoPage"
 import PlatformTeamSection from "@/components/content/PlatformTeamSection"
 import { getStoreContext } from "@/lib/store-context.server"
+
+export async function generateMetadata(): Promise<Metadata> {
+	const store = await getStoreContext()
+	const title = store.isPlatformHome ? "About" : store.homepage.aboutTitle || "About our store"
+	const description = store.isPlatformHome
+		? "Learn how Nurava HubStores, operated by Nurava Tech, helps independent merchants build storefronts and shoppers discover stores across Kenya."
+		: store.homepage.aboutDescription || `${store.brand.name} is an independent store serving its customers directly.`
+	const metaDescription = description.slice(0, 320)
+	return { title, description: metaDescription, openGraph: { title, description: metaDescription }, twitter: { card: "summary", title, description: metaDescription } }
+}
 
 export default async function AboutPage() {
 	const store = await getStoreContext()

@@ -1,7 +1,17 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { getStoreContext } from "@/lib/store-context.server"
 import { getStoreRouteHref } from "@/lib/store-home"
 import { getCachedPublishedBlogPosts } from "@/lib/public-blog.server"
+
+export async function generateMetadata(): Promise<Metadata> {
+	const store = await getStoreContext()
+	const title = store.isPlatformHome ? "Guides and insights" : "Blog"
+	const description = store.isPlatformHome
+		? "Practical guides for merchants and shoppers exploring electronics, furniture, boutique fashion, cakes, and more with Nurava HubStores."
+		: `News, buying guides, and updates from ${store.brand.name}.`
+	return { title, description, openGraph: { title, description }, twitter: { card: "summary", title, description } }
+}
 
 export default async function BlogPage() {
 	const store = await getStoreContext()

@@ -152,7 +152,12 @@ export function getPlatformSiteSettingsDefaults(): PlatformSiteSettings {
 			responseTime: clientConfig.contact.responseTime,
 		},
 		social: { ...clientConfig.social },
-		seo: { ...clientConfig.seo },
+		seo: {
+			title: "Nurava HubStores | Discover Stores & Shop Online",
+			description: "Discover independent stores and shop across multiple industries with Nurava HubStores. Explore furniture, electronics, fashion, cakes and more while connecting directly with merchants.",
+			keywords: "Nurava HubStores, online shopping Kenya, independent stores, multi-industry commerce, merchant storefronts, furniture stores, electronics stores, fashion stores, cake shops.",
+			ogImage: "/images/nuravahubsoreslogo.png",
+		},
 		features: {
 			showWhatsAppButton: clientConfig.features.showWhatsAppButton,
 			showWhatsAppContact: clientConfig.features.showWhatsAppContact,

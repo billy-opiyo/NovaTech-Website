@@ -1,6 +1,7 @@
+import type { Metadata } from "next"
 import { Suspense } from "react"
 import ProductsClient from "./ProductsClient"
-import { getStoreRequestTenantContext } from "@/lib/store-context.server"
+import { getStoreContext, getStoreRequestTenantContext } from "@/lib/store-context.server"
 import { getCachedFilteredProducts } from "@/lib/public-catalog.server"
 
 type SearchParams = Record<string, string | string[] | undefined>
@@ -13,6 +14,15 @@ function toSearchParams(values: SearchParams) {
 	}
 	if (!params.has("limit")) params.set("limit", "12")
 	return params
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+	const store = await getStoreContext()
+	const title = store.industry ? `${store.industry.name} products` : "Shop products from independent stores"
+	const description = store.industry
+		? `Browse ${store.industry.name.toLowerCase()} products from ${store.brand.name}. Compare the products, offers, and details available in this store.`
+		: "Discover products across electronics, furniture, boutique fashion, cakes, and more from independent Nurava HubStores merchants."
+	return { title, description, openGraph: { title, description }, twitter: { card: "summary", title, description } }
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

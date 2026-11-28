@@ -21,6 +21,10 @@ import AndroidSystemBars from "@/components/providers/AndroidSystemBars"
 import { getPlatformDomain } from "backend/lib/platform-domain"
 import AndroidOfflineCache from "@/components/providers/AndroidOfflineCache"
 
+function safeJsonLd(value: unknown) {
+	return JSON.stringify(value).replace(/</g, "\\u003c")
+}
+
 export async function generateMetadata(): Promise<Metadata> {
 	const [store, requestHeaders] = await Promise.all([getStoreContext(), headers()])
 	const requestPath = requestHeaders.get("x-nurava-request-path")?.split("?", 1)[0] || "/"
@@ -32,17 +36,21 @@ export async function generateMetadata(): Promise<Metadata> {
 		? `https://${domain}`
 		: `https://${store.storeSlug}.${domain}`
 	const canonicalUrl = new URL(pathname, origin).toString()
+	const socialImage = store.seo.ogImage ? [store.seo.ogImage] : undefined
+	const siteName = store.isPlatformHome ? "Nurava HubStores" : store.brand.name
 	const privatePath = /^\/(admin|manage|platform|account|auth|onboarding)(?:\/|$)/.test(pathname)
 		|| pathname === "/cart"
 		|| pathname === "/checkout"
 		|| pathname === "/newsletter/unsubscribe"
 	return {
+		metadataBase: new URL(origin),
 		title: { default: store.seo.title || store.brand.name, template: `%s | ${store.brand.name}` },
 		description: store.seo.description,
 		keywords: store.seo.keywords,
 		alternates: { canonical: canonicalUrl },
 		...(privatePath ? { robots: { index: false, follow: false } } : {}),
-		openGraph: { type: "website", locale: store.site.locale, url: canonicalUrl, siteName: store.brand.name, title: store.seo.title || store.brand.name, description: store.seo.description, ...(store.seo.ogImage ? { images: [store.seo.ogImage] } : {}) },
+		openGraph: { type: "website", locale: store.site.locale, url: canonicalUrl, siteName, title: store.seo.title || store.brand.name, description: store.seo.description, ...(socialImage ? { images: socialImage } : {}) },
+		twitter: { card: socialImage ? "summary_large_image" : "summary", title: store.seo.title || store.brand.name, description: store.seo.description, ...(socialImage ? { images: socialImage } : {}) },
 	}
 }
 
@@ -54,6 +62,27 @@ export default async function RootLayout({
 	const store = await getStoreContext()
 	const resolvedTheme = resolveStoreTheme(store)
 	const activeTheme = resolvedTheme.preset
+	const platformOrigin = `https://${getPlatformDomain()}`
+	const platformStructuredData = store.isPlatformHome ? {
+		"@context": "https://schema.org",
+		"@graph": [
+			{
+				"@type": "Organization",
+				"@id": `${platformOrigin}/#organization`,
+				name: "Nurava Tech",
+				url: platformOrigin,
+				brand: { "@type": "Brand", name: "Nurava HubStores" },
+			},
+			{
+				"@type": "WebSite",
+				"@id": `${platformOrigin}/#website`,
+				url: platformOrigin,
+				name: "Nurava HubStores",
+				inLanguage: "en-KE",
+				publisher: { "@id": `${platformOrigin}/#organization` },
+			},
+		],
+	} : null
 	return (
 		<html
 			lang={store.site.language}
@@ -61,6 +90,7 @@ export default async function RootLayout({
 			style={themeToCssVariables(activeTheme, resolvedTheme.overrides) as React.CSSProperties}
 		>
 			<head>
+				{platformStructuredData && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(platformStructuredData) }} />}
 				{/* Apply the theme before CSS can paint to prevent a light-mode flash. */}
 				<script
 					dangerouslySetInnerHTML={{

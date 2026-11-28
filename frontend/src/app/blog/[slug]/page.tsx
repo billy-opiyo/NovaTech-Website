@@ -1,6 +1,15 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getStoreContext } from "@/lib/store-context.server"
 import { getCachedPublishedBlogPost } from "@/lib/public-blog.server"
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+	const [store, { slug }] = await Promise.all([getStoreContext(), params])
+	const post = await getCachedPublishedBlogPost(store.isPlatformHome ? "platform" : store.tenantId, store.isPlatformHome ? null : store.tenantId, slug)
+	if (!post) return { title: "Article not found", robots: { index: false, follow: false } }
+	const description = (post.excerpt?.trim() || post.content.trim()).slice(0, 320)
+	return { title: post.title, description, openGraph: { type: "article", title: post.title, description, ...(post.coverImageUrl ? { images: [post.coverImageUrl] } : {}) }, twitter: { card: post.coverImageUrl ? "summary_large_image" : "summary", title: post.title, description, ...(post.coverImageUrl ? { images: [post.coverImageUrl] } : {}) } }
+}
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
 	const [store, { slug }] = await Promise.all([getStoreContext(), params])

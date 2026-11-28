@@ -14,7 +14,7 @@ export const clientConfig = {
 		tagline: "Kenya's multi-industry commerce platform",
 	},
 	site: {
-		url: "https://nuravatech.com",
+		url: "https://nuravahubstores.com",
 		locale: "en_KE",
 		language: "en",
 		country: "Kenya",

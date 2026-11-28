@@ -156,66 +156,69 @@ export default function SplashScreen({ children, platformHome }: { children: Rea
 	if (!shouldShowSplash) return <>{children}</>
 	if (!readyToReveal) {
 		return (
-			<div
-				className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}${centerSplashContent ? " splash-screen--centered-content" : ""}`}
-				style={splashStyle}
-				role="status"
-				aria-live="polite"
-				aria-label={`Loading ${splashName}`}
-			>
-				<div className="splash-content relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
-					<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-primary">
-						{splashSettings?.welcomeText || "Welcome to"}
-					</p>
-					<h1 className="splash-wordmark" aria-label={splashName}>
-						{Array.from(splashName).map((character, index) => (
-							<span
-								key={`${character}-${index}`}
-								style={{ animationDelay: `${index * LETTER_STAGGER_DELAY}ms` }}
-							>
-								{character === " " ? "\u00a0" : character}
-							</span>
-						))}
-					</h1>
-					{splashLogo && (
-						<img
-							className="splash-logo-icon"
-							src={splashLogo}
-							alt=""
-							aria-hidden="true"
-							onError={(event) => {
-								const image = event.currentTarget
-								if (fallbackSplashLogo && image.dataset.fallbackApplied !== "true") {
-									image.dataset.fallbackApplied = "true"
-									image.src = fallbackSplashLogo
-								}
-							}}
-						/>
-					)}
-					{showProgress && <div className="splash-loading mt-10 w-full">
-						<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
-							<span>{splashSettings?.loadingText || "Preparing your store"}</span>
-							<span className="tabular-nums">
-								{progress}%
-								<span className="splash-ellipsis" aria-label="Loading">
-									<span>.</span>
-									<span>.</span>
-									<span>.</span>
+			<>
+				<div>{children}</div>
+				<div
+					className={`splash-screen ${backgroundMode === "images" ? "splash-screen--images" : backgroundMode === "color" ? "splash-screen--solid" : "splash-screen--glass"}${centerSplashContent ? " splash-screen--centered-content" : ""}`}
+					style={splashStyle}
+					role="status"
+					aria-live="polite"
+					aria-label={`Loading ${splashName}`}
+				>
+					<div className="splash-content relative z-10 flex w-full max-w-md flex-col items-center px-8 text-center">
+						<p className="splash-welcome mb-3 text-xs font-extrabold uppercase tracking-[0.35em] text-primary">
+							{splashSettings?.welcomeText || "Welcome to"}
+						</p>
+						<h1 className="splash-wordmark" aria-label={splashName}>
+							{Array.from(splashName).map((character, index) => (
+								<span
+									key={`${character}-${index}`}
+									style={{ animationDelay: `${index * LETTER_STAGGER_DELAY}ms` }}
+								>
+									{character === " " ? "\u00a0" : character}
 								</span>
-							</span>
-						</div>
-						<div
-							className="h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/15"
-							aria-hidden="true"
-						>
-							<div
-								className="splash-progress h-full rounded-full"
-								style={{ width: `${progress}%` }}
+							))}
+						</h1>
+						{splashLogo && (
+							<img
+								className="splash-logo-icon"
+								src={splashLogo}
+								alt=""
+								aria-hidden="true"
+								onError={(event) => {
+									const image = event.currentTarget
+									if (fallbackSplashLogo && image.dataset.fallbackApplied !== "true") {
+										image.dataset.fallbackApplied = "true"
+										image.src = fallbackSplashLogo
+									}
+								}}
 							/>
-						</div>
-					</div>}
+						)}
+						{showProgress && <div className="splash-loading mt-10 w-full">
+							<div className="mb-3 flex items-center justify-between text-sm font-extrabold text-primary">
+								<span>{splashSettings?.loadingText || "Preparing your store"}</span>
+								<span className="tabular-nums">
+									{progress}%
+									<span className="splash-ellipsis" aria-label="Loading">
+										<span>.</span>
+										<span>.</span>
+										<span>.</span>
+									</span>
+								</span>
+							</div>
+							<div
+								className="h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/15"
+								aria-hidden="true"
+							>
+								<div
+									className="splash-progress h-full rounded-full"
+									style={{ width: `${progress}%` }}
+								/>
+							</div>
+						</div>}
+					</div>
 				</div>
-			</div>
+			</>
 		)
 	}
 

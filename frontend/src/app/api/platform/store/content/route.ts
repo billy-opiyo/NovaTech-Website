@@ -12,7 +12,7 @@ const contentSchema = z.object({
 	heroTitle: z.string().trim().max(160), heroHighlight: z.string().trim().max(120), heroDescription: z.string().trim().max(1000),
 	heroPrimaryLabel: z.string().trim().max(60), featuredTitle: z.string().trim().max(120), categoryTitle: z.string().trim().max(120),
 	aboutTitle: z.string().trim().max(120), aboutDescription: z.string().trim().max(2000),
-	phoneDisplay: z.string().trim().max(50), email: z.string().trim().email().or(z.literal("")), addressLine: z.string().trim().max(200),
+	phoneDisplay: z.string().trim().max(50), email: z.string().trim().pipe(z.union([z.string().email(), z.literal("")])), addressLine: z.string().trim().max(200),
 	facebook: z.string().trim().max(300), instagram: z.string().trim().max(300), tiktok: z.string().trim().max(300),
 	categoryImages: z.record(z.string().trim().min(1).max(80), z.string().trim().max(2048)).default({}),
 }).strict()

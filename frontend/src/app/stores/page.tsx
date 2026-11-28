@@ -1,6 +1,17 @@
+import type { Metadata } from "next"
 import { Store as StoreIcon } from "lucide-react"
 import { getCachedPublishedStores, getStorePublicUrl } from "@/lib/store-directory.server"
 import StoreDirectoryBrowser from "@/components/home/StoreDirectoryBrowser"
+import { getStoreContext } from "@/lib/store-context.server"
+
+export async function generateMetadata(): Promise<Metadata> {
+	const store = await getStoreContext()
+	const title = store.isPlatformHome ? "Browse independent stores" : "Stores"
+	const description = store.isPlatformHome
+		? "Discover the Nurava Marketplace and independent merchant storefronts. Compare stores and explore products across multiple industries."
+		: `Explore stores and products from ${store.brand.name}.`
+	return { title, description }
+}
 
 export default async function StoreDirectoryPage() {
 	const stores = await getCachedPublishedStores()

@@ -1,6 +1,16 @@
+import type { Metadata } from "next"
 import CategoryPage, { type CategoryProduct } from "./CategoryClient"
-import { getStoreRequestTenantContext } from "@/lib/store-context.server"
+import { getStoreContext, getStoreRequestTenantContext } from "@/lib/store-context.server"
 import { getCachedFilteredProducts } from "@/lib/public-catalog.server"
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+	const [store, { slug }] = await Promise.all([getStoreContext(), params])
+	const category = store.homepage.categories.find((item) => item.slug === slug.trim().toLowerCase())
+	const name = category?.name || slug.replaceAll("-", " ")
+	const title = `${name} products`
+	const description = `Browse ${name.toLowerCase()} products${category?.industryName ? ` in ${category.industryName.toLowerCase()}` : ""} from ${store.isPlatformHome ? "Nurava HubStores stores" : store.brand.name}.`
+	return { title, description, openGraph: { title, description }, twitter: { card: "summary", title, description } }
+}
 
 export default async function StoreCategoryPage({ params }: { params: Promise<{ slug: string }> }) {
 	const [{ slug }, context] = await Promise.all([params, getStoreRequestTenantContext()])
