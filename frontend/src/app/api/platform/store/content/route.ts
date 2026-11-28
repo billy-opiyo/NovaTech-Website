@@ -44,15 +44,20 @@ export async function PATCH(request: Request) {
 	if ("response" in result) return result.response
 	const parsed = contentSchema.safeParse(await request.json().catch(() => null))
 	if (!parsed.success) return NextResponse.json({ message: "Review the store content fields.", issues: parsed.error.flatten() }, { status: 400 })
-	const { name, logoUrl, heroImage, phoneDisplay, email, addressLine, facebook, instagram, tiktok, categoryImages, ...copy } = parsed.data
-	const existing = await prisma.store.findUnique({ where: { id: result.store.id }, select: { homepageSettings: true, contactSettings: true } })
-	const homepage = existing?.homepageSettings && typeof existing.homepageSettings === "object" && !Array.isArray(existing.homepageSettings) ? existing.homepageSettings as Record<string, unknown> : {}
-	const contact = existing?.contactSettings && typeof existing.contactSettings === "object" && !Array.isArray(existing.contactSettings) ? existing.contactSettings as Record<string, unknown> : {}
-	const updated = await prisma.store.update({ where: { id: result.store.id }, data: {
-		name, logoUrl: logoUrl || null,
-		homepageSettings: { ...homepage, ...copy, heroImage: heroImage || null, categoryImages },
-		contactSettings: { ...contact, phoneDisplay, email, addressLine, social: { ...(contact.social && typeof contact.social === "object" && !Array.isArray(contact.social) ? contact.social as Record<string, unknown> : {}), facebook, instagram, tiktok } },
-	}, select: { name: true, logoUrl: true, homepageSettings: true, contactSettings: true } })
-	revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
-	return NextResponse.json({ store: updated })
+	try {
+		const { name, logoUrl, heroImage, phoneDisplay, email, addressLine, facebook, instagram, tiktok, categoryImages, ...copy } = parsed.data
+		const existing = await prisma.store.findUnique({ where: { id: result.store.id }, select: { homepageSettings: true, contactSettings: true } })
+		const homepage = existing?.homepageSettings && typeof existing.homepageSettings === "object" && !Array.isArray(existing.homepageSettings) ? existing.homepageSettings as Record<string, unknown> : {}
+		const contact = existing?.contactSettings && typeof existing.contactSettings === "object" && !Array.isArray(existing.contactSettings) ? existing.contactSettings as Record<string, unknown> : {}
+		const updated = await prisma.store.update({ where: { id: result.store.id }, data: {
+			name, logoUrl: logoUrl || null,
+			homepageSettings: { ...homepage, ...copy, heroImage: heroImage || null, categoryImages },
+			contactSettings: { ...contact, phoneDisplay, email, addressLine, social: { ...(contact.social && typeof contact.social === "object" && !Array.isArray(contact.social) ? contact.social as Record<string, unknown> : {}), facebook, instagram, tiktok } },
+		}, select: { name: true, logoUrl: true, homepageSettings: true, contactSettings: true } })
+		revalidateTenantPublicCatalog({ tenantId: result.store.tenantId, storeId: result.store.id, ownerType: "PLATFORM" }, { storeContext: true, storeDirectory: true, platformDiscovery: true, platformStoreHomepage: true })
+		return NextResponse.json({ store: updated })
+	} catch (error) {
+		console.error("Unable to save platform store content", error)
+		return NextResponse.json({ message: "Store content could not be saved. Please try again." }, { status: 500 })
+	}
 }

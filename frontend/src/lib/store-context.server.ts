@@ -162,7 +162,7 @@ export const getStoreContext = cache(async function getStoreContext(): Promise<S
 		const seo = record(store.seoSettings)
 		const contact = record(store.contactSettings)
 		const contactValues = store.ownerType === "PLATFORM"
-			? { ...clientConfig.contact, ...resolvedPlatformSettings?.contact }
+			? { ...clientConfig.contact, ...resolvedPlatformSettings?.contact, ...contact }
 			: contact
 		const socialSettings = record(contact.social)
 		const storedHomepage = record(store.homepageSettings)
