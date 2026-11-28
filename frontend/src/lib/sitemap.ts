@@ -147,10 +147,24 @@ export async function getSitemapXml(id: number) {
 		const skip = (id - range.firstId) * (range.group === "stores" ? STORE_PAGE_SIZE : SITEMAP_PAGE_SIZE)
 
 		if (range.group === "stores") {
-			const stores = await prisma.store.findMany({ where: publicStoreWhere, orderBy: { id: "asc" }, skip, take: STORE_PAGE_SIZE, select: { slug: true, updatedAt: true } })
+			const stores = await prisma.store.findMany({
+				where: publicStoreWhere,
+				orderBy: { id: "asc" },
+				skip,
+				take: STORE_PAGE_SIZE,
+				select: {
+					slug: true,
+					updatedAt: true,
+					products: { where: { isPublished: true, category: { is: publicProductCategoryWhere } }, take: 1, select: { id: true } },
+				},
+			})
 			return toUrlSet(stores.flatMap((store) => {
 				const origin = storeOrigin(store.slug)
-				return origin ? [{ url: `${origin}/`, lastModified: store.updatedAt }, { url: `${origin}/products` }, { url: `${origin}/blog` }] : []
+				return origin ? [
+					{ url: `${origin}/`, lastModified: store.updatedAt },
+					...(store.products.length > 0 ? [{ url: `${origin}/products` }] : []),
+					{ url: `${origin}/blog` },
+				] : []
 			}))
 		}
 

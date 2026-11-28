@@ -17,12 +17,21 @@ function toSearchParams(values: SearchParams) {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-	const store = await getStoreContext()
+	const [store, context] = await Promise.all([getStoreContext(), getStoreRequestTenantContext()])
+	const catalogQuery = new URLSearchParams({ limit: "1" })
+	const catalog = await getCachedFilteredProducts(catalogQuery, context, { includeReviewDetails: false })
+		.catch(() => ({ total: 0 }))
 	const title = store.industry ? `${store.industry.name} products` : "Shop products from independent stores"
 	const description = store.industry
 		? `Browse ${store.industry.name.toLowerCase()} products from ${store.brand.name}. Compare the products, offers, and details available in this store.`
 		: "Discover products across electronics, furniture, boutique fashion, cakes, and more from independent Nurava HubStores merchants."
-	return { title, description, openGraph: { title, description }, twitter: { card: "summary", title, description } }
+	return {
+		title,
+		description,
+		robots: catalog.total > 0 ? { index: true, follow: true } : { index: false, follow: true },
+		openGraph: { title, description },
+		twitter: { card: "summary", title, description },
+	}
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
