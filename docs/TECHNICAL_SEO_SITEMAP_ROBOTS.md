@@ -18,7 +18,7 @@ The requested canonical domain is `nuravahubstores.com`, and the source-level pl
 
 ## Implementation
 
-- `frontend/src/app/sitemap.xml/route.ts` serves the sitemap index at `/sitemap.xml`; `frontend/src/app/sitemap/[id].xml/route.ts` serves child XML files, and `frontend/src/lib/sitemap.ts` builds the filtered entries. It splits child files at 45,000 URLs (15,000 storefronts, because each contributes three URLs). Entries cover published storefronts and their product/blog indexes, eligible products, active configured categories, and published platform or tenant blog posts. Entry URLs use HTTPS on the platform apex or `{storeSlug}.{platformDomain}`.
+- `frontend/src/app/sitemap.xml/route.ts` serves the sitemap index at `/sitemap.xml`; `frontend/src/app/sitemap/[...file]/route.ts` serves child XML files, and `frontend/src/lib/sitemap.ts` builds the filtered entries. It splits child files at 45,000 URLs (15,000 storefronts, because each contributes three URLs). Entries cover published storefronts and their product/blog indexes, eligible products, active configured categories, and published platform or tenant blog posts. Entry URLs use HTTPS on the platform apex or `{storeSlug}.{platformDomain}`.
 - Product and article entries use their reliable database `updatedAt` value. Storefront home entries use the store `updatedAt` value. Fixed pages and categories omit `lastmod` because the source has no reliable page/category modification timestamp.
 - Sitemap responses use shared-cache headers for one hour with stale-while-revalidate. Database count errors return an index pointing to the fixed sitemap page; a page query error returns an empty child sitemap and logs the failure. Empty content counts produce only the fixed sitemap page.
 - `frontend/src/app/robots.ts` allows page and asset crawling and references the production sitemap. Private/account/auth/checkout/onboarding pages use `noindex,nofollow` metadata so crawlers can fetch them and read the directive; robots.txt is not used as an access-control or indexing mechanism. API routes are not blanket-blocked.
@@ -26,7 +26,7 @@ The requested canonical domain is `nuravahubstores.com`, and the source-level pl
 
 ## Production follow-up
 
-The source change did not register the domain, change DNS/Vercel settings, or deploy. The live endpoints and tenant URLs were verified on 2026-11-27. Reconcile the repository's remaining `nuravatech.com` configuration and documentation with the production `nuravahubstores.com` domain. `/deals` has now been removed from the source sitemap because it redirects to `/stores?all=1`; the production sitemap will keep listing it until this source change is deployed. After deployment, recheck:
+The fix is committed as `1b3e79d` on `main` and was confirmed live on 2026-11-28. No DNS or Vercel project settings were changed. Reconcile the repository's remaining `nuravatech.com` configuration and documentation with the production `nuravahubstores.com` domain. For future SEO changes, recheck:
 
 - `https://nuravahubstores.com/sitemap.xml`
 - `https://nuravahubstores.com/robots.txt`
@@ -39,7 +39,7 @@ In Google Search Console, verify a Domain property for `nuravahubstores.com` (in
 - `npm run type-check`: passed.
 - Focused ESLint on the changed SEO files: passed.
 - `tests/seo/sitemap.test.ts`: 6 passed, covering fixed URLs, empty data, database failure, eligible store/product/category/article generation, hidden-category filtering, demo exclusions, and cache headers.
-- `npm run build` with `PLATFORM_DOMAIN=nuravahubstores.com` supplied to the command: passed. Next emitted the sitemap index route and catch-all child sitemap route. Static prerender logged the unavailable Neon database; this did not fail the build.
+- `npm run build` with the root production environment loaded: passed. Static prerender could not reach Neon from the build sandbox, but the runtime database-backed route was verified separately with the configured production environment.
 - Local HTTP checks against the production build returned 200 for `/sitemap.xml`, `/sitemap/0.xml`, and `/robots.txt`. Both sitemap documents parsed as XML, the fixed child contained 13 HTTPS URLs on the target domain with no private/API/staging URLs, and the index pointed to one child when database counts were unavailable. `robots.txt` referenced the target sitemap. A query-string page emitted the clean canonical and matching Open Graph URL; `/auth/signin` emitted `noindex,nofollow`.
 - The repository-wide `npm test` run before the final SEO-specific tests reported 166 passing and 6 failing tests. The failures were existing UI/source assertions, a missing `frontend/src/lib/demo-store-config` module imported by a test, and a tenant host test that attempted database-backed resolution. They were outside the sitemap implementation.
 
@@ -49,5 +49,10 @@ In Google Search Console, verify a Domain property for `nuravahubstores.com` (in
 - `https://nuravahubstores.com/sitemap.xml`, all three linked children, and `/robots.txt` returned HTTP 200. All XML parsed successfully. The child files contain 13 fixed platform URLs, 3 `nurava-marketplace` URLs, and 16 `nurava-marketplace` category URLs (32 total). No demo-store, private, API, product, or article URLs were present; the database currently has no products or posts to publish.
 - At the time of the live audit, all 32 sitemap URLs returned HTTP 200. Canonicals matched except `/deals`, which returned a production 307 redirect to `/stores?all=1`; the destination canonical is `/stores`. The follow-up source fix below removes that redirecting URL.
 - Production `robots.txt` returned `text/plain`, allows `/`, and names `https://nuravahubstores.com/sitemap.xml`. Private auth pages return `noindex,nofollow`; no sitemap URLs were marked noindex.
-- Repeated production sitemap requests returned `X-Vercel-Cache: HIT` with increasing `Age`, confirming the responses are cached at the edge. No deployment or production changes were made as part of this verification.
-- Follow-up source fix: removed the redirecting `/deals` URL from the fixed sitemap and added a regression assertion. Production remains unchanged until deployment.
+- Repeated production sitemap requests returned `X-Vercel-Cache: HIT` with increasing `Age`, confirming the responses are cached at the edge. This was the initial audit, before the follow-up fix.
+
+## Post-fix production verification (2026-11-28)
+
+- Commit `1b3e79d` was pushed to `main` and auto-deployed. A cache-busted request returned three valid sitemap children with 12 fixed platform URLs, 3 platform-store URLs, and 16 category URLs (31 total); `/deals` is absent.
+- All 31 listed URLs returned HTTP 200, had matching canonicals, and were indexable. No API, private, or demo-store URLs appeared.
+- Production `/robots.txt` returned HTTP 200, allows `/`, and references the production sitemap. `/auth/signin` remained `noindex,nofollow`.
