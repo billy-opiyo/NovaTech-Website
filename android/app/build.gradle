@@ -2,12 +2,38 @@ import groovy.json.JsonSlurper
 
 apply plugin: 'com.android.application'
 
-def releaseStoreFile = System.getenv('NURAVA_ANDROID_KEYSTORE')
-def releaseStorePassword = System.getenv('NURAVA_ANDROID_STORE_PASSWORD')
-def releaseKeyAlias = System.getenv('NURAVA_ANDROID_KEY_ALIAS')
-def releaseKeyPassword = System.getenv('NURAVA_ANDROID_KEY_PASSWORD')
+def releaseEnvironment = { String name -> providers.environmentVariable(name).orNull }
+def releaseStoreFile = releaseEnvironment('NURAVA_ANDROID_KEYSTORE')
+def releaseKeyAlias = releaseEnvironment('NURAVA_ANDROID_KEY_ALIAS')
+def signingSecrets = [:]
+def signingSecretsFilePath = releaseEnvironment('NURAVA_ANDROID_SIGNING_FILE')
+if (signingSecretsFilePath) {
+    def signingSecretsFile = new File(signingSecretsFilePath)
+    if (!signingSecretsFile.isFile()) {
+        throw new GradleException('The temporary Android signing file is missing.')
+    }
+    try {
+        signingSecrets = new JsonSlurper().parseText(signingSecretsFile.getText('UTF-8')) ?: [:]
+    } catch (Exception ignored) {
+        throw new GradleException('The temporary Android signing file is invalid.')
+    }
+    def storePasswordValue = signingSecrets instanceof Map ? signingSecrets.get('storePassword') : null
+    def keyPasswordValue = signingSecrets instanceof Map ? signingSecrets.get('keyPassword') : null
+    def storePasswordText = storePasswordValue == null ? null : storePasswordValue.toString()
+    def keyPasswordText = keyPasswordValue == null ? null : keyPasswordValue.toString()
+    if (!(signingSecrets instanceof Map)
+        || storePasswordText == null
+        || storePasswordText.isEmpty()
+        || keyPasswordText == null
+        || keyPasswordText.isEmpty()) {
+        def availableKeys = signingSecrets instanceof Map ? signingSecrets.keySet().join(', ') : 'not a JSON object'
+        throw new GradleException("The temporary Android signing file is missing one or both password entries. Parsed keys: ${availableKeys ?: '(none)' }.")
+    }
+}
+def releaseStorePassword = signingSecrets.containsKey('storePassword') ? signingSecrets.get('storePassword').toString() : releaseEnvironment('NURAVA_ANDROID_STORE_PASSWORD')
+def releaseKeyPassword = signingSecrets.containsKey('keyPassword') ? signingSecrets.get('keyPassword').toString() : releaseEnvironment('NURAVA_ANDROID_KEY_PASSWORD')
 def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
-def expectedProductionCertificateSha256 = System.getenv('NURAVA_ANDROID_EXPECTED_CERT_SHA256')
+def expectedProductionCertificateSha256 = releaseEnvironment('NURAVA_ANDROID_EXPECTED_CERT_SHA256')
 def productionAppId = 'com.nurava.hubstores'
 def productionSiteUrl = 'https://nuravahubstores.com'
 
@@ -71,16 +97,16 @@ def verifyProductionReleaseInputs = tasks.register('verifyProductionReleaseInput
     group = 'verification'
     description = 'Checks production target, app identity, and release signing inputs before release packaging.'
     doLast {
-        if (System.getenv('NURAVA_ANDROID_RELEASE_WRAPPER') != '1') {
+        if (releaseEnvironment('NURAVA_ANDROID_RELEASE_WRAPPER') != '1') {
             throw new GradleException('Use npm run android:release:apk or npm run android:release:aab so the finished artifact is verified before distribution.')
         }
-        if (System.getenv('NURAVA_ANDROID_PRODUCTION_RELEASE_ENABLED') != '1') {
+        if (releaseEnvironment('NURAVA_ANDROID_PRODUCTION_RELEASE_ENABLED') != '1') {
             throw new GradleException('Production APK/AAB generation is disabled. Enable it only after the production site is deployed and the release is approved.')
         }
-        if (System.getenv('CAPACITOR_BUILD_TARGET') != 'production') {
+        if (releaseEnvironment('CAPACITOR_BUILD_TARGET') != 'production') {
             throw new GradleException('Production release requires CAPACITOR_BUILD_TARGET=production. Use npm run android:release:apk or npm run android:release:aab.')
         }
-        if (System.getenv('CAPACITOR_SERVER_URL') != productionSiteUrl) {
+        if (releaseEnvironment('CAPACITOR_SERVER_URL') != productionSiteUrl) {
             throw new GradleException('Production release requires the approved https://nuravahubstores.com Capacitor URL.')
         }
 
@@ -111,7 +137,9 @@ def verifyProductionReleaseInputs = tasks.register('verifyProductionReleaseInput
             NURAVA_ANDROID_KEY_ALIAS: releaseKeyAlias,
             NURAVA_ANDROID_KEY_PASSWORD: releaseKeyPassword,
         ]
-        def missingValues = signingValues.findAll { name, value -> !value || !value.trim() }.keySet()
+        def missingValues = signingValues.findAll { name, value ->
+            value == null || value.toString().isEmpty()
+        }.keySet()
         if (!missingValues.isEmpty()) {
             throw new GradleException("Production release signing is incomplete. Configure all four NURAVA_ANDROID_* values; missing: ${missingValues.join(', ')}. Values are not displayed.")
         }

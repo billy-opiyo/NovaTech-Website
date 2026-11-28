@@ -98,8 +98,19 @@ function sdkTool(name, env) {
 }
 
 function run(command, args, env) {
-	const usesCmdScript = process.platform === "win32" && (/\.(bat|cmd)$/i.test(command) || command === "bundletool")
-	const result = spawnSync(command, args, { encoding: "utf8", env, windowsHide: true, maxBuffer: 8 * 1024 * 1024, shell: usesCmdScript })
+	let executable = command
+	let commandArgs = args
+	const isApksignerBatch = process.platform === "win32" && path.basename(command).toLowerCase() === "apksigner.bat"
+	if (isApksignerBatch) {
+		const java = env.JAVA_HOME
+			? path.join(env.JAVA_HOME, "bin", "java.exe")
+			: "java"
+		const apksignerJar = path.join(path.dirname(command), "lib", "apksigner.jar")
+		executable = java
+		commandArgs = ["-jar", apksignerJar, ...args]
+	}
+	const usesCmdScript = process.platform === "win32" && !isApksignerBatch && (/\.(bat|cmd)$/i.test(command) || command === "bundletool")
+	const result = spawnSync(executable, commandArgs, { encoding: "utf8", env, windowsHide: true, maxBuffer: 8 * 1024 * 1024, shell: usesCmdScript })
 	if (result.error || result.status !== 0) throw new Error(`Release verification command failed: ${path.basename(command)}.`)
 	return `${result.stdout || ""}\n${result.stderr || ""}`
 }
