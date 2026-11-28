@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { uploadFile } from "backend/lib/storage"
 import { hasAllowedFileSignature, IMAGE_TOO_LARGE_MESSAGE, MAX_IMAGE_UPLOAD_BYTES } from "backend/lib/file-validation"
-import { ImageOptimizationTooLargeError, optimizeProductImage } from "backend/lib/image-optimization"
+import { ImageOptimizationTooLargeError, optimizeFavicon } from "backend/lib/image-optimization"
 
 const imageKinds: Record<string, "JPEG" | "PNG" | "WEBP" | "GIF"> = {
 	"image/jpeg": "JPEG",
@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
 
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!hasAllowedFileSignature(buffer, [kind])) return NextResponse.json({ message: "The uploaded image content is invalid." }, { status: 400 })
-		const optimizedBuffer = await optimizeProductImage(buffer)
-		const key = `platform/assets/favicon-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.webp`
-		const url = await uploadFile(optimizedBuffer, key, "image/webp")
+		const optimizedBuffer = await optimizeFavicon(buffer)
+		const key = `platform/assets/favicon-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.png`
+		const url = await uploadFile(optimizedBuffer, key, "image/png")
 		return NextResponse.json({ url, key }, { status: 201 })
 	} catch (error) {
 		if (error instanceof ImageOptimizationTooLargeError) return NextResponse.json({ message: IMAGE_TOO_LARGE_MESSAGE }, { status: 400 })

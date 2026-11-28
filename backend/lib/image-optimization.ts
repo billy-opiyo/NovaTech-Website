@@ -31,3 +31,17 @@ export async function optimizeProductImage(input: Buffer): Promise<Buffer> {
 
 	throw new ImageOptimizationTooLargeError()
 }
+
+/** Normalize platform favicons to a square PNG format supported by search engines. */
+export async function optimizeFavicon(input: Buffer): Promise<Buffer> {
+	const metadata = await sharp(input, { failOn: "error" }).metadata()
+	if (!metadata.width || !metadata.height) throw new Error("The uploaded favicon dimensions are invalid.")
+
+	const output = await sharp(input, { failOn: "error" })
+		.rotate()
+		.resize(256, 256, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 0 } })
+		.png({ compressionLevel: 9, palette: true })
+		.toBuffer()
+	if (output.length > MAX_IMAGE_UPLOAD_BYTES) throw new ImageOptimizationTooLargeError()
+	return output
+}
